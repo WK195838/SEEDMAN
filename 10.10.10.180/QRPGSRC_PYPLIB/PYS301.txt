@@ -1,0 +1,198 @@
+     H****************************************************************
+     H* PROGRAM NAME : PYS301                                        *
+     H* SYSTEM       : MIRS                                          *
+     H* SUBSYSTEM    : PY                                            *
+     H* REMARK       :計算年度平均本薪                             *
+     H* PROCESS      : (1)先計算每一個月之平均底薪                 *
+     H*                (2)計算當年平均底薪
+     H* INPUT PARM.  : (1)員工公司 X(1) : S31I1
+     H*********        (2)員工編號 X(5) : S31I2
+     H*********        (3)年度起日 9(6) : S31I3
+     H*********        (5)到職日   9(6) : S31I5
+     H*********        (6)離職日   9(6) : S31I6
+     H*                (2)員工編號 X(8) : S31I2
+     H*                (3)年度起日 9(8) : S31I3
+     H*                (5)到職日   9(8) : S31I5
+     H*                (6)離職日   9(8) : S31I6
+     H*                (7)目前底薪 9(7) : S31I7
+     H* OUTPUT PARM. : (1)平均底薪 9(7) : S31O1
+     H****************************************************************
+     FPYSHPF  IF  E           K        DISK
+     F*
+     E                    A1         12  8 0             .月起日
+     E                    A2         12  8 0             .月止日
+     E                    A3         12  7 0             .月平均薪資
+     I*
+     I            DS
+     I                                        1   80WYMD1
+     I                                        1   40WY1
+     I                                        5   60WM1
+     I                                        1   60WYM1
+     I                                        7   80WD1
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN SH03      KSH03
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYSH1    KLIST
+     C                     KFLD           S31I1
+     C                     KFLD           S31I2
+     C                     KFLD           KSH03
+     C           KEYSH2    KLIST
+     C                     KFLD           S31I1
+     C                     KFLD           S31I2
+     C*==============================================================*
+     C*                    PARM LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM           S31I1   2
+     C                     PARM           S31I2   8
+     C                     PARM           S31I3   80
+     C                     PARM           S31I5   80
+     C                     PARM           S31I6   80
+     C                     PARM           S31I7   70
+     C                     PARM           S31O1   70
+     C*==============================================================*
+     C*          MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C                     Z-ADD*ZERO     S31O1
+     C*
+     C                     Z-ADD0         WI      20
+  01-C           WI        DOWLT12
+    C                     ADD  1         WI
+    C                     EXSR RTN100                     .月起迄日
+  01-C                     END
+     C*
+     C                     MOVEL*ZERO     A3
+     C                     Z-ADD0         WI
+  02-C           WI        DOWLT12
+    C                     ADD  1         WI
+    C                     EXSR RTN200                     .每月底薪
+  02-C                     END
+     C*
+     C                     Z-ADD0         WN      20
+     C                     Z-ADD0         TA3     90
+     C*
+     C                     Z-ADD0         WI
+  03-C           WI        DOWLT12
+    C                     ADD  1         WI
+  04-C           A3,WI     IFNE *ZERO
+    C                     ADD  A3,WI     TA3     90
+    C                     ADD  1         WN
+  04-C                     END
+  03-C                     END
+     C*
+  05-C           WN        IFNE *ZERO
+    C           TA3       DIV  WN        S31O1     H
+  05-C                     END
+     C*
+     C                     SETON                       LR
+     C                     RETRN
+     C*==============================================================*
+     C*    RTN100....計算本年度每一個月起迄日
+     C*==============================================================*
+01===C           RTN100    BEGSR
+|    C*月起日
+| 01-C           WI        IFEQ 1
+|   C                     Z-ADDS31I3     A1,WI
+|   C*
+| 01*C                     ELSE
+|   C           WI        SUB  1         WJ      20
+|   C                     Z-ADDA1,WJ     WYMD1
+|   C                     ADD  1         WM1
+| 02-C           WM1       IFGT 12
+|   C                     ADD  1         WY1
+|   C                     SUB  12        WM1
+| 02-C                     END
+|   C*
+|   C                     Z-ADDWYMD1     A1,WI
+| 01-C                     END
+|    C*月止日
+|    C                     CALL 'P34'
+|    C                     PARM WYM1      P3401I  60
+|    C                     PARM '2'       P3403I  1
+|    C                     PARM '1'       P3404I  1
+|    C                     PARM           P3411O  1
+|    C                     PARM           P3412O  20
+|    C                     MOVE P3412O    WD1
+|    C*
+|    C                     Z-ADDA1,WI     WYMD1
+|    C*
+|    C*                    Z-ADDWYM1      P2201I
+|    C*                    CALL 'P22'
+|    C*                    PARM           P2201I  40
+|    C*                    PARM           P2211O  1
+|    C*                    PARM           P2212O  20
+|    C*                    Z-ADDP2212O    WD1
+|    C*
+|    C                     Z-ADDWYMD1     A2,WI
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*   RTN200....計算每月平均底薪－每月最多調薪一次
+     C*==============================================================*
+02===C           RTN200    BEGSR
+|    C*
+|    C*本月未到職
+| 01-C           S31I5     IFGT A2,WI
+|   C                     Z-ADD*ZERO     A3,WI
+|   C                     GOTO END200
+| 01-C                     END
+|    C*
+|    C*本月已離職
+| 02-C           S31I6     IFNE *ZERO
+|   C           S31I6     ANDLEA1,WI
+|   C                     Z-ADD*ZERO     A3,WI
+|   C                     GOTO END200
+| 02-C                     END
+|    C*
+|    C*月底薪資
+|    C                     Z-ADDS31I7     WSALN   70
+|    C*
+|    C                     Z-ADDA2,WI     KSH03
+|    C           KEYSH1    SETGTSH0
+|    C           KEYSH2    READESH0                      40
+|    C*
+| 03-C           *IN40     IFEQ '0'
+|   C           SH06      ANDNE*ZERO
+|   C                     Z-ADDSH07      WSALN
+| 03-C                     END
+|    C*------------------------------------------------------------
+|    C*上月調薪
+|    C                     MOVEL'N'       SWSH    1        .調薪
+|    C                     Z-ADDA1,WI     KSH03
+|    C           KEYSH1    SETGTSH0
+|    C           KEYSH2    READESH0                      40
+|    C*
+| 04-C           *IN40     IFEQ '0'
+|   C           SH06      ANDNE*ZERO
+|   C           SH03      ANDLEA2,WI
+|   C                     MOVEL'Y'       SWSH    1
+| 04-C                     END
+|    C*------------------------------------------------------------
+|    C*無調薪
+| 05-C           SWSH      IFEQ 'N'
+|   C                     Z-ADDWSALN     A3,WI
+|   C                     GOTO END200
+| 05-C                     END
+|    C*------------------------------------------------------------
+|    C*調薪前天數
+|    C                     MOVE SH03      WDAY    20
+|    C                     SUB  1         WDAY
+|    C*
+|    C*平均本薪= (調薪前X調薪前日數/30) +
+|    C*            (調薪後X(30-調薪前日數)/30)
+|    C*
+|    C           SH07      MULT WDAY      WAMT   208
+|    C                     DIV  30        WAMT      H
+|    C                     Z-ADDWAMT      A3,WI     H
+|    C           30        SUB  WDAY      WDAY
+|    C           WSALN     MULT WDAY      WAMT
+|    C                     DIV  30        WAMT      H
+|    C                     ADD  WAMT      A3,WI     H
+|    C*
+02===C           END200    ENDSR
+

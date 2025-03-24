@@ -1,0 +1,235 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME : GLS003                                     *
+     H*    AUTHOR       : A1034   STEHPANIE                          *
+     H*    CREATE DATE  : 81/11/17                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :財務系統                                  *
+     H*    SUBSYSTEM    :總帳系統                                  *
+     H*    REMARK       :計算資金金額                              *
+     H****************************************************************
+     FGLAHLF05UF  E           K        DISK
+     FGLWF05  UF  E           K        DISK                      A
+     FGLAFPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM           S001I1            公司別
+     C                     PARM           S001I2            傳票號碼
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAH     KLIST
+     C                     KFLD           S001I1
+     C                     KFLD           S001I2
+     C           KEYAHD    KLIST
+     C                     KFLD           S001I1
+     C                     KFLD           S001I2
+     C                     KFLD           WRRND
+     C           KEYAHC    KLIST
+     C                     KFLD           S001I1
+     C                     KFLD           S001I2
+     C                     KFLD           WRRNC
+     C           KEYAH1    KLIST
+     C                     KFLD           S001I1
+     C                     KFLD           S001I2
+     C                     KFLD           WF0503
+     C           KEYAF     KLIST
+     C                     KFLD           S001I1
+     C                     KFLD           AH04
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN AH01      S001I1
+     C           *LIKE     DEFN AH02      S001I2
+     C           *LIKE     DEFN AH02      S001I3
+     C           *LIKE     DEFN AH12      WDCASH           借方現金
+     C           *LIKE     DEFN AH12      WCCASH           貸方現金
+     C           *LIKE     DEFN AH12      WTEMP            未沖資金
+     C*WNBR=記錄此次作業處理之傳票
+     C           *LIKE     DEFN WF0501    WNBR
+     C*WAH12D,WAH13D記錄非現金科目金額最大者
+     C*WRRND ,WRRNCD記錄非現金科目金額最大者之ＲＲＮ
+     C           *LIKE     DEFN AH12      WAH12D
+     C           *LIKE     DEFN AH13      WAH13D
+     C           *LIKE     DEFN AH03      WRRND
+     C           *LIKE     DEFN AH03      WRRNC
+     C           *LIKE     DEFN AH22      WAH22
+     C           *LIKE     DEFN AH22      WAH22D
+     C           *LIKE     DEFN AH22      WAH22C
+     C*
+     C           *LIKE     DEFN WF0501    WCR
+     C           *LIKE     DEFN WF0501    WCR1
+     C           *LIKE     DEFN WF0501    WDE
+     C           *LIKE     DEFN WF0501    WDE1
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*                    CALL 'QCAEXEC'
+     C*                    PARM           WCOM   80
+     C*                    PARM 80        LENTH  155
+     C*                    OPEN GLWF05
+     C*
+     C                     EXSR RTN010
+     C* GET AK07,AK08
+     C           S001I1    CHAINAK0                  40
+     C*
+     C           KEYAH     SETLLAH0
+     C           KEYAH     READEAH0                      44
+     C*
+     C           *IN44     DOWEQ'0'
+     C*
+     C           AH12      CASNE0         RTN110
+     C                     CAS            RTN120
+     C                     END
+     C*
+     C           KEYAH     READEAH0                      44
+     C                     END
+     C*
+     C           WDCASH    IFNE WCCASH
+     C                     EXSR RTN200
+     C                     END
+     C*
+     C                     RETRN
+     C*==============================================================*
+     C*          RTN010....INIT
+     C*==============================================================*
+     C           RTN010    BEGSR
+     C*
+     C                     Z-ADD0         WDCASH            借方現金
+     C                     Z-ADD0         WCCASH            貸方現金
+     C*
+     C*WNBR=記錄此次作業處理之傳票
+     C                     ADD  2         WNBR
+     C                     Z-ADD0         WDE
+     C                     Z-ADD0         WDE1
+     C                     Z-ADD0         WCR
+     C                     Z-ADD0         WCR1
+     C                     Z-ADD0         WAH12D
+     C                     Z-ADD0         WAH13D
+     C                     MOVE *BLANKS   WAH22D
+     C                     MOVE *BLANKS   WAH22C
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          RTN110....借方資金
+     C*==============================================================*
+     C           RTN110    BEGSR
+     C*
+     C           KEYAF     CHAINAF0                  40
+.+---C           AF09      IFNE '4'
+.|   C                     ADD  AH12      WDCASH
+.|---C                     ELSE
+.| +-C           AH22      IFEQ *BLANKS
+.| | C           AH12      IFGT WAH12D
+.| | C                     Z-ADDAH12      WAH12D
+.| | C                     Z-ADDAH03      WRRND
+.| | C                     MOVE AK08      WAH22D
+.| | C                     END
+.| |-C                     ELSE
+.| | C                     Z-ADDWNBR      WF0501
+.| | C                     Z-ADDAH12      WF0502
+.| | C                     Z-ADDAH03      WF0503
+.| | C                     MOVE AH22      WF0504
+.| | C                     WRITEGLWF05R
+.| | C                     ADD  1         WDE
+.| +-C                     END
+.+---C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          RTN120....貸方資金
+     C*==============================================================*
+     C           RTN120    BEGSR
+     C*
+     C           KEYAF     CHAINAF0                  40
+.+---C           AF09      IFNE '4'
+.|   C                     ADD  AH13      WCCASH
+.|---C                     ELSE
+.| +-C           AH22      IFEQ *BLANKS
+.| | C           AH13      IFGT WAH13D
+.| | C                     Z-ADDAH13      WAH13D
+.| | C                     Z-ADDAH03      WRRNC
+.| | C                     MOVE AK07      WAH22C
+.| | C                     END
+.| |-C                     ELSE
+.| | C           WNBR      ADD  1         WF0501
+.| | C                     Z-ADDAH13      WF0502
+.| | C                     Z-ADDAH03      WF0503
+.| | C                     MOVE AH22      WF0504
+.| | C                     WRITEGLWF05R
+.| | C                     ADD  1         WCR
+.| +-C                     END
+.+---C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          RTN200....
+     C*==============================================================*
+     C           RTN200    BEGSR
+     C*
+I    C           WDCASH    IFGT WCCASH
+.    C           WDCASH    SUB  WCCASH    WTEMP
+     C                     ADD  1         WNBR
+.    C           WNBR      SETLLGLWF05                   42
+.+---C           *IN42     IFEQ '0'
+.|   C           KEYAHC    CHAINAH0                  40
+.|   C                     MOVE WAH22C    AH22
+.|   C                     Z-ADDWTEMP     AH23
+.|   C                     UPDATAH0
+.|---C                     ELSE
+.|   C           WNBR      READEGLWF05                   44
+.| +-C           *IN44     DOWEQ'0'
+.| | C           WTEMP     ANDGT0
+.| | C                     ADD  1         WCR1
+.| | C           KEYAH1    CHAINAH0                  40
+.| | C           WTEMP     IFGT WF0502
+.| | C           WCR1      ANDNEWCR
+.| | C                     Z-ADDWF0502    AH23
+.| | C                     ELSE
+.| | C                     Z-ADDWTEMP     AH23
+.| | C                     END
+.| | C                     SUB  AH23      WTEMP
+.| | C                     MOVE WF0504    AH22
+.| | C                     UPDATAH0
+.| | C*
+.| | C           WNBR      READEGLWF05                   44
+.| +-C                     END
+.+---C                     END
+     C                     SUB  1         WNBR
+I    C                     END
+     C*
+I    C           WDCASH    IFLT WCCASH
+.    C           WCCASH    SUB  WDCASH    WTEMP
+.    C           WNBR      SETLLGLWF05                   42
+.+---C           *IN42     IFEQ '0'
+.|   C           KEYAHD    CHAINAH0                  40
+.|   C                     MOVE WAH22D    AH22
+.|   C                     Z-ADDWTEMP     AH23
+.|   C                     UPDATAH0
+.|---C                     ELSE
+.|   C           WNBR      READEGLWF05                   44
+.| +-C           *IN44     DOWEQ'0'
+.| | C           WTEMP     ANDGT0
+.| | C                     ADD  1         WDE1
+.| | C           KEYAH1    CHAINAH0                  40
+.| | C           WTEMP     IFGT WF0502
+.| | C           WDE1      ANDNEWDE
+.| | C                     Z-ADDWF0502    AH23
+.| | C                     ELSE
+.| | C                     Z-ADDWTEMP     AH23
+.| | C                     END
+.| | C                     SUB  AH23      WTEMP
+.| | C                     MOVE WF0504    AH22
+.| | C                     UPDATAH0
+.| | C*
+.| | C           WNBR      READEGLWF05                   44
+.| +-C                     END
+.+---C                     END
+I    C                     END
+     C*
+     C                     ENDSR
+

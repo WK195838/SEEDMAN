@@ -1,0 +1,165 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR6432                                    *
+     H*    PROGRAM NAME :勞工保險費證明表　　　                    *
+     H*    AUTHOR       : KLAUS                                      *
+     H*    CREATE DATE  : 2001/05/17                                 *
+     H*    UPDATE DATE  : 2006/03/01 JENNIFER                        *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYHDPF  IP  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYDEPF  IF  E           K        DISK
+     FPYR643WFO   E           K        DISK
+     I*
+     IHD0
+     I                                              HD02  L1
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      210 2160PDATE
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I                                      503 509 DEM041
+     I                                      510 516 DEM042
+     I                                      541 548 DEM021
+     I                                      551 558 DEM022
+     I                                      601 6020DPEN
+     I                                      611 6140DPENK
+     I*部門代碼
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEYLIST
+     C*==============================================================*
+     C*PYEMPF
+     C           KEYEM     KLIST
+     C                     KFLD           HD01             .公司編號
+     C                     KFLD           HD02             .員工編號
+     C           KEYHD     KLIST
+     C                     KFLD           HD01             .公司編號
+     C                     KFLD           HD02             .員工編號
+     C           KEYDE     KLIST
+     C                     KFLD           HD01             .公司編號
+     C                     KFLD           TEMP1   2        .種類
+     C*
+     C                     MOVEL'01'      TEMP1
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN200                     *WRITE PD1
+     C*
+     CL1 10                EXSR RTN810
+     CLR 10                EXSR RTN890
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DEM01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C*                    CALL 'P82'
+|    C*                    PARM DPENK     P8201I  40
+|    C*                    PARM '2'       P8202I  1
+|    C*                    PARM '1'       P8203I  1
+|    C*                    PARM '2'       P8204I  1
+|    C*                    PARM '2'       P8205I  1
+|    C*                    PARM           P8211O  40
+|    C                     Z-ADDDPENK     DYY     40
+|    C                     MOVEL*BLANK    DFLG    1
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200... PROCESS
+     C*==============================================================*
+02===C           RTN200    BEGSR
+|    C*
+|    C                     MOVEL*BLANK    DFLG
+|    C*
+|    C           KEYEM     CHAINPYEMPF               40
+|    C*
+|    C*判斷資料是否符合畫面輸入的部門代碼&員工編號
+|    C           EM04      IFGE DEM041
+|    C           EM04      ANDLEDEM042
+|    C*
+|    C           HD02      IFGE DEM021
+|    C           HD02      ANDLEDEM022
+|    C*抓PYHDPF檔裡HD05='C9'勞工保險
+|    C*(只算畫面輸入年度的該年總計)
+|   C                     ADD  HD06      WF05
+|   C                     MOVEL'Y'       DFLG
+|   C                     ENDIF
+|   C                     ENDIF
+|    C*
+02===C           ETN200    ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK 1
+     C*==============================================================*
+03===C           RTN810    BEGSR
+     C*
+|    C           DFLG      IFEQ 'Y'
+|    C*
+|   C  N40                MOVELEM01      WF01             公司編號
+|   C  N40                MOVELEM02      WF02             員工編號
+|   C  N40                MOVELEM03      WF03             員工姓名
+|   C  N40                MOVELEM31      WF04             身份証號
+|   C                     MOVELEM04      WF08             部門代碼
+|   C                     Z-ADDDYY       WF07             年月
+|    C*部門列印順序
+|    C           KEYDE     SETLLDE0
+|    C           KEYDE     READEDE0                      46
+|    C           *IN46     DOWEQ'0'
+|    C*
+|    C           DE04      IFEQ EM04
+|    C                     Z-ADDDE03      WF09             順序
+|    C                     LEAVE
+|    C                     ENDIF
+|    C*
+|    C           KEYDE     READEDE0                      46
+|    C                     ENDDO
+|    C*
+|    C                     WRITEWF0
+|    C                     CLEARWF0
+|    C*
+|    C                     ENDIF
+     C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR
+     C*==============================================================*
+03===C           RTN890    BEGSR
+     C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+03===C           RTN899    BEGSR
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+

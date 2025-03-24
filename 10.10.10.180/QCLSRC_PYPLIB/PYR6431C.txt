@@ -1,0 +1,75 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM ID   : PYR6431C                                  */
+     /*    PROGRAM NAME :勞工保險費證明表　　　　 　　　        */
+     /*    AUTHOR       : KLAUS                                     */
+     /*    CREATE DATE  : 90/05/17                                  */
+     /*    UPDATE DATE  : 95/03/01 JENNIFER                         */
+     /*    SYSTEM       : 人事薪資管理                            */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&DEM01)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DEM041)   TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DEM042)   TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DEM021)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DEM022)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DPENK)    TYPE(*CHAR) LEN(4)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DEM01)    VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&DEM041)   VALUE(%SST(*LDA 503 7))
+             CHGVAR     VAR(&DEM042)   VALUE(%SST(*LDA 510 7))
+             CHGVAR     VAR(&DEM021)   VALUE(%SST(*LDA 541 8))
+             CHGVAR     VAR(&DEM022)   VALUE(%SST(*LDA 551 8))
+             CHGVAR     VAR(&DPENK)    VALUE(%SST(*LDA 611 4))
+
+/*  清除上一筆 WK 資料 */
+             CPYF       FROMFILE(PYR643WF) TOFILE(QTEMP/PYR643WF) +
+                        CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/PYR643WF))
+             OVRDBF     FILE(PYR643WF) TOFILE(QTEMP/PYR643WF) SHARE(*YES)
+             CLRPFM     FILE(QTEMP/PYR643WF)
+
+             OVRDBF     FILE(PYHDPF) SHARE(*YES)
+
+             OPNQRYF    FILE((PYHDPF)) QRYSLT('HD01 *EQ "' *CAT +
+                          &DEM01 *CAT '"  & HD02 *EQ %RANGE("' *CAT +
+                          &DEM021 *CAT '" "' *CAT &DEM022 *CAT '") +
+                          & HD034 *EQ "' *CAT &DPENK *CAT '"  +
+                          & HD04 *EQ "1" & HD05 *EQ "C9" ') +
+                          KEYFLD(*FILE) +
+                          MAPFLD((HD031 HD03 *CHAR 6) (HD034 +
+                          '%SST(HD031 1 4)' *CHAR 4))
+
+
+             OVRPRTF    FILE(PYR643P) PAGESIZE(33 132) CPI(10) +
+                          OVRFLW(33)
+
+/*將符合的資料寫入暫存檔(PYR643WF)                           */
+             CALL       PYR6432
+
+/*將資料按部門代碼做排序                                       */
+             OPNQRYF    FILE((PYR643WF))                           +
+                        KEYFLD((WF09)(WF08)(WF02))
+
+             CALL       PYR6433
+             CLOF       OPNID(PYHDPF)
+             CLOF       OPNID(PYR643WF)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('PYR643P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             ENDPGM
+

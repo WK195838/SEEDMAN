@@ -1,0 +1,230 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA3101                                    *
+     H*    PROGRAM NAME :員工晉升試算作業                        *
+     H*    AUTHOR       : A1336 KLAUS                                *
+     H*    CREATE DATE  : 91/09/26                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYDSPF  IF  E           K        DISK
+     FPYPSPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FPYT8PF  UF  E           K        DISK                      A
+     FPYSHPF  UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DT801
+     I                                      503 510 DT802
+     I                                      511 5170DT804
+     I                                      518 5250WT804
+     I                                      526 5270DTT1
+     I                                      528 5300DTT2
+     I                                      531 544 DSH05
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYT8     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           WT804            生效日期
+     C           KEYDS     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           EM02             員工編號
+     C*
+     C                     MOVEL'SH04'    W#Y01  10 P
+     C                     MOVEL*BLANK    W#Y02  10 P
+     C           KEY#Y     KLIST
+     C                     KFLD           W#Y01
+     C                     KFLD           W#Y02
+     C           KEYPS     KLIST
+     C                     KFLD           EM06
+     C                     KFLD           EM07
+     C           KEYPS1    KLIST
+     C                     KFLD           KT810
+     C                     KFLD           XT816
+     C           KEYPS2    KLIST
+     C                     KFLD           KT810
+     C           KEYPS3    KLIST
+     C                     KFLD           T810
+     C                     KFLD           T816
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100                      .INIT
+     C*
+     C                     EXSR R1000                      PYT8PF
+     C*
+     C                     EXSR R2000                      PYSHPF
+     C*
+     C*==============================================================*
+     C*          R0100.... INITIAL PROCESS
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C           KEYT8     SETLLT80
+|    C           KEYT8     READET80                      46
+| 06-C           *IN46     DOWEQ'0'
+|   C                     DELETT80
+|   C           KEYT8     READET80                      46
+| 06-C                     END
+|    C*
+|    C           KEYT8     SETLLSH0
+|    C           KEYT8     READESH0                      46
+| 06-C           *IN46     DOWEQ'0'
+|   C                     DELETSH0
+|   C           KEYT8     READESH0                      46
+| 06-C                     END
+|    C*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... WRITE PYT8PF
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     Z-ADD0         XT810   20
+|    C                     Z-ADD0         XT816   30
+|    C                     MOVEL*BLANK    KT810   2
+|    C                     Z-ADD0         SAR     70
+|    C                     Z-ADD0         SAR1    70
+|    C*
+|    C           KEYPS     CHAINPS0                  42
+|    C  N42      PS02      ADD  PS03      SAR              晉升前本薪
+|    C*----------------------------------------------------------------
+|    C*升等
+| 01-C           DTT1      IFNE 0
+|   C*
+|   C*七職等升八職等時，本薪須先加４５００元
+| 02-C           EM06      IFEQ '07'
+|   C                     ADD  PS10      SAR
+| 02-C                     END
+|   C*
+|   C           *LOVAL    SETLLPS0
+|   C                     MOVELEM06      XT810
+|   C                     ADD  DTT1      XT810
+|   C                     MOVELXT810     KT810
+|   C*
+|   C           KEYPS2    SETLLPS0
+|   C                     READ PS0                      46
+| 03-C           *IN46     DOWEQ'0'
+|   C           PS02      ADD  PS03      SAR1
+| 04-C           SAR1      IFGE SAR
+|   C                     MOVE PS01      T810
+|   C                     Z-ADDPS04      T816
+|   C                     ADD  3         T816             加三級
+|   C                     GOTO TAG1
+| 04-C                     END
+|   C                     READ PS0                      46
+| 03-C                     END
+| 01-C                     END
+|    C           TAG1      TAG
+|    C*----------------------------------------------------------------
+|    C*升級
+| 05-C           DTT2      IFNE 0
+|   C*
+|   C                     MOVE EM06      T810
+|   C           EM07      ADD  DTT2      T816             職級
+|   C*
+| 05-C                     END
+|    C*----------------------------------------------------------------
+|   C           KEYPS3    CHAINPS0                  41
+|   C  N41      PS02      ADD  PS03      SAR1             晉升後本薪
+|    C*
+|    C                     MOVELEM01      T801             公司編號
+|    C                     MOVELEM01      T8011            公司（自）
+|    C                     MOVELEM01      T8012            公司（至）
+|    C                     MOVELEM02      T802             員工編號
+|    C                     MOVEL'1'       T803             調動類別
+|    C                     Z-ADDWT804     T804             生效日期
+|    C                     MOVELEM041     T8051            部門（自）
+|    C                     MOVELEM042     T8052            部門（自）１
+|    C                     MOVELEM043     T8053            部門（自）２
+|    C                     MOVELEM044     T8054            部門（自）３
+|    C                     MOVELEM041     T8061            部門（至）４
+|    C                     MOVELEM042     T8062            部門（至）１
+|    C                     MOVELEM043     T8063            部門（至）２
+|    C                     MOVELEM044     T8064            部門（至）３
+|    C                     MOVELEM05      T807             職稱（自）４
+|    C                     MOVELEM05      T808             職稱（至）
+|    C                     MOVELEM06      T809             職等（自）
+|    C**                   MOVELXT810     T810             職等（至）
+|    C*******              MOVELEM100     T811             薪制（自）
+|    C*******              MOVELEM100     T812             薪制（至）
+|    C*******              MOVEL          T813             班別（自）
+|    C*******              MOVEL          TR14             班別（至）
+|    C                     Z-ADDEM07      T815             職級（自）
+|    C***                  Z-ADDXT816     T816             職級（至）
+|    C*******              MOVEL          T817             工作內容（自）
+|    C*******              MOVEL          T818             工作內容（至）
+|    C                     MOVELEM051     T819             副職稱（自）
+|    C                     MOVELEM051     T820             副職稱（至）
+|    C*
+|    C           KEYDS     CHAINDS0                  40
+|    C                     MOVELDS041     T8211            成本中心（自）１
+|    C                     MOVELDS042     T8212            成本中心（自）２
+|    C                     MOVELDS043     T8213            成本中心（自）３
+|    C                     MOVELDS041     T8214            成本中心（至）１
+|    C                     MOVELDS042     T8215            成本中心（至）２
+|    C                     MOVELDS043     T8216            成本中心（至）３
+|    C                     MOVELEM111     T8221            工作類別（自）
+|    C                     MOVELEM111     T8222            工作類別（至）
+|    C                     MOVELEM133     T8231            生產獎金註記（自）
+|    C                     MOVELEM133     T8232            生產獎金註記（至）
+|    C                     MOVELEM130     T8131            工作地點（自）１
+|    C                     MOVELEM130     T8132            工作地點（至）２
+|    C                     MOVEL'U'       T896             主檔更新
+|    C                     Z-ADD$A8YMD    T897             記錄更新日期
+|    C                     TIME           T898             記錄更新時間
+|    C                     MOVEL$USER     T899             使用者代號
+|    C*
+|    C                     WRITET80
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... WRITE PYSHPF
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C                     MOVELEM01      SH01
+|    C                     MOVELEM02      SH02
+|    C                     Z-ADDWT804     SH03
+|    C*
+| 02-C           DSH05     IFEQ *BLANK
+|   C                     MOVEL'1'       SH04
+|   C                     MOVELSH04      W#Y02
+|   C           KEY#Y     CHAIN#Y0                  42
+| 03-C           *IN42     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #Y03      P6501I 80
+|   C                     PARM 13        P6502I  30
+|   C           SH05      PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 03-C                     END
+| 02*C                     ELSE
+|   C                     MOVEL' '       SH04
+|   C                     MOVELDSH05     SH05
+| 02-C                     END
+|    C*
+|    C                     Z-ADD*ZERO     SH06
+|    C                     Z-ADDSAR       SH07
+|    C                     Z-ADDSAR1      SH08
+|    C                     Z-ADD$A8YMD    SH97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     SH98
+|    C                     MOVEL$USER     SH99
+|    C*
+|    C                     WRITESH0
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+

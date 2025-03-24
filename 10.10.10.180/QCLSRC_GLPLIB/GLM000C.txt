@@ -1,0 +1,62 @@
+             PGM
+             DCL        VAR(&WDATE) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&$USER)  TYPE(*CHAR) LEN(10)
+             DCL        VAR(&S0101I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&S0102I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&S0101O) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&P3101I) TYPE(*DEC)  LEN(8 0)
+             DCL        VAR(&P3102I) TYPE(*CHAR) LEN(1) VALUE('2')
+             DCL        VAR(&P3103I) TYPE(*CHAR) LEN(1) VALUE('1')
+             DCL        VAR(&P3104I) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&P3105I) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&P3101O) TYPE(*DEC)  LEN(8 0)
+
+             DCLF       FILE(*LIBL/GLM000D) RCDFMT(DSPD1)
+             OVRMSGF MSGF(QCPFMSG) TOMSGF(PTFLIB/PTMF)
+             CALL       PGM(R@S004) PARM('GL')
+             CALL       PGM(P63)
+             RTVDTAARA  DTAARA(*LDA (101 10)) RTNVAR(&$USER)
+             RTVDTAARA  DTAARA(*LDA (201 8)) RTNVAR(&WDATE)
+             RTVDTAARA  DTAARA(PTDA01 (1 1)) RTNVAR(&P3104I)
+             RTVDTAARA  DTAARA(PTDA01 (2 1)) RTNVAR(&P3105I)
+             CHGVAR     VAR(&P3101I) VALUE(&WDATE)
+             CALL       PGM(P31) PARM(&P3101I &P3102I &P3103I +
+                          &P3104I &P3105I &P3101O)
+             CHGVAR     VAR(&DDATE) VALUE(&P3101O)
+             SETATNPGM  PGM(*LIBL/ATN01)
+
+             CALL       PGM(S#S01) PARM(&$USER 'GLM000C' &S0101O)
+             RTVDTAARA  DTAARA(*LDA (152 10)) RTNVAR(&$USERN)
+             CHGVAR     VAR(&S0101I) VALUE(&$USER)
+  START:
+             SNDRCVF    DEV(*FILE) RCDFMT(DSPD1)
+             CHGVAR     VAR(&IN98) VALUE('0')
+
+             IF         COND(&DOPID *EQ '01') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('GLM100C'))
+             IF         COND(&DOPID *EQ '02') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('GLM200C'))
+             IF         COND(&DOPID *EQ '03') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('GLM300C'))
+             IF         COND(&DOPID *EQ '04') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('GLM400C'))
+             IF         COND(&DOPID *EQ '05') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('GLM500C'))
+             IF         COND(&DOPID *EQ '06') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('GLM600C'))
+             IF         COND(&DOPID *EQ '09') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('GLM900C'))
+             IF         COND(&DOPID *EQ '71') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('PTM000C'))
+             IF         COND(&DOPID *EQ '72') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('S#M000'))
+             IF         COND(&DOPID *EQ '90') THEN(RETURN)
+             GOTO       CHKAUT
+
+  CHKAUT:    CALL       PGM(S#S01) PARM(&S0101I &S0102I &S0101O)
+             IF         COND(&S0101O = 'Y') THEN(CALL PGM(&S0102I))
+             ELSE       CMD(CHGVAR VAR(&IN98) VALUE('1'))
+             GOTO       START
+
+             ENDPGM
+

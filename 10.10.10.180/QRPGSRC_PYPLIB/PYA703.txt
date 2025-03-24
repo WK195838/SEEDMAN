@@ -1,0 +1,744 @@
+     H****************************************************************
+     H*            泛太資訊科技開發股份有限公司－版權所有          *
+     H*--------------------------------------------------------------*
+     H*    PROGRAM NAME : PYA703                                     *
+     H*    AUTHOR       : A1138  DAVID.  CHEN                        *
+     H*    CREATE DATE  : 81/03/20                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : MIRS                                       *
+     H*    SUBSYSTEM    : PY                                         *
+     H*    PURPOSE      :所得稅課稅資料維護(A,U,D,I)               *
+     F****************************************************************
+     FPYTDLF05UF  E           K        DISK                      A
+     FSYCMPF  IF  E           K        DISK
+     FPYEMLF04UF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     F            EM0                               KRENAMEEM2
+     FPYA703D CF  E                    WORKSTN
+     F*------------------------------------------------------------***
+     E*: PYDA03 (01-30) :
+     E                    A1         15  2
+     E*: PYDA03 (31-270) :
+     E                    A2         15 16
+     I*----------------------------------------------------------------
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I*
+     I           UDS
+     I                                      101 110 USER
+     I                                      101 107 USER7
+     I                                      203 2080DDATE
+     I                                      139 139 $RMK01
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      201 2040YEAR
+     I*
+     IPYDA03      DS                            512
+     I                                        1  30 A1
+     I                                       31 270 A2
+     I                                      300 301 CTD04
+     I*
+     I            DS
+     I                                        1  10 DTD05
+     I                                        1   8 TD05L8
+     I                                        9  10 TD05R2
+     I*
+     I            DS
+     I                                        1   40TD15D
+     I                                        1   20TD15L2
+     I                                        3   40TD15R2
+     I*
+     I            DS
+     I                                        1   40TD16D
+     I                                        1   20TD16L2
+     I                                        3   40TD16R2
+     I*
+     I            DS
+     I                                        1   60KTD16
+     I                                        1   40TD16Y
+     I                                        5   60TD16M
+     I*
+     I            DS
+     I                                        1   60KYM
+     I                                        1   40KYY
+     I                                        5   60KMM
+     I            DS
+     I                                        1   1 EM321
+     I                                        2   8 EM04
+     I                                        2   2 EM041
+     I                                        3   3 EM042
+     I                                        4   4 EM043
+     I                                        5   8 EM044
+     I                                        1  10 TD99
+     I            DS
+     I                                        1  10 DTD12
+     I                                        1   8 DTD128
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           PYDA03
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYTD     KLIST
+     C                     KFLD           DTD11            公司編碼
+     C                     KFLD           WTD01            年度
+     C                     KFLD           DTD04            格式代號
+     C                     KFLD           DTD05            身份證號
+     C                     KFLD           DTD18            課稅次數編
+     C           KEYTD1    KLIST
+     C                     KFLD           DTD11
+     C                     KFLD           WTD01
+     C                     KFLD           DTD04
+     C                     KFLD           DTD05
+     C                     KFLD           WTD18
+     C           KEYEM     KLIST
+     C                     KFLD           DTD11
+     C                     KFLD           DTD05
+     C           KEYEM2    KLIST
+     C                     KFLD           DTD11
+     C                     KFLD           DTD128
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INITIAL
+     C***
+  01-C           *IN03     DOWEQ'0'
+    C*
+  02-C           SCID      CASEQ'SC01'    RTN100
+    C           SCID      CASEQ'SC02'    RTN200
+  02-C                     END
+    C*
+  01-C                     END
+     C***
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL VALUE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C                     IN   PYDA03
+|    C* INIT. FIELDS -----------------------------------------------***
+|    C                     MOVEL'SC01'    SCID    4
+|    C                     MOVEL*BLANK    DTD11
+|    C                     Z-ADD0         DTD01
+|    C                     MOVEL*BLANK    DTD04
+|    C                     MOVEL*BLANK    DTD05
+|    C                     MOVEL*BLANK    DTD12            員工編號
+|    C                     MOVEL'1'       DOPT
+|    C                     Z-ADD1         DTD18            課稅次數
+|    C*-------------------------------------------------------------***
+|    C*公司別
+|    C                     MOVEL$COR      DTD11
+|    C*
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN100....'SC01' SCREEN MAIN ROUTINE
+      *==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|     *
+| 01-C           *IN03     IFEQ '0'
+|   C           KEYEM     CHAINEM0                  42
+|   C                     EXSR RTN110
+|   C*:--------------------------------:*
+|   C*: RTN110 -> SCREEN CHECK CORRECT :*
+|   C*:--------------------------------:*
+| 02-C           *IN99     IFEQ '0'
+|   C                     EXSR RTN120                     *SCR2 INIT
+|   C                     MOVEL'SC02'    SCID
+|   C*:-------------------------:*
+|   C*: RTN120 -> SCRN2 INITIAL :*
+|   C*:-------------------------:*
+| 02-C                     END
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN110....SCREEN CHECK
+     C*==============================================================*
+03===C           RTN110    BEGSR
+|    C*
+|    C*:------------------:*
+|    C*: CHECK 公司編碼 :*
+|    C*:------------------:*
+| 01-C           DTD11     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01*C                     ELSE
+|   C           DTD11     CHAINCM0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02*C                     ELSE
+| 03-C           CM11      IFEQ *BLANKS
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 03-C                     END
+| 02-C                     END
+| 01-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*:--------------:*
+|    C*: CHECK 年度 :*
+|    C*:--------------:*
+|    C*          DTD01     IFEQ *ZERO
+|    C*                    SETON                     619499
+|    C*                    END
+|    C*  99                GOTO END110
+|    C*
+|    C*:------------------:*
+|    C*: CHECK 格式代號 :*
+|    C*:------------------:*
+| 04-C           DTD04     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 04*C                     ELSE
+|   C                     Z-ADD1         XX      20
+|   C           DTD04     LOKUPA1,XX                    40
+| 05-C           *IN40     IFEQ '1'
+|   C                     MOVE A2,XX     A2TD04
+| 05*C                     ELSE
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 05-C                     END
+| 04-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*:----------------------------:*
+|    C*: CHECK 身份證號及員工編號 :*
+|    C*:----------------------------:*
+| 06-C           DTD05     IFEQ *BLANK
+|   C           DTD12     ANDEQ*BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     636699
+| 06-C                     END
+|    C   99                GOTO END110
+|    C*
+| 07-C           DTD05     IFNE *BLANK
+|   C           KEYEM     CHAINEM0                  40
+| 08-C           *IN40     IFEQ '0'
+|   C                     MOVELEM02      DTD12     P
+| 08*C                     ELSE
+|   C                     MOVEL*BLANK    DTD12
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 08-C                     END
+|   C   99                GOTO END110
+| 07-C                     END
+|    C*
+| 09-C           DTD05     IFEQ *BLANK
+|   C           DTD12     ANDNE*BLANK
+|   C           KEYEM2    CHAINEM2                  40
+| 10-C           *IN40     IFEQ '0'
+|   C                     MOVELEM31      DTD05     P
+| 10*C                     ELSE
+|   C                     MOVEL*BLANK    DTD05
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 10-C                     END
+|   C   99                GOTO END110
+| 09-C                     END
+|    C*
+|    C*:------------------:*
+|    C*: CHECK 作業選擇 :*
+|    C*:------------------:*
+| 11-C           DOPT      IFNE '1'
+|   C           DOPT      ANDNE'2'
+|   C           DOPT      ANDNE'4'
+|   C           DOPT      ANDNE'5'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 11-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     CALL 'P82'
+|    C                     PARM DTD01     P8201I  40
+|    C                     PARM '1'       P8202I  1
+|    C                     PARM '1'       P8203I  1
+|    C                     PARM '2'       P8204I  1
+|    C                     PARM '1'       P8205I  1
+|    C                     PARM           P8211O  40
+|    C                     MOVELP8211O    WTD01   40
+|    C*:------------------------------------------------------:*
+|    C*: KEYTD 公司編碼＋年度＋格式代號＋身份證號＋課稅次數 :*
+|    C*:------------------------------------------------------:*
+|    C*
+|    C                     Z-ADD*ZERO     WTD18   20
+|    C                     Z-ADD*ZERO     KTD15   60
+|    C                     Z-ADD*ZERO     KTD16
+|    C*
+| 12-C           DOPT      IFEQ '1'
+|   C           DTD18     ANDGT1
+|   C           DTD18     SUB  1         WTD18
+|   C           KEYTD1    CHAINTD0                  41
+| 13-C           *IN41     IFEQ '0'
+|   C*
+|   C                     Z-ADDTD16      KTD16
+|   C*
+| 14-C           TD16M     IFEQ 1
+|   C                     ADD  1         TD16M
+|   C                     Z-ADDKTD16     KTD15
+| 14-C                     END
+|   C*
+| 15-C           TD16M     IFGT 1
+|   C           TD16M     ANDLT12
+|   C                     ADD  1         TD16M
+|   C                     Z-ADDKTD16     KTD15
+| 15-C                     END
+|   C*
+| 16-C           TD16M     IFEQ 12
+|   C                     ADD  1         TD16Y
+|   C                     Z-ADD1         TD16M
+|   C                     Z-ADDKTD16     KTD15
+| 16-C                     END
+|   C*
+| 13-C                     END
+| 12-C                     END
+|    C*
+|    C           KEYTD     CHAINTD0                  40
+|    C*
+|    C*新增資料但資料已存在檔案中
+| 17-C           DOPT      IFEQ '1'
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 17-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C* UPDAT,DEL,INQ 但資料不存在檔案中
+| 18-C           DOPT      IFNE '1'
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 18-C                     END
+|    C   99                GOTO END110
+|     *
+| 19-C           DOPT      IFEQ '2'
+|   C           DOPT      OREQ '4'
+| 20-C           TD96      IFNE 0
+|   C           $RMK01    ANDNE'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 20-C                     END
+| 19-C                     END
+|    C   99                GOTO END110
+|     *
+03===C           END110    ENDSR
+      *==============================================================*
+      *          RTN120....'SC02' SCREEN INITIAL
+      *==============================================================*
+04===C           RTN120    BEGSR
+|     *
+| 01-C           DOPT      IFEQ '1'                        *ADD
+|   C                     EXSR RTN800
+|   C*                    EXSR RTN810
+|   C*:------------------------:*
+|   C*: RTN800 -> CLEAR FIELDS :*
+|   C*:------------------------:*
+| 01*C                     ELSE
+|   C                     EXSR RTN810                     *U,D,I
+|   C*:-----------------------------:*
+|   C*: RTN810 -> MOVE DATA TO SCR2 :*
+|   C*:-----------------------------:*
+| 01-C                     END
+|    C*
+| 02-C           DOPT      IFEQ '1'
+|   C           DOPT      OREQ '2'
+|   C                     SETON                     31
+| 02*C                     ELSE
+|   C                     SETOF                     31
+|   C*:---------------------------:*
+|   C*: N31 -> PROTECT ALL FIELDS :*
+|   C*:---------------------------:*
+| 02-C                     END
+|    C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN200....'SC02' SCREEN MAIN ROUTINE
+      *==============================================================*
+05===C           RTN200    BEGSR
+|    C*
+|    C                     EXFMTDSPC2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO END200
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'
+|   C                     MOVE 'SC01'    SCID
+|   C                     GOTO END200
+| 02-C                     END
+|    C*
+| 03-C           DOPT      IFEQ '1'
+|   C           DOPT      OREQ '2'
+|   C                     EXSR RTN820
+|   C*:-------------------------------:*
+|   C*: RTN820 -> CHECK 'SC02' SCREEN :*
+|   C*:-------------------------------:*
+| 03-C                     END
+|    C*
+| 04-C           *IN99     IFEQ '0'
+| 05-C           DOPT      IFNE '5'
+|   C                     EXSR RTN830
+|   C*:------------------------------:*
+|   C*: RTN830 -> MOVE DATA TO FILE  :*
+|   C*:------------------------------:*
+| 05-C                     END
+|   C                     MOVE 'SC01'    SCID
+|   C                     GOTO END200
+| 04-C                     END
+|    C*
+05===C           END200    ENDSR
+      *==============================================================*
+      *          RTN800....CLEAR FIELD WHEN ADD
+      *==============================================================*
+06===C           RTN800    BEGSR
+|     *
+|    C                     Z-ADD*ZERO     TD07
+|    C                     Z-ADD*ZERO     TD08
+|    C                     Z-ADD*ZERO     TD20
+|    C                     MOVEL*BLANK    TD06
+|    C                     MOVEL*BLANK    TD10
+|    C                     MOVEL*BLANK    TD12
+|    C                     MOVEL*BLANK    TD09
+|    C                     MOVEL*BLANK    TD13
+|    C                     MOVEL*BLANK    TD14
+|    C                     Z-ADD*ZERO     TD15D
+|    C                     Z-ADD*ZERO     TD16D
+|    C*
+|    C           KEYEM     CHAINEM0                  42
+| 01-C           *IN42     IFEQ '0'
+| 02-C           EM321     IFEQ 'F'
+|   C                     MOVEL'3'       TD06
+| 02-C                     END
+| 03-C           EM311     IFEQ '1'
+|   C                     MOVEL'A'       TD10
+| 03-C                     END
+|   C                     MOVELEM02      TD12
+|   C                     MOVELEM03      TD13
+|   C                     MOVELEM39      TD14
+|   C                     MOVELDTD01     TD15D
+|   C                     MOVE '01'      TD15D
+|   C                     MOVELDTD01     TD16D
+|   C                     MOVE '12'      TD16D
+| 01*C                     ELSE
+|   C                     SUB  1         WTD01   40
+|   C           KEYTD     CHAINTD0                  40
+|   C                     ADD  1         WTD01
+| 04-C           *IN40     IFEQ '0'
+|   C                     Z-ADDDTD01     TD15L2
+|   C                     Z-ADD01        TD15R2
+|   C                     Z-ADDDTD01     TD16L2
+|   C                     Z-ADD12        TD16R2
+| 04-C                     END
+| 01-C                     END
+|    C* EVA
+| 05-C           DOPT      IFEQ '1'
+|   C           DTD18     ANDGT1
+|   C                     MOVE TD16M     TD15D
+| 05-C                     END
+|    C*
+|    C*
+06===C           END800    ENDSR
+     C*==============================================================*
+     C*          RTN810....MOVE DATA TO 'SC02' SCREEN
+     C*==============================================================*
+07===C           RTN810    BEGSR
+|    C*
+|    C                     CALL 'P82'
+|    C                     PARM DTD01     P8201I  40
+|    C                     PARM '1'       P8202I  1
+|    C                     PARM '1'       P8203I  1
+|    C                     PARM '2'       P8204I  1
+|    C                     PARM '1'       P8205I  1
+|    C                     PARM           P8211O  40
+|    C                     MOVELP8211O    WTD01   40
+|    C                     Z-ADDWTD01     TD01
+|    C*
+|    C*                    CALL 'P39'
+|    C*                    PARM TD15      P3901I  60
+|    C*                    PARM '2'       P3902I  1
+|    C*                    PARM '1'       P3903I  1
+|    C*                    PARM DFMT      P3904I  1
+|    C*                    PARM DTYPE     P3905I  1
+|    C*                    PARM           P3911O  60
+|    C*                    Z-ADDP3911O    TD15D
+     C                     Z-ADDTD15      TD15D
+|    C*
+|    C*                    CALL 'P39'
+|    C*                    PARM TD16      P3901I  60
+|    C*                    PARM '2'       P3902I  1
+|    C*                    PARM '1'       P3903I  1
+|    C*                    PARM DFMT      P3904I  1
+|    C*                    PARM DTYPE     P3905I  1
+|    C*                    PARM           P3911O  60
+|    C*                    Z-ADDP3911O    TD16D
+     C                     Z-ADDTD16      TD16D
+|    C*
+|    C                     MOVELDTD11     TD11
+|    C                     MOVELDTD04     TD04
+|    C                     MOVELDTD05     TD05
+|    C                     Z-ADDDTD18     TD18
+|    C*
+|    C*:--------------------------:*
+|    C*:查詢模式--> UNLOCK DATA :*
+|    C*:--------------------------:*
+| 01-C           DOPT      IFEQ '5'
+|   C           *LOVAL    SETLLTD0
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+      *==============================================================*
+      *          RTN820....CHECK 'SC02' SCREEN
+      *==============================================================*
+08===C           RTN820    BEGSR
+|     *
+|    C*:-------------------:*
+|    C*:給付總額不可為零 :*
+|    C*:-------------------:*
+|    C**         TD07      IFLE 0
+|    C**                   SETON                     659099
+|    C**                   END
+|    C** 99                GOTO END820
+|    C**         TD08      IFGT TD07
+|    C**                   SETON                     708999
+|    C**                   END
+|    C** 99                GOTO END820
+|    C**
+|    C*:------------------------------:*
+|    C*:證號別須等於' ' '1' '3' '4' :*
+|    C*:------------------------------:*
+| 01-C           TD06      IFNE ' '
+|   C           TD06      ANDNE'1'
+|   C           TD06      ANDNE'3'
+|   C           TD06      ANDNE'4'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 01-C                     END
+|    C   99                GOTO END820
+|     *
+|    C*:---------------------:*
+|    C*:身份證號為統一編號 :*
+|    C*:---------------------:*
+| 02-C           TD06      IFEQ '1'
+|   C           TD05R2    ANDNE*BLANKS
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 02-C                     END
+|    C   99                GOTO END820
+|     *
+|    C*:----------------------------:*
+|    C*:證號錯誤須等於' ' 'A' 'B' :*
+|    C*:----------------------------:*
+| 03-C           TD10      IFNE ' '
+|   C           TD10      ANDNE'A'
+|   C           TD10      ANDNE'B'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6799
+| 03-C                     END
+|    C   99                GOTO END820
+|     *
+|    C*:-----------------:*
+|    C*: CHECK身份證號 :*
+|    C*:-----------------:*
+| 04-C           TD10      IFEQ ' '
+| 05-C           TD06      IFEQ *BLANKS
+|   C                     CALL 'P02'
+|   C                     PARM           DTD05
+|   C                     PARM           P02O1   1
+|   C                     PARM           P02O2   1
+| 06-C           P02O1     IFEQ 'N'
+|   C                     MOVEL'UPT0045' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6799
+| 06-C                     END
+| 05-C                     END
+|    *
+| 07-C           TD06      IFEQ '1'
+|   C                     CALL 'P03'
+|   C                     PARM           TD05L8
+|   C                     PARM           P03O    1
+| 08-C           P03O      IFEQ 'N'
+|   C                     MOVEL'UPT0044' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6799
+| 08-C                     END
+| 07-C                     END
+| 04-C                     END
+|    C   99                GOTO END820
+|     *
+|    C*:------------------:*
+|    C*: CHECK 房屋稅籍 :*
+|    C*:------------------:*
+| 09-C           TD04      IFEQ CTD04
+|   C           TD04      OREQ '9A'
+| 10-C           TD09      IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6899
+| 10-C                     END
+| 09-C                     END
+|    C   99                GOTO END820
+|     *
+|    C*:------------------:*
+|    C*: CHECK 所得月份 :*
+|    C*:------------------:*
+| 11-C           TD15D     IFEQ *ZERO
+|   C                     Z-ADDDTD01     TD15L2
+|   C                     Z-ADD01        TD15R2
+| 11-C                     END
+|    C*
+| 12-C           TD15R2    IFGT 12
+|   C           TD15R2    ORLT 1
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6999
+| 12-C                     END
+|    C   99                GOTO END820
+|    C*
+| 13-C           TD16D     IFEQ *ZERO
+|   C                     Z-ADDDTD01     TD16L2
+|   C                     Z-ADD12        TD16R2
+| 13-C                     END
+|     *
+| 14-C           TD16R2    IFGT 12
+|   C           TD16R2    ORLT 1
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7199
+| 14-C                     END
+|    C   99                GOTO END820
+|     *
+| 15-C           TD15D     IFGT TD16D
+|   C                     MOVEL'UPT1011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     697199
+| 15-C                     END
+|    C   99                GOTO END820
+|    C*
+08===C           END820    ENDSR
+     C*==============================================================*
+     C*          RTN830....MOVE DATA TO FILE
+     C*==============================================================*
+09===C           RTN830    BEGSR
+|    C*PYTDPF
+|    C                     CALL 'P39'
+|    C                     PARM TD15D     P3901I  60
+|    C                     PARM '1'       P3902I  1
+|    C                     PARM '1'       P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           TD15      PARM           P3911O  60
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM TD16D     P3901I  60
+|    C                     PARM '1'       P3902I  1
+|    C                     PARM '1'       P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           TD16      PARM           P3911O  60
+|    C*
+|    C*公司統一由工廠報稅，無論工廠、公司都寫入工廠統編
+|    C*
+|    C           '01'      CHAINCM0                  41
+| 01-C           DOPT      IFEQ '1'
+|   C           DOPT      OREQ '2'
+|   C                     MOVELCM11      TD02
+|   C                     MOVELCM04      TD17
+|   C                     Z-ADD$A8YMD    TD97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     TD98
+| 01-C                     END
+|    C*
+| 02-C           DOPT      IFEQ '1'
+|   C                     Z-ADDWTD01     TD01
+|   C                     MOVELDTD11     TD11
+|   C                     MOVELDTD04     TD04
+|   C                     MOVELDTD05     TD05
+|   C                     Z-ADDDTD18     TD18
+|   C                     Z-ADD0         TD03
+|   C                     Z-ADD0         TD96
+|   C                     WRITETD0
+| 02-C                     END
+|    C*
+| 03-C           DOPT      IFEQ '2'
+|   C           KEYEM     CHAINEM0                  41
+| 04-C           *IN41     IFEQ '0'
+| 05-C           EM39      IFNE *BLANK
+|   C                     MOVELEM39      TD14
+| 05-C                     END
+| 04-C                     END
+|   C                     UPDATTD0
+| 03-C                     END
+|    C*
+|    C*更新PYEMPF的最近申報年月EM127
+|    C           KEYEM     CHAINEM0                  40
+| 06-C           *IN40     IFEQ '0'
+|   C*
+| 07-C           DOPT      IFEQ '1'
+|   C           DOPT      OREQ '2'
+|   C                     Z-ADDTD16      EM127
+|   C                     UPDATEM0
+| 07-C                     END
+|   C*
+| 08-C           DOPT      IFEQ '4'
+|   C                     Z-ADDTD15      KYM
+|   C*
+| 09-C           KMM       IFEQ 1
+|   C           KYY       SUB  1         KYY
+|   C                     Z-ADD1         KMM
+|   C                     Z-ADDKYM       EM127
+| 09-C                     END
+|   C*
+| 10-C           KMM       IFGT 1
+|   C           KMM       SUB  1         KMM
+|   C                     Z-ADDKYM       EM127
+| 10-C                     END
+|   C*
+|   C                     UPDATEM0
+| 08-C                     END
+|   C*
+| 06-C                     END
+|    C*
+| 11-C           DOPT      IFEQ '4'
+|   C                     DELETTD0
+| 11-C                     END
+|    C*
+09===C           END830    ENDSR
+     C*
+

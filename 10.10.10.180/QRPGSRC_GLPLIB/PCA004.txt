@@ -1,0 +1,237 @@
+      ****************************************************************
+      *   人頭馬匯東洋酒股份有限公司－版權所有      TEL:5042266    *
+      *                                                              *
+      * PROGRAM NAME : PCA004                                        *
+      * AUTHER       : TINA                                          *
+      * CREATE DATE  : 82/10/07                                      *
+      * UPDATE DATE  :                                               *
+      * SYSTEM       :人頭馬匯東                                   *
+      * SUBSYSTEM    :零用金系統                                   *
+      * REMARK       :支付撥補／取消作業　　　　                   *
+      ****************************************************************
+     FPT#BPF  IF  E           K        DISK
+     FPCA004D CF  E                    WORKSTN
+     F                                              KINFDS DSPFDS
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      201 2080$A8YMD
+     I                                      501 505 $WRHUS
+     I                                      513 513 $WRHTY
+     I                                      598 5990$PRTID
+     I                                      601 602 DCA01
+     I                                      603 603 COMPS
+     I                                      604 604 COMPE
+     I                                      605 605 DSEL1
+     I                                      606 606 DSEL2
+     I                                      607 607 COMP
+     I                                      611 6180YCA10S
+     I                                      621 6280YCA10E
+     I                                      631 639 DCA02S
+     I                                      641 649 DCA02E
+     I                                      651 6580YDATE
+     I                                      661 6660DDATE
+     I*
+     I* FOR F4 HELP -- GET CURSOR POSITION
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+      *==============================================================*
+      *          IDENTIFY A PARAMETER LIST
+      *==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+     C  N10                EXSR RTN010                     .INIT SCREEN
+  01-C           *IN03     DOUEQ'1'
+    C           *IN99     OREQ '0'
+    C                     EXFMTDSPD1
+    C                     MOVEA*ALL'0'   *IN,60
+      *
+  02-C           *IN03     IFEQ '0'
+    C                     EXSR RTN100                     .CHECK      ?
+  02-C                     END
+  01-C                     END
+     C*
+     C                     EXSR OUTLDA
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+      *===============================================================*
+      *          RTN010....INIT SCREEN
+      *===============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     MOVEL*BLANKS   DCA01
+|    C                     MOVEL*BLANKS   COMP
+|    C                     MOVEL*BLANKS   DSEL1
+|    C                     MOVEL*BLANKS   DSEL2
+|    C                     MOVEL*BLANKS   DCA02S
+|    C                     MOVEL*BLANKS   DCA02E
+|    C                     Z-ADD0         DCA10S
+|    C                     Z-ADD0         DCA10E
+|    C                     Z-ADD0         YCA10S
+|    C                     Z-ADD0         YCA10E
+|    C                     Z-ADD0         DDATE
+|    C                     Z-ADD0         YDATE
+|    C                     MOVEL'SCR001'  APPSCR  6
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+      *===============================================================*
+      *          RTN100....CHECK SCREEN
+      *===============================================================*
+02===C           RTN100    BEGSR
+|    C*公司
+| 01-C           DCA01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 01-C                     END
+|    C   99                GOTO END100
+| 01-C           DCA01     SETLL#B0                      40
+     C           *IN40     IFEQ '0'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 01-C                     END
+|    C   99                GOTO END100
+|    C* CHK辦事處
+| 02-C           COMP      IFEQ *BLANKS
+|   C                     MOVE *LOVAL    COMPS
+|   C                     MOVE *HIVAL    COMPE
+| 02*C                     ELSE
+|   C                     MOVE COMP      COMPS
+|   C                     MOVE COMP      COMPE
+| 02-C                     END
+|    C*
+| 03-C           DCA10S    IFEQ 0
+|   C                     Z-ADD0         DCA10S
+| 03-C                     END
+| 04-C           DCA10E    IFEQ 0
+|   C                     Z-ADD123199    DCA10E
+| 04-C                     END
+|    C*(CHECK DATE)-登帳日期
+| 05-C           DCA10S    IFNE 0
+|   C                     CALL 'P09'
+|   C                     PARM DCA10S    P0901I  60
+|   C                     PARM           P0901O  1
+| 06-C           P0901O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 06-C                     END
+| 05-C                     END
+|    C   99                GOTO END100
+|    C*
+| 07-C           DCA10E    IFNE 0
+|   C                     CALL 'P09'
+|   C                     PARM DCA10E    P0901I  60
+|   C                     PARM           P0901O  1
+| 08-C           P0901O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 08-C                     END
+| 07-C                     END
+|    C   99                GOTO END100
+|   C* 日期轉換
+| 05-C           DCA10S    IFNE 0
+     C                     Z-ADDDCA10S    WCA10S  80
+|   C                     CALL 'P31'
+|   C                     PARM WCA10S    P310I1  80
+|   C                     PARM '3'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           YCA10S    PARM           P3111O  80
+| 06-C                     END
+|   C*
+|   C* 日期轉換
+| 05-C           DCA10E    IFNE 0
+     C                     Z-ADDDCA10E    WCA10E  80
+|   C                     CALL 'P31'
+|   C                     PARM WCA10E    P310I1  80
+|   C                     PARM '3'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           YCA10E    PARM           P3111O  80
+| 06-C                     END
+|    C**
+| 09-C           YCA10S    IFGT YCA10E
+|   C                     MOVEL'UPT0041' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     626399
+| 09-C                     END
+|    C   99                GOTO END100
+|    C*零用金號碼
+| 10-C           DCA02S    IFEQ *BLANKS
+|   C                     MOVE *LOVAL    DCA02S
+| 10-C                     END
+| 11-C           DCA02E    IFEQ *BLANKS
+|   C                     MOVE *HIVAL    DCA02E
+| 11-C                     END
+|    C*
+| 12-C           DCA02S    IFGT DCA02E
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     646599
+| 12-C                     END
+|    C   99                GOTO END100
+|    C*作業別
+| 13-C           DSEL1     IFEQ *BLANKS
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 13-C                     END
+|    C   99                GOTO END100
+|    C*選擇碼
+| 14-C           DSEL2     IFEQ *BLANKS
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6799
+| 14-C                     END
+|    C   99                GOTO END100
+|    C*(CHECK WHEN DATE EQUAL 0)
+| 15-C           DSEL1     IFEQ 'A'
+| 15-C           DDATE     ANDEQ0
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6899
+| 15-C                     END
+|    C   99                GOTO END100
+|    C*
+| 16-C           DDATE     IFNE 0
+|   C                     Z-ADDDDATE     WDATE   80
+|   C*
+|   C                     CALL 'P31'
+|   C                     PARM WDATE     P3101I  80
+|   C                     PARM '3'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           YDATE     PARM           P3111O  80
+     C*
+     C           YDATE     IFGT $A8YMD
+|   C                     MOVEL'UPT0120' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6899
+| 14-C                     END
+| 16-C                     END
+|    C   99                GOTO END100
+     C*
+02===C           END100    ENDSR
+      *===============================================================*
+      *          OUTLDA....OUT LDA
+      *===============================================================*
+03===C           OUTLDA    BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     OUT  *NAMVAR
+|    C*
+03===C           ENDLDA    ENDSR
+

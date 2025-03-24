@@ -1,0 +1,579 @@
+     A****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA4031                                    *
+     H*    PROGRAM NAME :員工特休結算作業                          *
+     H*    AUTHOR       :                                            *
+     H*    CREATE DATE  :                                            *
+     H*    UPDATE DATE  : 91/10/31 A1336 KLAUS                       *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     F*PYVAPF  IF  E           K        DISK
+     FPYLTPF  IF  E           K        DISK
+     FPYPYPF  IF  E           K        DISK
+     FPYPDPF  IF  E           K        DISK
+     FPYPD1PF IF  E           K        DISK
+     FPYPSPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPY2HPF  UF  E           K        DISK                      A
+     F*PY2HLF01UF  E           K        DISK                      A
+     I*================================================================
+     I           UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      203 2060$A8YM
+     I                                      201 2040$A8Y
+     I                                      211 2160DDATE
+     I*
+     I                                      501 502 DEM01
+     I                                      503 5070DYM
+     I                                      503 5050DYY
+     I                                      506 5070DMM
+     I                                      508 5130WYM
+     I                                      508 5110WYY
+     I****                                  514 5190WYM1
+     I                                      514 5170WYY1
+     I/COPY PYDDSSRC,PYPMDS01
+     I/COPY PYRPGSRC,PYC09I
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEY2H     KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           WYY              年度
+     C           KEYPY     KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           EM02             員工編號
+     C           KEYLT     KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           WYY1             年度
+     C*PYPMPF
+     C                     MOVEL'01'      PM01    2
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           EM01             公司編號
+     C           KEYPDA    KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           PD102            薪資項目
+     C           KEYPS     KLIST
+     C                     KFLD           EM06             職等編號
+     C                     KFLD           EM07             職級編號
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C****                 Z-ADD0         WYM1
+     C*
+     C           KEYPM     CHAINPM0                  41
+  01-C           *IN41     IFEQ '0'
+    C*
+    C*-------------------------------------------------------------***
+    C           KEY2H     CHAINH20                  43
+  02-C           *IN43     IFEQ '1'
+    C*
+     C           WYY       SUB  1         WYY1
+    C                     MOVELEM01      H201      P      公司
+    C                     MOVELEM02      H202      P      員工
+    C                     Z-ADDWYY1      H203             特休年度
+    C                     Z-ADDWYM       H207             處理年月
+    C*-------------------------------------------------------------***
+    C*特休天數計算：（特休時數＝特休天數＊８）
+    C*
+    C                     Z-ADD*ZERO     H204
+    C*
+    C*特休基準年月＝當年度的１２月
+    C*　　　（ＥＸ：如計算９１年度之特休，特休基準年月＝９１／１２）
+    C*
+    C                     Z-ADD*ZERO     H203YM  60       本年基準年月
+    C                     MOVELH203      H203YM
+    C                     MOVE 12        H203YM
+    C                     Z-ADD*ZERO     YMD     80
+    C                     MOVELH203YM    YMD
+    C                     MOVE 31        YMD
+    C*
+    C*工作年月＝基準年月－到職日期年月＋１
+    C*
+    C                     Z-ADD*ZERO     WMM     40
+    C                     Z-ADD*ZERO     KMM     40
+    C                     Z-ADD*ZERO     WRKY    20
+    C                     Z-ADD*ZERO     WRKM    20
+    C                     CALL 'P33'
+    C                     PARM EM13      P3301I  80       到職日
+    C                     PARM YMD       P3302I  80
+    C                     PARM '2'       P3303I  1
+    C                     PARM '1'       P3304I  1
+    C           WMM       PARM           P3311O  70
+    C                     PARM           P3312O  20
+    C                     ADD  1         WMM              工作總月數
+    C**---------------------------------------------------------------
+    C*計算留職停薪月份總數
+  03-C           EM261     IFNE 0
+    C           EM261     DIV  30        KMM
+    C*須扣除留職停薪時段才是工作總月數
+    C           WMM       SUB  KMM       WMM
+  03-C                     END
+    C                     Z-ADDWMM       H216
+    C**---------------------------------------------------------------
+    C           WMM       DIV  12        WRKY             工作年數
+    C                     MVR            WRKM             工作月數
+    C*
+    C                     Z-ADD*ZERO     DAY     52
+    C                     Z-ADD*ZERO     DAY1    52
+    C                     Z-ADD*ZERO     AA      20
+    C                     Z-ADD*ZERO     BB      11
+    C*----------------------------------------------------------------
+    C*判斷本年特休天數
+  04-C                     SELEC
+    C*工作年月＜１年
+    C*特休天數＝０天
+    C           WMM       WHLT 12
+    C                     Z-ADD0         H204
+    C*工作年月＞１年　且　＜２年者，
+    C*特休天數＝７＊工作月／１２　
+    C           WMM       WHGT 12
+    C           WMM       ANDLT24
+    C           WRKM      MULT 7         DAY
+    C           DAY       DIV  12        DAY
+    C                     Z-ADDDAY       AA
+    C                     Z-ADDDAY       BB
+    C                     Z-ADDAA        H204
+    C*
+  05-C           BB        IFGT 0.5
+    C                     ADD  1         H204
+  05*C                     ELSE
+    C                     ADD  0.5       H204
+  05-C                     END
+    C*
+    C*工作年月＞＝２年　且　＜＝３年者，
+    C*特休天數＝７天
+    C           WMM       WHGE 24
+    C           WMM       ANDLE36
+    C                     Z-ADD7         H204
+    C*
+    C*工作年月＞３年　且　＜４年者，
+    C*特休天數＝（１０＊工作月／１２）＋（７＊（１２－工作月）／１２）
+    C           WMM       WHGT 36
+    C           WMM       ANDLT48
+    C           WRKM      MULT 10        DAY1
+    C           DAY1      DIV  12        DAY1
+    C*
+    C           12        SUB  WRKM      WRKM
+    C           WRKM      MULT 7         DAY
+    C           DAY       DIV  12        DAY
+    C*
+    C                     ADD  DAY1      DAY
+    C                     Z-ADDDAY       AA
+    C                     Z-ADDDAY       BB
+    C                     Z-ADDAA        H204
+    C*
+  06-C           BB        IFGT 0.5
+    C                     ADD  1         H204
+  06*C                     ELSE
+    C                     ADD  0.5       H204
+  06-C                     END
+    C*
+    C*工作年月＞＝４年　且　＜＝５年者，
+    C*特休天數＝１０天
+    C           WMM       WHGE 48
+    C           WMM       ANDLE60
+    C                     Z-ADD10        H204
+    C*
+    C*工作年月＞５年　且　＜６年者，
+    C*特休天數＝（１４＊工作月／１２）＋（１０＊（１２－工作月）／１２）
+    C           WMM       WHGT 60
+    C           WMM       ANDLT72
+    C           WRKM      MULT 14        DAY1
+    C           DAY       DIV  12        DAY1
+    C*
+    C           12        SUB  WRKM      WRKM
+    C           WRKM      MULT 7         DAY
+    C           DAY       DIV  12        DAY
+    C*
+    C                     ADD  DAY1      DAY
+    C                     Z-ADDDAY       AA
+    C                     Z-ADDDAY       BB
+    C                     Z-ADDAA        H204
+    C*
+  07-C           BB        IFGT 0.5
+    C                     ADD  1         H204
+  07*C                     ELSE
+    C                     ADD  0.5       H204
+  07-C                     END
+    C*
+    C*工作年月＞＝６年　且　＜＝１０年者，
+    C*特休天數＝１４天
+    C           WMM       WHGE 72
+    C           WMM       ANDLE120
+    C                     Z-ADD14        H204
+    C*
+    C*工作年月＞１０年　且　＜１１年者，
+    C*特休天數＝１４＋（工作月／１２）
+    C           WMM       WHGT 120
+    C           WMM       ANDLT132
+    C           WRKM      DIV  12        DAY
+    C                     ADD  14        DAY
+    C                     Z-ADDDAY       AA
+    C                     Z-ADDDAY       BB
+    C                     Z-ADDAA        H204
+    C*
+  08-C           BB        IFGT 0.5
+    C                     ADD  1         H204
+  08*C                     ELSE
+    C                     ADD  0.5       H204
+  08-C                     END
+    C*
+    C*工作年月＞＝１１年者，
+    C*特休天數＝１４＋（工作年－１０）＋（工作月／１２）
+    C           WMM       WHGE 132
+    C                     ADD  14        WRKY
+    C           WRKY      SUB  10        WRKY
+    C           WRKM      DIV  12        DAY
+    C                     ADD  WRKY      DAY
+    C                     Z-ADDDAY       AA
+    C                     Z-ADDDAY       BB
+    C                     Z-ADDAA        H204
+    C*
+  09-C           BB        IFGT 0.5
+    C                     ADD  1         H204
+  09*C                     ELSE
+    C                     ADD  0.5       H204
+  09-C                     END
+    C*
+    C*特休最多加至３０天
+  10-C           H204      IFGT 30
+    C                     Z-ADD30        H204
+  10-C                     END
+    C*
+  04-C                     END
+    C*
+    C*-------------------------------------------------------------***
+    C*計算基準計薪總時數：
+    C*去年未休天數＜＝去年特休總數之５０％則全部領特休未休代金。
+    C*去年未休天數＞＝去年特休總數之５０％才可遞延，
+    C*　　　　　　　　超出５０％之時數可遞延至明年。
+    C*
+    C                     SUB  1         WYY1             去年度
+    C*
+    C                     Z-ADD*ZERO     HR      41       基準時數
+    C*
+    C                     Z-ADD*ZERO     TOT1    41
+    C                     Z-ADD*ZERO     FLDT1   41       去年可休總時數
+    C                     Z-ADD*ZERO     FLDT2   41       去年已休總時數
+    C                     Z-ADD*ZERO     FLDT3   41       去年未休總時數
+    C                     Z-ADD*ZERO     H205             年假折發－天數
+    C                     Z-ADD*ZERO     H205H            年假折發－時數
+    C                     Z-ADD*ZERO     H208             去年可休年假－天
+    C                     Z-ADD*ZERO     H208H            去年可休年假－時
+    C                     Z-ADD*ZERO     H209             去年已休年假－天
+    C                     Z-ADD*ZERO     H209H            去年已休年假－時
+    C                     Z-ADD*ZERO     H210             去年未休年假－天
+    C                     Z-ADD*ZERO     H210H            去年未休年假－時
+    C*
+    C*LT10=本年度特休年假
+    C*LT11=本年已休－天 LT13=去年轉休－天 LT15=明年預借－天
+    C*LT12=本年已休－時 LT14=去年轉休－時 LT16=明年預借－時
+    C*
+    C           KEYLT     CHAINLT0                  40
+  11-C           *IN40     IFEQ '0'
+    C*
+    C                     Z-ADDLT15      LT15L   30
+    C                     Z-ADDLT16      LT16L   10
+    C*
+    C           LT10      ADD  LT13      TOT1    41
+    C                     ADD  LT15      TOT1
+    C           TOT1      MULT 8         FLDT1   41
+    C                     ADD  LT14      FLDT1
+    C                     ADD  LT16      FLDT1            去年可休總時數
+    C*
+    C           LT11      MULT 8         FLDT2   41
+    C                     ADD  LT12      FLDT2            去年已休總時數
+    C*
+    C           FLDT1     SUB  FLDT2     FLDT3   41       去年未休總時數
+    C*
+  11-C                     END
+    C                     ADD  1         WYY1
+    C*
+    C*去年可休年假（天數．時數）
+  12-C           FLDT1     IFNE *ZERO
+    C           FLDT1     DIV  PM101     H208
+    C                     MVR            H208H
+  12-C                     END
+    C*
+    C*去年已休年假（天數．時數）
+  13-C           FLDT2     IFNE *ZERO
+    C           FLDT2     DIV  PM101     H209
+    C                     MVR            H209H
+  13-C                     END
+    C*
+    C*去年未休年假（天數．時數）
+  14-C           FLDT3     IFNE *ZERO
+    C           FLDT3     DIV  PM101     H210
+    C                     MVR            H210H
+  14-C                     END
+    C*
+    C*折發基準時數＝去年特休時數之５０％
+    C           LT10      MULT PM101     HR
+    C           HR        MULT 0.5       HR
+    C*
+    C*年假折發（天數．時數）
+    C*最多只可折發去年特休時數之５０％
+  15-C           FLDT3     IFGE HR
+    C           FLDT3     SUB  HR        CC      41
+    C           CC        DIV  PM101     H210             去年未休－天數
+    C                     MVR            H210H            去年未休－時數
+    C           HR        DIV  PM101     H205             可折發天數
+    C                     MVR            H205H            可折發時數
+  15*C                     ELSE
+    C           FLDT3     DIV  PM101     H205
+    C                     MVR            H205H
+  15-C                     END
+    C*-------------------------------------------------------------***
+    C           KEYPS     CHAINPS0                  40
+    C*外籍人員不發放折發代金
+    C*職稱代碼=(B1,DA,DB,DC,DD)不發放折發代金
+    C*職等=(11,12)不發放折發代金
+  16-C           EM321     IFEQ 'F'                        外國人
+    C*911018S   EM05      OREQ 'B1'
+    C*          EM05      OREQ 'DA'
+    C*          EM05      OREQ 'DB'
+    C*          EM05      OREQ 'DC'
+    C*          EM05      OREQ 'DD'
+    C*          PS01      OREQ '11'
+    C*911018E   PS01      OREQ '12'
+    C                     Z-ADD*ZERO     H206
+    C*
+  16*C                     ELSE
+    C*
+    C*計算出應發代金之計算基準金額：
+    C*以基準檔之項目金額計算
+    C*
+    C                     Z-ADD*ZERO     SAR     70
+    C                     Z-ADD*ZERO     HMNY    81       時薪
+    C                     Z-ADD*ZERO     H206
+    C*
+    C           KEYPY     CHAINPYPYPF               40
+  17-C           *IN40     IFEQ '0'
+    C                     Z-ADDPY03      SAR
+    C                     Z-ADDPY03      H211             本俸金額
+  17-C                     END
+    C*
+    C           DEM01     SETLLPD10
+    C           DEM01     READEPD10                     46
+  18-C           *IN46     DOWEQ'0'
+    C*
+    C                     SETOF                     45
+    C           KEYPDA    CHAINPD0                  45
+    C  N45                ADD  PD04      SAR
+    C*
+    C           DEM01     READEPD10                     46
+  18-C                     END
+    C*
+    C*領生產獎金者以績效獎金代替
+  19-C           EM133     IFEQ 'A'
+    C           EM133     OREQ 'B'
+    C           KEYPS     CHAINPS0                  40
+    C  N40                ADD  PS10      SAR
+  19-C                     END
+    C*
+    C*-------------------------------------------------------------***
+    C*可折日數（四捨五入）
+  20-C           FLDT3     IFLT HR
+    C                     Z-ADDFLDT3     HR
+  20-C                     END
+    C                     Z-ADD*ZERO     WH205   42
+    C           HR        DIV  PM101     WH205
+    C*-------------------------------------------------------------***
+    C*(薪項加總）／３０＊剩餘天數＝休假代金
+    C           SAR       DIV  30        HMNY             日薪
+    C           HMNY      MULT WH205     H206      H      折發金額
+    C*-------------------------------------------------------------***
+    C*折發金額不可小於零
+  21-C           H206      IFLE *ZERO
+    C                     Z-ADD*ZERO     H206
+  21-C                     END
+    C*
+  16-C                     END
+    C*
+    C                     Z-ADD$A8YMD    H297
+    C                     TIME           H298
+    C                     MOVEL$USER     H299
+    C*
+    C                     WRITEH20
+    C*-------------------------------------------------------------***
+    C*911129
+  02*C                     ELSE
+    C*
+    C                     MOVELEM01      H201      P      公司
+    C                     MOVELEM02      H202      P      員工
+    C                     Z-ADDWYM       H207             處理年月
+    C*
+    C*計算基準計薪總時數：
+    C*去年未休天數＜＝去年特休總數之５０％則全部領特休未休代金。
+    C*去年未休天數＞＝去年特休總數之５０％才可遞延，
+    C*　　　　　　　　超出５０％之時數可遞延至明年。
+    C*
+    C                     SUB  1         WYY1             去年度
+    C*
+    C                     Z-ADD*ZERO     HR      41       基準時數
+    C*
+    C                     Z-ADD*ZERO     TOT1    41
+    C                     Z-ADD*ZERO     FLDT1   41       去年可休總時數
+    C                     Z-ADD*ZERO     FLDT2   41       去年已休總時數
+    C                     Z-ADD*ZERO     FLDT3   41       去年未休總時數
+    C                     Z-ADD*ZERO     H205             年假折發－天數
+    C                     Z-ADD*ZERO     H205H            年假折發－時數
+    C                     Z-ADD*ZERO     H208             去年可休年假－天
+    C                     Z-ADD*ZERO     H208H            去年可休年假－時
+    C                     Z-ADD*ZERO     H209             去年已休年假－天
+    C                     Z-ADD*ZERO     H209H            去年已休年假－時
+    C                     Z-ADD*ZERO     H210             去年未休年假－天
+    C                     Z-ADD*ZERO     H210H            去年未休年假－時
+    C*
+    C*LT10=本年度特休年假
+    C*LT11=本年已休－天 LT13=去年轉休－天 LT15=明年預借－天
+    C*LT12=本年已休－時 LT14=去年轉休－時 LT16=明年預借－時
+    C*
+    C           KEYLT     CHAINLT0                  40
+  22-C           *IN40     IFEQ '0'
+    C*
+    C                     Z-ADDLT15      LT15L   30
+    C                     Z-ADDLT16      LT16L   10
+    C*
+    C           LT10      ADD  LT13      TOT1    41
+    C                     ADD  LT15      TOT1
+    C           TOT1      MULT 8         FLDT1   41
+    C                     ADD  LT14      FLDT1
+    C                     ADD  LT16      FLDT1            去年可休總時數
+    C*
+    C           LT11      MULT 8         FLDT2   41
+    C                     ADD  LT12      FLDT2            去年已休總時數
+    C*
+    C           FLDT1     SUB  FLDT2     FLDT3   41       去年未休總時數
+    C*
+  22-C                     END
+    C                     ADD  1         WYY1
+    C*
+    C*去年可休年假（天數．時數）
+  23-C           FLDT1     IFNE *ZERO
+    C           FLDT1     DIV  PM101     H208
+    C                     MVR            H208H
+  23-C                     END
+    C*
+    C*去年已休年假（天數．時數）
+  24-C           FLDT2     IFNE *ZERO
+    C           FLDT2     DIV  PM101     H209
+    C                     MVR            H209H
+  24-C                     END
+    C*
+    C*去年未休年假（天數．時數）
+  25-C           FLDT3     IFNE *ZERO
+    C           FLDT3     DIV  PM101     H210
+    C                     MVR            H210H
+  25-C                     END
+    C*
+    C*折發基準時數＝去年特休時數之５０％
+    C           LT10      MULT PM101     HR
+    C           HR        MULT 0.5       HR
+    C*
+    C*年假折發（天數．時數）
+    C*最多只可折發去年特休時數之５０％
+  26-C           FLDT3     IFGE HR
+    C           FLDT3     SUB  HR        CC      41
+    C           CC        DIV  PM101     H210             去年未休－天數
+    C                     MVR            H210H            去年未休－時數
+    C           HR        DIV  PM101     H205             可折發天數
+    C                     MVR            H205H            可折發時數
+  26*C                     ELSE
+    C           FLDT3     DIV  PM101     H205
+    C                     MVR            H205H
+  26-C                     END
+    C*-------------------------------------------------------------***
+    C           KEYPS     CHAINPS0                  40
+    C*外籍人員不發放折發代金
+    C*職稱代碼=(B1,DA,DB,DC,DD)不發放折發代金
+    C*職等=(11,12)不發放折發代金
+  27-C           EM321     IFEQ 'F'                        外國人
+    C*911018S   EM05      OREQ 'B1'
+    C*          EM05      OREQ 'DA'
+    C*          EM05      OREQ 'DB'
+    C*          EM05      OREQ 'DC'
+    C*          EM05      OREQ 'DD'
+    C*          PS01      OREQ '11'
+    C*911018E   PS01      OREQ '12'
+    C                     Z-ADD*ZERO     H206
+    C*
+  27*C                     ELSE
+    C*
+    C*計算出應發代金之計算基準金額：
+    C*以基準檔之項目金額計算
+    C*
+    C                     Z-ADD*ZERO     SAR     70
+    C                     Z-ADD*ZERO     HMNY    81       時薪
+    C                     Z-ADD*ZERO     H206
+    C*
+    C           KEYPY     CHAINPYPYPF               40
+  28-C           *IN40     IFEQ '0'
+    C                     Z-ADDPY03      SAR
+    C                     Z-ADDPY03      H211             本俸金額
+  28-C                     END
+    C*
+    C           DEM01     SETLLPD10
+    C           DEM01     READEPD10                     46
+  29-C           *IN46     DOWEQ'0'
+    C*
+    C                     SETOF                     45
+    C           KEYPDA    CHAINPD0                  45
+    C  N45                ADD  PD04      SAR
+    C*
+    C           DEM01     READEPD10                     46
+  29-C                     END
+    C*
+    C*領生產獎金者以績效獎金代替
+  30-C           EM133     IFEQ 'A'
+    C           EM133     OREQ 'B'
+    C           KEYPS     CHAINPS0                  40
+    C  N40                ADD  PS10      SAR
+  30-C                     END
+    C*
+    C*-------------------------------------------------------------***
+    C*可折日數（四捨五入）
+  31-C           FLDT3     IFLT HR
+    C                     Z-ADDFLDT3     HR
+  31-C                     END
+    C                     Z-ADD*ZERO     WH205   42
+    C           HR        DIV  PM101     WH205
+    C*-------------------------------------------------------------***
+    C*(薪項加總）／３０＊剩餘天數＝休假代金
+    C           SAR       DIV  30        HMNY             日薪
+    C           HMNY      MULT WH205     H206      H      折發金額
+    C*-------------------------------------------------------------***
+    C*折發金額不可小於零
+  32-C           H206      IFLE *ZERO
+    C                     Z-ADD*ZERO     H206
+  32-C                     END
+    C*
+  27-C                     END
+    C*
+    C                     Z-ADD$A8YMD    H297
+    C                     TIME           H298
+    C                     MOVEL$USER     H299
+    C*
+    C                     UPDATH20
+  02-C                     END
+    C*
+  01-C                     END
+     C*
+     C*==============================================================*
+

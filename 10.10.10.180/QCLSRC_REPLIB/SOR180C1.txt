@@ -1,0 +1,94 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    AUTHOR       : KEVIN                                     */
+     /*    CREATE DATE  : 112/06/06                                 */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : SOR180C1                                  */
+     /*    SYSTEM       :                                       */
+     /*    SUBSYSTEM    :銷售訂單系統                             */
+     /*    REMARK       :業務銷售報表(篩選資料&產生報表)      */
+     /*   需求單號:1120360                                        */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&$EVR)   TYPE(*CHAR) LEN(1)
+
+             /*業務員代碼*/
+             DCL        VAR(&DWF01S) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&DWF01E) TYPE(*CHAR) LEN(6)
+             /*送貨日期*/
+             DCL        VAR(&YMD8S1) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YMD8E1) TYPE(*CHAR) LEN(8)
+             /* EXCEL */
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             CHGVAR     VAR(&YMD8S1) VALUE(%SST(*LDA 866 8))
+             CHGVAR     VAR(&YMD8E1) VALUE(%SST(*LDA 874 8))
+             CHGVAR     VAR(&DWF01S) VALUE(%SST(*LDA 601 6))
+             CHGVAR     VAR(&DWF01E) VALUE(%SST(*LDA 607 6))
+
+             CHGVAR     VAR(&LIB)   VALUE('QTEMP')
+             CHGVAR     VAR(&FILE)  VALUE('SOR180F')
+
+             CPYF       FROMFILE(SOR180WF) TOFILE(QTEMP/SOR180WF) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817)
+             CLRPFM FILE(QTEMP/SOR180WF)
+
+             CPYF       FROMFILE(SOR180F) TOFILE(QTEMP/SOR180F) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817)
+             CLRPFM FILE(QTEMP/SOR180F)
+
+             OVRDBF     FILE(SOR180WF) TOFILE(QTEMP/SOR180WF) SHARE(*YES)
+             OVRDBF     FILE(SOR180F) TOFILE(QTEMP/SOR180F) SHARE(*YES)
+
+             OVRDBF     FILE(SOSCPF) SHARE(*YES)
+             OPNQRYF    FILE((SOSCPF)) QRYSLT('                     +
+                          SC27 *EQ %RANGE("' || &DWF01S || '"       +
+                                          "' || &DWF01E || '" )     +
+                       & MSC08 *EQ %RANGE("' || &YMD8S1 || '"       +
+                                          "' || &YMD8E1 || '" )     +
+                       & SC13 *NE "*"  & SC35  *NE "T"              +
+                       & SC03 *NE "S4" & SC01A *NE "K" ')           +
+                          KEYFLD(*FILE)                  +
+                          MAPFLD((MSC08 SC08 *CHAR 8) (SC01A +
+                          '%SST(SC01 1 1)'))
+
+             CALL       SOR1801
+
+             CLOF       OPNID(SOSCPF)
+
+             OVRDBF     FILE(SOSGPF) SHARE(*YES)
+             OPNQRYF    FILE((SOSGPF)) QRYSLT('                     +
+                          SG11 *EQ %RANGE("' || &DWF01S || '"       +
+                                          "' || &DWF01E || '" )     +
+                       & MSG26 *EQ %RANGE("' || &YMD8S1 || '"       +
+                                          "' || &YMD8E1 || '" )     +
+                       & SG04A *NE "B"  & SG01A *NE "K"             +
+                       & SG17  *EQ " "                  ')          +
+                          KEYFLD(*FILE)                             +
+                          MAPFLD((MSG26 SG26 *CHAR 8)               +
+                          (SG04A '%SST(SG04 1 1)')                  +
+                          (SG01A '%SST(SG01 1 1)'))
+
+             CALL       SOR1802
+
+             CLOF       OPNID(SOSGPF)
+
+             OPNQRYF    FILE((SOR180WF)) QRYSLT(*ALL)               +
+                        KEYFLD(WF01 WF02 WF04 WF03)
+
+             CALL       SOR1803
+
+             CLOF       OPNID(SOR180WF)
+
+             DLTOVR     FILE(*ALL)
+
+
+             /*將SOR180F轉換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

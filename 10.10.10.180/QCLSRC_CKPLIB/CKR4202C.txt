@@ -1,0 +1,375 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM ID   : CKR420                                    */
+     /*    PROGRAM NAME :應付票據明細表                           */
+     /*    AUTHOR       : A1087  JOYCE                              */
+     /*    CREATE DATE  : 1992.10.05                                */
+     /*    UPDATE DATE  : 1993/12/02 蘇志遠 DEREK SU              */
+     /*    SYSTEM       :票據系統                                 */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&WHA02F)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&WHA02T)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DHA04F)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&DHA04T)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&DHA16F)   TYPE(*CHAR) LEN(6)
+             DCL        VAR(&DHA16T)   TYPE(*CHAR) LEN(6)
+             DCL        VAR(&WHA06F)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WHA06T)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WHA07F)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WHA07T)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WHA17F)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&WHA17T)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&WHA24F)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&WHA24T)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&WHA27F)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&WHA27T)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&WHA05F)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&WHA05T)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&WHA23F)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&WHA23T)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DSORT)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&WHF72)    TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WHF73S)   TYPE(*CHAR) LEN(4)
+             DCL        VAR(&WHF73E)   TYPE(*CHAR) LEN(4)
+
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&WHA02F)   VALUE(%SST(*LDA 601 2))
+             CHGVAR     VAR(&WHA02T)   VALUE(%SST(*LDA 605 2))
+             CHGVAR     VAR(&DHA04F)   VALUE(%SST(*LDA 503 10))
+             CHGVAR     VAR(&DHA04T)   VALUE(%SST(*LDA 513 10))
+             CHGVAR     VAR(&DHA16F)   VALUE(%SST(*LDA 523 6))
+             CHGVAR     VAR(&DHA16T)   VALUE(%SST(*LDA 529 6))
+             CHGVAR     VAR(&WHA06F)   VALUE(%SST(*LDA 569 8))
+             CHGVAR     VAR(&WHA06T)   VALUE(%SST(*LDA 577 8))
+             CHGVAR     VAR(&WHA07F)   VALUE(%SST(*LDA 585 8))
+             CHGVAR     VAR(&WHA07T)   VALUE(%SST(*LDA 593 8))
+             CHGVAR     VAR(&WHA17F)   VALUE(%SST(*LDA 609 1))
+             CHGVAR     VAR(&WHA17T)   VALUE(%SST(*LDA 610 1))
+             CHGVAR     VAR(&WHA24F)   VALUE(%SST(*LDA 611 1))
+             CHGVAR     VAR(&WHA24T)   VALUE(%SST(*LDA 612 1))
+             CHGVAR     VAR(&WHA05F)   VALUE(%SST(*LDA 613 1))
+             CHGVAR     VAR(&WHA05T)   VALUE(%SST(*LDA 614 1))
+             CHGVAR     VAR(&WHA23F)   VALUE(%SST(*LDA 615 2))
+             CHGVAR     VAR(&WHA23T)   VALUE(%SST(*LDA 617 2))
+             CHGVAR     VAR(&WHA27F)   VALUE(%SST(*LDA 619 1))
+             CHGVAR     VAR(&WHA27T)   VALUE(%SST(*LDA 620 1))
+             CHGVAR     VAR(&DSORT)    VALUE(%SST(*LDA 621 1))
+             CHGVAR     VAR(&WHF72)   VALUE(%SST(*LDA 629 8))
+             CHGVAR     VAR(&WHF73S)   VALUE(%SST(*LDA 637 4))
+             CHGVAR     VAR(&WHF73E)   VALUE(%SST(*LDA 641 4))
+
+
+     /* 排列方式＝１　（開票日＋到期日＋票據號碼）  */
+             IF         COND(&DSORT = '1')  THEN(DO)
+             OVRDBF     FILE(CKHAPF) SHARE(*YES)
+             OVRPRTF    FILE(CKR421P) PAGESIZE(*N 132) CPI(15)
+     /* 單一選擇　　　（開票日＋到期日＋票據號碼）  */
+             IF         COND(&WHA17F *EQ &WHA17T) THEN(DO)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' HA02 *EQ %RANGE("' +
+                          *CAT &WHA02F *CAT '" "' *CAT &WHA02T *CAT +
+                          '") & HA04 *EQ %RANGE("' *CAT &DHA04F +
+                          *CAT '" "' *CAT &DHA04T *CAT '") & WHA16 +
+                          *EQ %RANGE("' *CAT &DHA16F *CAT '" "' +
+                          *CAT &DHA16T *CAT '") & HA06 *EQ %RANGE(' +
+                          *CAT &WHA06F *CAT ' ' *CAT &WHA06T *CAT +
+                          ') & HA07 *EQ %RANGE(' *CAT &WHA07F *CAT +
+                          ' ' *CAT &WHA07T *CAT ') & HA17 *EQ +
+                          %RANGE("' *CAT &WHA17F *CAT '" "' *CAT +
+                          &WHA17T *CAT '") & HA24 *EQ %RANGE("' +
+                          *CAT &WHA24F *CAT '" "' *CAT &WHA24T *CAT +
+                          '") & HA27 *EQ %RANGE("' *CAT &WHA27F +
+                          *CAT '" "' *CAT &WHA27T *CAT '") & (HA01 +
+                          *EQ "2") & HA05 *EQ %RANGE("' *CAT +
+                          &WHA05F *CAT '" "' *CAT &WHA05T *CAT '") +
+                          & HA23 *EQ %RANGE("' *CAT &WHA23F *CAT '" +
+                          "' *CAT &WHA23T *CAT '")') KEYFLD((HA02) +
+                          (HA06) (HA07) (HA03)) MAPFLD((WHA16 +
+                          '%SST(HA16 9 6)'))
+             ENDDO
+     /* 全部選擇，但作廢不選（開票日＋到期日＋票據號碼）  */
+             ELSE       CMD(DO)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' HA02 *EQ %RANGE("' +
+                          *CAT &WHA02F *CAT '" "' *CAT &WHA02T *CAT +
+                          '") & HA04 *EQ %RANGE("' *CAT &DHA04F +
+                          *CAT '" "' *CAT &DHA04T *CAT '") & WHA16 +
+                          *EQ %RANGE("' *CAT &DHA16F *CAT '" "' +
+                          *CAT &DHA16T *CAT '") & HA06 *EQ %RANGE(' +
+                          *CAT &WHA06F *CAT ' ' *CAT &WHA06T *CAT +
+                          ') & HA07 *EQ %RANGE(' *CAT &WHA07F *CAT +
+                          ' ' *CAT &WHA07T *CAT ') & HA17 *EQ +
+                          %RANGE("' *CAT &WHA17F *CAT '" "' *CAT +
+                          &WHA17T *CAT '") & HA17 *NE "0" +
+                          & HA24 *EQ %RANGE("' +
+                          *CAT &WHA24F *CAT '" "' *CAT &WHA24T *CAT +
+                          '") & HA27 *EQ %RANGE("' *CAT &WHA27F +
+                          *CAT '" "' *CAT &WHA27T *CAT '") & (HA01 +
+                          *EQ "2") & HA05 *EQ %RANGE("' *CAT +
+                          &WHA05F *CAT '" "' *CAT &WHA05T *CAT '") +
+                          & HA23 *EQ %RANGE("' *CAT &WHA23F *CAT '" +
+                          "' *CAT &WHA23T *CAT '")') KEYFLD((HA02) +
+                          (HA06) (HA07) (HA03)) MAPFLD((WHA16 +
+                          '%SST(HA16 9 6)'))
+             ENDDO
+             CALL       CKR4202
+             CLOF       OPNID(CKHAPF)
+             ENDDO
+     /* 排列方式＝２　（到期日＋開票日＋票據號碼）  */
+             IF         COND(&DSORT = '2')  THEN(DO)
+             OVRDBF     FILE(CKHAPF) SHARE(*YES)
+             OVRPRTF    FILE(CKR422P) PAGESIZE(*N 132) CPI(15)
+     /* 單一選擇　　　（到期日＋開票日＋票據號碼）  */
+             IF         COND(&WHA17F *EQ &WHA17T) THEN(DO)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' HA02 *EQ %RANGE("' +
+                          *CAT &WHA02F *CAT '" "' *CAT &WHA02T *CAT +
+                          '") & HA04 *EQ %RANGE("' *CAT &DHA04F +
+                          *CAT '" "' *CAT &DHA04T *CAT '") & WHA16 +
+                          *EQ %RANGE("' *CAT &DHA16F *CAT '" "' +
+                          *CAT &DHA16T *CAT '") & HA06 *EQ %RANGE(' +
+                          *CAT &WHA06F *CAT ' ' *CAT &WHA06T *CAT +
+                          ') & HA07 *EQ %RANGE(' *CAT &WHA07F *CAT +
+                          ' ' *CAT &WHA07T *CAT ') & HA17 *EQ +
+                          %RANGE("' *CAT &WHA17F *CAT '" "' *CAT +
+                          &WHA17T *CAT '") & HA24 *EQ %RANGE("' +
+                          *CAT &WHA24F *CAT '" "' *CAT &WHA24T *CAT +
+                          '") & HA27 *EQ %RANGE("' *CAT &WHA27F +
+                          *CAT '" "' *CAT &WHA27T *CAT '") & (HA01 +
+                          *EQ "2") & HA05 *EQ %RANGE("' *CAT &WHA05F +
+                          *CAT '" "' *CAT &WHA05T *CAT '") & HA23 *EQ +
+                          %RANGE("' *CAT &WHA23F *CAT '" "' *CAT +
+                          &WHA23T *CAT '")') +
+                          KEYFLD((HA02) (HA16) (HA07) (HA06) +
+                          (HA03)) MAPFLD((WHA16 '%SST(HA16 9 6)'))
+             ENDDO
+     /* 全部選擇，但作廢不選（到期日＋開票日＋票據號碼）  */
+             ELSE       CMD(DO)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' HA02 *EQ %RANGE("' +
+                          *CAT &WHA02F *CAT '" "' *CAT &WHA02T *CAT +
+                          '") & HA04 *EQ %RANGE("' *CAT &DHA04F +
+                          *CAT '" "' *CAT &DHA04T *CAT '") & WHA16 +
+                          *EQ %RANGE("' *CAT &DHA16F *CAT '" "' +
+                          *CAT &DHA16T *CAT '") & HA06 *EQ %RANGE(' +
+                          *CAT &WHA06F *CAT ' ' *CAT &WHA06T *CAT +
+                          ') & HA07 *EQ %RANGE(' *CAT &WHA07F *CAT +
+                          ' ' *CAT &WHA07T *CAT ') & HA17 *EQ +
+                          %RANGE("' *CAT &WHA17F *CAT '" "' *CAT +
+                          &WHA17T *CAT '") & HA17 *NE "0" +
+                          & HA24 *EQ %RANGE("' +
+                          *CAT &WHA24F *CAT '" "' *CAT &WHA24T *CAT +
+                          '") & HA27 *EQ %RANGE("' *CAT &WHA27F +
+                          *CAT '" "' *CAT &WHA27T *CAT '") & (HA01 +
+                          *EQ "2") & HA05 *EQ %RANGE("' *CAT &WHA05F +
+                          *CAT '" "' *CAT &WHA05T *CAT '") & HA23 *EQ +
+                          %RANGE("' *CAT &WHA23F *CAT '" "' *CAT +
+                          &WHA23T *CAT '")') +
+                          KEYFLD((HA02) (HA16) (HA07) (HA06) +
+                          (HA03)) MAPFLD((WHA16 '%SST(HA16 9 6)'))
+             ENDDO
+             CALL       CKR4203
+             CLOF       OPNID(CKHAPF)
+             ENDDO
+     /* 排列方式＝３　（銀行帳號＋到期日＋票據號碼）  */
+             IF         COND(&DSORT = '3')  THEN(DO)
+             OVRDBF     FILE(CKHAPF) SHARE(*YES)
+             OVRPRTF    FILE(CKR423P) PAGESIZE(*N 132) CPI(15)
+     /* 單一選擇　　　（銀行帳號＋到期日＋票據號碼）  */
+             IF         COND(&WHA17F *EQ &WHA17T) THEN(DO)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' HA02 *EQ %RANGE("' +
+                          *CAT &WHA02F *CAT '" "' *CAT &WHA02T *CAT +
+                          '") & HA04 *EQ %RANGE("' *CAT &DHA04F +
+                          *CAT '" "' *CAT &DHA04T *CAT '") & WHA16 +
+                          *EQ %RANGE("' *CAT &DHA16F *CAT '" "' +
+                          *CAT &DHA16T *CAT '") & HA06 *EQ %RANGE(' +
+                          *CAT &WHA06F *CAT ' ' *CAT &WHA06T *CAT +
+                          ') & HA07 *EQ %RANGE(' *CAT &WHA07F *CAT +
+                          ' ' *CAT &WHA07T *CAT ') & HA17 *EQ +
+                          %RANGE("' *CAT &WHA17F *CAT '" "' *CAT +
+                          &WHA17T *CAT '") & HA24 *EQ %RANGE("' +
+                          *CAT &WHA24F *CAT '" "' *CAT &WHA24T *CAT +
+                          '") & HA27 *EQ %RANGE("' *CAT &WHA27F +
+                          *CAT '" "' *CAT &WHA27T *CAT '") & (HA01 +
+                          *EQ "2") & HA05 *EQ %RANGE("' *CAT &WHA05F +
+                          *CAT '" "' *CAT &WHA05T *CAT '") & HA23 *EQ +
+                          %RANGE("' *CAT &WHA23F *CAT '" "' *CAT +
+                          &WHA23T *CAT '")') +
+                          KEYFLD((HA02) (HA16) (HA07) (HA03) +
+                          ) MAPFLD((WHA16 '%SST(HA16 9 +
+                          6)'))
+             ENDDO
+     /* 全部選擇，但作廢不選（銀行帳號＋到期日＋票據號碼）    */
+             ELSE       CMD(DO)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' HA02 *EQ %RANGE("' +
+                          *CAT &WHA02F *CAT '" "' *CAT &WHA02T *CAT +
+                          '") & HA04 *EQ %RANGE("' *CAT &DHA04F +
+                          *CAT '" "' *CAT &DHA04T *CAT '") & WHA16 +
+                          *EQ %RANGE("' *CAT &DHA16F *CAT '" "' +
+                          *CAT &DHA16T *CAT '") & HA06 *EQ %RANGE(' +
+                          *CAT &WHA06F *CAT ' ' *CAT &WHA06T *CAT +
+                          ') & HA07 *EQ %RANGE(' *CAT &WHA07F *CAT +
+                          ' ' *CAT &WHA07T *CAT ') & HA17 *EQ +
+                          %RANGE("' *CAT &WHA17F *CAT '" "' *CAT +
+                          &WHA17T *CAT '") & HA17 *NE "0" +
+                          & HA24 *EQ %RANGE("' +
+                          *CAT &WHA24F *CAT '" "' *CAT &WHA24T *CAT +
+                          '") & HA27 *EQ %RANGE("' *CAT &WHA27F +
+                          *CAT '" "' *CAT &WHA27T *CAT '") & (HA01 +
+                          *EQ "2") & HA05 *EQ %RANGE("' *CAT &WHA05F +
+                          *CAT '" "' *CAT &WHA05T *CAT '") & HA23 *EQ +
+                          %RANGE("' *CAT &WHA23F *CAT '" "' *CAT +
+                          &WHA23T *CAT '")') +
+                          KEYFLD((HA02) (HA16) (HA07) (HA03) +
+                          ) MAPFLD((WHA16 '%SST(HA16 9 +
+                          6)'))
+             ENDDO
+             CALL       CKR4204
+             CLOF       OPNID(CKHAPF)
+             ENDDO
+
+     /* 排列方式＝４　（廠商代號＋開票日期＋票據號碼）  */
+             IF         COND(&DSORT = '4')  THEN(DO)
+             OVRDBF     FILE(CKHAPF) SHARE(*YES)
+             OVRPRTF    FILE(CKR424P) PAGESIZE(*N 132) CPI(15)
+     /* 單一選擇　　　（廠商代號＋開票日期＋票據號碼）    */
+             IF         COND(&WHA17F *EQ &WHA17T) THEN(DO)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' HA02 *EQ %RANGE("' +
+                          *CAT &WHA02F *CAT '" "' *CAT &WHA02T *CAT +
+                          '") & HA04 *EQ %RANGE("' *CAT &DHA04F +
+                          *CAT '" "' *CAT &DHA04T *CAT '") & WHA16 +
+                          *EQ %RANGE("' *CAT &DHA16F *CAT '" "' +
+                          *CAT &DHA16T *CAT '") & HA06 *EQ %RANGE(' +
+                          *CAT &WHA06F *CAT ' ' *CAT &WHA06T *CAT +
+                          ') & HA07 *EQ %RANGE(' *CAT &WHA07F *CAT +
+                          ' ' *CAT &WHA07T *CAT ') & HA17 *EQ +
+                          %RANGE("' *CAT &WHA17F *CAT '" "' *CAT +
+                          &WHA17T *CAT '") & HA24 *EQ %RANGE("' +
+                          *CAT &WHA24F *CAT '" "' *CAT &WHA24T *CAT +
+                          '") & HA27 *EQ %RANGE("' *CAT &WHA27F +
+                          *CAT '" "' *CAT &WHA27T *CAT '") & (HA01 +
+                          *EQ "2") & HA05 *EQ %RANGE("' *CAT &WHA05F +
+                          *CAT '" "' *CAT &WHA05T *CAT '") & HA23 *EQ +
+                          %RANGE("' *CAT &WHA23F *CAT '" "' *CAT +
+                          &WHA23T *CAT '")') +
+                          KEYFLD((HA02) (HA04) (HA06) +
+                          (HA03)) MAPFLD((WHA16 '%SST(HA16 9 +
+                          6)'))
+             ENDDO
+     /* 全部選擇，但作廢不選（廠商代號＋開票日期＋票據號碼） */
+             ELSE       CMD(DO)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' HA02 *EQ %RANGE("' +
+                          *CAT &WHA02F *CAT '" "' *CAT &WHA02T *CAT +
+                          '") & HA04 *EQ %RANGE("' *CAT &DHA04F +
+                          *CAT '" "' *CAT &DHA04T *CAT '") & WHA16 +
+                          *EQ %RANGE("' *CAT &DHA16F *CAT '" "' +
+                          *CAT &DHA16T *CAT '") & HA06 *EQ %RANGE(' +
+                          *CAT &WHA06F *CAT ' ' *CAT &WHA06T *CAT +
+                          ') & HA07 *EQ %RANGE(' *CAT &WHA07F *CAT +
+                          ' ' *CAT &WHA07T *CAT ') & HA17 *EQ +
+                          %RANGE("' *CAT &WHA17F *CAT '" "' *CAT +
+                          &WHA17T *CAT '") & HA17 *NE "0" +
+                          & HA24 *EQ %RANGE("' +
+                          *CAT &WHA24F *CAT '" "' *CAT &WHA24T *CAT +
+                          '") & HA27 *EQ %RANGE("' *CAT &WHA27F +
+                          *CAT '" "' *CAT &WHA27T *CAT '") & (HA01 +
+                          *EQ "2") & HA05 *EQ %RANGE("' *CAT &WHA05F +
+                          *CAT '" "' *CAT &WHA05T *CAT '") & HA23 *EQ +
+                          %RANGE("' *CAT &WHA23F *CAT '" "' *CAT +
+                          &WHA23T *CAT '")') +
+                          KEYFLD((HA02) (HA04) (HA06) +
+                          (HA03)) MAPFLD((WHA16 '%SST(HA16 9 +
+                          6)'))
+             ENDDO
+             CALL       CKR4205
+             CLOF       OPNID(CKHAPF)
+             ENDDO
+     /* 排列方式＝５　（到期日＋開票日＋票據號碼）  */
+             IF         COND(&DSORT = '5')  THEN(DO)
+             OVRDBF     FILE(CKR4H0F) SHARE(*YES)
+             OVRPRTF    FILE(CKR425P) PAGESIZE(*N 132) CPI(15)
+     /* 單一選擇　　　（到期日＋開票日＋票據號碼）  */
+             IF         COND(&WHA17F *EQ &WHA17T) THEN(DO)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' HA02 *EQ %RANGE("' +
+                          *CAT &WHA02F *CAT '" "' *CAT &WHA02T *CAT +
+                          '") & HA04 *EQ %RANGE("' *CAT &DHA04F +
+                          *CAT '" "' *CAT &DHA04T *CAT '") & WHA16 +
+                          *EQ %RANGE("' *CAT &DHA16F *CAT '" "' +
+                          *CAT &DHA16T *CAT '") & HA06 *EQ %RANGE(' +
+                          *CAT &WHA06F *CAT ' ' *CAT &WHA06T *CAT +
+                          ') & HA07 *EQ %RANGE(' *CAT &WHA07F *CAT +
+                          ' ' *CAT &WHA07T *CAT ') & HA17 *EQ +
+                          %RANGE("' *CAT &WHA17F *CAT '" "' *CAT +
+                          &WHA17T *CAT '") & HA24 *EQ %RANGE("' +
+                          *CAT &WHA24F *CAT '" "' *CAT &WHA24T *CAT +
+                          '") & HA27 *EQ %RANGE("' *CAT &WHA27F +
+                          *CAT '" "' *CAT &WHA27T *CAT '") & (HA01 +
+                          *EQ "2") & HA05 *EQ %RANGE("' *CAT &WHA05F +
+                          *CAT '" "' *CAT &WHA05T *CAT '") & HA23 *EQ +
+                          %RANGE("' *CAT &WHA23F *CAT '" "' *CAT +
+                          &WHA23T *CAT '") & HF72 *EQ (' *CAT &WHF72 +
+                          *CAT ') & HF73 *EQ %RANGE(' *CAT &WHF73S +
+                          *CAT ' ' *CAT &WHF73E *CAT ') ') +
+                          KEYFLD((HA02) (HA16) (HA07) (HA06) +
+                          (HA03)) MAPFLD((WHA16 '%SST(HA16 9 6)'))
+             ENDDO
+     /* 全部選擇，但作廢不選（到期日＋開票日＋票據號碼）  */
+             ELSE       CMD(DO)
+             OPNQRYF    FILE((CKR4H0F)) QRYSLT(' HA02 *EQ %RANGE("' +
+                          *CAT &WHA02F *CAT '" "' *CAT &WHA02T *CAT +
+                          '") & HA04 *EQ %RANGE("' *CAT &DHA04F +
+                          *CAT '" "' *CAT &DHA04T *CAT '") & WHA16 +
+                          *EQ %RANGE("' *CAT &DHA16F *CAT '" "' +
+                          *CAT &DHA16T *CAT '") & HA06 *EQ %RANGE(' +
+                          *CAT &WHA06F *CAT ' ' *CAT &WHA06T *CAT +
+                          ') & HA07 *EQ %RANGE(' *CAT &WHA07F *CAT +
+                          ' ' *CAT &WHA07T *CAT ') & HA17 *EQ +
+                          %RANGE("' *CAT &WHA17F *CAT '" "' *CAT +
+                          &WHA17T *CAT '") & HA17 *NE "0" +
+                          & HA24 *EQ %RANGE("' +
+                          *CAT &WHA24F *CAT '" "' *CAT &WHA24T *CAT +
+                          '") & HA27 *EQ %RANGE("' *CAT &WHA27F +
+                          *CAT '" "' *CAT &WHA27T *CAT '") & (HA01 +
+                          *EQ "2") & HA05 *EQ %RANGE("' *CAT &WHA05F +
+                          *CAT '" "' *CAT &WHA05T *CAT '") & HA23 *EQ +
+                          %RANGE("' *CAT &WHA23F *CAT '" "' *CAT +
+                          &WHA23T *CAT '") & HF72 *EQ (' *CAT &WHF72 +
+                          *CAT ') & HF73 *EQ %RANGE(' *CAT &WHF73S +
+                          *CAT ' ' *CAT &WHF73E *CAT ') ') +
+                          KEYFLD((HA02) (HA16) (HA07) (HA06) +
+                          (HA03)) MAPFLD((WHA16 '%SST(HA16 9 6)'))
+             ENDDO
+             CALL       CKR4206
+             CLOF       OPNID(CKR4H0F)
+             ENDDO
+
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1))  RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3))  RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             IF         COND(&DSORT = '1')  THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('CKR421P')
+             ENDDO
+             IF         COND(&DSORT = '2')  THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('CKR422P')
+             ENDDO
+             IF         COND(&DSORT = '3')  THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('CKR423P')
+             ENDDO
+             IF         COND(&DSORT = '4')  THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('CKR424P')
+             ENDDO
+             IF         COND(&DSORT = '5')  THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('CKR425P')
+             ENDDO
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             ENDPGM
+

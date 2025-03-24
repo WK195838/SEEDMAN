@@ -1,0 +1,373 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     A*    PROGRAM-ID   : CKR4B0                                     *
+     A*    PROGRAM NAME :銀行調節表                                *
+     A*    AUTHOR       : A1149   HUANG-SHU.MEI                      *
+     A*    CREATE DATE  : 1993.02.24                                 *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       :票據系統                                  *
+     A****************************************************************
+     FCKHDLF01IF  E           K        DISK
+     FCKHFLF04IF  E           K        DISK
+     FCKHBLF01IF  E           K        DISK
+     FCKHCLF01IF  E           K        DISK
+     FCKHAJF06IF  E           K        DISK
+     FPT#XPF  IF  E           K        DISK
+     FCKR4B0P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I* LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      219 219 $PENV
+     I                                      220 229 $PRTNM
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DHC01
+     I                                      503 508 DHC02F
+     I                                      509 514 DHC02T
+     I                                      515 5210DHC03
+     I* SET RANGE FIELD ++++++++++++++++++++++++++++++++++++++++++++++
+     I                                      522 535 $HC02F
+     I                                      536 549 $HC02T
+     I                                      550 5570$HC03
+     I/COPY QRPGSRC,PT#XDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN HD01      #B001I
+     C           *LIKE     DEFN HD02      SHD02
+     C*
+     C           *LIKE     DEFN HD01      #C001I
+     C           *LIKE     DEFN HA04      #C002I
+     C           *LIKE     DEFN HD01      #D001I
+     C           *LIKE     DEFN HA04      #D002I
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHB     KLIST
+     C                     KFLD           HD03
+     C           KEYHD     KLIST
+     C                     KFLD           DHC01
+     C                     KFLD           DHC02F
+     C           KEYHF     KLIST
+     C                     KFLD           HA03
+     C                     KFLD           HA02
+     C           KEYHAC    KLIST
+     C                     KFLD           HD01
+     C                     KFLD           HD02
+     C           KEY#X     KLIST
+     C                     KFLD           D#X03   2
+     C                     KFLD           DHC01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      .INIT
+     C*
+     C                     EXSR R0200                      .MAIN
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETON                     39
+|    C                     IN   PTDA01
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C*
+|    C*GET表頭公司別++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'CKS#B0'
+|    C                     PARM DHC01     #B001I
+|    C                     PARM           #B002O 16
+|    C           PCONAM    PARM           #B003O 34
+|    C                     PARM           #B098O 50
+|    C                     PARM           #B099O  1
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ... MAIN PROCESS  (GET DATA)
+     C*==============================================================*
+02===C           R0200     BEGSR
+|    C* GET DATA +++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*銀行帳戶資料檔
+|    C           KEYHD     SETLLHD0
+|    C                     READ HD0                      42
+| 01-C           *IN42     DOWEQ'0'                        .EOF
+|   C           HD02      ANDLE$HC02T                     .EOK
+|   C                     EXSR R2000
+|   C                     READ HD0                      42
+| 01-C                     END
+|    C*
+| 02-C           *IN10     IFEQ '1'                        .HAS DATA
+|   C* LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++++
+|   C*                    EXSR R8100                       .L1 TOTAL
+|   C                     EXSR R8900                       .LR TOTAL
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C* IF NO DATA DON'T PRINT
+| 02*C*                    ELSE                            .NO DATA
+|   C*                    EXSR R8999                       .LR NO DATA
+| 02-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+03===C           R2000     BEGSR
+|    C* FIRST FECORD
+| 01-C           *IN10     IFEQ '0'
+|   C                     EXSR R7100                      .L1 INIT
+|   C                     SETON                     10
+| 01-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* LEVEL BREAK COMP & PROCESS
+| 02-C           HD02      IFNE SHD02                       .L1 BREAK
+     C           KEYHAC    SETLLHC0                      47
+     C           KEYHAC    SETLLCKHAJF06                 49
+     C  N47N49             GOTO E2000
+|   C                     EXSR R8100                       .L1 TOTAL
+|   C                     EXSR R7100                       .L1 INIT
+| 02-C                     END
+|    C*+<<DETAIL DATA SET>>
+|    C*銀行未沖金額
+|    C                     EXSR R2A00
+|    C*帳面未沖金額
+|    C                     EXSR R2B00
+     C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+03===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2A00 ... DETAIL
+     C*==============================================================*
+04===C           R2A00     BEGSR
+|    C*銀行未沖金額
+|    C           KEYHAC    SETLLHC0
+|    C           KEYHAC    READEHC0                      48
+| 01-C           *IN48     DOWEQ'0'
+|   C           HC03      ANDLE$HC03
+|   C                     MOVEL'****'    PBANK
+|   C                     MOVEL*BLANKS   PCOMP
+|   C*收入類
+| 02-C           HC08      IFEQ '1'
+|   C           HC08      OREQ '3'
+|   C           HC08      OREQ '5'
+|   C*轉換日期HC03
+|   C                     MOVEL'CK'      D#X03
+|   C           KEY#X     CHAIN#X0                  40
+|   C                     CALL 'P31'
+|   C                     PARM HC03      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM #X101     P3104I  1
+|   C                     PARM #X102     P3105I  1
+|   C           PIDATE    PARM           P3101O  80
+|   C*
+|   C                     MOVEL*BLANKS   P#C
+|   C                     MOVELHC05      PICKNO
+|   C                     Z-ADDHC06      PIAMT
+|   C*支出類全為零
+|   C                     Z-ADD*ZERO     PODATE
+|   C                     MOVEL*BLANKS   P#D
+|   C                     MOVEL*BLANKS   POCKNO
+|   C                     Z-ADD*ZERO     POAMT
+| 02-C                     END
+|   C*++++++++++++++++++++++++
+|   C*支出類
+| 03-C           HC08      IFEQ '2'
+|   C           HC08      OREQ '4'
+|   C           HC08      OREQ '6'
+|   C*轉換日期HC03
+|   C                     MOVEL'CK'      D#X03
+|   C           KEY#X     CHAIN#X0                  40
+|   C                     CALL 'P31'
+|   C                     PARM HC03      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM #X101     P3104I  1
+|   C                     PARM #X102     P3105I  1
+|   C           PODATE    PARM           P3101O  80
+|   C*
+|   C                     MOVEL*BLANKS   P#D
+|   C                     MOVELHC05      POCKNO
+|   C                     Z-ADDHC06      POAMT
+|   C*收入類全為零
+|   C                     Z-ADD*ZERO     PIDATE
+|   C                     MOVEL*BLANKS   P#C
+|   C                     MOVEL*BLANKS   PICKNO
+|   C                     Z-ADD*ZERO     PIAMT
+| 03-C                     END
+|   C*
+| 04-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 04-C                     END
+|   C                     WRITEPD1
+|   C*
+|   C           KEYHAC    READEHC0                      48
+| 01-C                     END
+|    C*
+04===C           E2A00     ENDSR
+     C*==============================================================*
+     C*          R2B00 ... DETAIL
+     C*==============================================================*
+05===C           R2B00     BEGSR
+|    C*帳面未沖金額
+|    C           KEYHAC    SETLLCKHAJF06
+|    C           KEYHAC    READECKHAJF06                 48
+| 01-C           *IN48     DOWEQ'0'
+|   C           HA15      ANDLE$HC03
+|   C                     MOVEL*BLANKS   PBANK
+|   C                     MOVEL'****'    PCOMP
+|   C*收入類
+| 02-C           HA01      IFEQ '1'
+|   C           HA01      OREQ '3'
+|   C           HA01      OREQ '5'
+|   C*轉換日期HA15
+|   C                     MOVEL'CK'      D#X03
+|   C           KEY#X     CHAIN#X0                  40
+|   C                     CALL 'P31'
+|   C                     PARM HA15      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM #X101     P3104I  1
+|   C                     PARM #X102     P3105I  1
+|   C           PIDATE    PARM           P3101O  80
+|   C*
+|   C                     MOVEL*BLANKS   P#C
+|   C*客戶
+|   C                     CALL 'CKS#C0'
+|   C                     PARM HA02      #C001I
+|   C                     PARM HA04      #C002I
+|   C           P#C       PARM           #C003O 10
+|   C                     PARM           #C004O 42
+|   C                     PARM           #C005O 10
+|   C                     PARM           #C098O 50
+|   C                     PARM           #C099O  1
+|   C                     MOVELHA03      PICKNO
+|   C                     Z-ADDHA10      PIAMT
+|   C*支出類全為零
+|   C                     Z-ADD*ZERO     PODATE
+|   C                     MOVEL*BLANKS   P#D
+|   C                     MOVEL*BLANKS   POCKNO
+|   C                     Z-ADD*ZERO     POAMT
+| 02-C                     END
+|   C*++++++++++++++++++++++++
+|   C*支出類
+| 03-C           HA01      IFEQ '2'
+|   C           HA01      OREQ '4'
+|   C           HA01      OREQ '6'
+|   C*轉換日期HA15
+|   C                     MOVEL'CK'      D#X03
+|   C           KEY#X     CHAIN#X0                  40
+|   C                     CALL 'P31'
+|   C                     PARM HA15      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM #X101     P3104I  1
+|   C                     PARM #X102     P3105I  1
+|   C           PODATE    PARM           P3101O  80
+|   C*廠商
+|   C                     MOVEL*BLANKS   P#D
+     C           KEYHF     CHAINCKHFLF04             40
+     C           *IN40     IFEQ '0'
+     C                     MOVELHF77      #D003O
+     C                     ELSE
+|   C                     CALL 'CKS#D0'
+|   C                     PARM HA02      #D001I
+|   C                     PARM HA04      #D002I
+|   C                     PARM           #D003O 10
+|   C                     PARM           #D004O 42
+|   C                     PARM           #D005O 62
+|   C                     PARM           #D098O 50
+|   C                     PARM           #D099O  1
+     C                     END
+     C*廠商簡稱
+     C                     CALL 'P65'
+     C                     PARM #D003O    P6501I 80
+     C                     PARM 10        P6502I  30
+     C           P#D       PARM           P6511O 80
+     C                     PARM           P6512O 80
+     C*
+|   C                     MOVELHA03      POCKNO
+|   C                     Z-ADDHA10      POAMT
+|   C*收入類全為零
+|   C                     Z-ADD*ZERO     PIDATE
+|   C                     MOVEL*BLANKS   P#C
+|   C                     MOVEL*BLANKS   PICKNO
+|   C                     Z-ADD*ZERO     PIAMT
+| 03-C                     END
+|   C*
+| 04-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 04-C                     END
+|   C                     WRITEPD1
+|   C*
+|   C           KEYHAC    READECKHAJF06                 48
+| 01-C                     END
+|    C*
+05===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+06===C           R7100     BEGSR
+|    C*LEVEL BREAK INIT DATA SET
+|    C*銀行名稱
+|    C                     MOVELHD02      PHD02
+|    C*銀行帳號
+|    C           KEYHB     CHAINHB0                  40
+|    C   40                MOVEL*BLANKS   PHB03
+|    C  N40                MOVELHB03      PHB03
+|    C* LEVEL BREAK KEY SAVE
+|    C                     MOVELHD02      SHD02
+|    C* << IF THIS KEY BREAK SKIP PAGE THEN SETON >>
+|    C                     SETON                     39
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+07===C           R8100     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     WRITEPT1
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+08===C           R8900     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     WRITEPT1
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+09===C*          R8999     BEGSR
+|    C*
+|    C*                    WRITEPH1
+|    C*
+|    C*                    WRITEPE9
+|    C*
+09===C*                    ENDSR
+

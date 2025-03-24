@@ -1,0 +1,115 @@
+     H****************************************************************
+     H*    PROGRAM NAME : FIS370                                     *
+     H*    AUTHOR       : A1038   CATHY SUN                          *
+     H*    CREATE DATE  : 79/07/29                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : MIRS                                       *
+     H*    SUBSYSTEM    : PY                                         *
+     H*    PROCEDURE    :                                            *
+     H*    REMARK       :計算所得稅                                *
+     H****************************************************************
+     FPYTAPF  IF  E           K        DISK
+     FPYTCPF  IF  E           K        DISK
+      *
+     E                    STR        20  8 0
+     E                    END        20  8 0
+     E                    RATE       20  3 2
+     E                    DUCT       20  8 0
+      *
+     C           *ENTRY    PLIST
+     C                     PARM           PIX     1        扣稅基準
+     C                     PARM           PI1     80       應稅薪金
+     C                     PARM           PI2     1        婚姻狀況
+     C                     PARM           PI3     20       撫養人數
+     C                     PARM           PI4     1
+     C                     PARM           PO1     70       所得稅
+     C                     PARM           PO2     53       所得稅率
+      *==============================================================*
+      *          MAIN ROUTINE
+      *==============================================================*
+     C                     Z-ADD0         PO1
+     C                     Z-ADD0         PO2
+     C*
+     C                     EXSR RTN100                     .INIT ARRAY
+     C                     EXSR RTN200                     .COMPUTE
+     C*
+     C                     SETON                       LR
+     C                     RETRN
+      *==============================================================*
+      *          RTN100....MOVE PYTCPF DATA TO ARRAY
+      *==============================================================*
+01===C           RTN100    BEGSR
+|    C*
+|    C           '0'       CHAINTA0                  40
+|    C*
+|    C           *LOVAL    SETLLTC0
+|    C                     READ TC0                      41
+|     *
+|    C                     Z-ADD0         I       30
+| 01-C           *IN41     DOWEQ'0'
+|   C                     ADD  1         I
+|   C                     Z-ADDTC02      STR,I
+|   C                     Z-ADDTC03      END,I
+|   C                     Z-ADDTC04      RATE,I
+|   C                     Z-ADDTC05      DUCT,I
+|   C                     READ TC0                      41
+| 01-C                     END
+|     *
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN200....COMPUTE TAX
+      *==============================================================*
+02===C           RTN200    BEGSR
+|    C*
+|     *估計全年薪資所得＝當月應稅薪金も１２
+|    C           PI1       MULT 12        WPI1    80
+|     *配偶免稅額
+| 01-C           PI2       IFEQ 'M'
+|   C                     Z-ADDTA03      WKAMT   60
+| 01*C                     ELSE
+|   C                     Z-ADD0         WKAMT
+| 01-C                     END
+|     *
+|     *扶養親屬寬減額＝扶養人數も親屬寬減額
+|    C           PI3       MULT TA04      WTA04   80
+|     *
+|     *估計全年應稅薪資所得＝估計全年薪資所得－（
+|     *                      個人免稅額＋配偶免稅額＋扶養親屬寬減額＋
+|     *                      標準扣除額＋薪資扣除額）
+|    C           WPI1      SUB  TA02      WTAXIN  80       個人免稅額
+|    C                     SUB  WKAMT     WTAXIN           配偶免稅額
+|    C                     SUB  WTA04     WTAXIN           扶養人數
+|    C           PI4       IFEQ 'S'
+|    C                     SUB  TA05      WTAXIN           未婚標準
+|    C                     ELSE
+|    C                     SUB  TA13      WTAXIN           已婚標
+|    C                     END
+|    C                     SUB  TA06      WTAXIN           薪資扣除
+|     *
+|    C                     Z-ADD*ZERO     WTAX   122
+|    C*
+| 02-C           WTAXIN    IFGT 0
+|   C                     Z-ADD1         J       30
+| 03-C           J         DOWLEI
+|   C*
+| 04-C           WTAXIN    IFGE END,J
+|   C           WTAXIN    ANDLESTR,J
+|   C           WTAXIN    MULT RATE,J    WTAX      H
+|   C                     SUB  DUCT,J    WTAX
+|   C                     Z-ADDRATE,J    PO2
+|   C                     Z-ADDI         J
+| 04-C                     END
+|   C*
+|   C                     ADD  1         J
+| 03-C                     END
+| 02-C                     END
+|     *
+|    C           WTAX      DIV  12        PO1       H
+|     *
+|    C           PO1       IFLE TA08
+|    C           PIX       ANDNE'1'
+|    C                     Z-ADD0         PO1
+|    C                     END
+|     *
+02===C                     ENDSR
+

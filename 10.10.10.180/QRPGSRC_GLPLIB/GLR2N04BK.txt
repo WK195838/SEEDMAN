@@ -1,0 +1,267 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLR2N0                                     *
+     H*    PROGRAM NAME : 明細帳列印－科目明細                     *
+     H*    AUTHOR       : A1087  JOYCE                               *
+     H*    CREATE DATE  : 1992.11.30                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     H****************************************************************
+     FGLWF10  IP  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLAAPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLR2N1P O   E             39     PRINTER
+     E*欄位代碼
+     E                    W02         5  2
+     E*檢核程式
+     E                    W03         5 10
+     E*欄位內容
+     E                    W04         5 20
+     E*欄位內容說明
+     E                    W05         5 20
+     E*傳入參數名稱
+     E                    W08         7 10
+     I*
+     IGLWF10R
+     I                                              WF1001L6
+     I                                              WF1002L5
+     I                                              WF1003L4
+     I                                              WF1004L3
+     I                                              WF1005L2
+     I                                              WF1006L1
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     IGLDA01      DS
+     I                                        1  16 WTEXT
+     I                                        1   8 WDA01
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAH01
+     I                                      503 510 DAH04S
+     I                                      591 598 DAH04E
+     I                                      531 5370DAH10S
+     I                                      538 5440DAH10E
+     I                                      561 5670DAH25S
+     I                                      568 5740DAH25E
+     I                                      599 599 DK
+     I                                      600 600 DJ
+     I*檢核程式之參數
+     ICHKPGM      DS
+     I                                        1   2 WAK01
+     I                                        3  22 WPARM1
+     I                                       23  32 WPARM2
+     I                                       33  33 WCHK
+     I            DS
+     I                                        1 100 W04
+     I                                        1  20 WF1002
+     I                                       21  40 WF1003
+     I                                       41  60 WF1004
+     I                                       61  80 WF1005
+     I                                       81 100 WF1006
+     I            DS
+     I                                        1 100 W05
+     I                                        1  20 PF1002
+     I                                       21  40 PF1003
+     I                                       41  60 PF1004
+     I                                       61  80 PF1005
+     I                                       81 100 PFK16
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           GLDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAA     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           W02,WI
+     C           KEYAF     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           WF1001
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C   L6                EXSR R1A00
+     C                     EXSR R2000                      .DETAIL
+     C*
+     CL1 10                EXSR R8100
+     CLR 10                WRITEPE1
+     C*
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C*
+|    C                     MOVE DAH01     WAK01
+|    C* GET表頭公司別
+|    C           DAH01     CHAIN#B0                  40
+|    C   40                MOVEL*BLANK    #B16
+|    C**
+|    C* CALL 'GLS005' GET 本期結帳碼
+|    C**
+|    C                     CALL 'GLS005'
+|    C                     PARM DAH01     P005I1  2
+|    C                     PARM DAH10E    P005I2  80
+|    C                     PARM 'S'       P005I3  1
+|    C                     PARM           P005O1  40
+|    C                     PARM           P005O2  20
+|    C                     PARM           P005O3  1
+|    C                     PARM           P005O4  1
+|    C                     MOVE *BLANK    PTYPE
+| 01-C           P005O4    IFNE 'Y'
+|   C                     SETON                     30
+|   C                     IN   GLDA01
+|   C                     MOVE WDA01     PTYPE
+| 01-C                     END
+|    C*
+|    C*CLEAR TOTAL FIELD
+|    C                     Z-ADD0         PM
+|    C                     Z-ADD0         PN
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1A00 ... DETAIL
+     C*==============================================================*
+02===C           R1A00     BEGSR
+|    C*
+|    C           KEYAF     CHAINAF0                  40
+|    C*
+|    C* GET  HEADING
+|    C                     MOVE AF11      W02,1
+|    C                     MOVE AF12      W02,2
+|    C                     MOVE AF13      W02,3
+|    C                     MOVE AF14      W02,4
+|    C                     MOVE AF15      W02,5
+|    C                     MOVE '0'       WCHK
+|    C*
+| 01-C                     DO   5         WI      10
+|   C* KEYAA=DAH01+W02,WI
+| 02-C           W02,WI    IFNE *BLANKS
+|   C           KEYAA     CHAINAA0                  40
+|   C                     MOVE AA04      W03,WI
+|   C                     MOVE AA05      W08,WI
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C                     SETON                     31
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+03===C           R2000     BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     SETON                     31
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+| 01-C                     END
+|    C*
+|    C                     MOVE WF1001    PAH04
+|    C*
+|    C                     EXSR R2A00
+|    C* ACCUMULATE TOTAL
+|    C                     ADD  WF1008    PM
+|    C                     ADD  WF1009    PN
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R2A00 ....GET 欄位說明
+     C*==============================================================*
+04===C           R2A00     BEGSR
+|    C*
+| 01-C                     DO   5         WI
+| 02-C           W03,WI    IFEQ *BLANKS
+|   C           W04,WI    OREQ *BLANKS
+|   C                     MOVE W04,WI    W05,WI
+| 03-C           WI        IFEQ 5
+|   C                     MOVELW05,WI    PF1006
+| 03-C                     END
+| 02*C                     ELSE
+|   C                     MOVE W04,WI    WPARM1
+|   C                     MOVE W08,WI    WPARM2
+|   C                     CALL W03,WI
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C           W05,WI    PARM           DESC   20
+| 04-C           WI        IFEQ 5
+|   C                     MOVELW05,WI    PF1006
+| 04-C                     END
+| 02-C                     END
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+05===C           R8100     BEGSR
+|    C*
+|    C*
+| 01-C           AF06      IFEQ '1'                         借方科目
+|   C           PM        SUB  PN        PO                +借-貸
+| 01*C                     ELSE                             貸方科目
+|   C           PN        SUB  PM        PO                +貸-借
+| 01-C                     END
+|    C*
+| 02-C           PO        IFLT 0
+|   C                     SETON                     59
+| 02*C                     ELSE
+|   C                     SETOF                     59
+| 02-C                     END
+|    C*
+| 02-C           *IN31     IFEQ '1'
+|   C                     WRITEPE2
+| 02-C                     END
+|    C*
+|    C                     WRITEPD1
+|    C                     SETOF                     31
+|    C*
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD*ZERO     PM
+|    C                     Z-ADD*ZERO     PN
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+06===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R1000
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+06===C                     ENDSR
+

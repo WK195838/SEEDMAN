@@ -1,0 +1,171 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME : GLS006                                     *
+     H*    AUTHOR       : A1150                                      *
+     H*    CREATE DATE  : 81/11/06                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H*    REMARK       :                                            *
+     F****************************************************************
+     FGLACPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     E*
+     E                    W01        13  1
+     E                    W02        13  8 0
+     I*
+     I            DS
+     I                                        1  13 W01
+     I                                        1   1 AC03
+     I                                        2   2 AC04
+     I                                        3   3 AC05
+     I                                        4   4 AC06
+     I                                        5   5 AC07
+     I                                        6   6 AC08
+     I                                        7   7 AC09
+     I                                        8   8 AC10
+     I                                        9   9 AC11
+     I                                       10  10 AC12
+     I                                       11  11 AC13
+     I                                       12  12 AC14
+     I                                       13  13 AC15
+     I            DS
+     I                                        1 1040W02
+     I                                        1   80AC03B
+     I                                        9  160AC04B
+     I                                       17  240AC05B
+     I                                       25  320AC06B
+     I                                       33  400AC07B
+     I                                       41  480AC08B
+     I                                       49  560AC09B
+     I                                       57  640AC10B
+     I                                       65  720AC11B
+     I                                       73  800AC12B
+     I                                       81  880AC13B
+     I                                       89  960AC14B
+     I                                       97 1040AC15B
+     I            DS
+     I                                        1   40W031
+     I                                        5   60W032
+     I                                        7   80W033
+     I                                        1   80W03
+     I            DS
+     I                                        1   80W041
+     I                                        1   40W04
+     C*==============================================================*
+     C*                    PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM           P006I1  2
+     C                     PARM           P006I2  40
+     C                     PARM           P006I3  20
+     C                     PARM           P006I4  1
+     C                     PARM           P006O1  80
+     C                     PARM           P006O2  80
+     C                     PARM           P006O3  1
+     C                     PARM           P006O4  1
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYAC     KLIST
+     C                     KFLD           P006I1           *公司別
+     C                     KFLD           W04              *會計年度
+     C           KEYAK     KLIST
+     C                     KFLD           P006I1           *公司別
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C*
+     C*轉換日期格式----- P006I2-->W04
+     C*-----------------------------------------
+  01-C           P006I4    IFEQ 'S'
+    C           KEYAK     CHAINAK0                  40
+    C*------------------------------
+    C   40                GOTO @END
+    C*------------------------------
+  02-C           AK11      IFEQ '1'                        *YMD-西元年
+    C           AK11      OREQ '2'                        *YMD-中國年
+    C                     Z-ADDP006I2    W031
+    C                     Z-ADD0         W032
+    C                     Z-ADD0         W033
+  02*C                     ELSE
+    C                     Z-ADDP006I2    W03     80
+  02-C                     END
+    C*
+    C                     CALL 'P31'
+    C                     PARM W03       P3101I  80
+    C                     PARM AK11      P3102I  1
+    C                     PARM AK09      P3103I  1
+    C                     PARM '2'       P3104I  1
+    C                     PARM '1'       P3105I  1
+    C           W041      PARM           P3101O  80
+  01*C                     ELSE
+    C                     Z-ADDP006I2    W04     40
+  01-C                     END
+     C*
+     C           KEYAC     CHAINAC0                  40
+     C   40                GOTO @END
+     C*---------------------------------
+     C*用會計期間計算日期起ˇ迄
+     C*---------------------------------
+  03-C           P006I3    IFEQ 01
+    C                     Z-ADDAC03A     W05     80       *P006O1
+    C                     Z-ADDAC03B     W06     80       *P006O2
+  03*C                     ELSE
+    C           P006I3    SUB  1         YY      20
+    C                     Z-ADDP006I3    ZZ      20
+    C                     CALL 'P37'
+    C                     PARM W02,YY    P3701I  80
+    C                     PARM '2'       P3702I  1
+    C                     PARM '1'       P3703I  1
+    C                     PARM 1         P3704I  40
+    C           W05       PARM           P3711O  80
+    C*
+    C                     Z-ADDW02,ZZ    W06
+  03-C                     END
+     C*
+     C*日期型態='S'時，須轉換螢幕顯示格式
+  04-C           P006I4    IFEQ 'S'
+    C                     CALL 'P31'
+    C                     PARM W05       P3101I  80
+    C                     PARM '2'       P3102I  1
+    C                     PARM '1'       P3103I  1
+    C                     PARM AK11      P3104I  1
+    C                     PARM AK09      P3105I  1
+    C           W051      PARM           P3101O  80
+    C*
+    C                     CALL 'P31'
+    C                     PARM W06       P3101I  80
+    C                     PARM '2'       P3102I  1
+    C                     PARM '1'       P3103I  1
+    C                     PARM AK11      P3104I  1
+    C                     PARM AK09      P3105I  1
+    C           W061      PARM           P3101O  80
+  04*C                     ELSE
+    C                     Z-ADDW05       W051    80
+    C                     Z-ADDW06       W061    80
+  04-C                     END
+     C*
+     C*起迄日期
+     C                     Z-ADDW051      P006O1
+     C                     Z-ADDW061      P006O2
+     C*本期結帳------
+     C                     MOVELAC03      P006O3
+     C*至本期結帳-----
+  05-C                     DO   P006I3    X       20
+  06-C           W01,X     IFNE 'Y'
+    C                     SETON                     99
+  06-C                     END
+  05-C                     END  1
+     C*
+  07-C           *IN99     IFEQ '0'
+    C                     MOVEL'Y'       P006O4
+  07*C                     ELSE
+    C                     MOVEL*BLANK    P006O4
+  07-C                     END
+     C*
+     C*
+     C           @END      TAG
+     C                     SETON                     LR
+

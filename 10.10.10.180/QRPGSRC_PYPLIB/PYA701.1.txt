@@ -1,0 +1,349 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM NAME : PYA701                                     *
+     H*    PROGRAM NAME :                                        *
+     H*    AUTHOR       : A1413 CLOUD                                *
+     H*    CREATE DATE  : 96/04/16                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     F*公司獎金資料檔
+     FPYPBLF02UF  E           K        DISK
+     FPYPYPF  UF  E           K        DISK
+     FPYBTPF  UF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FSYBNPF  IF  E           K        DISK
+     FPYA701D CF  E                    WORKSTN
+     I*---------------------------------------------------------------
+     I/COPY QDDSSRC,PYPMDS01
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      128 1280$PRTID
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      139 139 $RMK01
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      162 1620$EVR
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DPY01
+     I                                      503 505 DBT061
+     I                                      522 522 DBT03
+     I*
+     I                                      571 5760WBT04
+     I                                      577 5800WPB03
+     I                                      581 582 DPB04
+     I*
+     I                                      601 6040DPH03
+     I                                      606 6110WPH03
+     I                                      623 6280DBT045
+     I                                      623 6240DYY
+     I                                      625 6260DMM
+     I                                      627 6280DBT05
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C                     MOVEL'2'       DFMT    1
+     C                     MOVEL'2'       DTYPE   1
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPB     KLIST
+     C                     KFLD           DPY01
+     C                     KFLD           WPB03
+     C                     KFLD           DPB04
+     C           KEYBT     KLIST
+     C                     KFLD           DPY01
+     C                     KFLD           DBT03
+     C                     KFLD           WBT04
+     C                     KFLD           DBT05
+     C                     KFLD           DBT061
+     C           KEYCM     KLIST
+     C                     KFLD           DPY01
+     C           KEYBN     KLIST
+     C                     KFLD           DBT061
+     C           KEYPY     KLIST
+     C                     KFLD           DPY01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     *INI. RTN.
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C                     EXSR RTN100                     *MAIN
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL ROUTINE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   LDA
+|    C*
+|    C                     MOVEL*BLANK    DBT061           轉存銀行
+|    C                     MOVEL'1'       DBT03            所得類別
+|    C                     Z-ADDDDATE     DBT045           存入日期
+|    C                     MOVELDDATE     XDATE   40
+|    C                     Z-ADDXDATE     DPH03            計薪年月
+     C                     CALL 'P39'
+     C                     PARM DPH03     P3901I  60
+     C                     PARM '1'       P3902I  1
+     C                     PARM '1'       P3903I  1
+     C                     PARM '1'       P3904I  1
+     C                     PARM '1'       P3905I  1
+     C           DPH03     PARM           P3911O  60
+|    C                     Z-ADD0         DPB03            獎金年度
+|    C                     MOVEL*BLANK    DPB04
+|    C                     SETON                     97
+|    C*
+|    C                     Z-ADD1         $CPY
+|    C                     Z-ADD1         $PRTID
+|    C                     Z-ADD2         $EVR
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100.... MAIN ROUTINE
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C*                    MOVEA*ALL'0'   *IN,60
+| 01-C           DBT03     IFEQ '4'
+|   C                     SETON                     91
+| 01*C                     ELSE
+|   C                     SETON                     90
+| 01-C                     END
+|    C*
+|    C                     EXFMTDSPC1
+|    C*
+|    C                     MOVEA*ALL'0'   *IN,60
+| 02-C           *IN03     IFEQ '1'
+|   C                     GOTO END100
+| 02-C                     END
+|    C*
+|    C                     EXSR RTN110                     *CHK SCREEN1
+|    C*
+| 03-C           *IN99     IFEQ '0'
+| 04-C           *IN13     ANDEQ'1'
+|   C                     EXSR RTN120                     *PROCESS
+| 03-C                     END
+|    C*
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          RTN110....CHECK SCREEN1
+     C*==============================================================*
+03===C           RTN110    BEGSR
+|    C*
+|    C*公司編號
+| 01-C           DPY01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 01-C                     END
+|    C*
+|    C           KEYCM     CHAINCM0                  41
+| 02-C           *IN41     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 02-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*轉存銀行
+| 03-C           DBT061    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 03-C                     END
+|    C*
+|    C           KEYBN     CHAINBN0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 04-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*所得類別
+| 05-C           DBT03     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 05-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*存入日期
+| 06-C           DBT045    IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 06*C                     ELSE
+|   C*
+|   C                     Z-ADDDBT045    P3001I
+|   C                     CALL 'P30'
+|   C                     PARM           P3001I  80
+|   C                     PARM '1'       P3002I  1
+|   C                     PARM '1'       P3003I  1
+|   C                     PARM           P3011O  1
+| 07-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 07-C                     END
+| 06-C                     END
+|    C   99                GOTO END110
+|    C*
+     C           DYY       ADD  2000      DBT04   60
+     C                     MULT 100       DBT04
+     C                     ADD  DMM       DBT04
+|    C                     Z-ADDDBT04     WBT04
+|    C*
+| 08-C           DBT03     IFEQ '4'
+|   C*
+|   C*獎金年度
+| 09-C           DPB03     IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6799
+| 09-C                     END
+|   C   99                GOTO END110
+|   C*
+|   C*獎金類別
+| 10-C           DPB04     IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 10-C                     END
+|   C   99                GOTO END110
+|   C*
+|   C           DPB03     ADD  1911      WPB03   40
+| 08*C                     ELSE
+|   C*
+|   C*計薪年月
+| 11-C           DPH03     IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 11-C                     END
+|   C   99                GOTO END110
+|   C*
+     C                     CALL 'P39'
+     C                     PARM DPH03     P3901I  60
+     C                     PARM '1'       P3902I  1
+     C                     PARM '1'       P3903I  1
+     C                     PARM '2'       P3904I  1
+     C                     PARM '1'       P3905I  1
+     C                     PARM           P3911O  60
+|   C                     Z-ADDP3911O    WPH03
+| 08-C                     END
+|    C*
+| 12-C           $RMK01    IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6799
+| 12-C                     END
+|    C   99                GOTO END110
+|    C*
+     C           DYY       ADD  2000      DBT04
+     C                     MULT 100       DBT04
+     C                     ADD  DMM       DBT04
+|    C                     Z-ADDDBT04     WBT04
+|    C*
+03===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN120.... PROCESS
+     C*==============================================================*
+04===C           RTN120    BEGSR
+|    C*
+|    C                     SETON                     96
+|    C                     WRITEDSPC1
+|    C*
+|    C                     EXSR RTN130
+|    C*
+|    C                     OUT  LDA
+|    C                     CALL 'PYA7011C'
+|    C*
+|    C*郵局的銀行總行別不同
+|    C           DBT061    IFEQ '110'                      .一銀
+|    C                     CALL 'PYA7077C'
+|    C                     END
+|    C*
+|    C           DBT061    IFEQ '010'
+|    C           DBT061    OREQ '510'
+|    C                     CALL 'PYA7013C'                 郵局
+|    C                     END
+|    C*
+|    C                     CALL 'PYR707AC'                 列印報表
+|    C*
+| 01-C           DBT03     IFEQ '4'
+|   C                     SETON                     91
+| 01*C                     ELSE
+|   C                     SETON                     90
+| 01-C                     END
+|    C                     SETON                     95
+|    C                     SETOF                     9697
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN130.... UPDATE PYPBPF PYPYPF
+     C*==============================================================*
+05===C           RTN130    BEGSR
+|    C*
+|    C*清除薪資銀行轉存歷史檔PYBTPF
+|    C           KEYBT     SETLLBT0
+|    C           KEYBT     READEBT0                      40
+| 13-C           *IN40     DOWEQ'0'
+|   C                     DELETBT0
+|    C           KEYBT     READEBT0                      40
+| 13-C                     END
+|    C*
+|    C*存回發放年月、發放日期
+| 01-C           DBT03     IFEQ '4'
+|   C*
+|   C           KEYPB     SETLLPB0
+|   C           KEYPB     READEPB0                      42
+| 02-C           *IN42     DOWEQ'0'
+|   C                     Z-ADDWBT04     PB05
+|   C                     Z-ADDDBT05     PB05D
+|   C                     Z-ADD$A8YMD    PB97
+|   C                     TIME           PB98
+|   C                     MOVEL$USER     PB99
+|   C                     UPDATPB0
+|   C           KEYPB     READEPB0                      42
+| 02-C                     END
+|   C*
+| 01*C                     ELSE
+|   C*
+|   C*存回上、下期存入日期
+|   C           KEYPY     SETLLPY0
+|   C           KEYPY     READEPY0                      43
+| 03-C           *IN43     DOWEQ'0'
+|   C*下期薪
+| 04-C           DBT03     IFEQ '1'
+|   C                     Z-ADDDBT05     PY07
+| 04-C                     END
+|   C*上期薪
+| 05-C           DBT03     IFEQ '2'
+|   C                     Z-ADDDBT05     PY08
+| 05-C                     END
+|   C                     Z-ADD$A8YMD    PY97
+|   C                     TIME           PY98
+|   C                     MOVEL$USER     PY99
+|   C                     UPDATPY0
+|   C           KEYPY     READEPY0                      43
+| 03-C                     END
+|   C*
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+

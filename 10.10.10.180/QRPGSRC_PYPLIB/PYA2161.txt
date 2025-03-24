@@ -1,0 +1,401 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM NAME : PYA2161                                    *
+     H*    AUTHOR       : A1184                                      *
+     H*    CREATE DATE  : 85/03/17                                   *
+     H*    UPDATE DATE  : 89/03/01 A1274 EVA                         *
+     H*    SYSTEM       : PY                                         *
+     H*    SUBSYSTEM    :                                            *
+     H*    PURPOSE      :刷卡異常確認處理                          *
+     H****************************************************************
+     FPYT6PF  UP  E           K        DISK
+     FPYLVLF05UF  E           K        DISK                      A
+     FPYLAPF  UF  E           K        DISK                      A
+     FPYLUPF  UF  E           K        DISK                      A
+     FPYLTPF  UF  E           K        DISK                      A
+     FPYPMPF  IF  E           K        DISK
+     FPYLCPF  IF  E           K        DISK
+     E*------------------------------------------------------------***
+     IT60
+     I                                              T602  L1
+     I*
+     I           UDS
+     I                                      111 1160$CHYMD
+     I                                      101 110 $USER
+     I                                      187 1920DDATE
+     I                                      201 2080$A8YMD
+     I                                      501 502 DT602
+     I*                                     503 5080DT601
+     I                                      509 5160WDT601
+     I                                      520 5260DT601
+     I            DS
+     I                                        1   80T601
+     I                                        1   40KYY
+     I                                        5   60KMM
+     I                                        7   80KDD
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           T602
+     C           KEYLV     KLIST                           請假檔
+     C                     KFLD           T602             公司
+     C                     KFLD           T603             員工
+     C                     KFLD           T601             刷卡日期
+     C*                    KFLD           T607             更正狀態
+     C*                    KFLD           T612             起始時間
+     C*                    KFLD           T613             終止時間
+     C           KEYLV2    KLIST                           請假檔
+     C                     KFLD           T602
+     C                     KFLD           T603
+     C                     KFLD           T601
+     C           KEYLV3    KLIST                           請假檔
+     C                     KFLD           T602
+     C                     KFLD           T603
+     C           KEYLA     KLIST
+     C                     KFLD           T602
+     C                     KFLD           T603
+     C                     KFLD           T601
+     C           KEYLA2    KLIST
+     C                     KFLD           T602
+     C                     KFLD           T603
+     C           KEYLC     KLIST
+     C                     KFLD           T607
+     C           KEYLU     KLIST                           加班轉休檔
+     C                     KFLD           T602
+     C                     KFLD           T603
+     C                     KFLD           KYY
+     C                     KFLD           KMM
+     C           KEYLT     KLIST                           年假檔
+     C                     KFLD           T602
+     C                     KFLD           T603
+     C                     KFLD           KYY
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*參數檔
+     C   L1                EXSR R7100
+     C*
+     C                     EXSR R1000
+     C*
+     C                     Z-ADD$CHYMD    T696
+     C                     Z-ADD$A8YMD    T697
+     C                     TIME           T698
+     C                     MOVEL$USER     T699
+     C                     UPDATT60
+     C*
+     C   LR                EXSR R8900
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+01===C           R7100     BEGSR
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... MAIN PROCESS
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C*遲到　早退　忘刷卡
+|    C           KEYLA     CHAINLA0                  40
+|    C                     Z-ADD0         LA96
+|    C                     Z-ADD$A8YMD    LA97
+|    C                     TIME           LA98
+|    C                     MOVEL$USER     LA99
+|    C*
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELT602      LA01
+|   C                     MOVELT603      LA02
+|   C                     Z-ADDT601      LA03
+|   C*遲到
+| 02-C           T607      IFEQ 'L'
+|   C                     ADD  1         LA04             .遲到
+|   C                     UPDATLA0
+| 02-C                     END
+|   C*早退
+| 03-C           T607      IFEQ 'E'
+|   C                     ADD  1         LA05             .早退
+|   C                     UPDATLA0
+| 03-C                     END
+|   C*忘刷卡
+| 04-C           T607      IFEQ 'F'
+|   C                     ADD  1         LA06             .忘刷卡
+|   C                     UPDATLA0
+| 04-C                     END
+|   C*
+| 01*C                     ELSE
+|   C                     MOVELT602      LA01
+|   C                     MOVELT603      LA02
+|   C                     Z-ADDT601      LA03
+|   C*遲到
+| 05-C           T607      IFEQ 'L'
+|   C                     Z-ADD1         LA04             .遲到
+|   C                     Z-ADD0         LA05
+|   C                     Z-ADD0         LA06
+|   C                     WRITELA0
+| 05-C                     END
+|   C*早退
+| 06-C           T607      IFEQ 'E'
+|   C                     Z-ADD0         LA04
+|   C                     Z-ADD1         LA05             .早退
+|   C                     Z-ADD0         LA06
+|   C                     WRITELA0
+| 06-C                     END
+|   C*忘刷卡
+| 07-C           T607      IFEQ 'F'
+|   C                     Z-ADD0         LA04
+|   C                     Z-ADD0         LA05
+|   C                     Z-ADD1         LA06             .忘刷卡
+|   C                     WRITELA0
+| 07-C                     END
+|   C*
+| 01-C                     END
+|    C*------------------------------------------------------------***
+|    C*請假資料
+|    C           KEYLC     CHAINLC0                  40
+|    C   40                GOTO E1000
+|    C*
+|    C                     Z-ADD*ZERO     WT605   20
+|    C                     Z-ADD*ZERO     WT606   20
+|    C*
+|    C           KEYLV     CHAINLV0                  42
+|    C*
+| 08-C           *IN42     IFEQ '0'
+|   C                     EXSR R0200                      篩選時間
+| 08*C                     ELSE
+|   C*
+|   C*CHECK 請假日期區間*
+|   C           KEYLV     SETGTLV0
+|   C           KEYLV3    REDPELV0                      46*往前讀
+| 09-C           *IN46     IFEQ '0'
+|   C*
+| 10-C           T601      IFGE LV03
+|   C           T601      ANDLELV05
+|   C                     EXSR R0200                      篩選時間
+| 10*C                     ELSE
+|   C                     Z-ADDT605      WT605
+|   C                     Z-ADDT606      WT606
+|   C                     EXSR R0300
+|   C                     WRITELV0
+| 10-C                     END
+|   C*
+| 09*C                     ELSE
+|   C                     Z-ADDT605      WT605
+|   C                     Z-ADDT606      WT606
+|   C                     EXSR R0300
+|   C                     WRITELV0
+| 09-C                     END
+|   C*
+| 08-C                     END
+|    C*
+|    C*-----------------------------------------------------------***
+|    C**更新特休歷史檔（年假）及加班轉休歷史檔
+|    C                     EXSR R0100
+|    C*
+|    C*-----------------------------------------------------------***
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R0100 ... UPDATE PYLUPF, PYLTPF
+     C*==============================================================*
+03===C           R0100     BEGSR
+|    C*
+|    C*更新特休歷史檔（年假）
+| 01-C           T607      IFEQ 'A'
+|   C*
+|   C           KEYLT     CHAINLT0                  43
+| 02-C           *IN43     IFEQ '1'
+|   C                     Z-ADD0         LT96
+|   C                     Z-ADD$A8YMD    LT97
+|   C                     TIME           LT98
+|   C                     MOVEL$USER     LT99
+|   C*
+|   C                     MOVELT602      LT01
+|   C                     MOVELT603      LT02
+|   C                     Z-ADDKYY       LT03
+|   C*分鐘轉成小時
+|   C                     Z-ADD*ZERO     A1      32
+|   C           T606      DIV  60        A1
+|   C                     ADD  T605      A1
+|   C*小時轉天數
+|   C           A1        DIV  PM101     LT11
+|   C                     MVR            LT12
+|   C                     WRITELT0
+| 02*C                     ELSE
+|   C                     Z-ADD0         LT96
+|   C                     Z-ADD$A8YMD    LT97
+|   C                     TIME           LT98
+|   C                     MOVEL$USER     LT99
+|   C*
+|   C*巳存在請假檔者作累計
+|   C                     Z-ADD*ZERO     A1      32
+|   C           T606      DIV  60        A1
+|   C                     ADD  T605      A1
+|   C*小時轉天數
+|   C           A1        DIV  PM101     B1      30
+|   C                     MVR            C1      10
+|   C                     ADD  B1        LT11
+|   C                     ADD  C1        LT12
+|   C                     UPDATLT0
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C*------------------------------------------------------------***
+|    C*更新加班轉休歷史檔
+| 03-C           T607      IFEQ 'R'
+|   C*
+|   C           KEYLU     CHAINLU0                  44
+| 04-C           *IN44     IFEQ '1'
+|   C                     Z-ADD$A8YMD    LU97
+|   C                     TIME           LU98
+|   C                     MOVEL$USER     LU99
+|   C*
+|   C                     MOVELT602      LU01
+|   C                     MOVELT603      LU02
+|   C                     Z-ADDKYY       LU03
+|   C                     Z-ADDKMM       LU04
+|   C*分鐘轉成小時
+|   C                     Z-ADD*ZERO     A2      62
+|   C           T606      DIV  60        A2
+|   C                     ADD  T605      A2
+|   C                     Z-ADDA2        LU06
+|   C                     WRITELU0
+| 04*C                     ELSE
+|   C                     Z-ADD$A8YMD    LU97
+|   C                     TIME           LU98
+|   C                     MOVEL$USER     LU99
+|   C*
+|   C*巳存在加班轉休檔者作累計
+|   C                     Z-ADD*ZERO     A2      62
+|   C           T606      DIV  60        A2
+|   C                     ADD  T605      A2
+|   C                     ADD  A2        LU06
+|   C                     UPDATLU0
+| 04-C                     END
+| 03-C                     END
+|    C*------------------------------------------------------------***
+|    C*
+03===C           E0100     ENDSR
+     C*==============================================================*
+     C*          R0200 ... 時間區間篩選控制
+     C*==============================================================*
+04===C           R0200     BEGSR
+|    C*
+|    C                     Z-ADD0         LV96
+|    C                     Z-ADD$A8YMD    LV97
+|    C                     TIME           LV98
+|    C                     MOVEL$USER     LV99
+|    C*
+|    C                     Z-ADDLV07      WLV07   40
+|    C                     Z-ADDT613      WT613   40
+|    C                     Z-ADD*ZERO     WT605   20
+|    C                     Z-ADD*ZERO     WT606   20
+|    C*
+| 01-C           WT613     IFLT T612
+|   C                     ADD  2400      WT613
+| 01-C                     END
+|    C*
+| 02-C           WLV07     IFLT LV06
+|   C                     ADD  2400      WLV07
+| 02-C                     END
+|    C*遲到早退
+|    C*起始時間<=實際上班刷卡時間,實際下班刷卡時間<=終止時間
+|    C* LV06 <= T612, WT613 <= WLV07      *NO WRITE
+| 03-C           T612      IFGE LV06
+|   C           WT613     ANDLEWLV07
+|   C                     GOTO E0200
+| 03-C                     END
+|    C*遲到加班
+|    C*起始時間<=實際上班刷卡時間<=終止時間
+|    C*實際下班刷卡時間>=終止時間
+|    C* LV06 <= T612 <= WLV07 < WT613     *UPDATE
+| 04-C           T612      IFGE LV06
+|   C           T612      ANDLEWLV07
+|   C           WT613     ANDGTWLV07
+|   C                     ADD  T605      WT605            .異常時
+|   C                     ADD  T606      WT606            .異常分
+|   C                     EXSR R0300
+|   C                     Z-ADDT613      LV07
+|   C                     UPDATLV0
+| 04-C                     END
+|    C*早退
+|    C*實際上班刷卡時間<起始時間<=實際下班刷卡時間
+|    C*實際下班刷卡時間<=終止時間
+|    C* T612 < LV06 <= WT613 <= WLV07     *UPDATE
+| 05-C           T612      IFLT LV06
+|   C           WT613     ANDGELV06
+|   C           WT613     ANDLEWLV07
+|   C                     ADD  T605      WT605
+|   C                     ADD  T606      WT606
+|   C                     EXSR R0300
+|   C                     Z-ADDT612      LV06
+|   C                     UPDATLV0
+| 05-C                     END
+|    C*遲到
+|    C*起始時間<實際上班刷卡時間,終止時間<實際上班刷卡時間
+|    C* LV06, WLV07 < T612 (WT613)        *WRITE
+| 06-C           T612      IFGT LV06
+|   C           T612      ANDGTWLV07
+|   C*                    Z-ADDT605      WT605
+|   C*                    Z-ADDT606      WT606
+|   C                     ADD  T605      WT605
+|   C                     ADD  T606      WT606
+|   C                     EXSR R0300
+|   C                     Z-ADDT612      LV06
+|   C                     Z-ADDT613      LV07
+|   C*                    WRITELV0
+|   C                     UPDATLV0
+| 06-C                     END
+|    C*
+|    C* LV06, WLV07 > WT613 (T612)        *WRITE
+| 07-C           WT613     IFLT LV06
+|   C           WT613     ANDLTWLV07
+|   C*                    Z-ADDT605      WT605
+|   C*                    Z-ADDT606      WT606
+|   C                     ADD  T605      WT605
+|   C                     ADD  T606      WT606
+|   C                     EXSR R0300
+|   C                     Z-ADDT612      LV06
+|   C                     Z-ADDT613      LV07
+|   C*                    WRITELV0
+|   C                     UPDATLV0
+| 07-C                     END
+|    C*
+04===C           E0200     ENDSR
+     C*==============================================================*
+     C*          R0300 ... PYLVPF
+     C*==============================================================*
+05===C           R0300     BEGSR
+|    C*
+|    C                     MOVELT602      LV01
+|    C                     MOVELT603      LV02
+|    C                     Z-ADDT601      LV03
+|    C*                    MOVELT607      LV04
+|    C                     MOVELT608      LV04
+|    C                     Z-ADDT601      LV05
+|    C*分鐘轉成小時
+|    C           WT606     DIV  60        LV08
+|    C                     ADD  WT605     LV08
+|    C*小時轉天數
+|    C           LV08      DIV  PM101     LV09
+|    C                     MVR            LV08
+|    C*
+|    C                     Z-ADD0         LV96
+|    C                     Z-ADD$A8YMD    LV97
+|    C                     TIME           LV98
+|    C                     MOVEL$USER     LV99
+|    C*
+05===C           E0300     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR
+     C*==============================================================*
+06===C           R8900     BEGSR
+|    C*
+06===C                     ENDSR
+

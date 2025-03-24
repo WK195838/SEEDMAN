@@ -1,0 +1,193 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR2072                                    *
+     H*    PROGRAM NAME :遲到資料明細表列印                        *
+     H*    AUTHOR       : A1226 PETER                                *
+     H*    CREATE DATE  : 97/02/11                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYLAJF02IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR207P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    @AR1    7   7  8
+     E*---------------------------------------------------------------
+     ILAJF02
+     I                                              EM041 L2
+     I                                              EM042 L2
+     I                                              EM043 L2
+     I                                              EM044 L2
+     I                                              LA02  L1
+     I*
+     I           UDS
+     I                                      125 1270$CPY
+     I                                      203 2080DDATE
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DLA01
+     I                                      560 566 DEM041
+     I                                      567 573 DEM042
+     I                                      513 520 DLA021
+     I                                      521 528 DLA022
+     I**                                    529 5340DLA031
+     I**                                    535 5400DLA032
+     I                                      541 541 DFMT
+     I                                      542 542 DTYPE
+     I                                      543 5500WLA031
+     I                                      551 5580WLA032
+     I                                      600 6050DLA031
+     I                                      607 6120DLA032
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+  01-C           *INL2     IFEQ '1'
+    C           KEYDP     CHAINDP0                  40
+    C   40                MOVEL*BLANK    DP02
+    C                     SETON                     3132
+  01-C                     END
+     C* SAM DEL
+     C*  L2                SETOF                     31
+     C*  L1                SETOF                     32
+     C* END
+     C                     EXSR RTN100
+     C*
+     CL1 10                EXSR RTN810
+     CL2 10                EXSR RTN820
+     CLR 10                EXSR RTN890
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           LA01      CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C*
+|    C                     SETON                     1039
+|    C                     SETON                     3132
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT20
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+|    C                     CALL 'P35'
+|    C                     PARM LA03      P3501I  80
+|    C                     PARM '2'       P3502I  1
+|    C                     PARM '1'       P3503I  1
+|    C                     PARM           P3511O  10
+|    C                     Z-ADDP3511O    X       10
+|    C                     MOVEL@AR1,X    LA03N
+|    C*
+|    C*                    CALL 'P31'
+|    C*                    PARM LA03      P3101I  80
+|    C*                    PARM '2'       P3102I  1
+|    C*                    PARM '1'       P3103I  1
+|    C*                    PARM DFMT      P3104I  1
+|    C*                    PARM DTYPE     P3105I  1
+|    C*          PLA03     PARM           P3101O  80
+     C                     Z-ADDLA03      PLA03
+|    C*
+|    C                     WRITEPD1
+|    C                     SETOF                     3132
+|    C*
+|    C                     ADD  LA04      PT11
+|    C                     ADD  LA05      PT12
+|    C                     ADD  LA06      PT13
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK 1
+     C*==============================================================*
+03===C           RTN810    BEGSR
+|    C*
+|    C                     WRITEPT1
+|    C*
+|    C                     ADD  PT11      PT21
+|    C                     ADD  PT12      PT22
+|    C                     ADD  PT13      PT23
+|    C                     ADD  1         PT20
+|    C*
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     SETON                     32
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN820... LEVEL BREAK 2
+     C*==============================================================*
+04===C           RTN820    BEGSR
+|    C*
+|    C                     WRITEPT2
+|    C                     WRITEPE1
+|    C*
+|    C                     Z-ADD*ZERO     PT20
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C                     SETON                     3132
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR
+     C*==============================================================*
+05===C           RTN890    BEGSR
+|    C*
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+06===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+**
+星期一星期二星期三星期四星期五星期六星期日
+

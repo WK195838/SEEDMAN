@@ -1,0 +1,152 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM ID   : PYR2262                                    *
+     H*    PROGRAM NAME :獎懲資料明細表　                          *
+     H*    AUTHER       : A1336 KLAUS                                *
+     H*    CREATE DATE  : 91/07/16                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYXXPF  IP  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR226P O   E             39     PRINTER
+     E*-------------------------------------------------------------***
+     IXX0
+     I                                              XX02  L2
+     I                                              XX04  L1
+     I*
+     I           UDS
+     I                                      125 1270$CPY
+     I                                      211 2160DDATE
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DXX01
+     I                                      601 607 DXX021
+     I                                      608 614 DXX022
+     I                                      513 5190DXX051
+     I                                      520 5260DXX052
+     I                                      537 544 DXX041
+     I                                      545 552 DXX042
+     I                                      553 5600WXX051
+     I                                      561 5680WXX052
+     I                                      569 570 DXX061
+     I                                      571 572 DXX062
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYEM     KLIST
+     C                     KFLD           DXX01
+     C                     KFLD           XX04
+     C           KEY#Y     KLIST
+     C                     KFLD           #Y01
+     C                     KFLD           #Y02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C   L2                SETOF                     31
+     C   L1                SETOF                     32
+     C*
+     C                     EXSR R2000
+     C*
+     CL1 10                EXSR R8100
+     C*
+     CLR 10                EXSR R8900
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DXX01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C*公司名稱
+|    C           DXX01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C                     MOVEL'Y'       $DATA
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+|    C           KEYEM     CHAINEM0                  40
+|    C*
+|   C                     MOVEL'XX06'    #Y01      P
+|   C                     MOVELXX06      #Y02      P
+|    C           KEY#Y     CHAIN#Y0                  41
+|    C                     MOVEL#Y03      XX06N
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM XX05      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM DFMT      P3104I  1
+|    C                     PARM DTYPE     P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    PXX05
+|    C*
+|    C                     WRITEPD1
+|    C                     SETON                     3132
+|    C*
+|    C                     ADD  1         PT51    40
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+03===C           R8100     BEGSR
+|    C*
+|    C                     WRITEPT5
+|    C*
+|    C                     Z-ADD*ZERO     PT51
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR
+     C*==============================================================*
+13===C           R8900     BEGSR
+|    C*
+|    C*                    WRITEPE1
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+15===C           R8999     BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+15===C           E8999     ENDSR
+

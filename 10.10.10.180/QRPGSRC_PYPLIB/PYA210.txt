@@ -1,0 +1,380 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     F****************************************************************
+     FPYOVPF  UF  E           K        DISK                      A
+     FPYEMPF  UF  E           K        DISK
+     FPYA210D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      152 161 $USERN
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*WORK DATA AREA
+     IOVDS      E DSPYOVPF
+     IOVDSW       DS                            108
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYEMF    KLIST
+     C                     KFLD           DOV01F
+     C                     KFLD           DOV02F
+     C           KEYEMT    KLIST                           *NEXT REC SETLL
+     C                     KFLD           DOV01T
+     C                     KFLD           DOV02T
+     C           KEYOV     KLIST
+     C                     KFLD           DOV01F
+     C                     KFLD           DOV02F
+     C                     KFLD           WOV03F
+     C           KEYOVT    KLIST
+     C                     KFLD           DOV01T
+     C                     KFLD           DOV02T
+     C                     KFLD           OV03
+     C           KEYOVW    KLIST
+     C                     KFLD           DOV01F
+     C                     KFLD           DOV02F
+     C                     KFLD           OV03
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN OV26      SOV26
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C           *LIKE     DEFN OV03      WOV03F
+     C           *LIKE     DEFN OV03      WOV03T
+     C           *LIKE     DEFN DDATE     DOV03D
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DOV01F
+|    C                     MOVEL*BLANK    DOV02F
+|    C                     Z-ADD*ZERO     DOV03F
+|    C                     Z-ADD*ZERO     DOV03T
+|    C                     MOVEL*BLANK    DOV01T
+|    C                     MOVEL*BLANK    DOV02T
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 02-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C           *IN14     ANDEQ'1'
+|   C                     EXSR R1C00                      *拷貝選擇
+| 02-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*
+| 01-C           DOV01F    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DOV01F    CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+|    C*
+| 02-C           DOV02F    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           KEYEMF    CHAINEM0                  40
+| 03-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606199
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 04-C           DOV03F    IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P30'
+|    C                     PARM DOV03F    P3001I  80
+|    C                     PARM DFMT      P3002I  1
+|    C                     PARM DTYPE     P3003I  1
+|    C                     PARM           P3011O  1
+| 05-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DOV03F    P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WOV03F    PARM           P3101O  80
+|    C*
+| 06-C           DOV03T    IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P30'
+|    C                     PARM DOV03T    P3001I  80
+|    C                     PARM DFMT      P3002I  1
+|    C                     PARM DTYPE     P3003I  1
+|    C                     PARM           P3011O  1
+| 07-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DOV03T    P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WOV03T    PARM           P3101O  80
+|    C*
+| 08-C           WOV03T    IFLT WOV03F
+|   C                     MOVEL'UPT0041' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     626399
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 09-C           DOV01T    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 09-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 10-C           DOV02T    IFEQ *BLANK
+|   C                     MOVELDOV02F    DOV02T
+| 10-C                     END
+|    C*
+|    C           KEYEMT    CHAINEM0                  40
+| 11-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     646599
+| 11-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVELEM02      DEM02
+|    C                     MOVELEM03      DEM03
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....拷貝選擇
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R1C10
+|   C           DOPT      CASEQ2         R1C20
+|   C           DOPT      CASEQ3         R1C30
+| 01-C                     END
+|    C*
+|    C                     MOVEL'UPT2142' ERRID
+|    C                     MOVEL'PTMF'    ERRF
+|    C                     SETON                     99
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....不存在WRITE,存在　放棄拷貝
+     C*==============================================================*
+05===C           R1C10     BEGSR
+|    C*
+|    C           KEYOV     SETLLOV0
+|    C           KEYEMF    READEOV0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C           OV03      ANDLEWOV03T
+|   C*
+|   C*DATA EXIST CHECK
+|   C           KEYOVT    CHAINOV0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     EXSR R1D00                      拷貝
+|   C                     Z-ADD*ZERO     OV96
+|   C                     WRITEOV0
+|   C                     Z-ADD*ZERO     SOV26
+|   C                     EXSR R1E00
+| 02-C                     END
+|   C*NEXT REC FIND
+|   C           KEYOVW    SETGTOV0
+|   C           KEYEMF    READEOV0                      46
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....不存在WRITE,存在　覆蓋－無須確認
+     C*==============================================================*
+06===C           R1C20     BEGSR
+|    C*
+|    C           KEYOV     SETLLOV0
+|    C           KEYEMF    READEOV0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C           OV03      ANDLEWOV03T
+|   C*
+|   C                     MOVELOVDS      OVDSW            .KEEP DATA
+|   C*EXISTED RECORD
+|   C           KEYOVT    CHAINOV0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     EXSR R1D00                      拷貝
+|   C                     Z-ADD*ZERO     OV96
+|   C                     WRITEOV0
+|   C                     Z-ADD*ZERO     SOV26
+|   C                     EXSR R1E00
+| 02*C                     ELSE
+|   C                     Z-ADDOV26      SOV26
+|   C                     MOVELOVDSW     OVDS             .RESTORE QB
+|   C                     EXSR R1D00                      拷貝
+|   C                     UPDATOV0
+|   C                     EXSR R1E00
+| 02-C                     END
+|   C*NEXT REC FIND
+|   C           KEYOVW    SETGTOV0
+|   C           KEYEMF    READEOV0                      46
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*  R1C30 ....不存在WRITE,存在　覆蓋－逐筆確認
+     C*==============================================================*
+07===C           R1C30     BEGSR
+|    C*
+|    C           KEYOV     SETLLOV0
+|    C           KEYEMF    READEOV0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C           OV03      ANDLEWOV03T
+|   C*
+|   C                     MOVELOVDS      OVDSW            .KEEP DATA
+|   C*ITEM EXISTED
+|   C           KEYOVT    CHAINOV0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     EXSR R1D00                      拷貝
+|   C                     Z-ADD*ZERO     OV96
+|   C                     WRITEOV0
+|   C                     Z-ADD*ZERO     SOV26
+|   C                     EXSR R1E00
+| 02*C                     ELSE
+|   C                     EXSR R1C31                      逐筆確認
+| 02-C                     END
+|   C*<NEXT REC FIND>
+|   C           KEYOVW    SETGTOV0
+|   C           KEYEMF    READEOV0                      46
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1C31 ....逐筆確認是否拷貝PROCESS
+     C*==============================================================*
+08===C           R1C31     BEGSR
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM OV03      P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           DOV03D    PARM           P3101O  80
+|    C*
+|    C                     MOVEL' '       COVE
+|    C                     MOVELDOV03D    DOV03
+|    C                     EXFMTDSPD2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           COVE      IFEQ 'Y'
+|   C                     Z-ADDOV26      SOV26
+|   C                     MOVELOVDSW     OVDS
+|   C                     EXSR R1D00                      拷貝
+|   C                     UPDATOV0
+|   C                     EXSR R1E00                      拷貝
+| 01-C                     END
+|    C*
+08===C           E1C31     ENDSR
+     C*==============================================================*
+     C*          R1D00 ....拷貝PROCESS
+     C*==============================================================*
+09===C           R1D00     BEGSR
+|    C*ITEM
+|    C                     MOVELDOV01T    OV01
+|    C                     MOVELDOV02T    OV02
+|    C                     TIME           OV98
+|    C                     Z-ADD$A8YMD    OV97
+|    C                     MOVEL$USER     OV99
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 .... PYEMPF轉休時數
+     C*==============================================================*
+10===C           R1E00     BEGSR
+|    C*
+|    C           KEYEMT    CHAINEM0                  40
+|    C   40                GOTO E1E00
+|    C*
+|    C*                    SUB  SOV26     EM54
+|    C*                    ADD  OV26      EM54
+|    C*
+|    C                     Z-ADD$A8YMD    EM97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     EM98
+|    C                     MOVEL$USER     EM99
+|    C                     UPDATEM0
+|    C*
+10===C           E1E00     ENDSR
+     C*==============================================================*
+

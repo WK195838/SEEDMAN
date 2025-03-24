@@ -1,0 +1,116 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM ID   : GLR2O0C                                   */
+     /*    PROGRAM NAME :沖帳明細表                               */
+     /*    AUTHOR       : A1087  JOYCE                              */
+     /*    CREATE DATE  : 1992.12.01                                */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       : 泛太總帳                                */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             DCL        VAR(&DAL01)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DAL02S)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DAL02E)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DAK12F)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DOP)      TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DPER)     TYPE(*CHAR) LEN(6)
+
+     /*****  CPYF       --> GLWF07                              *****/
+             CPYF       FROMFILE(GLWF07) TOFILE(QTEMP/GLWF07) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/GLWF07))
+             OVRDBF     FILE(GLWF07) TOFILE(QTEMP/GLWF07)
+
+     /*****  CPYF       --> GLWF08                              *****/
+             CPYF       FROMFILE(GLWF08) TOFILE(QTEMP/GLWF08) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/GLWF08))
+             OVRDBF     FILE(GLWF08) TOFILE(QTEMP/GLWF08)
+
+     /*****  CPYF       --> GLWF09                              *****/
+             CPYF       FROMFILE(GLWF09) TOFILE(QTEMP/GLWF09) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/GLWF09))
+             OVRDBF     FILE(GLWF09) TOFILE(QTEMP/GLWF09)
+     /*-------------------------------------------------------------*/
+             CHGVAR     VAR(&DAL01)    VALUE(%SST(*LDA 501  2))
+             CHGVAR     VAR(&DAL02S)   VALUE(%SST(*LDA 503  8))
+             CHGVAR     VAR(&DAL02E)   VALUE(%SST(*LDA 511  8))
+             CHGVAR     VAR(&DAK12F)   VALUE(%SST(*LDA 526  8))
+             CHGVAR     VAR(&DOP)      VALUE(%SST(*LDA 534  1))
+             CHGVAR     VAR(&DPER)     VALUE(%SST(*LDA 541  6))
+
+             OVRDBF     FILE(GLALLF02) SHARE(*YES)
+             OPNQRYF    FILE(GLALLF02) QRYSLT(' +
+                        AL01  *EQ        "' *CAT &DAL01 *CAT '"  +
+                      & (  AL11  *EQ 0  +
+                         | AL11  *GE ' *CAT &DPER *CAT ' )+
+                      & AL02  *EQ %RANGE("' *CAT &DAL02S *CAT '" +
+                                         "' *CAT &DAL02E *CAT '") +
+                      & AL12  *LE         ' *CAT &DAK12F *CAT ' ') +
+                        KEYFLD(*FILE)
+
+             CALL       GLR2O01
+             CLOF       OPNID(GLALLF02)
+             DLTOVR     FILE(GLALLF02)
+
+             OVRPRTF    FILE(GLR2O0P) PAGESIZE(*N 132) CPI(12)
+             OVRPRTF    FILE(GLR2O2P) PAGESIZE(*N 132) CPI(12)
+             OVRPRTF    FILE(GLR2O4P) PAGESIZE(*N 132) CPI(12)
+
+             OVRPRTF    FILE(GLR2O1P) PAGESIZE(*N 198) CPI(15) +
+                          OVRFLW(55)
+             OVRPRTF    FILE(GLR2O3P) PAGESIZE(*N 198) CPI(15) +
+                          OVRFLW(55)
+             OVRPRTF    FILE(GLR2O5P) PAGESIZE(*N 198) CPI(15) +
+                          OVRFLW(55)
+
+             IF         COND(&DOP = '1' *OR &DOP = '4') THEN(CALL +
+                          PGM(GLR2O02))
+
+             CLRPFM     FILE(QTEMP/GLWF07)
+             CLRPFM     FILE(QTEMP/GLWF08)
+             IF         COND(&DOP = '2' *OR &DOP = '4') THEN(CALL +
+                          PGM(GLR2O03))
+
+             CLRPFM     FILE(QTEMP/GLWF07)
+             CLRPFM     FILE(QTEMP/GLWF08)
+             IF         COND(&DOP = '3' *OR &DOP = '4') THEN(CALL +
+                          PGM(GLR2O04))
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+
+             IF         COND(&DOP = '1' *OR &DOP = '4') THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2O0P')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2O1P')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             ENDDO
+
+             IF         COND(&DOP = '2' *OR &DOP = '4') THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2O2P')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2O3P')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             ENDDO
+
+             IF         COND(&DOP = '3' *OR &DOP = '4') THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2O4P')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2O5P')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             ENDDO
+
+             ENDPGM
+

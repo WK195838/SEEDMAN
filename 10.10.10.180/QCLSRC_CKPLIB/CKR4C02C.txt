@@ -1,0 +1,99 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM ID   : CKR4C0                                    */
+     /*    PROGRAM NAME :簽收條／信封／掛號單                     */
+     /*    AUTHOR       : A1150                                     */
+     /*    CREATE DATE  : 81/10/07                                  */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       :                                           */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&DHA02F)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DHA02T)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DHA23)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DHA06F)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DHA06T)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DHA04F)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&DHA04T)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&DKIND)   TYPE(*CHAR) LEN(1)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DHA02F)   VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&DHA02T)   VALUE(%SST(*LDA 505 2))
+             CHGVAR     VAR(&DHA23)    VALUE(%SST(*LDA 508 2))
+             CHGVAR     VAR(&DHA06F)   VALUE(%SST(*LDA 510 8))
+             CHGVAR     VAR(&DHA06T)   VALUE(%SST(*LDA 518 8))
+             CHGVAR     VAR(&DHA04F)   VALUE(%SST(*LDA 538 10))
+             CHGVAR     VAR(&DHA04T)   VALUE(%SST(*LDA 548 10))
+             CHGVAR     VAR(&DKIND)    VALUE(%SST(*LDA 537 1))
+
+             OVRDBF     FILE(CKHAPF) SHARE(*YES)
+             IF         COND(&DHA23 *EQ ' ' ) THEN(DO)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' ( HA01 *EQ "2" ) & +
+                          HA02 *EQ %RANGE("' *CAT &DHA02F *CAT '" +
+                          "' *CAT &DHA02T *CAT '") & +
+                          HA06C *EQ +
+                          %RANGE("' *CAT &DHA06F *CAT '" "' *CAT +
+                          &DHA06T *CAT '") & HA04 *EQ %RANGE("' +
+                          *CAT &DHA04F *CAT '" "' *CAT &DHA04T *CAT +
+                          '") ') KEYFLD((HA02) (HA04) (HA06) (HA03)) +
+                          MAPFLD((HA06C HA06 *CHAR 8))
+                        ENDDO
+             ELSE       CMD(DO)
+
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' ( HA01 *EQ "2" ) & +
+                          HA02 *EQ %RANGE("' *CAT &DHA02F *CAT '" +
+                          "' *CAT &DHA02T *CAT '") & HA23 *EQ ("' +
+                          *CAT &DHA23 *CAT '") & HA06C *EQ +
+                          %RANGE("' *CAT &DHA06F *CAT '" "' *CAT +
+                          &DHA06T *CAT '") & HA04 *EQ %RANGE("' +
+                          *CAT &DHA04F *CAT '" "' *CAT &DHA04T *CAT +
+                          '") ') KEYFLD((HA02) (HA04) (HA06) (HA03)) +
+                          MAPFLD((HA06C HA06 *CHAR 8))
+                        ENDDO
+
+             RTVDTAARA  DTAARA(*LDA (219 1))  RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3))  RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+
+             IF         COND(&DKIND *EQ '1') THEN(DO)
+             OVRPRTF    FILE(CKR4C1P) CPI(10)
+             CALL       CKR4C02
+             DLTOVR     FILE(*ALL)
+
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CHGVAR     VAR(&P6401I) VALUE('CKR4C1P')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             ENDDO
+
+             IF         COND(&DKIND *EQ '2') THEN(DO)
+             OVRPRTF    FILE(CKR4C2P) PAGESIZE(33) OVRFLW(30)
+             CALL       CKR4C03
+             DLTOVR     FILE(*ALL)
+
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CHGVAR     VAR(&P6401I) VALUE('CKR4C2P')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             ENDDO
+
+             IF         COND(&DKIND *EQ '3') THEN(DO)
+             OVRPRTF    FILE(CKR4C3P) CPI(13.3)
+             CALL       CKR4C04
+             DLTOVR     FILE(*ALL)
+
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CHGVAR     VAR(&P6401I) VALUE('CKR4C3P')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             ENDDO
+
+             CLOF       OPNID(CKHAPF)
+
+             ENDPGM
+

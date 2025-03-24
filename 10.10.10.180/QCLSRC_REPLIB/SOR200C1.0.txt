@@ -1,0 +1,80 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    AUTHOR       : CLEMENT                                   */
+     /*    CREATE DATE  : 112/07/19                                 */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : SOR200C1                                  */
+     /*    SYSTEM       :                                       */
+     /*    SUBSYSTEM    :銷售訂單系統                             */
+     /*    REMARK       :寄賣客戶出貨報表(篩選資料&產生報表)  */
+     /*   需求單號:1120457                                        */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&$EVR)   TYPE(*CHAR) LEN(1)
+
+             /*客戶代號*/
+             DCL        VAR(&DWF01S) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DWF01E) TYPE(*CHAR) LEN(5)
+             /*送貨日期*/
+             DCL        VAR(&YMD8S1) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YMD8E1) TYPE(*CHAR) LEN(8)
+             /*日期選項*/
+             DCL        VAR(&DATOPT) TYPE(*CHAR) LEN(1)
+             /* EXCEL */
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             CHGVAR     VAR(&YMD8S1) VALUE(%SST(*LDA 866 8))
+             CHGVAR     VAR(&YMD8E1) VALUE(%SST(*LDA 874 8))
+             CHGVAR     VAR(&DWF01S) VALUE(%SST(*LDA 601 5))
+             CHGVAR     VAR(&DWF01E) VALUE(%SST(*LDA 606 5))
+             CHGVAR     VAR(&DATOPT) VALUE(%SST(*LDA 667 1))
+
+             CHGVAR     VAR(&LIB)   VALUE('QTEMP')
+             CHGVAR     VAR(&FILE)  VALUE('SOR200F')
+
+
+             CPYF       FROMFILE(SOR200F) TOFILE(QTEMP/SOR200F) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817)
+             CLRPFM FILE(QTEMP/SOR200F)
+
+             OVRDBF     FILE(SOR200F) TOFILE(QTEMP/SOR200F) SHARE(*YES)
+
+             OVRDBF     FILE(SOSEPF) SHARE(*YES)
+             IF         COND(&DATOPT *EQ '1') THEN(DO)
+             OPNQRYF    FILE((SOSEPF) (MTMDPF)) FORMAT(SOSEPF) +
+                          QRYSLT('                     SE04 *EQ +
+                          %RANGE("' || &DWF01S || '"       "' || +
+                          &DWF01E || '" )     & MSE06 *EQ %RANGE("' +
+                          || &YMD8S1 || '"       "' || &YMD8E1 || +
+                          '" )     & MD20 *EQ "Y" ') KEYFLD((SE04) +
+                          (SE06) (SE01)) JFLD((SE04 MD01 *EQ)) +
+                          MAPFLD((MSE06 SE06 *CHAR 8))
+
+             CALL       PGM(SOR2001)
+                        ENDDO
+
+             IF         COND(&DATOPT *EQ '2') THEN(DO)
+             OPNQRYF    FILE((SOSEPF) (MTMDPF)) FORMAT(SOSEPF) +
+                          QRYSLT('SE04 *EQ %RANGE("' || &DWF01S || +
+                          '" "' || &DWF01E || '" ) & MSE24 *EQ +
+                          %RANGE("' || &YMD8S1 || '" "' || &YMD8E1 +
+                          || '" ) & MD20 *EQ "Y" ') KEYFLD((SE04) +
+                          (SE24) (SE01)) JFLD((SE04 MD01 *EQ)) +
+                          MAPFLD((MSE24 SE24 *CHAR 8))
+
+             CALL       PGM(SOR2001)
+                        ENDDO
+
+             CLOF       OPNID(SOSEPF)
+
+             DLTOVR     FILE(*ALL)
+
+
+             /*將SOR200F轉換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

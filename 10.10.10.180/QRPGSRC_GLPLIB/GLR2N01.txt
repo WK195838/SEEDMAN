@@ -1,0 +1,223 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLR2N0                                     *
+     H*    PROGRAM NAME : 明細帳列印－區間                         *
+     H*    AUTHOR       : A1087  JOYCE                               *
+     H*    CREATE DATE  : 1992.11.30                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     H****************************************************************
+     FGLAHLF02IP  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLWF10  O   E           K        DISK
+     E*
+     E                    WA01        5 20
+     E*排序
+     E                    W01         5  1 0
+     E                    W011        5  1 0D            *SORT
+     E*輸入欄位代碼
+     E                    W02         5  2
+     E*輸入欄位之控制碼
+     E                    W10         7  1
+     I*
+     IAH0
+     I                                              AH04  L1
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAH01
+     I                                      503 510 DAH04S
+     I                                      591 598 DAH04E
+     I                                      531 5370DAH10S
+     I                                      538 5440DAH10E
+     I                                      561 5670DAH25S
+     I                                      568 5740DAH25E
+     I                                      599 599 DK
+     I                                      600 600 DJ
+     I            DS
+     I                                        1   50WAF19
+     I                                        1   10AF191
+     I                                        2   20AF192
+     I                                        3   30AF193
+     I                                        4   40AF194
+     I                                        5   50AF195
+     I            DS
+     I                                        1   50W01
+     I                                        1   10A
+     I                                        2   20B
+     I                                        3   30C
+     I                                        4   40D
+     I                                        5   50E
+     I            DS
+     I                                        1   7 W10
+     I                                        1   7 AF18
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN WF1008    WAH12S
+     C           *LIKE     DEFN WF1008    WAH12E
+     C           *LIKE     DEFN WF1008    WAH13S
+     C           *LIKE     DEFN WF1008    WAH13E
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAF     KLIST
+     C                     KFLD           AH01
+     C                     KFLD           AH04
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C   L1                EXSR R0100
+     C*
+  01-C           AH12      IFGE WAH12S
+    C           AH12      ANDLEWAH12E
+    C           AH13      ANDGEWAH13S
+    C           AH13      ANDLEWAH13E
+    C*
+     C                     MOVE AH05      WA01,A
+     C                     MOVE AH06      WA01,B
+     C                     MOVE AH07      WA01,C
+     C                     MOVE AH08      WA01,D
+    C                     MOVE *BLANKS   WA01,E
+  02-C           AH09      IFNE 0
+    C                     CALL 'P56'                      *P56(GET'/')
+    C                     PARM AH09      P5601I  80
+    C                     PARM           P5601O 10
+    C                     MOVELP5601O    WA01,E
+  02-C                     END
+    C*
+    C                     MOVE AH04      WF1001
+    C                     MOVE WA01,1    WF1002
+    C                     MOVE WA01,2    WF1003
+    C                     MOVE WA01,3    WF1004
+    C                     MOVE WA01,4    WF1005
+    C                     MOVE WA01,5    WF1006
+    C                     MOVE AH02      WF1007
+    C                     Z-ADDAH12      WF1008
+    C                     Z-ADDAH13      WF1009
+    C                     MOVE AH16      WF1010
+    C                     WRITEGLWF10R
+    C*
+  01-C                     END
+     C*
+     CLR                   RETRN
+     C*==============================================================*
+     C*          R0100 ....GET 排序控制碼
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C           KEYAF     CHAINAF0                  40
+|    C*
+|    C                     MOVE AF11      W02,1
+|    C                     MOVE AF12      W02,2
+|    C                     MOVE AF13      W02,3
+|    C                     MOVE AF14      W02,4
+|    C                     MOVE AF15      W02,5
+|    C*
+|    C                     Z-ADDAF19      WAF19
+|    C                     Z-ADDAF191     A
+|    C                     Z-ADDAF192     B
+|    C                     Z-ADDAF193     C
+|    C                     Z-ADDAF194     D
+|    C                     Z-ADDAF195     E
+|    C*
+|    C                     Z-ADDW01       W011
+|    C                     SORTAW011
+|    C                     Z-ADDW011,1    W01S    30
+|    C                     EXSR R1C10
+|    C*
+|    C                     Z-ADD0         WAH12S
+|    C                     Z-ADD*ALL'9'   WAH12E
+|    C                     Z-ADD0         WAH13S
+|    C                     Z-ADD*ALL'9'   WAH13E
+| 03-C           AF06      IFEQ '1'
+| 04-C           DJ        IFEQ '1'
+|   C                     Z-ADD.01       WAH12S
+|   C                     Z-ADD*ALL'9'   WAH12E
+| 04*C                     ELSE
+| 05-C           DJ        IFEQ '2'
+|   C                     Z-ADD0         WAH12S
+|   C                     Z-ADD0         WAH12E
+| 05-C                     END
+| 04-C                     END
+| 03-C                     END
+| 06-C           AF06      IFEQ '2'
+| 07-C           DJ        IFEQ '1'
+|   C                     Z-ADD.01       WAH13S
+|   C                     Z-ADD*ALL'9'   WAH13E
+| 07*C                     ELSE
+| 08-C           DJ        IFEQ '2'
+|   C                     Z-ADD0         WAH13S
+|   C                     Z-ADD0         WAH13E
+| 08-C                     END
+| 07-C                     END
+| 06-C                     END
+|    C*
+01===CSR                   ENDSR
+     C*==============================================================*
+     C*          R1C10 ....GET 排序控制碼
+     C*==============================================================*
+02===C           R1C10     BEGSR
+|    C*
+| 01-C           W01S      IFLT 5
+|   C                     SETON                     31
+|   C                     Z-ADD0         I       30
+| 02-C           *IN31     DOWEQ'1'
+|   C                     ADD  1         I
+| 03-C           W01,I     IFEQ 0
+|   C           W10,I     ANDEQ'V'
+|   C                     ADD  1         W01S
+|   C                     Z-ADDW01S      W01,I
+| 03-C                     END
+| 04-C           W01S      IFGE 5
+|   C           I         ORGE 5
+|   C                     SETOF                     31
+| 04-C                     END
+| 02-C                     END
+|   C*
+| 05-C           W01S      IFLT 5
+|   C                     SETON                     31
+|   C                     Z-ADD0         I       30
+| 06-C           *IN31     DOWEQ'1'
+|   C                     ADD  1         I
+| 07-C           W01,I     IFEQ 0
+|   C           W02,I     ANDNE*BLANK
+|   C                     ADD  1         W01S
+|   C                     Z-ADDW01S      W01,I
+| 07-C                     END
+| 08-C           W01S      IFGE 5
+|   C           I         ORGE 5
+|   C                     SETOF                     31
+| 08-C                     END
+| 06-C                     END
+| 05-C                     END
+|   C*
+| 09-C           W01S      IFLT 5
+|   C                     SETON                     31
+|   C                     Z-ADD0         I       30
+| 10-C           *IN31     DOWEQ'1'
+|   C                     ADD  1         I
+| 11-C           W01,I     IFEQ 0
+|   C                     ADD  1         W01S
+|   C                     Z-ADDW01S      W01,I
+| 11-C                     END
+| 12-C           W01S      IFGE 5
+|   C           I         ORGE 5
+|   C                     SETOF                     31
+| 12-C                     END
+| 10-C                     END
+| 09-C                     END
+| 01-C                     END
+|    C*
+02===CSR                   ENDSR
+

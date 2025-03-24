@@ -1,0 +1,124 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    DSPF NAME    : KIP0191                                    *
+     H*    AUTHOR       : DEREK                                      *
+     H*    CREATE DATE  : 2016/12/12                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    PROGRAM NAME : KIP0191                                    *
+     H*    SYSTEM       :茂世進銷存                                *
+     H*    SUBSYSTEM    :專櫃進銷存系統                            *
+     H*    REMARK       :業績獎金計算                              *
+     H****************************************************************
+     FKIP019D CF  E                    WORKSTN
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      211 2160DDATE
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      131 1340$WWW
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      162 1620$EVR
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     I                                      501 5060DBA01S
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN98     PARM *IN98     IN98    1
+     C           *IN97     PARM *IN97     IN97    1
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INT.
+     C*
+  01-C           *IN03     DOUEQ'1'
+    C           @PRC      OREQ 'Y'
+    C                     EXSR R1000                      *MAIN
+  01-C                     ENDDO
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+     C*==============================================================*
+     C*          R0100 ... INITIAL ROUTINE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   *NAMVAR
+|    C*
+|    C                     Z-ADD0         DBA01S           銷售年月
+|    C                     Z-ADD0         DBA01            銷售年月
+|    C                     MOVEL*BLANK    @PRC    1         PROCESS
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ...  MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *CHK SCREEN1
+|    C*
+| 02-C           *IN99     IFEQ '0'
+|   C           *IN13     ANDEQ'1'
+|   C                     SETON                     28    .執行中
+|   C                     WRITEDSPD1
+|   C                     SETOF                     28
+|   C                     MOVEL'Y'       @PRC
+|   C                     OUT  LDA
+|   C                     SETON                     96
+| 02-C                     ENDIF
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 ... CHECK SCREEN1
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*銷售年月必須輸入
+| 01-C           DBA01     IFEQ 0
+|   C                     SETON                     9961
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*驗證銷售年月是否正確
+|    C                     CALL 'P38'
+|    C                     PARM DBA01     P3801I  60       月份
+|    C                     PARM '3'       P3802I  1        日期格式
+|    C                     PARM '1'       P3803I  1        日期曆別
+|    C           DBA01S    PARM           P3801O  60       轉換月份
+|    C                     PARM           P3811O  1        驗證結果
+| 02-C           P3811O    IFEQ 'N'
+|   C                     SETON                     9961
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 02-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*
+03===C           E1B00     ENDSR
+

@@ -1,0 +1,214 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : CKR4G0                                     *
+     H*    PROGRAM NAME :登錄票據明細表                            *
+     H*    AUTHOR       : A1062  JEANNY                              *
+     H*    CREATE DATE  : 1993.04.20                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :票據系統                                  *
+     H****************************************************************
+     FCKHFLF01IP  E           K        DISK
+     FCKHBLF01IF  E           K        DISK
+     FPT#XPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FCKR4G0P O   E             39     PRINTER
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I* LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I* PROPRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DHF02F
+     I                                      505 506 DHF02T
+     I                                      509 5160WHF06F
+     I                                      517 5240WHF06T
+     I                                      525 5280DHF71F
+     I                                      529 5320DHF71T
+     I/COPY QRPGSRC,PT#XDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *LIKE     DEFN #X01      W#X01
+     C           *LIKE     DEFN #A01      W#A01
+     C           *LIKE     DEFN #A02      W#A02
+     C*
+     C           *LIKE     DEFN HF02      #B001I
+     C           *LIKE     DEFN HF02      #D001I
+     C           *LIKE     DEFN HF04      #D002I
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY#X     KLIST
+     C                     KFLD           W#X01
+     C                     KFLD           DHF02F
+     C           KEY#A     KLIST
+     C                     KFLD           W#A01            *'HA05'
+     C                     KFLD           W#A02            *HF05
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*+ LEVEL BREAK INIT PROCESS +++++++++++++++++++++++++++++++++++
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     EXSR R2000
+     C*
+     C*+ LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++
+     CLR 10                EXSR R8900
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+     C                     IN   PTDA01
+|    C*表頭++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*
+|    C*GET公司別
+     C                     MOVELDHF02F    DHF02            *MAY UPD
+     C                     MOVEL*BLANK    PCONAM
+     C                     CALL 'CKS#B0'
+     C                     PARM DHF02F    #B001I
+     C                     PARM           #B002O 16
+     C           PCONAM    PARM           #B003O 34
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C*GET開票日
+     C                     MOVEL'CK'      W#X01
+     C           KEY#X     CHAIN#X0                  40
+     C*
+     C                     CALL 'P31'
+     C                     PARM WHF06F    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C                     PARM           P3101O  80
+     C                     Z-ADDP3101O    DHF06F
+     C*
+     C                     CALL 'P31'
+     C                     PARM WHF06T    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           DHF06T    PARM           P3101O  80
+     C*
+     C*CLEAR TOTAL FIELD
+     C                     Z-ADD*ZEROS    PT11
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C*+<<DATA SET>>+++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*開票日
+     C                     CALL 'P31'
+     C                     PARM HF06      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           HF06N     PARM           P3101O  80
+     C*到期日
+     C                     CALL 'P31'
+     C                     PARM HF07      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           HF07N     PARM           P3101O  80
+     C*廠商名稱
+     C                     MOVELHF77      #D003O
+     C           #D003O    IFEQ *BLANK
+     C                     CALL 'CKS#D0'
+     C                     PARM HF02      #D001I
+     C                     PARM HF04      #D002I
+     C                     PARM           #D003O 18
+     C                     PARM           #D004O 42
+     C                     PARM           #D005O 62
+     C                     PARM           #D098O 50
+     C                     PARM           #D099O  1
+     C                     END
+     C*
+     C                     CALL 'P65'
+     C                     PARM #D003O    P6501I 80
+     C                     PARM 10        P6502I  30
+     C           PHF04     PARM           P6511O 80
+     C*                    PARM           P6512O 80
+     C*銀行名稱
+     C                     MOVEL*BLANK    HB02             *銀行名稱
+     C           HF08      CHAINHB0                  40
+     C*票類
+     C                     MOVEL*BLANK    W#A01
+     C                     MOVEL*BLANK    W#A02
+     C                     MOVEL*BLANK    HF05N
+     C                     MOVEL'CKTYPE'  W#A01
+     C                     MOVELHF05      W#A02
+     C           KEY#A     CHAIN#A0                  40    *票類
+     C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #A03      P6501I 80
+|   C                     PARM 6         P6502I  30
+|   C           HF05N     PARM           P6511O 80
+|   C                     PARM           P6512O 80
+     C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 05-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 05-C                     END
+     C*
+     C                     ADD  HF10      PT11
+     C                     WRITEPD1
+|    C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|    C* ACCUMULATE TOTAL
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+06===C           R8900     BEGSR
+|    C*
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     WRITEPT1
+     C                     Z-ADD*ZEROS    PT11
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+07===C           R8999     BEGSR
+|    C*
+|    C                     SETON                     80
+|    C                     EXSR R1000
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+

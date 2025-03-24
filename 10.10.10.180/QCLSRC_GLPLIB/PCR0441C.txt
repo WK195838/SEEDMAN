@@ -1,0 +1,531 @@
+     /***************************************************************/
+     /*                                                             */
+     /*    PROGRAM ID   : PCR044C                                   */
+     /*    PROGRAM NAME :零用金專案明細表                         */
+     /*    CREATE DATE  : 1992.12.30                                */
+     /*    UPDATE DATE  :                                           */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             DCL        VAR(&DCA01)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DCA02S)   TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DCA02E)   TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DCA04S)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DCA04E)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DCA10F)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DCA10T)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DCA05A)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DCA06A)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DCA07A)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DCA08A)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DCA9AS)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DCA9AE)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DCA05S)   TYPE(*CHAR) LEN(20)
+             DCL        VAR(&DCA05E)   TYPE(*CHAR) LEN(20)
+             DCL        VAR(&DCA06S)   TYPE(*CHAR) LEN(20)
+             DCL        VAR(&DCA06E)   TYPE(*CHAR) LEN(20)
+             DCL        VAR(&DCA07S)   TYPE(*CHAR) LEN(20)
+             DCL        VAR(&DCA07E)   TYPE(*CHAR) LEN(20)
+             DCL        VAR(&DCA08S)   TYPE(*CHAR) LEN(20)
+             DCL        VAR(&DCA08E)   TYPE(*CHAR) LEN(20)
+             DCL        VAR(&DCA09F)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DCA09T)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DSORT)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DCA17S)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DCA17E)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DOP)      TYPE(*CHAR) LEN(1)
+
+     /*****  CPYF       --> GLWF17                              *****/
+             CPYF       FROMFILE(GLWF17) TOFILE(QTEMP/GLWF17) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/GLWF17))
+             OVRDBF     FILE(GLWF17) TOFILE(QTEMP/GLWF17)
+     /*-------------------------------------------------------------*/
+             CHGVAR     VAR(&DCA01)    VALUE(%SST(*LDA 501  2))
+             CHGVAR     VAR(&DCA02S)   VALUE(%SST(*LDA 934  9))
+             CHGVAR     VAR(&DCA02E)   VALUE(%SST(*LDA 943  9))
+             CHGVAR     VAR(&DCA04S)   VALUE(%SST(*LDA 503  8))
+             CHGVAR     VAR(&DCA04E)   VALUE(%SST(*LDA 511  8))
+             CHGVAR     VAR(&DCA10F)   VALUE(%SST(*LDA 533  8))
+             CHGVAR     VAR(&DCA10T)   VALUE(%SST(*LDA 541  8))
+             CHGVAR     VAR(&DCA05A)   VALUE(%SST(*LDA 551  2))
+             CHGVAR     VAR(&DOP)      VALUE(%SST(*LDA 549 1))
+             CHGVAR     VAR(&DCA06A)   VALUE(%SST(*LDA 553  2))
+             CHGVAR     VAR(&DCA07A)   VALUE(%SST(*LDA 555  2))
+             CHGVAR     VAR(&DCA08A)   VALUE(%SST(*LDA 557  2))
+             CHGVAR     VAR(&DCA9AS)   VALUE(%SST(*LDA 919  2))
+             CHGVAR     VAR(&DCA9AE)   VALUE(%SST(*LDA 929  2))
+             CHGVAR     VAR(&DCA05S)   VALUE(%SST(*LDA 592 20))
+             CHGVAR     VAR(&DCA05E)   VALUE(%SST(*LDA 680 20))
+             CHGVAR     VAR(&DCA06S)   VALUE(%SST(*LDA 612 20))
+             CHGVAR     VAR(&DCA06E)   VALUE(%SST(*LDA 700 20))
+             CHGVAR     VAR(&DCA07S)   VALUE(%SST(*LDA 632 20))
+             CHGVAR     VAR(&DCA07E)   VALUE(%SST(*LDA 720 20))
+             CHGVAR     VAR(&DCA08S)   VALUE(%SST(*LDA 652 20))
+             CHGVAR     VAR(&DCA08E)   VALUE(%SST(*LDA 740 20))
+             CHGVAR     VAR(&DCA09F)   VALUE(%SST(*LDA 672  8))
+             CHGVAR     VAR(&DCA09T)   VALUE(%SST(*LDA 760  8))
+             CHGVAR     VAR(&DSORT)    VALUE(%SST(*LDA 550  1))
+             CHGVAR     VAR(&DCA17S)   VALUE(%SST(*LDA 932  1))
+             CHGVAR     VAR(&DCA17E)   VALUE(%SST(*LDA 933  1))
+
+             OVRDBF     FILE(PCCALF01) SHARE(*YES)
+             IF         COND(&DSORT = '1') THEN(DO)
+  /*登帳日期   */
+             IF         COND(&DOP   = '1') THEN(DO)
+             OPNQRYF    FILE(PCCALF01) QRYSLT(' +
+                        CA01  *EQ        "' *CAT &DCA01 *CAT '"  +
+                      & CA02  *EQ %RANGE("' *CAT &DCA02S *CAT '" +
+                                         "' *CAT &DCA02E *CAT '") +
+                      & CA04  *EQ %RANGE("' *CAT &DCA04S *CAT '" +
+                                         "' *CAT &DCA04E *CAT '") +
+                      & CA10C *EQ %RANGE("' *CAT &DCA10F *CAT '" +
+                                         "' *CAT &DCA10T *CAT '") +
+                      & CA17  *EQ %RANGE("' *CAT &DCA17S *CAT '" +
+                                         "' *CAT &DCA17E *CAT '") +
+                      & CA20  *NE "V" +
+                    & ( ( (   CA05A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")))) +
+                      & ( CA09A *EQ %RANGE("' *CAT &DCA9AS *CAT '" +
+                                           "' *CAT &DCA9AE *CAT '") +
+                        & CA09C *EQ %RANGE("' *CAT &DCA09F *CAT '" +
+                                           "' *CAT &DCA09T *CAT '"))') +
+                        MAPFLD((CA10C  CA10  *CHAR   8) +
+                               (CA09C  CA09  *CHAR   8)) +
+                        KEYFLD((CA04) (CA10) (CA02))
+                        ENDDO
+  /*支付日期   */
+             IF         COND(&DOP   = '2') THEN(DO)
+             OPNQRYF    FILE(PCCALF01) QRYSLT(' +
+                        CA01  *EQ        "' *CAT &DCA01 *CAT '"  +
+                      & CA02  *EQ %RANGE("' *CAT &DCA02S *CAT '" +
+                                         "' *CAT &DCA02E *CAT '") +
+                      & CA04  *EQ %RANGE("' *CAT &DCA04S *CAT '" +
+                                         "' *CAT &DCA04E *CAT '") +
+                      & CA11C *EQ %RANGE("' *CAT &DCA10F *CAT '" +
+                                         "' *CAT &DCA10T *CAT '") +
+                      & CA17  *EQ %RANGE("' *CAT &DCA17S *CAT '" +
+                                         "' *CAT &DCA17E *CAT '") +
+                      & CA20  *NE "V" +
+                    & ( ( (   CA05A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")))) +
+                      & ( CA09A *EQ %RANGE("' *CAT &DCA9AS *CAT '" +
+                                           "' *CAT &DCA9AE *CAT '") +
+                        & CA09C *EQ %RANGE("' *CAT &DCA09F *CAT '" +
+                                           "' *CAT &DCA09T *CAT '"))') +
+                        MAPFLD((CA11C  CA11  *CHAR   8) +
+                               (CA09C  CA09  *CHAR   8)) +
+                        KEYFLD((CA04) (CA11) (CA02))
+                        ENDDO
+  /*撥補日期   */
+             IF         COND(&DOP   = '3') THEN(DO)
+             OPNQRYF    FILE(PCCALF01) QRYSLT(' +
+                        CA01  *EQ        "' *CAT &DCA01 *CAT '"  +
+                      & CA02  *EQ %RANGE("' *CAT &DCA02S *CAT '" +
+                                         "' *CAT &DCA02E *CAT '") +
+                      & CA04  *EQ %RANGE("' *CAT &DCA04S *CAT '" +
+                                         "' *CAT &DCA04E *CAT '") +
+                      & CA29C *EQ %RANGE("' *CAT &DCA10F *CAT '" +
+                                         "' *CAT &DCA10T *CAT '") +
+                      & CA17  *EQ %RANGE("' *CAT &DCA17S *CAT '" +
+                                         "' *CAT &DCA17E *CAT '") +
+                      & CA20  *NE "V" +
+                    & ( ( (   CA05A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")))) +
+                      & ( CA09A *EQ %RANGE("' *CAT &DCA9AS *CAT '" +
+                                           "' *CAT &DCA9AE *CAT '") +
+                        & CA09C *EQ %RANGE("' *CAT &DCA09F *CAT '" +
+                                           "' *CAT &DCA09T *CAT '"))') +
+                        MAPFLD((CA29C  CA29  *CHAR   8) +
+                               (CA09C  CA09  *CHAR   8)) +
+                        KEYFLD((CA04) (CA29) (CA02))
+                        ENDDO
+                        ENDDO
+             ELSE       CMD(DO)
+  /*登帳日期   */
+             IF         COND(&DOP   = '1') THEN(DO)
+             OPNQRYF    FILE(PCCALF01) QRYSLT(' +
+                        CA01  *EQ        "' *CAT &DCA01 *CAT '"  +
+                      & CA02  *EQ %RANGE("' *CAT &DCA02S *CAT '" +
+                                         "' *CAT &DCA02E *CAT '") +
+                      & CA04  *EQ %RANGE("' *CAT &DCA04S *CAT '" +
+                                         "' *CAT &DCA04E *CAT '") +
+                      & CA10C *EQ %RANGE("' *CAT &DCA10F *CAT '" +
+                                         "' *CAT &DCA10T *CAT '") +
+                      & CA17  *EQ %RANGE("' *CAT &DCA17S *CAT '" +
+                                         "' *CAT &DCA17E *CAT '") +
+                      & CA20  *NE "V" +
+                    & ( ( (   CA05A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")))) +
+                      & ( CA09A *EQ %RANGE("' *CAT &DCA9AS *CAT '" +
+                                           "' *CAT &DCA9AE *CAT '") +
+                        & CA09C *EQ %RANGE("' *CAT &DCA09F *CAT '" +
+                                           "' *CAT &DCA09T *CAT '"))') +
+                        MAPFLD((CA10C  CA10  *CHAR   8) +
+                               (CA09C  CA09  *CHAR   8)) +
+                        KEYFLD((CA10) (CA02) (CA04))
+                        ENDDO
+  /*支付日期   */
+             IF         COND(&DOP   = '2') THEN(DO)
+             OPNQRYF    FILE(PCCALF01) QRYSLT(' +
+                        CA01  *EQ        "' *CAT &DCA01 *CAT '"  +
+                      & CA02  *EQ %RANGE("' *CAT &DCA02S *CAT '" +
+                                         "' *CAT &DCA02E *CAT '") +
+                      & CA04  *EQ %RANGE("' *CAT &DCA04S *CAT '" +
+                                         "' *CAT &DCA04E *CAT '") +
+                      & CA11C *EQ %RANGE("' *CAT &DCA10F *CAT '" +
+                                         "' *CAT &DCA10T *CAT '") +
+                      & CA17  *EQ %RANGE("' *CAT &DCA17S *CAT '" +
+                                         "' *CAT &DCA17E *CAT '") +
+                      & CA20  *NE "V" +
+                    & ( ( (   CA05A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")))) +
+                      & ( CA09A *EQ %RANGE("' *CAT &DCA9AS *CAT '" +
+                                           "' *CAT &DCA9AE *CAT '") +
+                        & CA09C *EQ %RANGE("' *CAT &DCA09F *CAT '" +
+                                           "' *CAT &DCA09T *CAT '"))') +
+                        MAPFLD((CA11C  CA11  *CHAR   8) +
+                               (CA09C  CA09  *CHAR   8)) +
+                        KEYFLD((CA11) (CA02) (CA04))
+                        ENDDO
+  /*撥補日期   */
+             IF         COND(&DOP   = '3') THEN(DO)
+             OPNQRYF    FILE(PCCALF01) QRYSLT(' +
+                        CA01  *EQ        "' *CAT &DCA01 *CAT '"  +
+                      & CA02  *EQ %RANGE("' *CAT &DCA02S *CAT '" +
+                                         "' *CAT &DCA02E *CAT '") +
+                      & CA04  *EQ %RANGE("' *CAT &DCA04S *CAT '" +
+                                         "' *CAT &DCA04E *CAT '") +
+                      & CA29C *EQ %RANGE("' *CAT &DCA10F *CAT '" +
+                                         "' *CAT &DCA10T *CAT '") +
+                      & CA17  *EQ %RANGE("' *CAT &DCA17S *CAT '" +
+                                         "' *CAT &DCA17E *CAT '") +
+                      & CA20  *NE "V" +
+                    & ( ( (   CA05A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA05A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA05S *CAT '" +
+                                               "' *CAT &DCA05E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA06A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA06S *CAT '" +
+                                               "' *CAT &DCA06E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA07A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA07S *CAT '" +
+                                               "' *CAT &DCA07E *CAT '"))) +
+                      & ( (   CA05A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA05  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA06A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA06  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA07A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA07  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")) +
+                       |  (   CA08A *EQ        "' *CAT &DCA08A *CAT '" +
+                        &     CA08  *EQ %RANGE("' *CAT &DCA08S *CAT '" +
+                                               "' *CAT &DCA08E *CAT '")))) +
+                      & ( CA09A *EQ %RANGE("' *CAT &DCA9AS *CAT '" +
+                                           "' *CAT &DCA9AE *CAT '") +
+                        & CA09C *EQ %RANGE("' *CAT &DCA09F *CAT '" +
+                                           "' *CAT &DCA09T *CAT '"))') +
+                        MAPFLD((CA29C  CA29  *CHAR   8) +
+                               (CA09C  CA09  *CHAR   8)) +
+                        KEYFLD((CA29) (CA02) (CA04))
+                        ENDDO
+                        ENDDO
+
+             CALL       PCR0441
+             CLOF       OPNID(PCCALF01)
+             DLTOVR     FILE(PCCALF01)
+
+
+             IF         COND(&DSORT = '1') THEN(DO)
+     /*****  會計科目－排序                                   *****/
+             OVRPRTF    FILE(PCR044AP) PAGESIZE(*N 198) CPI(15) +
+                          OVRFLW(55) USRDTA('零用專案')
+             CALL       PCR044A
+                        ENDDO
+             ELSE       CMD(DO)
+     /*****  傳票日期－排序                                   *****/
+             OVRPRTF    FILE(PCR044BP) PAGESIZE(*N 198) CPI(15) +
+                          OVRFLW(55) USRDTA('零用專案')
+             CALL       PCR044B
+                        ENDDO
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+
+             IF         COND(&DSORT = '1') THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('PCR044AP')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+                        ENDDO
+             ELSE       CMD(DO)
+             CHGVAR     VAR(&P6401I) VALUE('PCR044BP')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+                        ENDDO
+
+             ENDPGM
+

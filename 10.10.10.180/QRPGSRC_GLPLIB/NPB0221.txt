@@ -1,0 +1,173 @@
+     FGLAHLF04IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FMTMALF02IF  E           K        DISK
+     FNPNEPF  IF  E           K        DISK
+     FNPNFPF  UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     IGLDA01      DS
+     I                                        1  16 DA01
+     I*
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      501 502 DAH01
+     I                                      509 5110DYEAR
+     I                                      512 5130DMM
+     I                                      534 5370@YEAR
+     I                                      541 5480DAH10S
+     I                                      549 5560DAH10E
+     I            DS
+     I                                        1   3 NF05
+     I                                        1   1 NF051
+     I            DS
+     I                                        1   6 NF06
+     I                                        1   1 NF06A
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           GLDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYNF1    KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           @YEAR
+     C                     KFLD           DMM
+     C           KEYNF     KLIST
+     C                     KFLD           NF01
+     C                     KFLD           NF02
+     C                     KFLD           NF02A
+     C                     KFLD           NF03
+     C                     KFLD           NF04
+     C                     KFLD           NF05
+     C                     KFLD           NF06
+     C                     KFLD           NF07
+     C                     KFLD           NF08
+     C                     KFLD           NF10
+     C                     KFLD           NF11
+     C           KEYNE     KLIST
+     C                     KFLD           AH01
+     C                     KFLD           AH04
+     C           KEYAF     KLIST
+     C                     KFLD           AH01
+     C                     KFLD           AH04
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100
+     C*總帳餘額轉至實績
+     C           *LOVAL    SETLLAH0
+     C                     READ AH0                      46
+  01-C           *IN46     DOWEQ'0'
+      *判斷需存在會計科目NE
+    C           KEYNE     SETLLNE0                      40
+  02-C           *IN40     IFEQ '1'
+      *PROCESS FILE
+    C                     EXSR R1000
+  02-C                     END
+    C                     READ AH0                      46
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ... INITIAL
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C           DAH01     CHAINAK0                  40
+|    C*
+|    C                     Z-ADDDMM       I       20
+|    C*清除實績期數，ＦＯＲ重新計算
+|    C           KEYNF1    SETLLNF0
+|    C           KEYNF1    READENF0                      46
+| 03-C           *IN46     DOWEQ'0'
+|   C                     DELETNF0
+|   C           KEYNF1    READENF0                      46
+| 03-C                     END
+|    C*
+|    C                     MOVELDAH01     NF01
+|    C                     Z-ADD@YEAR     NF02
+|    C                     Z-ADDDMM       NF02A
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... GET DATA TO WORK FILE
+     C*==============================================================*
+02===C           R1000     BEGSR
+      *GET品牌
+|    C                     MOVEL*BLANK    NF04
+| 01-C           AH06A     IFEQ '03'
+|   C                     MOVELAH06      NF04
+| 01-C                     END
+      *
+| 02-C           AH06A     IFEQ '02'
+|   C                     MOVELAH06      WFLD1   4
+|   C                     MOVE WFLD1     NF04
+| 02-C                     END
+      *
+|    C                     MOVEL'99'      NF03
+|    C           NF04      SETLLMA0
+|    C           NF04      READEMA0                      46
+| 03-C           *IN46     DOWEQ'0'
+| 04-C           MA11      IFNE *BLANK
+|   C                     MOVELMA11      WFLD2   1
+| 05-C           WFLD2     IFEQ '1'
+|   C                     MOVEL'10'      NF03
+| 05-C                     END
+| 06-C           WFLD2     IFEQ '2'
+|   C                     MOVEL'20'      NF03
+| 06-C                     END
+| 07-C           WFLD2     IFEQ '3'
+|   C                     MOVEL'30'      NF03
+| 07-C                     END
+|   C                     SETON                     46
+| 04-C                     END
+|   C  N46      NF04      READEMA0                      46
+| 03-C                     END
+      *
+|    C                     MOVELAH07      NF05
+|    C                     MOVELAH05      NF06
+|    C                     MOVELAH08      NF07
+|    C                     MOVELAH15      NF08
+     C                     Z-ADDAH10      NF10
+     C                     MOVELAH02      NF11
+      *
+|    C           KEYNF     CHAINNF0                  41
+|    C                     TIME           NF97
+|    C                     Z-ADD$A8YMD    NF98
+|    C                     MOVEL$USER     NF99
+|    C* GET餘額
+|    C           KEYAF     CHAINAF0                  40
+| 08-C           *IN40     IFEQ '0'
+| 09-C           AF06      IFEQ '1'
+|   C           AH12      SUB  AH13      WAMT   132
+| 09*C                     ELSE
+|   C           AH13      SUB  AH12      WAMT
+| 09-C                     END
+| 08-C                     END
+      *
+| 10-C           *IN41     IFEQ '0'
+|   C                     ADD  WAMT      NF09
+|   C                     UPDATNF0
+| 10*C                     ELSE
+|   C                     Z-ADDWAMT      NF09
+|   C                     WRITENF0
+| 10-C                     END
+      *
+02===C                     ENDSR
+

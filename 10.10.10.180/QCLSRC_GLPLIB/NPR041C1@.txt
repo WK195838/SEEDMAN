@@ -1,0 +1,65 @@
+             PGM
+             DCL        VAR(&DND01)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&$YEAR)   TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DND03S)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DND03E)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DND04S)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DND04E)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DCON)     TYPE(*CHAR) LEN(1)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DND01)   VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&$YEAR)   VALUE(%SST(*LDA 535 4))
+             CHGVAR     VAR(&DND03S)   VALUE(%SST(*LDA 541 2))
+             CHGVAR     VAR(&DND03E)   VALUE(%SST(*LDA 543 2))
+             CHGVAR     VAR(&DND04S)   VALUE(%SST(*LDA 545 2))
+             CHGVAR     VAR(&DND04E)   VALUE(%SST(*LDA 547 2))
+             CHGVAR     VAR(&DCON)     VALUE(%SST(*LDA 569 1))
+
+      /******/
+
+             OVRDBF     FILE(NPNDPF) SHARE(*YES)
+             OPNQRYF    FILE((NPNDPF)) QRYSLT(' ND01 *EQ "' *CAT +
+                          &DND01 *CAT '"  & ND02 *EQ ' *CAT &$YEAR +
+                          *CAT '  & ND03 *EQ %RANGE("' *CAT &DND03S +
+                          *CAT '" "' *CAT &DND03E *CAT '") & ND04 +
+                          *EQ %RANGE("' *CAT &DND04S *CAT '" "' +
+                          *CAT &DND04E *CAT '") ') KEYFLD((ND03) +
+                          (ND04) (ND051) (ND05))
+
+             OVRPRTF    FILE(NPR041P) PAGESIZE(*N 198) CPI(15) +
+                          USRDTA('預算比較')
+
+             IF         COND(&DCON = '1')  THEN(DO)
+             OVRPRTF    FILE(NPR041AP) PAGESIZE(*N 198) CPI(15) +
+                        USRDTA('預算比較')
+                        CALL NPR0411
+             CHGVAR     VAR(&P6401I) VALUE('NPR046AP')
+             ENDDO
+
+             IF         COND(&DCON = '2')  THEN(DO)
+             OVRPRTF    FILE(NPR041BP) PAGESIZE(*N 198) CPI(15) +
+                        USRDTA('預算比較')
+                        CALL NPR0412
+             CHGVAR     VAR(&P6401I) VALUE('NPR046BP')
+             ENDDO
+
+
+             CLOF       OPNID(NPNDPF)
+             DLTOVR     FILE(*ALL)
+           /********/
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+
+             CHGVAR     VAR(&P6401I) VALUE('NPR041P')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             ENDPGM
+

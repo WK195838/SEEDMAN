@@ -1,0 +1,66 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    AUTHOR       : JONATHAN YEH                              */
+     /*    CREATE DATE  : 100/03/18                                 */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : SAR086C1                                  */
+     /*    SYSTEM       :                                       */
+     /*    SUBSYSTEM    :銷售分析系統                             */
+     /*    REMARK       :滯銷產品明細                             */
+     /* 服務單號: NOTE:1030317    WEB:1030360                   */
+     /***************************************************************/
+     /* 服務單號:1031674                                        */
+     /*00A 1030918 JONATHAN新增轉成EXCEL*/
+             PGM
+             DCL        VAR(&$EVR)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)   TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTID) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6601I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6602I) TYPE(*DEC)  LEN(1 0)
+             DCL        VAR(&P6603I) TYPE(*DEC)  LEN(3 0)
+             DCL        VAR(&P6604I) TYPE(*DEC)  LEN(2 0)
+
+             DCL        VAR(&NSDAT1) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&NSDAT2) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DMA01S) TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DMA01E) TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DNSDAT) TYPE(*CHAR) LEN(3)
+
+
+             CHGVAR     VAR(&DNSDAT) VALUE(%SST(*LDA 613 3))
+             CHGVAR     VAR(&DMA01S) VALUE(%SST(*LDA 616 9))
+             CHGVAR     VAR(&NSDAT1)  VALUE(%SST(*LDA 850 8))
+             CHGVAR     VAR(&NSDAT2)  VALUE(%SST(*LDA 858 8))
+             CHGVAR     VAR(&DMA01E) VALUE(%SST(*LDA 625 9))
+
+  /*滯銷品明細表EXCEL*/
+    /*00A*/  CPYF       FROMFILE(SAR086WF) TOFILE(QTEMP/SAR086WF) +
+                          CRTFILE(*YES)
+    /*00A*/  MONMSG     MSGID(CPF2817) EXEC(CLRPFM +
+                          FILE(QTEMP/SAR086WF))
+    /*00A*/  CLRPFM     FILE(QTEMP/SAR086WF)
+
+    /*00A*/  OVRDBF     FILE(SAR086WF) TOFILE(QTEMP/SAR086WF) +
+                          SHARE(*YES)
+
+             OVRPRTF    FILE(SAR086P) PAGESIZE(*N 198) CPI(15) +
+                        USRDTA('滯銷產品')
+
+             CALL       SAR0861
+             CHGVAR     VAR(&P6601I) VALUE('SAR086P')
+   /*00A*/   CALL       PGM(ECL100C) PARM('QTEMP' 'SAR086WF')
+
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (162 1)) RTNVAR(&$EVR)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (598 2)) RTNVAR(&$PRTID)
+             CHGVAR     VAR(&P6602I) VALUE(&$EVR)
+             CHGVAR     VAR(&P6603I) VALUE(&$CPY)
+             CHGVAR     VAR(&P6604I) VALUE(&$PRTID)
+             CALL      PGM(P66) PARM(&P6601I &P6602I &P6603I &P6604I)
+
+
+             ENDPGM
+

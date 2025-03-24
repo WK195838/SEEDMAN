@@ -1,0 +1,264 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLR3B01                                    *
+     H*    PROGRAM NAME :費用分攤設定列印                          *
+     H*    AUTHOR       : A1150                                      *
+     H*    CREATE DATE  : 81/11/03                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FGLAPPF  IP  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FPT#APF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLAQPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLR3B0P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    A1      1   2 10
+     IAP0
+     I                                              AP01  L1
+     I                                              AP02  L1
+     I                                              AP03  L1
+     I                                              AP04  L1
+     I                                              AP05  L1
+     I                                              AP06  L1
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAP01
+     I                                      503 510 DAP02F
+     I                                      511 518 DAP02T
+     I                                      519 520 DAP03F
+     I                                      521 522 DAP03T
+     I                                      523 528 DAP04F
+     I                                      529 534 DAP04T
+     I                                      535 535 DAP05
+     I                                      536 5430DAP06F
+     I                                      544 5510DAP06T
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY#B     KLIST
+     C                     KFLD           DAP01            *公司別
+     C           KEY#Y     KLIST
+     C                     KFLD           WTMP1  10        *'AP03'
+     C                     KFLD           WTMP2  10        *AP03
+     C           KEY#A     KLIST
+     C                     KFLD           AP04
+     C           KEYAF     KLIST
+     C                     KFLD           DAP01
+     C                     KFLD           AQ04
+     C           KEYAQ     KLIST
+     C                     KFLD           DAP01
+     C                     KFLD           AP02
+     C                     KFLD           AP03
+     C                     KFLD           AP04
+     C                     KFLD           DAP05
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*+ LEVEL BREAK INIT PROCESS +++++++++++++++++++++++++++++++++++
+     C   L1                EXSR R7100
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     C*+ LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++
+     CL1 10                EXSR R8100
+     CLR 10                EXSR R8900
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C*
+     C                     IN   PTDA01
+     C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           PDATE     PARM           P3101O  80
+     C*
+|    C*
+|    C           KEY#B     CHAIN#B0                  40
+|    C   40                MOVEL*BLANK    #B03
+|    C*啟用日期 FOR PH1 ------
+|    C           KEY#B     CHAINAK0                  40
+|    C*日期格式轉換FOR PH1 ----------
+|    C                     CALL 'P31'
+|    C                     PARM DAP06F    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C                     PARM           P3101O  80
+|    C*
+|    C                     Z-ADDP3101O    PAP06F
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DAP06T    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C                     PARM           P3101O  80
+|    C*
+|    C                     Z-ADDP3101O    PAP06T
+|    C*
+|    C*分攤別 FOR PH1 -------
+| 01-C           DAP05     IFEQ '1'
+|   C                     MOVEAA1,1      PFLD1            *預設分攤
+| 01*C                     ELSE
+|   C                     MOVEAA1,2      PFLD1            *追溯分攤
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C*+<<DATA SET>>+++++++++++++++++++++++++++++++++++++++++++++++++++
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|   C                     SETON                     31
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 01-C                     END
+|    C*
+|    C                     MOVEL*BLANK    AQ04
+|    C                     MOVEL*BLANK    AF03
+|    C                     MOVEL*BLANK    AQ16
+|    C                     Z-ADD0         AQ12
+|    C                     MOVEL*BLANK    AQ22
+|    C*
+|    C           KEYAQ     READEAQ0                      44
+| 02-C           *IN44     IFEQ '1'
+|   C                     WRITEPD1
+| 02-C                     END
+|    C*
+| 03-C           *IN44     DOWEQ'0'
+|   C*
+|   C           KEYAF     CHAINAF0                  40
+|   C   40                MOVEL*BLANK    AF03
+|   C*
+|   C   31                WRITEPD1
+|   C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|   C                     SETOF                         31
+|   C  N31                WRITEPD1
+|   C           KEYAQ     READEAQ0                      44
+|   C*
+| 04-C  N44      *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|   C                     SETON                     31
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 04-C                     END
+|   C*
+| 03-C                     END
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+03===C           R7100     BEGSR
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM AP06      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C                     PARM           P3101O  80
+|    C*
+|    C                     Z-ADDP3101O    PAP06
+|    C*
+|    C                     MOVEL*BLANK    P#Y03
+|    C                     MOVEL'AP03'    WTMP1
+|    C                     MOVELAP03      WTMP2
+|    C           KEY#Y     CHAIN#Y0                  40
+|    C  N40                MOVEL#Y03      P#Y03
+|    C*
+|    C           KEY#A     CHAIN#A0                  40
+|    C   40                MOVEL*BLANK    #A02
+|    C*
+|    C           KEYAQ     SETLLAQ0
+|    C*
+|    C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|    C                     SETON                     31
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+04===C           R8100     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C  NLR                WRITEPT1
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+05===C           R8900     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C                     WRITEPT2
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+06===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R1000
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+06===C                     ENDSR
+**
+預設分攤
+追溯分攤
+

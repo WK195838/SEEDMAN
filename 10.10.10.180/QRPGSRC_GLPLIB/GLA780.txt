@@ -1,0 +1,218 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250
+     H*
+     H*    PROGRAM-ID   : GLA780
+     H*    PROGRAM NAME : 過帳還原作業
+     H*    AUTHOR       : A1087  JOYCE
+     H*    CREATE DATE  : 1992.11.06
+     H*    UPDATE DATE  :
+     H*    SYSTEM       : 泛太總帳
+     H****************************************************************
+     FGLAKPF  IF  E           K        DISK
+     FGLAGPF  IF  E           K        DISK
+     FGLAHLF01IF  E           K        DISK
+     FGLA780D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I*                                     211 2160DYMD
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAH01
+     I                                      503 511 DAH02
+     I                                      512 520 DAG03
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAH     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           DAH02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT VALUE
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C                     EXSR R1000
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....SCREEN INIT VALUE SET
+     C*==============================================================*
+01===CSR         R0100     BEGSR
+|    C*
+|    C                     SETON                     27
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C                     MOVEL*BLANK    DAH01
+|    C                     MOVEL*BLANK    DAH02
+|    C                     MOVEL*BLANK    DAG03
+|    C                     Z-ADD1         $CPY
+|    C                     MOVE '00'      $PRTCD
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      .CHECK      ?
+|    C*
+| 02-C           *IN14     IFEQ '1'
+|   C           *IN99     ANDEQ'0'
+|   C                     SETOF                     27
+|   C                     SETON                     28    .執行中
+|   C                     WRITEDSPD1
+|   C                     SETOF                     28
+|   C*
+|   C                     OUT  LDA
+|   C                     CALL 'GLA7801C'
+|   C                     SETON                     27
+|   C* 作業完成
+|   C                     MOVEL'UPT2142' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 02-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00  ...CHECK DATA FROM SCREEN KEY-IN
+     C*===============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C* CHK公司別
+|    C*
+| 01-C           DAH01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           DAH01     CHAINAK0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02*C                     ELSE
+| 03-C           AK15      IFNE *BLANK
+|   C                     MOVEL'UGL0013' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6099
+| 03-C                     END
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 04-C           DAH02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           KEYAH     CHAINAH0                  40
+| 05-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606199
+| 05*C                     ELSE
+|   C                     CALL 'GLS005'
+|   C                     PARM DAH01     P005I1  2
+|   C                     PARM AH10      P005I2  80
+|   C                     PARM 'F'       P005I3  1
+|   C                     PARM           P005O1  40
+|   C                     PARM           P005O2  20
+|   C                     PARM           P005O3  1
+|   C                     PARM           P005O4  1
+| 06-C           P005O1    IFEQ 0
+|   C           P005O2    OREQ 0
+|   C                     MOVEL'UGL0029' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6199
+| 06-C                     END
+|   C   99                GOTO E1B00
+| 07-C           P005O1    IFLE AK13
+|   C                     MOVEL'UGL0032' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     99
+| 07-C                     END
+|   C   99                GOTO E1B00
+      *
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*須為已過帳之傳票
+| 08-C           AH18      IFNE 'V'
+|   C                     MOVEL'UGL0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606199
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*GET迴轉傳票號碼
+|    C                     MOVEL*BLANK    DAG03
+|    C           KEYAH     CHAINAG0                  40
+| 09-C           *IN40     IFEQ '0'
+|   C                     MOVELAG03      DAG03
+| 09-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C* CHK FUN AUT
+| 10-C           $ADD      IFNE 'Y'
+|   C           $UPD      ORNE 'Y'
+|   C           $DLT      ORNE 'Y'
+|   C           $INQ      ORNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 10-C                     END
+|    C   99                GOTO E1B00
+|    C*
+03===CSR         E1B00     ENDSR
+     C*==============================================================*
+

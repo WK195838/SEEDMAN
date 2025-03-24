@@ -1,0 +1,166 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR6413                                    *
+     H*    PROGRAM NAME :勞保調整投保申請表列印　　                *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 90/03/26                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :員工保險維護子系統                        *
+     H****************************************************************
+     FPYR641WFIP  E           K        DISK
+     FPYR641P O   E             39     PRINTER
+     E*---------------------------------------------------------------*
+     I              '(留存)'            C         SORT1
+     E*---------------------------------------------------------------*
+     IWF0
+     I**                                            WFXX  L2
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*----------------------------------------------------------------
+     I                                      501 502 DW31
+     I                                      571 578 DW132S
+     I                                      581 588 DW132E
+     I                                      519 5220DYM
+     I                                      524 537 DNAME1
+     I                                      538 551 DNAME2
+     I                                      552 5570WYM
+     I                                      561 5660DYMD
+     I                                      568 568 DSORT
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN300
+     C*
+     CLR 10                EXSR RTN890
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   *NAMVAR
+|    C                     SETON                     1039
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DW31      CM001I  2        *公司編號
+|    C                     PARM           CM002O 22        *公司名稱
+|    C                     PARM           CM003O 32        *代碼說明
+|    C           DFMT      PARM           CM004O  1        *日期格式
+|    C           DTYPE     PARM           CM005O  1        *日期曆別
+|    C                     PARM           CM098O 50        *備用欄
+|    C                     PARM           CM099O  1        *存在否？
+|    C*整調年月格式轉換
+|    C*
+|    C*                    CALL 'P39'
+|    C*                    PARM DYM       P3901I  60
+|    C*                    PARM '1'       P3902I  1
+|    C*                    PARM '1'       P3903I  1
+|    C*                    PARM '2'       P3904I  1
+|    C*                    PARM '2'       P3905I  1
+|    C*          HYM       PARM           P3911O  60
+     C                     Z-ADDDYM       HYM
+|    C*
+|    C*
+| 01-C           CM099O    IFEQ 'N'
+|   C                     MOVEL*BLANK    CM03
+| 01*C                     ELSE
+|   C                     MOVELCM003O    CM03
+| 01-C                     END
+|    C                     Z-ADD0         NN      30       *累績20
+|    C*
+| 02-C           DSORT     IFEQ 'A'
+|   C                     MOVELSORT1     PTYPE            留存
+| 02*C                     ELSE
+| 03-C           DSORT     IFEQ 'B'
+|   C                     MOVEL*BLANK    PTYPE            申報
+| 03-C                     END
+| 02-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN300... WRITE DETAIL
+     C*==============================================================*
+02===C           RTN300    BEGSR
+|    C*
+|    C*出生日期轉換
+|    C*                    CALL 'P31'
+|    C*                    PARM WF03      P3101I  80       *出生日期
+|    C*                    PARM DFMT      P3102I  1        *日期格式
+|    C*                    PARM DTYPE     P3103I  1        *日期曆別
+|    C*                    PARM '2'       P3104I  1
+|    C*                    PARM '2'       P3105I  1
+|    C*          PEM33     PARM           P3111O  80       *出生日期
+     C                     Z-ADDWF03      PEM33
+|    C*
+|    C                     MOVELWF01      PEM03            *姓名
+|    C                     MOVELWF02      PEM31            *身分證號
+|    C                     MOVELWF04      P1308B           *調整前保額
+|    C                     MOVELWF05      PW130B           *調整後保額
+|    C*
+|    C*列印類別：
+|    C* A.留存：列印全部資料（包含調整前後保額金額相同亦列印）
+|    C* B.申報：列印部份資料（調整前後保額金額不同者列印）
+| 01-C           DSORT     IFEQ 'B'
+| 02-C           P1308B    IFEQ PW130B
+|   C                     GOTO END300
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C*每１５人列印一頁
+| 03-C           NN        IFLE 14
+|   C                     ADD  1         NN               *累績15
+|   C                     ADD  1         TT01             *合計人數
+| 03*C                     ELSE
+|   C*
+|   C                     EXSR RTN890
+|   C                     Z-ADD1         NN               *累績15
+|   C                     Z-ADD1         TT01             *合計人數
+|   C                     SETON                     39    *跳頁
+| 03-C                     END
+|    C*
+|    C*
+| 04-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1                        *表頭
+|   C                     SETOF                     39
+|   C                     SETON                     31
+| 04-C                     END
+|    C*
+|    C                     WRITEPD1                        *明細
+|    C*
+02===C           END300    ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR --- HAS DATA
+     C*==============================================================*
+03===C           RTN890    BEGSR
+|    C*
+|    C                     WRITEPT1                        *合計
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+04===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPE9                        *無資料
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+

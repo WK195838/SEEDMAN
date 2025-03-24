@@ -1,0 +1,245 @@
+      ****************************************************************
+      *   人頭馬匯東洋酒股份有限公司－版權所有      TEL:5042266    *
+      *                                                              *
+      * PROGRAM NAME : PCA003                                        *
+      * AUTHER       : AN MING HSIA                                  *
+      * CREATE DATE  : 10/08/93                                      *
+      * UPDATE DATE  :                                               *
+      * SYSTEM       :人頭馬匯東                                   *
+      * SUBSYSTEM    :零用金系統                                   *
+      * REMARK       :零用金作廢／取消處理                         *
+      ****************************************************************
+     FPT#BPF  IF  E           K        DISK
+     FPCA003D CF  E                    WORKSTN
+     F                                              KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      152 161 $USERN
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I*
+     I                                      601 602 DCA01
+     I                                      603 603 DCA17S
+     I                                      604 604 DCA17E
+     I                                      619 619 DCA17
+     I                                      605 605 DSEL1
+     I                                      611 6180YCA10S
+     I                                      621 6280YCA10E
+     I                                      631 639 DCA02S
+     I                                      641 649 DCA02E
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100                      *INIT VALUE
+     C*
+  01-C           *IN03     DOUEQ'1'
+    C           *IN99     OREQ '0'
+    C*
+    C                     EXSR R1000
+    C*
+  01-C                     END
+     C*
+     C   03                SETON                     LR
+     C*
+     C                     RETRN
+     C*==============================================================*
+     C*          R0100 ....SCREEN INIT VALUE SET
+     C*==============================================================*
+01===CSR         R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C                     SETON                     27
+|    C                     IN   PTDA01
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C                     MOVEL*BLANKS   DCA01
+|    C                     MOVEL*BLANKS   DCA17
+|    C                     MOVEL*BLANKS   DSEL1
+|    C                     MOVEL*BLANKS   DCA02S
+|    C                     MOVEL*BLANKS   DCA02E
+|    C                     Z-ADD0         DCA10S
+|    C                     Z-ADD0         DCA10E
+|    C                     Z-ADD0         YCA10S
+|    C                     Z-ADD0         YCA10E
+|    C                     MOVEL001       $CPY
+|    C                     MOVEL'00'      $PRTCD
+|    C                     MOVEL'2'       $PENV
+     C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      .CHECK      ?
+|    C                     OUT  LDA
+|    C*
+02===C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00  ...CHECK DATA FROM SCREEN KEY-IN
+     C*===============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C*公司別
+| 01-C           DCA01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 01-C           DCA01     SETLL#B0                      40
+     C           *IN40     IFEQ '0'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*登帳日期
+| 02-C           DCA10S    IFEQ 0
+|   C                     Z-ADD0         DCA10S
+| 02-C                     END
+| 03-C           DCA10E    IFEQ 0
+|   C                     Z-ADD123199    DCA10E
+| 03-C                     END
+|    C*(CHECK DATE)-登帳日期
+| 04-C           DCA10S    IFNE 0
+|   C                     CALL 'P09'
+|   C                     PARM DCA10S    P0901I  60
+|   C                     PARM           P0901O  1
+| 05-C           P0901O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 05-C                     END
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 06-C           DCA10E    IFNE 0
+|   C                     CALL 'P09'
+|   C                     PARM DCA10E    P0901I  60
+|   C                     PARM           P0901O  1
+| 07-C           P0901O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 07-C                     END
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C* 日期轉換
+| 08-C           DCA10S    IFNE 0
+|   C                     Z-ADDDCA10S    WCA10S  80
+|   C                     CALL 'P31'
+|   C                     PARM WCA10S    P310I1  80
+|   C                     PARM '3'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           YCA10S    PARM           P3111O  80
+| 08-C                     END
+|    C*
+|    C* 日期轉換
+| 09-C           DCA10E    IFNE 0
+|   C                     Z-ADDDCA10E    WCA10E  80
+|   C                     CALL 'P31'
+|   C                     PARM WCA10E    P310I1  80
+|   C                     PARM '3'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           YCA10E    PARM           P3111O  80
+| 09-C                     END
+|    C**
+| 10-C           YCA10S    IFGT YCA10E
+|   C                     MOVEL'UPT0041' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     626399
+| 10-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* CHK辦事處
+| 11-C           DCA17     IFEQ *BLANKS
+|   C                     MOVE *LOVAL    DCA17S
+|   C                     MOVE *HIVAL    DCA17E
+| 11*C                     ELSE
+|   C                     MOVE DCA17     DCA17S
+|   C                     MOVE DCA17     DCA17E
+| 11-C                     END
+|    C*
+|    C*零用金號碼
+| 12-C           DCA02S    IFEQ *BLANKS
+|   C                     MOVE *LOVAL    DCA02S
+| 12-C                     END
+| 13-C           DCA02E    IFEQ *BLANKS
+|   C                     MOVE *HIVAL    DCA02E
+| 13-C                     END
+|    C*
+| 14-C           DCA02S    IFGT DCA02E
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     646599
+| 14-C                     END
+|    C   99                GOTO E1B00
+|    C*作業別
+| 15-C           DSEL1     IFEQ *BLANKS
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 15-C                     END
+|    C   99                GOTO E1B00
+|    C*
+03===CSR         E1B00     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+04===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #ROW             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*印表機
+| 01-C           #ROW      IFEQ 17
+|   C           #COL      ANDGE39
+|   C           #COL      ANDLE40
+|   C                     CALL 'P64I'
+|   C           $PRTCD    PARM $PRTCD    P64II1  2
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+

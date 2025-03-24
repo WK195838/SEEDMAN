@@ -1,0 +1,117 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. TG801.
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       SOURCE-COMPUTER. IBM-AS400.
+       OBJECT-COMPUTER. IBM-AS400.
+      *SPECIAL-NAMES. I-O-FEEDBACK IS FEEDBACK-JUNK.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+
+       DATA DIVISION.
+       FILE SECTION.
+
+       WORKING-STORAGE SECTION.
+       01  WK-CHAR           PIC X(20).
+       01  SP                PIC 9(02).
+       01  EP                PIC 9(02).
+       01  WK-SPOS1          PIC 9(02).
+       01  WK-NUMB.
+           05  WK-NUM-B      PIC S9(18)    BINARY.
+       01  WK-NUMP.
+           05  WK-NUM-P      PIC S9(18)    COMP-3.
+       01  WK-NUMS.
+           05  WK-NUM-S      PIC S9(18).
+       01  WK-NUM            PIC S9(18).
+       01  WK-NUM0           PIC -ZZZZZZZZZZZZZZZZZ9.
+       01  WK-NUM1           PIC -ZZZZZZZZZZZZZZZZ9.9.
+       01  WK-NUM2           PIC -ZZZZZZZZZZZZZZZ9.99.
+       01  WK-NUM3           PIC -ZZZZZZZZZZZZZZ9.999.
+       01  WK-NUM4           PIC -ZZZZZZZZZZZZZ9.9999.
+       01  WK-NUM5           PIC -ZZZZZZZZZZZZ9.99999.
+       01  WK-NUM6           PIC -ZZZZZZZZZZZ9.999999.
+       01  WK-NUM7           PIC -ZZZZZZZZZZ9.9999999.
+
+       LINKAGE SECTION.
+       01  IN-CHAR            PIC X(20).
+       01  IN-TYPE            PIC X(01).
+       01  IN-BYTE            PIC 9(02).
+       01  IN-DIG             PIC 9(02).
+       01  IN-DEC             PIC 9(02).
+       01  OU-CHAR            PIC X(20).
+      *****************************************************************
+      ***** PROCEDURE DIVISION
+      *****************************************************************
+       PROCEDURE DIVISION        USING IN-CHAR
+                                       IN-TYPE
+                                       IN-BYTE
+                                       IN-DIG
+                                       IN-DEC
+                                       OU-CHAR.
+
+       MAIN-PROGRAM SECTION.
+           MOVE          IN-CHAR  TO   WK-CHAR.
+           MOVE          SPACES   TO   OU-CHAR.
+           IF IN-TYPE =  "B" PERFORM   201-BINARY-RTN  THRU    201-EXIT.
+           IF IN-TYPE =  "P" PERFORM   202-PACK-RTN    THRU    202-EXIT.
+           IF IN-TYPE =  "S" PERFORM   203-ZONE-RTN    THRU    203-EXIT.
+       000-END.
+           GOBACK.
+      *-----------------------------------------------------------*
+       201-BINARY-RTN.
+           MOVE   LOW-VALUE   TO   WK-NUM-B.
+           COMPUTE WK-SPOS1   =    8  - IN-BYTE + 1.
+           MOVE WK-CHAR (1 : IN-BYTE) TO WK-NUMB (WK-SPOS1 : IN-BYTE)
+           MOVE   WK-NUM-B    TO  WK-NUM.
+           PERFORM     299-NUM-RTN    THRU    299-EXIT.
+       201-EXIT.  EXIT.
+      *-----------------------------------------------------------*
+       202-PACK-RTN.
+           MOVE   LOW-VALUE   TO   WK-NUM-P.
+           MOVE   1           TO   SP.
+           MOVE   IN-BYTE     TO   EP.
+           IF     IN-BYTE     >    10
+                  MOVE        10   TO  EP
+                  COMPUTE     SP   =  IN-BYTE  -  10   +  1.
+           COMPUTE WK-SPOS1   =    10  - EP + 1
+           MOVE WK-CHAR (SP : EP) TO WK-NUMP (WK-SPOS1 : EP)
+           MOVE   WK-NUM-P    TO  WK-NUM.
+
+           PERFORM     299-NUM-RTN    THRU    299-EXIT.
+       202-EXIT.  EXIT.
+      *-----------------------------------------------------------*
+       203-ZONE-RTN.
+           MOVE   0           TO   WK-NUM-S.
+           COMPUTE WK-SPOS1   =    18  - IN-BYTE + 1.
+           MOVE WK-CHAR (1 : IN-BYTE) TO WK-NUMS (WK-SPOS1 : IN-BYTE)
+           MOVE   WK-NUMS     TO  WK-NUM.
+           PERFORM     299-NUM-RTN    THRU    299-EXIT.
+       203-EXIT.  EXIT.
+      *-----------------------------------------------------------*
+       299-NUM-RTN.
+           IF  IN-DEC = 0
+               MOVE  WK-NUM   TO  WK-NUM0
+               MOVE  WK-NUM0  TO  OU-CHAR.
+           IF  IN-DEC = 1
+               COMPUTE  WK-NUM1  = WK-NUM  / 10
+               MOVE  WK-NUM1  TO  OU-CHAR.
+           IF  IN-DEC = 2
+               COMPUTE  WK-NUM2  = WK-NUM  / 100
+               MOVE  WK-NUM2  TO  OU-CHAR.
+           IF  IN-DEC = 3
+               COMPUTE  WK-NUM3  = WK-NUM  / 1000
+               MOVE  WK-NUM3  TO  OU-CHAR.
+           IF  IN-DEC = 4
+               COMPUTE  WK-NUM4  = WK-NUM  / 10000
+               MOVE  WK-NUM4  TO  OU-CHAR.
+           IF  IN-DEC = 5
+               COMPUTE  WK-NUM5  = WK-NUM  / 100000
+               MOVE  WK-NUM5  TO  OU-CHAR.
+           IF  IN-DEC = 6
+               COMPUTE  WK-NUM6  = WK-NUM  / 1000000
+               MOVE  WK-NUM6  TO  OU-CHAR.
+           IF  IN-DEC = 7
+               COMPUTE  WK-NUM7  = WK-NUM  / 10000000
+               MOVE  WK-NUM7  TO  OU-CHAR.
+       299-EXIT.  EXIT.
+

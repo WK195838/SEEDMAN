@@ -1,0 +1,156 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H* PROGRAM NAME : SOR0942                                       *
+     H* AUTHER       : DEREK                                         *
+     H* CREATE DATE  : 2013/06/06                                    *
+     H* UPDATE DATE  :                                               *
+     H* SYSTEM       :茂世企業                                     *
+     H* SUBSYSTEM    :銷售訂單系統                                 *
+     H* REMARK       :產品出貨彙總表                               *
+     H*===============================================================
+     H* MODI CODE |   DATE   | DESCRIPTION
+     H*---------------------------------------------------------------
+     H*---------------------------------------------------------------
+     F****************************************************************
+     FSOSGLF08IF  E           K        DISK
+     FSOSHPF  IF  E           K        DISK
+     FMTMAPF  IF  E           K        DISK
+     FMTMFPF  IF  E           K        DISK
+     FSOR094WFO   E                    DISK
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$ADMDY
+     I                                      129 1340$ADDMY
+     I                                      131 1340$ADMY
+     I                                      162 1620$EVR
+     I                                      601 605 DMA12S
+     I                                      606 610 DMA12E
+     I                                      611 6180DYMD1S
+     I                                      619 6260DYMD1E
+     I                                      627 6340DYMD2
+     I                                      635 6420LYMD1S
+     I                                      643 6500LYMD1E
+     I                                      651 6580LYMD2
+     I*產品代號
+     I            DS
+     I                                        1   9 SH03
+     I                                        1   6 SH03A
+     I            DS
+     I                                        1   9 MF02
+     I                                        1   6 MF02A
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYMF     KLIST
+     C                     KFLD           SH03X
+     C*==============================================================*
+     C*                    DEFINE
+     C*==============================================================*
+     C           *LIKE     DEFN SG06      WSG06S
+     C           *LIKE     DEFN SG06      WSG06E
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*當月出貨
+     C                     Z-ADDDYMD1S    WSG06S
+     C                     Z-ADDDYMD1E    WSG06E
+     C                     MOVEL'1'       WF01      P      期別
+     C                     EXSR R1000
+     C*累積出貨
+  01-C           DYMD2     IFNE 0
+    C                     Z-ADDDYMD2     WSG06S
+    C                     Z-ADDDYMD1E    WSG06E
+    C                     MOVEL'2'       WF01      P      期別
+    C                     EXSR R1000
+  01-C                     END
+     C*去年同期出貨
+     C                     Z-ADDLYMD1S    WSG06S
+     C                     Z-ADDLYMD1E    WSG06E
+     C                     MOVEL'3'       WF01      P      期別
+     C                     EXSR R1000
+     C*去年同期累積出貨
+  02-C           LYMD2     IFNE 0
+    C                     Z-ADDLYMD2     WSG06S
+    C                     Z-ADDLYMD1E    WSG06E
+    C                     MOVEL'4'       WF01      P      期別
+    C                     EXSR R1000
+  02-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R1000 ...當月出貨
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C           WSG06S    SETLLSG0
+|    C                     READ SG0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C           SG06      ANDLEWSG06E
+|   C*
+|   C           SG02      SETLLSH0
+|   C           SG02      READESH0                      47
+| 02-C           *IN47     DOWEQ'0'
+|   C*
+|   C           SH03      CHAINMA0                  40
+| 03-C           *IN40     IFEQ '0'
+|   C           MA12      ANDGEDMA12S
+|   C           MA12      ANDLEDMA12E
+|   C                     EXSR R1100
+| 03-C                     END
+|   C*
+|   C           SG02      READESH0                      47
+| 02-C                     END
+|   C*
+|   C                     READ SG0                      46
+| 01-C                     END
+|    C*
+01===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1100 ... WRITE SOR094WF
+     C*==============================================================*
+02===C           R1100     BEGSR
+|    C*
+| 01-C           MA54      IFNE 'Y'
+|    C                     MOVELSG03      WF02      P      單別
+|    C                     MOVELSH03      WF03      P      產品代號
+|    C                     MOVELSH03A     WF04      P      產品代號前六碼
+|    C           SH04      ADD  SH05      WF05             數量
+|    C                     MULT -1        WF05             數量
+|    C                     MOVELSH02      WF06             單號
+| 01*C                     ELSE
+|   C                     EXSR R1200
+| 01-C                     ENDIF
+|    C*
+|    C                     WRITEWF0
+|    C*
+02===C           E1100     ENDSR
+     C*==============================================================*
+     C*          R1200 ... WRITE SOR094WF   禮盒
+     C*==============================================================*
+03===C           R1200     BEGSR
+     C                     MOVELSH03      SH03X   9
+|    C           KEYMF     SETLLMF0
+|    C           KEYMF     READEMF0                      49
+| 01-C           *IN49     DOWEQ'0'
+| 02-C           MF07      IFEQ ' '
+|   C           SH04      ADD  SH05      WKQTY  110
+|   C           WKQTY     MULT MF04      WRQTY  110
+|   C*
+|   C                     MOVELSG03      WF02      P      單別
+|   C                     MOVELMF02      WF03      P      產品代號
+|   C                     MOVELMF02A     WF04      P      產品代號前六碼
+|   C                     Z-ADDWRQTY     WF05             數量
+|    C                     MULT -1        WF05             數量
+|    C                     MOVELSH02      WF06             單號
+|   C                     WRITEWF0
+| 02-C                     ENDIF
+|   C*
+|   C           KEYMF     READEMF0                      49
+| 01-C                     ENDDO
+|    C*
+03===C           E1200     ENDSR
+

@@ -1,0 +1,166 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H* PROGRAM NAME : KIS023                                        *
+     H* AUTHER       : A1650  DEREK                                  *
+     H* CREATE DATE  : 101/06/22                                     *
+     H* UPDATE DATE  :                                               *
+     H* SYSTEM       :茂世企業                                     *
+     H* SUBSYSTEM    :專櫃系統                                     *
+     H* REMARK       :銷售訂單確認報表                             *
+     H*===============================================================
+     H* MODI CODE |   DATE   | DESCRIPTION
+     H*---------------------------------------------------------------
+     H*---------------------------------------------------------------
+     F****************************************************************
+     FKIS023D CF  E                    WORKSTN
+     F                                              KINFDS DSPFDS
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      119 1240$ADMDY
+     I                                      601 6080WBA01S
+     I                                      609 6160WBA01E
+     I                                      617 617 DTYPE
+     I                                      618 618 DATA
+     I*
+     I* FOR F4 HELP -- GET CURSOR POSITION
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN98     PARM *IN98     IN98    1
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    DEFINE
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+  01-C           *IN98     IFEQ '0'
+    C                     EXSR RTN010                     .INIT SCREEN
+  01*C                     ELSE
+    C                     IN   LDA
+  02-C           DATA      IFEQ 'Y'                        有資料
+    C                     MOVEL'MSG0013' ERRID
+    C                     MOVEL'R1MF'    ERRF
+    C                     SETON                     99
+  02*C                     ELSE                            無資料
+    C                     MOVEL'MSG0008' ERRID
+    C                     MOVEL'R1MF'    ERRF
+    C                     SETON                     99
+  02-C                     ENDIF
+  01-C                     ENDIF
+     C*
+  03-C           *IN03     DOUEQ'1'
+    C           *IN99     OREQ '0'
+    C                     EXSR RTN100                     *MAIN
+  03-C                     ENDDO
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+     C*===============================================================*
+     C*          RTN010....INIT SCREEN
+     C*===============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   LDA
+|    C*
+|    C                     Z-ADD$ADMDY    DDATE            系統日
+|    C                     Z-ADD$ADMDY    DBA01S           訂單日期起
+|    C                     Z-ADD$ADMDY    DBA01E           訂單日期迄
+|    C                     MOVEL'1'       DTYPE            訂單類別
+|    C                     MOVEL'N'       DATA             有資料否
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100.... MAIN ROUTINE
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     SETON                     97
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO END100
+| 01-C                     ENDIF
+|    C*
+|    C                     EXSR RTN110                     *CHK SCREEN1
+|    C*
+| 02-C           *IN99     IFEQ '0'
+|   C           *IN13     ANDEQ'1'
+|   C                     SETON                     96
+|   C                     WRITEDSPC1
+|   C                     MOVEL'N'       DATA
+|   C                     OUT  LDA
+| 02-C                     ENDIF
+|    C*
+02===C           END100    ENDSR
+     C*===============================================================*
+     C*          RTN110....CHECK SCREEN
+     C*===============================================================*
+03===C           RTN110    BEGSR
+|    C**訂單日期
+| 01-C           DBA01S    IFEQ 0
+|   C                     Z-ADD010100    DBA01S
+| 01*C                     ELSE
+|   C                     CALL 'P30'
+|   C                     PARM DBA01S    P3001I  80
+|   C                     PARM '3'       P3002I  1
+|   C                     PARM '1'       P3003I  1
+|   C                     PARM           P3011O  1
+| 02-C           P3011O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'MSG0003' ERRID
+|   C                     MOVEL'R1MF'    ERRF
+| 02-C                     ENDIF
+| 01-C                     ENDIF
+|    C   99                GOTO END110
+|    C*
+| 03-C           DBA01E    IFEQ 0
+|   C                     Z-ADD123199    DBA01E
+| 03*C                     ELSE
+|   C                     CALL 'P30'
+|   C                     PARM DBA01E    P3001I  80
+|   C                     PARM '3'       P3002I  1
+|   C                     PARM '1'       P3003I  1
+|   C                     PARM           P3011O  1
+| 04-C           P3011O    IFEQ 'N'
+|   C                     SETON                     6199
+|   C                     MOVEL'MSG0003' ERRID
+|   C                     MOVEL'R1MF'    ERRF
+| 04-C                     ENDIF
+| 03-C                     ENDIF
+|    C   99                GOTO END110
+|    C*日期格式轉換
+|    C                     CALL 'P31'
+|    C                     PARM DBA01S    P3101I  80
+|    C                     PARM '3'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WBA01S    PARM           P31110  80
+|    C*日期格式轉換
+|    C                     CALL 'P31'
+|    C                     PARM DBA01E    P3101I  80
+|    C                     PARM '3'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WBA01E    PARM           P31110  80
+|    C*
+| 05-C           WBA01S    IFGT WBA01E
+|   C                     SETON                     606199
+|   C                     MOVEL'MSG0004' ERRID
+|   C                     MOVEL'R1MF'    ERRF
+| 05-C                     ENDIF
+|    C   99                GOTO END110
+|    C*
+03===C           END110    ENDSR
+

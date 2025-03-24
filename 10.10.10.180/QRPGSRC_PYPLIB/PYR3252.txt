@@ -1,0 +1,228 @@
+     H****************************************************************/
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   */
+     H*                                                              */
+     H*    PROGRAM-ID   : PYR3252                                    */
+     H*    PROGRAM NAME :獎金所得扣繳稅款繳款書－工作地點          */
+     H*    AUTHOR       : A1274 EVA                                  */
+     H*    CREATE DATE  : 90/05/16                                   */
+     H*    UPDATE DATE  :                                            */
+     H*    SYSTEM       :人事薪資系統                              */
+     H****************************************************************/
+     FPYEMPF  IP  E           K        DISK
+     FPYPBLF01IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYR325WFO   E                    DISK
+     I*--------------------------------------------------------------**
+     IEM0
+     I                                              EM01  L1
+     I                                              EM130 L1
+     ILDA        UDS
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      128 129 $PRTID
+     I                                      152 161 $USERN
+     I                                      162 162 $EVR
+     I*
+     I                                      501 502 DPH01
+     I                                      541 5450DYM
+     I                                      546 5470DMM
+     I                                      507 508 DPH01T
+     I                                      509 5160WYMD
+     I                                      509 5140WYM
+     I                                      513 5140WMM
+     I                                      515 5160WPH01T
+     I                                      520 527 DPH021
+     I                                      528 535 DPH022
+     I                                      550 550 DSEL
+     I                                      551 5560KYM
+     I                                      536 537 DPB041
+     I                                      538 539 DPB042
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY
+     C*==============================================================*
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           EM01
+     C*
+     C           KEYPB     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WYM
+     C*
+     C           KEYEM     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100
+     C*
+     CL1 10                EXSR RTN200
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DPH01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... ACCOUNT
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     MOVELDPH01     W325AA            公司代號
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DYM       P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           WYM       PARM           P3911O  60
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DYM       P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '2'       P3905I  1
+|    C           KYM       PARM           P3911O  60
+|    C*
+|    C*------------------------------------------------------------***
+|    C***獎金及兼職薪資部份(PYPBPF)
+|    C*
+|    C                     Z-ADD*ZERO     PEPOS   40
+|    C*
+|    C           KEYPB     SETLLPB0
+|    C           KEYPB     READEPB0                      40
+| 01-C           *IN40     DOWEQ'0'
+|   C*
+| 02-C           PB04      IFGE DPB041
+|   C           PB04      ANDLEDPB042
+|   C*
+|   C                     ADD  1         PEPOS
+|   C*６％扣繳
+| 02-C           PEPOS     IFEQ 1
+|   C           PB07      ANDEQ0.06
+|   C                     ADD  PB06      W32523
+|   C                     ADD  PB08      W32524
+|   C                     ADD  1         W32521
+| 02-C                     END
+|   C*
+| 03-C           PEPOS     IFGT 1
+|   C           PB07      ANDEQ0.06
+|   C                     ADD  PB06      W32523
+|   C                     ADD  PB08      W32524
+| 03-C                     END
+|   C*免扣繳
+| 04-C           PEPOS     IFEQ 1
+|   C           PB07      ANDEQ0
+|   C                     ADD  PB06      W32553
+|   C                     ADD  PB08      W32554
+|   C                     ADD  1         W32551
+| 04-C                     END
+|   C*
+| 05-C           PEPOS     IFGT 1
+|   C           PB07      ANDEQ0
+|   C                     ADD  PB06      W32553
+|   C                     ADD  PB08      W32554
+| 05-C                     END
+|   C*
+| 02-C                     END
+|   C           KEYPB     READEPB0                      40
+| 01-C                     END
+|    C*
+|    C*------------------------------------------------------------***
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200... ACCOUNT
+     C*==============================================================*
+03===C           RTN200    BEGSR
+|    C*
+|    C                     Z-ADDKYM       W32512
+|    C                     Z-ADDKYM       W32522
+|    C                     Z-ADDKYM       W32532
+|    C                     Z-ADDKYM       W32542
+|    C                     Z-ADDKYM       W32552
+|    C                     Z-ADDKYM       W325A2
+|    C                     Z-ADDKYM       W325B2
+|    C                     Z-ADDKYM       W325C2
+|    C                     Z-ADDKYM       W325D2
+|    C                     Z-ADDKYM       W325E2
+|    C                     Z-ADDKYM       W325F2
+|    C                     Z-ADDKYM       W325G2
+|    C                     Z-ADDKYM       W325H2
+|    C*
+|    C                     MOVELEM130     W325PA
+|    C*
+|    C                     WRITEW325
+|    C*------------------------------------------------------------***
+|    C*INIT. FIELDS
+|    C                     Z-ADD*ZERO     W32511
+|    C                     Z-ADD*ZERO     W32513
+|    C                     Z-ADD*ZERO     W32514
+|    C                     Z-ADD*ZERO     W32521
+|    C                     Z-ADD*ZERO     W32523
+|    C                     Z-ADD*ZERO     W32524
+|    C                     Z-ADD*ZERO     W32531
+|    C                     Z-ADD*ZERO     W32533
+|    C                     Z-ADD*ZERO     W32534
+|    C                     Z-ADD*ZERO     W32541
+|    C                     Z-ADD*ZERO     W32543
+|    C                     Z-ADD*ZERO     W32544
+|    C                     Z-ADD*ZERO     W32551
+|    C                     Z-ADD*ZERO     W32553
+|    C                     Z-ADD*ZERO     W32554
+|    C                     Z-ADD*ZERO     W325A1
+|    C                     Z-ADD*ZERO     W325A3
+|    C                     Z-ADD*ZERO     W325A4
+|    C                     Z-ADD*ZERO     W325B1
+|    C                     Z-ADD*ZERO     W325B3
+|    C                     Z-ADD*ZERO     W325B4
+|    C                     Z-ADD*ZERO     W325C1
+|    C                     Z-ADD*ZERO     W325C3
+|    C                     Z-ADD*ZERO     W325C4
+|    C                     Z-ADD*ZERO     W325D1
+|    C                     Z-ADD*ZERO     W325D3
+|    C                     Z-ADD*ZERO     W325D4
+|    C                     Z-ADD*ZERO     W325E1
+|    C                     Z-ADD*ZERO     W325E3
+|    C                     Z-ADD*ZERO     W325E4
+|    C                     Z-ADD*ZERO     W325F1
+|    C                     Z-ADD*ZERO     W325F3
+|    C                     Z-ADD*ZERO     W325F4
+|    C                     Z-ADD*ZERO     W325G1
+|    C                     Z-ADD*ZERO     W325G3
+|    C                     Z-ADD*ZERO     W325G4
+|    C                     Z-ADD*ZERO     W325H1
+|    C                     Z-ADD*ZERO     W325H3
+|    C                     Z-ADD*ZERO     W325H4
+|    C*------------------------------------------------------------***
+|    C*
+03===C                     ENDSR
+

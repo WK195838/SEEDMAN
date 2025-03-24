@@ -1,0 +1,267 @@
+     A****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA4181                                    *
+     H*    PROGRAM NAME :員工出勤結算作業                          *
+     H*    AUTHOR       : SHARON                                     *
+     H*    CREATE DATE  : 94/01/14 A1386                             *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYT9PF  IF  E           K        DISK
+     FPYT3PF  IF  E           K        DISK
+     FPYLVLF02IF  E           K        DISK
+     FPYLCPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYPEPF  UF  E           K        DISK                      A
+     I*---------------------------------------------------------------*
+     E                    D1         31  1               .排班表
+     I*---------------------------------------------------------------*
+     I/COPY PYDDSSRC,PYPMDS01
+     I           UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      201 2060$A8YM
+     I                                      201 2040$A8Y
+     I                                      211 2160DDATE
+     I*
+     I                                      501 502 DEM01
+     I                                      503 5050DYEAR
+     I                                      506 5090WYEAR
+     I                                      510 5150WYMF
+     I                                      516 5210WYMT
+     I            DS
+     I                                        1   60WYM
+     I                                        1   40WYY
+     I                                        5   60WMM
+     I            DS
+     I                                        1   80WDF
+     I                                        1   60WMF
+     I                                        7   80DDF
+     I            DS
+     I                                        1   80WDT
+     I                                        1   60WMT
+     I                                        7   80DDT
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C                     MOVEL'01'      KPM01   2
+     C           KEYPM     KLIST
+     C                     KFLD           KPM01
+     C                     KFLD           DEM01
+     C           KEYT3     KLIST
+     C                     KFLD           DEM01            公司編號
+     C                     KFLD           WYM              排班年月
+     C           KEYLV     KLIST
+     C                     KFLD           DEM01            公司編號
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           WYM              薪資年月
+     C           KEYPE     KLIST
+     C                     KFLD           DEM01            公司編號
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           WYEAR            出勤年月
+     C           KEYT9     KLIST
+     C                     KFLD           DEM01            公司編號
+     C                     KFLD           WYEAR            年度
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010
+     C*
+|    C                     Z-ADD0         WDF     80       出勤日期起
+|    C                     Z-ADD0         WDT     80       出勤日期迄
+|    C                     Z-ADD0         WPE04   62       .工作時數
+|    C                     Z-ADD0         WPE05   62       .請假時數
+|    C                     Z-ADD0         WPE06   54       .出勤率
+|    C                     Z-ADD*ZERO     CLAS    30       非工作天數
+     C*
+     C*出勤起迄日(EX:2004/01/01~2004/12/31)
+     C                     Z-ADDWYMF      WMF
+     C                     Z-ADD1         DDF
+     C                     Z-ADDWYMT      WMT
+     C                     Z-ADD31        DDT
+     C                     SETOF                     68
+     C*新到職員工
+     C           EM13      IFGE WDF
+     C           EM13      ANDLEWDT
+     C                     Z-ADDEM13      WDF
+     C                     SETON                     68
+     C                     END
+     C*當年度留停
+     C           EM17      IFGE WDF
+     C           EM17      ANDLEWDT
+     C                     Z-ADDEM17      WDT
+     C                     SETON                     68
+     C                     END
+     C*當年度復職
+     C           EM18      IFGE WDF
+     C           EM18      ANDLEWDT
+     C                     Z-ADDEM18      WDT
+     C                     SETON                     68
+     C                     END
+     C*同年度留停且復職
+     C           EM17      IFGE WDF
+     C           EM17      ANDLEWDT
+     C           EM18      ANDGEWDF
+     C           EM18      ANDLEWDT
+     C                     Z-ADDEM17      WDF
+     C                     Z-ADDEM18      WDT
+     C                     SETON                     68
+     C                     END
+     C*當年度離職
+     C           EM19      IFGE WDF
+     C           EM19      ANDLEWDT
+     C                     Z-ADDEM19      WDT
+     C                     SETON                     68
+     C                     END
+     C*
+     C*正常工作時數
+     C           KEYT9     CHAINT90                  43
+     C  N43                Z-ADDT903      WPE04
+     C*
+     C                     Z-ADDWMF       WYM
+  01-C           WYM       DOWLEWMT
+    C   68                EXSR RTN100
+    C                     EXSR RTN200
+    C                     ADD  WHURS     WPE05
+    C*
+    C                     ADD  1         WMM
+  02-C           WMM       IFGT 12
+    C                     Z-ADD1         WMM
+    C                     ADD  1         WYY
+  02-C                     END
+  01-C                     END
+    C*
+     C                     Z-ADD*ZERO     ADAYS   90
+     C           CLAS      IFNE 0
+|    C                     CALL 'P32'
+|    C                     PARM WDF       P3201I  80
+|    C                     PARM WDT       P3202I  80
+|    C                     PARM '2'       P3203I  1
+|    C                     PARM '1'       P3204I  1
+|    C                     PARM           P3211O  90
+     C           P3211O    ADD  1         ADAYS
+     C*
+     C           ADAYS     SUB  CLAS      DD      30
+     C           DD        MULT 8         WPE04
+     C                     END
+     C*
+     C           WPE04     IFLE 0
+     C                     Z-ADD0         WPE06   54
+     C                     ELSE
+    C           WPE04     SUB  WPE05     FLD01   62
+    C           FLD01     DIV  WPE04     WPE06   54
+     C                     END
+    C                     EXSR RTN300
+     C*
+     C*===============================================================*
+     C*                  RTN010...INITIAL
+     C*===============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           KEYPM     CHAINPM0                  47
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*              RTN100...CACULATE WORK HOURS OF A YEAR
+     C*===============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     Z-ADD1         CNT     20
+|    C                     Z-ADD31        END1    20
+|    C*
+|    C           KEYT3     CHAINT30                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVEAT303      D1               休假陣列
+|   C*
+     C           T302      IFEQ WMF
+|   C                     Z-ADDDDF       CNT
+     C                     END
+     C           T302      IFEQ WMT
+     C           DDT       ANDNE31
+|   C                     Z-ADDDDT       END1
+     C                     END
+|   C*
+| 02-C           CNT       DOWLEEND1
+| 03-C           D1,CNT    IFEQ 'H'
+|   C                     ADD  1         CLAS
+| 03-C                     END
+     C                     ADD  1         CNT
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*===============================================================
+     C*                    RTN200...計算請假天數
+     C*==============================================================
+03===C           RTN200    BEGSR
+|    C*
+|    C                     Z-ADD0         WHURS   62       .請假時數
+|    C*
+|    C           KEYLV     SETLLLV0
+|    C           KEYLV     READELV0                      58
+| 01-C           *IN58     DOWEQ'0'
+|   C*計算除公差、公假、年休、無薪休假外的請假時數
+|   C           LV04      CHAINLC0                  43
+| 02-C           *IN43     IFEQ '0'
+| 03-C           LC03      IFEQ '2'                        .無薪假
+| 03-C           LC06      ANDNE888
+|   C*
+|   C*曠職請假時數扣三倍，其餘一倍
+| 04-C           LV04      IFEQ PM127                      .曠職
+|   C           LV09      MULT 3         WLV09   30
+|   C           LV08      MULT 3         WLV08   52
+|   C           WLV09     MULT PM101     WHH     30
+|   C                     ADD  WHH       WHURS
+|   C                     ADD  WLV08     WHURS
+| 04*C                     ELSE
+|   C           LV09      MULT PM101     WHH     30
+|   C                     ADD  WHH       WHURS
+|   C                     ADD  LV08      WHURS
+| 04-C                     END
+|   C*
+| 03-C                     END
+| 02-C                     END
+|   C           KEYLV     READELV0                      58
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*===============================================================
+     C*                    RTN300...WRITE PYPEPF
+     C*==============================================================
+04===C           RTN300    BEGSR
+|    C*
+|    C                     EXSR RTN310
+|    C           KEYPE     CHAINPE0                  46
+|    C   46                WRITEPE0
+|    C  N46                UPDATPE0
+|    C*
+04===C                     ENDSR
+     C*===============================================================
+     C*                    RTN310...WRITE PYPEPF DETAIL
+     C*==============================================================
+05===C           RTN310    BEGSR
+|    C*
+|    C                     MOVELDEM01     PE01
+|    C                     MOVELEM02      PE02
+|    C                     Z-ADDWYEAR     PE03
+|    C                     Z-ADDWPE04     PE04
+|    C                     Z-ADDWPE05     PE05
+|    C                     Z-ADDWPE06     PE06
+|    C                     Z-ADD$A8YMD    PE97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     PE98
+|    C                     MOVEL$USER     PE99
+|    C*
+05===C                     ENDSR
+

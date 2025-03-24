@@ -1,0 +1,514 @@
+     H****************************************************************
+     H*            泛太資訊科技開發股份有限公司－版權所有          *
+     H*--------------------------------------------------------------*
+     H*    PROGRAM NAME : PYA508                                     *
+     H*    AUTHOR       : A1084  CHARLES                             *
+     H*    CREATE DATE  : 80/12/18                                   *
+     H*    UPDATE DATE  : 2001/07/25 A1336 KLAUS                     *
+     H*    SYSTEM       : MIRS                                       *
+     H*    SUBSYSTEM    : PY                                         *
+     H*    PURPOSE      :假日資料設定                              *
+     H****************************************************************
+     FPYT7PF  UF  E           K        DISK                      A
+     FPYA508D CF  E                    WORKSTN
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E                    WFUN    5   5  6
+     E*---------------------------------------------------------------*
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I*
+     I           UDS
+     I                                      101 110 USER
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I*
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN T701      T701T
+     C           *LIKE     DEFN T701      T701B
+     C           *LIKE     DEFN T701      KT701
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYT      KLIST                           *PYT7PF
+     C                     KFLD           T701T
+     C           KEYB      KLIST                           *PYT7PF
+     C                     KFLD           T701B
+     C           KEYT7     KLIST                           *PYT7PF
+     C                     KFLD           KT701
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INITIAL
+     C***
+  01-C           *IN03     DOWEQ'0'
+    C*
+  02-C           SCID      CASEQ'SC02'    RTN200
+    C           SCID      CASEQ'SC03'    RTN300
+  02-C                     END
+    C*
+  01-C                     END
+     C***
+     C                     SETON                     LR
+     C                     RETRN
+     C*==============================================================*
+     C*          RTN010....INITIAL VALUE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C                     MOVE 'SC03'    SCID    4
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200....'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           RTN200    BEGSR
+|    C*: MOVE FUNTION CHAR TO 'SC02' SCREEN :
+|    C                     MOVE TEMP      WNUM    10
+|    C                     MOVE WFUN,WNUM DFUN
+|    C*
+| 01-C           TEMP      CASEQ'1'       RTN210           *ADD
+|   C           TEMP      CASEQ'2'       RTN220           *UPD
+|   C           TEMP      CASEQ'4'       RTN230           *DEL
+|   C           TEMP      CASEQ'5'       RTN240           *INQ
+| 01-C                     END
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN210....ADD DATA
+     C*==============================================================*
+03===C           RTN210    BEGSR
+|    C*
+|    C                     Z-ADD0         WT701
+|    C                     MOVEL*BLANK    DT702
+|    C*: CLEAR SCREEN FIELD :
+| 01-C           *IN33     DOWEQ'0'                        *CTL LOOP
+|   C*
+|   C                     SETON                     3132  *CAN INPUT
+|   C                     EXFMTDSPC2
+|    *: CLEAR ALL ERROR USED INDICATOR :
+|   C                     MOVEA*ALL'0'   *IN,60
+|    *
+| 02-C           *IN03     IFEQ '0'
+| 03-C           *IN12     IFEQ '0'
+|   C                     EXSR RTN810                     *CHK SCR
+|    *
+| 04-C           *IN99     IFEQ '0'
+|    *: WRITE DATA TO FILE :
+|   C                     EXSR RTN830                     *MVE DTA
+|   C*                    Z-ADDWT701     T701
+|   C                     CALL 'P31'
+|   C                     PARM WT701     P3101I  80
+|   C                     PARM DFMT      P3102I  1
+|   C                     PARM DTYPE     P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           T701      PARM           P3111O  80
+|   C                     WRITET70
+|    *: RETURN PREVIOUS :
+|   C*****                MOVE 'SC01'    SCID
+|   C                     MOVE 'SC03'    SCID
+|   C                     SETON                     33
+| 04-C                     END
+|    *
+| 03*C                     ELSE
+|    *: RETURN PREVIOUS :
+|   C*****                MOVE 'SC01'    SCID
+|   C                     MOVE 'SC03'    SCID
+|   C                     SETON                     33
+| 03-C                     END
+| 02*C                     ELSE
+|    *: RETURN :
+|   C                     SETON                     33
+| 02-C                     END
+|    *
+| 01-C                     END
+|    C                     SETOF                     33
+03===C                     ENDSR
+      *==============================================================*
+      *          RTN220....UPD DATA
+      *==============================================================*
+04===C           RTN220    BEGSR
+|    C                     EXSR RTN820                     *MOV DTA
+| 01-C           *IN33     DOWEQ'0'                        *CTL LOOP
+|    *
+|   C                     SETON                     31    *CAN INPUT
+|   C                     SETOF                     32    *PROTECT
+|   C                     EXFMTDSPC2
+|    *: CLEAR ALL ERROR USED INDICATOR :
+|   C                     MOVEA*ALL'0'   *IN,60
+|    *
+| 02-C           *IN03     IFEQ '0'
+| 03-C           *IN12     IFEQ '0'
+|   C                     EXSR RTN810                     *CHK SCR
+|    *
+| 04-C           *IN99     IFEQ '0'
+|    *: UPDATE FILE RECORD :
+|   C*                    Z-ADDWT701     KT701
+|   C                     CALL 'P31'
+|   C                     PARM WT701     P3101I  80
+|   C                     PARM DFMT      P3102I  1
+|   C                     PARM DTYPE     P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           KT701     PARM           P3111O  80
+|   C*
+|   C           KEYT7     CHAINT70                  40
+|   C                     EXSR RTN830
+|   C                     UPDATT70
+|   C*****                MOVE 'SC01'    SCID
+|   C                     MOVE 'SC03'    SCID
+|   C                     SETON                     33
+| 04-C                     END
+| 03*C                     ELSE
+|    *: RETURN PREVIOUS :
+|   C*****                MOVE 'SC01'    SCID
+|   C                     MOVE 'SC03'    SCID
+|   C                     SETON                     33
+| 03-C                     END
+| 02*C                     ELSE
+|    *: RETURN :
+|   C                     SETON                     33
+| 02-C                     END
+|    *
+| 01-C                     END
+|    C                     SETOF                     33
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN230....DEL DATA
+      *==============================================================*
+05===C           RTN230    BEGSR
+|    C                     EXSR RTN820                     *MOV DTA
+|    C                     SETOF                     3132  *NO INPUT
+|    C                     EXFMTDSPC2
+| 01-C           *IN33     DOWEQ'0'                        *CTL LOOP
+|    *
+|    *: CLEAR ALL ERROR USED INDICATOR :
+|   C                     MOVEA*ALL'0'   *IN,60
+|    *
+| 02-C           *IN03     IFEQ '0'
+|   C           *IN12     ANDEQ'0'
+|   C                     EXSR RTN810                     *CHK SCR
+|    *
+| 03-C           *IN99     IFEQ '0'
+|    *: UPDATE FILE RECORD :
+|   C                     CALL 'P31'
+|   C                     PARM WT701     P3101I  80
+|   C                     PARM DFMT      P3102I  1
+|   C                     PARM DTYPE     P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           KT701     PARM           P3111O  80
+|   C*
+|   C           KEYT7     CHAINT70                  40
+|   C                     EXSR RTN830
+|   C  N40                DELETT70
+|   C                     SETON                     33
+| 03-C                     END
+| 02*C                     ELSE
+|   C*****                MOVE 'SC01'    SCID
+|   C                     MOVE 'SC03'    SCID
+|   C                     SETON                     33
+| 02-C                     END
+| 01-C                     END
+05===C           END230    ENDSR
+      *==============================================================*
+      *          RTN240....INQ DATA
+      *==============================================================*
+06===C           RTN240    BEGSR
+|    C                     EXSR RTN820                     *MOV DTA
+|    C                     SETOF                     3132  *NO INPUT
+|    C                     EXFMTDSPC2
+|     *
+| 01-C           *IN03     IFEQ '0'
+|    *: RETURN PREVIOUS :
+|   C*****                MOVE 'SC01'    SCID
+|   C                     MOVE 'SC03'    SCID
+| 01-C                     END
+06===C                     ENDSR
+      *==============================================================*
+      *          RTN810....CHECK 'SC02' SCREEN
+      *==============================================================*
+07===C           RTN810    BEGSR
+|     *: CHECK BLANK :
+| 01-C           WT701     IFEQ 0
+|   C                     SETON                     619699
+| 01-C                     END
+|    C   99                GOTO END810
+|    C*CHK DATE
+|    C                     CALL 'P30'
+|    C                     PARM WT701     P3001I  80
+|    C                     PARM DFMT      P3002I  1
+|    C                     PARM DTYPE     P3003I  1
+|    C                     PARM           P3011O  1
+| 02-C           P3011O    IFEQ 'N'
+|   C                     SETON                     619499
+| 02-C                     END
+|    C   99                GOTO END810
+|     *: CHECK KEY :
+|    C                     CALL 'P31'
+|    C                     PARM WT701     P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           KT701     PARM           P3111O  80
+|    C           KEYT7     CHAINT70                  40    *NF
+| 03-C           TEMP      IFEQ '1'                        *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     SETON                     619599
+| 03-C                     END
+|    C   99                GOTO END810
+|    C*
+| 04-C           DT702     IFEQ *BLANK
+|   C                     SETON                     609899
+| 04-C                     END
+|    C   99                GOTO END810
+|     *
+07===C           END810    ENDSR
+      *==============================================================*
+      *          RTN820....MOVE DATA TO 'SC02' SCREEN
+      *==============================================================*
+08===C           RTN820    BEGSR
+|     *:MOVE DATA TO SCREEN :
+|    C                     MOVELT700      WT700
+|    C                     MOVELT702      DT702
+|     *: RELEASE RECORD LOCK :
+|    C*          SCID      IFEQ 'SC02'
+|    C*          TEMP      ANDEQ'5'
+|    C*                    UPDATT70
+|    C*                    END
+08===C                     ENDSR
+      *==============================================================*
+      *          RTN830....MOVE SCN TO FILE
+      *==============================================================*
+09===C           RTN830    BEGSR
+|    C                     MOVELWT700     T700
+|    C                     MOVELDT702     T702
+|    C                     Z-ADD$A8YMD    T797
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     T798
+|    C                     MOVELUSER      T799
+09===C           END830    ENDSR
+      *=============================================================*
+      *          RTN300 :  SUBFILE ROUTINE                          *
+      *=============================================================*
+10===C           RTN300    BEGSR
+|    C                     EXSR RTN310                     *INIT VARI
+|    C                     EXSR RTN320                     *READ NEXT
+|    C                     EXSR RTN330                     *EXFMT SFL
+|     *
+| 01-C           *IN03     DOWEQ'0'
+|   C*****      *IN12     ANDEQ'0'
+|    *
+| 02-C           *IN06     IFEQ '1'
+|   C                     MOVEL'1'       TEMP    1
+|   C                     MOVEL'SC02'    SCID
+|   C                     GOTO END300
+| 02-C                     END
+|   C*
+| 03-C           *IN25     IFEQ '0'
+|   C           *IN26     ANDEQ'0'
+|   C           WRRN      ANDNE0
+|   C                     EXSR RTN360                     *ONE PROCESS
+| 04-C           *IN03     IFEQ '1'
+|   C*****      *IN12     OREQ '1'
+|   C                     GOTO END300
+| 04-C                     END
+|   C                     EXSR RTN370                     *REWTITE SFL
+|    *
+| 03*C                     ELSE
+|    *
+| 05-C           *IN25     IFEQ '1'
+|   C           WRRN      ANDNE0
+|   C                     SETOF                     53
+|   C           KEYB      SETGTT70                        *AFTER 1 SETLL
+|   C                     EXSR RTN320                     *READ NEXT
+| 05-C                     END
+|    *
+| 06-C           *IN26     IFEQ '1'                        *ROLLDOWN
+|   C           KEYT      SETLLT70
+|   C                     EXSR RTN321                     *READ PREV
+| 06-C                     END
+| 03-C                     END
+|    *
+|   C                     EXSR RTN330                     *EXFMT SFL
+|    *
+| 01-C                     END
+|     *
+|    C           END300    TAG
+|    C*****                MOVE 'SC01'    SCID
+10===C                     ENDSR
+      *=========================================================*
+      *          RTN310 :  INITIAL                              *
+      *=========================================================*
+11===C           RTN310    BEGSR
+|     *: INITIAL VALUE :
+|    C                     Z-ADD0         RRN
+|    C                     Z-ADD0         WRRN    20
+|    C                     Z-ADD1         DRRN
+|    C                     MOVE *BLANK    DOP
+|    C           KEYT      SETLLT70                  40
+|     *
+11===C                     ENDSR
+      *=========================================================*
+      *          RTN320 :  READ NEXT
+      *=========================================================*
+12===C           RTN320    BEGSR
+|    C                     Z-ADD0         RRN
+|     *
+| 01-C           RRN       DOWLT10
+|   C                     READ T70                      40*EOF
+|    *
+| 02-C           *IN40     IFEQ '0'
+|   C                     ADD  1         RRN
+| 03-C           RRN       IFEQ 1
+|   C                     EXSR RTN380                     *GET KEY TOP
+| 03-C                     END
+|    *
+|   C                     Z-ADDT701      T701B
+|    *
+|   C                     SETOF                     53
+|   C*
+|   C                     CALL 'P31'
+|   C                     PARM T701      P3101I  80
+|   C                     PARM '1'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM DFMT      P3104I  1
+|   C                     PARM DTYPE     P3105I  1
+|   C           T701D     PARM           P3111O  80
+|   C*
+|   C                     WRITESFLSR
+|   C                     Z-ADDRRN       WRRN
+| 02*C                     ELSE
+|   C                     SETON                     53    *LST PAGE
+|   C  N98                SETON                     97    *LST PAGE
+|   C                     GOTO END320
+| 02-C                     END
+|    *
+| 01-C                     END                             *END DO
+|     *
+12===C           END320    ENDSR
+      *==============================================================*
+      *          RTN321 :  READ PREVIOUS
+     C*==============================================================*
+13===C           RTN321    BEGSR
+|    C                     Z-ADD11        RRN
+|     *
+| 01-C           RRN       DOWGT1
+|   C                     READPT70                      40*EOF
+|    *
+| 02-C           *IN40     IFEQ '0'
+|   C                     SUB  1         RRN
+|    *
+| 03-C           RRN       IFEQ 10
+|   C                     EXSR RTN380                     *GET KEY BOTTOM
+| 03-C                     END
+|   C                     Z-ADDT701      T701T
+|   C                     SETOF                     53    *DSP '+'
+|   C*
+|   C                     CALL 'P31'
+|   C                     PARM T701      P3101I  80
+|   C                     PARM '1'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM DFMT      P3104I  1
+|   C                     PARM DTYPE     P3105I  1
+|   C           T701D     PARM           P3111O  80
+|   C*
+|   C                     WRITESFLSR
+|   C                     Z-ADDRRN       WRRN
+| 02*C                     ELSE
+|   C                     SETON                     98    *FST PAGE
+|   C           KEYT      SETLLT70                  40
+|   C                     EXSR RTN320
+|   C                     GOTO END321
+| 02-C                     END
+|    *
+| 01-C                     END
+|     *
+13===C           END321    ENDSR
+      *==============================================================*
+      *          RTN330... EXFMT SFL                                 *
+      *==============================================================*
+14===C           RTN330    BEGSR
+|     *: CHECK SFL DATA EXIST :
+| 01-C           WRRN      IFEQ *ZEROS
+|   C                     SETON                     96    *NO DATA
+| 01*C                     ELSE
+|   C                     SETON                     50    *SFLDSP
+| 01-C                     END
+|     *: SHOW SCREEN :
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     WRITEDSPC11
+|    C                     EXFMTSFLCR
+|    C                     SETOF                     5051
+|    C                     MOVEA*ALL'0'   *IN,60
+|     *
+14===C                     ENDSR
+      *==============================================================*
+      *          RTN360....SINGLE RECORD MODIFY
+      *==============================================================*
+15===C           RTN360    BEGSR
+|     *
+|    C                     READCSFLSR                    40
+| 01-C           *IN40     DOWEQ'0'
+| 02-C           DOP       IFNE *BLANK
+|   C*                    CALL 'P31'
+|   C*                    PARM T701D     P3101I  80
+|   C*                    PARM DFMT      P3102I  1
+|   C*                    PARM DTYPE     P3103I  1
+|   C*                    PARM '2'       P3104I  1
+|   C*                    PARM '1'       P3105I  1
+|   C*          T701      PARM           P3111O  80
+|   C*                    Z-ADDT701      KT701
+|   C*          KEYT7     CHAINT70                  41
+|   C                     Z-ADDT701D     WT701
+|   C                     MOVELT702      DT702
+|   C                     MOVELT700      WT700
+|   C                     MOVELDOP       TEMP
+|   C                     MOVE *BLANK    DOP
+|   C                     SETOF                     54
+|   C                     UPDATSFLSR
+|   C                     EXSR RTN200
+| 02-C                     END
+|   C                     READCSFLSR                    40
+| 03-C           *IN03     IFEQ '1'
+|   C           *IN12     OREQ '1'
+|   C                     SETON                     40
+| 03-C                     END
+| 01-C                     END
+|     *
+15===C                     ENDSR
+      *==============================================================*
+      *          RTN370 :  REWRITE SUBFILE
+      *==============================================================*
+16===C           RTN370    BEGSR
+|     *
+|    C                     SETOF                     53    *DSP '+'
+|    C                     Z-ADD0         WRRN
+|    C           KEYT      SETLLT70
+|    C                     EXSR RTN320                     *READ NEXT
+|    C                     Z-ADDRRN       WRRN
+|     *
+16===C                     ENDSR
+      *==============================================================*
+      *          RTN380 :  SUBFILE CLEAR & INIT
+      *==============================================================*
+17===C           RTN380    BEGSR
+|     *: CLEAR SFL DATA :
+|    C                     SETON                     52
+|    C                     WRITESFLCR
+|    C                     SETOF                     5254
+|     *: SET TOP VALUE :
+|    C                     Z-ADDT701      T701T
+|    C                     Z-ADDT701      T701B
+|    C                     MOVE *BLANK    DOP
+17===C                     ENDSR
+**
+新增修改      刪除查詢
+

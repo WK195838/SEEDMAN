@@ -1,0 +1,164 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR1261                                    *
+     H*    PROGRAM NAME :員工住宿明細表　                          *
+     H*    AUTHOR       : A1336 KLAUS                                *
+     H*    CREATE DATE  : 2002/08/05                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYLIJF01IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR126P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     ILIJF01
+     I                                              LI02  L1
+     I                                              EM041 L2
+     I                                              EM042 L2
+     I                                              EM043 L2
+     I                                              EM044 L2
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I*
+     I           UDS
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DLI01
+     I                                      601 607 DEM041
+     I                                      608 614 DEM042
+     I                                      513 520 DLI021
+     I                                      521 528 DLI022
+     I                                      531 5370DLI051
+     I                                      538 5440DLI052
+     I                                      545 545 DLI03
+     I                                      546 546 DLI03E
+     I                                      548 5550WLI051
+     I                                      556 5630WLI052
+     I*
+     I              '住宿'              C         SORT1
+     I              '退宿'              C         SORT2
+     I              '復宿'              C         SORT3
+     I              '全部'              C         SORT4
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           KEYDP     KLIST
+     C                     KFLD           DP011
+     C                     KFLD           DP012
+     C                     KFLD           DP013
+     C                     KFLD           DP014
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C                     EXSR RTN100                     *WRITE PD1
+     C*
+     CL1                   SETON                     32
+     CL2                   SETON                     31
+     CLR 10                WRITEPE2
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C           DLI01     CHAINCM0                  40
+|    C   40                MOVE *BLANK    CM03
+|    C*
+|    C                     SETON                     103132
+|    C                     SETON                     39
+|    C                     MOVEL'Y'       $DATA
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+| 01-C           *INL2     IFEQ '1'
+|   C                     MOVELEM041     DP011
+|   C                     MOVELEM042     DP012
+|   C                     MOVELEM043     DP013
+|   C                     MOVELEM044     DP014
+|   C           KEYDP     CHAINDP0                  40
+|   C   40                MOVEL*BLANK    DP02
+|   C                     MOVELDP02      PDP021
+| 01-C                     END
+|    C*
+|    C*------------------------------------------------------------***
+|    C*報表排序
+|    C                     MOVEL*BLANK    LI03N
+| 01-C           DLI03     IFEQ '1'
+|   C                     MOVELSORT1     LI03N     P
+| 01-C                     END
+|    C*
+| 02-C           DLI03     IFEQ '2'
+|   C                     MOVELSORT2     LI03N     P
+| 02-C                     END
+|    C*
+| 03-C           DLI03     IFEQ '3'
+|   C                     MOVELSORT3     LI03N     P
+| 03-C                     END
+|    C*
+| 03-C           DLI03     IFEQ ' '
+|   C                     MOVELSORT4     LI03N     P
+| 03-C                     END
+|    C*
+| 02-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETON                     3132
+| 02-C                     END
+|    C*
+|    C                     Z-ADD*ZERO     PLI05
+|    C                     CALL 'P31'
+|    C                     PARM LI05      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM DFMT      P3104I  1
+|    C                     PARM DTYPE     P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    PLI05
+|    C*
+|    C                     Z-ADD*ZERO     PLI06
+|    C                     CALL 'P31'
+|    C                     PARM LI06      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM DFMT      P3104I  1
+|    C                     PARM DTYPE     P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    PLI06
+|    C*
+|    C                     WRITEPD1
+|    C*
+|    C                     SETOF                     3132
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+03===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+

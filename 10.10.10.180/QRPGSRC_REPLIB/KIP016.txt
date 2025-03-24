@@ -1,0 +1,360 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : KIP016                                     *
+     H*    PROGRAM NAME : VIP銷售明細查詢                          *
+     H*    AUTHOR       : DEREK                                      *
+     H*    CREATE DATE  : 2015/06/05   需求單號: 1040502           *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :專櫃進銷存系統                            *
+     H****************************************************************
+     FW2BALF05IF  E           K        DISK
+     FW2BBLF01IF  E           K        DISK
+     FW1VPPF  IF  E           K        DISK
+     FMTMALF  IF  E           K        DISK
+     FKIP016D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      152 161 $USERN
+     I                                      111 1160$CHYMD
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 505 $WRHUS
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C           *LIKE     DEFN BA01      KBA01S           銷售日期起
+     C           *LIKE     DEFN BA01      KBA01E           銷售日期迄
+     C           *LIKE     DEFN $A8YMD    FDATE            日期
+     C           *LIKE     DEFN $A8YMD    TDATE            日期
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYBA     KLIST                           .W2BALF05
+     C                     KFLD           DBA11            連絡電話
+     C                     KFLD           DBA12            分機
+     C                     KFLD           KBA01E           銷售日期
+     C           KEYVP     KLIST                           .W1VPPF
+     C                     KFLD           DBA11            連絡電話
+     C                     KFLD           DBA12            分機
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     MOVEL'1'       *INLR
+     C*==============================================================*
+     C*          R0100 ... INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C* INIT VALUE SET *---------------------------------------------*
+|    C                     MOVEL*BLANK    DBA11            連絡電話
+|    C                     MOVEL*BLANK    DBA12            分機
+|    C                     MOVEL*BLANK    DVP03             VIP姓名
+|    C                     Z-ADD0         DBA01S           銷售日期S
+|    C                     Z-ADD0         DBA01E           銷售日期E
+|    C                     Z-ADD13        @PRCD            .PAGE SIZE
+|    C*--------------------------------------------------------------*
+|    C                     MOVEL'SC01'    SCID    4
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ... 'SC01' SCREEN MAIN PROCESS
+     C*===============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *CHECK
+|    C*
+| 02-C           *IN99     IFEQ '0'
+|   C                     EXSR R0200                      *CHECK OK
+| 02-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00  ... 'SC01' SCREEN CHECK
+     C*===============================================================*
+03===C           R1B00     BEGSR
+|    C*連絡電話
+| 01-C           DBA11     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+|   C                     MOVEL*BLANK    DVP03            VIP姓名
+| 01*C                     ELSE
+|   C           KEYVP     CHAINVP0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM VP03      P6501I 80        被分割文字
+|   C                     PARM 32        P6502I  30       分割長度
+|   C           DVP03     PARM           P6511O 80        分割後字串1
+|   C                     PARM           P6512O 80        分割後字串2
+| 02*C                     ELSE
+|   C                     MOVEL*BLANK    DVP03            VIP姓名
+| 02-C                     END
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*銷售日期起
+| 03-C           DBA01S    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 03*C                     ELSE
+|   C                     Z-ADDDBA01S    FDATE
+|   C                     EXSR R9010                      .CHECK DATE
+| 04-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 04-C                     END
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*日期轉換SCREEN TO FILE
+|    C                     Z-ADDDBA01S    FDATE
+|    C                     EXSR R9020                      日期轉換
+|    C                     Z-ADDTDATE     KBA01S
+|    C*銷售日期迄
+| 05-C           DBA01E    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 05*C                     ELSE
+|   C                     Z-ADDDBA01E    FDATE
+|   C                     EXSR R9010                      .CHECK DATE
+| 06-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 06-C                     END
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*日期轉換SCREEN TO FILE
+|    C                     Z-ADDDBA01E    FDATE
+|    C                     EXSR R9020                      日期轉換
+|    C                     Z-ADDTDATE     KBA01E
+|    C*銷售起日不可大於銷售迄日
+| 07-C           KBA01S    IFGT KBA01E
+|   C                     MOVEL'UPT1011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     616299
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R0200 ... INITIAL VALUE
+     C*==============================================================*
+04===C           R0200     BEGSR
+|    C*
+|    C* INIT VALUE SET *---------------------------------------------*
+|    C*計算所選區間之累積消費總額
+|    C                     CALL 'KIP016S'
+|    C                     PARM DBA11     P01    15        連絡電話
+|    C                     PARM DBA12     P02     5        分機
+|    C                     PARM KBA01S    P03     80       銷售日期起
+|    C                     PARM KBA01E    P04     80       銷售日期迄
+|    C           DBA04T    PARM           P05    112       消費總額
+|    C*--------------------------------------------------------------*
+|    C                     EXSR R2A00                      .SFL INIT
+|    C                     MOVEL'SC02'    SCID
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... 'SC02' SCREEN MAIN PROCESS
+     C*==============================================================*
+05===C           R2000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 03-C           *IN25     IFEQ '1'                        *NEXT PAGE
+|   C                     EXSR R2N00
+|   C                     GOTO E2000
+| 03-C                     END
+|    C*
+05===C           E2000     ENDSR
+     C*=============================================================*
+     C*          R2A00 ... SUBFILE INIT PREPARE
+     C*=============================================================*
+06===C           R2A00     BEGSR
+|    C*
+|    C                     Z-ADD0         DRRN
+|    C                     Z-ADD0         RRN
+|    C                     MOVEL'N'       @BOTOM  1        *BOTTOM
+|    C*
+|    C                     MOVEL'1'       *IN52            *SFLCLR
+|    C                     WRITESFLCR
+|    C                     MOVEL'0'       *IN52
+|    C*
+|    C                     MOVEL'1'       *IN51            *SFLDSPCTL
+|    C                     MOVEL'0'       *IN50            *SFLDSP
+|    C                     MOVEL'0'       *IN53            *SFLEND
+|    C                     MOVEL'0'       *IN54            *SFLNXTCHG
+|    C*SFL INITIAITAL DATA ADD
+|    C*因有主檔及明細檔，
+|    C*須先讀取主檔，若有資料，才讀取明細檔，寫入SUBFILE
+|    C           KEYBA     SETLLBA0
+|    C           KEYVP     READEBA0                      46
+| 01-C           *IN46     IFEQ '0'
+|   C           BA01      ANDGEKBA01S
+|   C           BA03      SETLLBB0
+|   C                     EXSR R2A10                      *ADD SFL DTA
+| 01-C                     ENDIF
+|    C*
+| 02-C           RRN       IFGT 0
+|   C                     MOVEL'1'       *IN50            *SFLDSP
+| 02*C                     ELSE
+|   C                     MOVEL'1'       *IN99            *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 02-C                     END
+|    C*
+06===C                     ENDSR
+     C*=============================================================*
+     C*          R2A10 ... ADD SUBFILE DATA
+     C*=============================================================*
+07===C           R2A10     BEGSR
+|    C*
+|    C                     ADD  @PRCD     @DRCD
+|    C*
+| 03-C           RRN       DOWLT@DRCD
+|   C*讀取明細檔，寫入SUBFILE
+|   C           BA03      READEBB0                      47
+| 04-C           *IN47     IFEQ '0'
+|   C*日期轉換FILE TO SCREEN
+|   C                     Z-ADDBA01      FDATE            銷售日期
+|   C                     EXSR R9030                      日期轉換
+|   C                     Z-ADDTDATE     DBA01            銷售日期
+|   C*產品名稱
+|   C           BB03      CHAINMA0                  40
+| 05-C           *IN40     IFEQ '1'
+|   C                     MOVEL*BLANK    MA03
+| 05-C                     ENDIF
+|   C*
+|   C                     Z-ADDBB04      DBB04            銷售數量
+|   C                     Z-ADDBB07      DBB07            銷售金額
+|   C                     Z-ADDBB05      DBB05            搭贈數量
+|   C*
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+| 04*C                     ELSE                            *EOF
+|   C*明細檔資料讀取完畢，再讀取下一筆主檔資料
+|   C           KEYVP     READEBA0                      46
+| 06-C           *IN46     IFEQ '0'
+|   C           BA01      ANDGEKBA01S
+|   C           BA03      SETLLBB0
+| 06*C                     ELSE                            *EOF
+|   C*主檔資料讀取完畢，表所選範圍資料皆已寫入SUBFILE
+|   C                     Z-ADDRRN       @DRCD
+|   C                     MOVE 'Y'       @BOTOM
+|   C*                    SETON                     9653  *SFLEND
+|   C                     SETON                       53  *SFLEND
+| 06-C                     ENDIF
+| 04-C                     ENDIF
+| 03-C                     ENDDO
+|    C*
+|    C                     Z-ADDRRN       DRRN
+|    C*
+07===C                     ENDSR
+     C*=============================================================*
+     C*          R2N00 ... ROLLUP MAIN ROUTINE
+     C*=============================================================*
+08===C           R2N00     BEGSR
+|    C*
+| 01-C           @BOTOM    IFEQ 'Y'                        *EOF
+|   C                     MOVEL'1'       *IN96            *LAST PAGE
+|   C*                    MOVEL'CPF5203' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+|   C                     Z-ADDRRN       DRRN
+| 01*C                     ELSE
+|   C                     EXSR R2A10
+| 01-C                     END
+|    C*
+08===C                     ENDSR
+     C*=============================================================*
+     C*          R9010 ...驗證日期
+     C*=============================================================*
+09===C           R9010     BEGSR
+|    C*
+|    C                     CALL 'P30'
+|    C                     PARM FDATE     P3001I  80       日期
+|    C                     PARM $PFMT     P3002I  1        日期格式
+|    C                     PARM $PTYPE    P3003I  1        曆別
+|    C                     PARM           P3011O  1        驗證結果
+|    C*
+09===C                     ENDSR
+     C*=============================================================*
+     C*          R9020 ...日期格式轉換SCREEN TO FILE
+     C*=============================================================*
+10===C           R9020     BEGSR
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM FDATE     P3101I  80       原始日期
+|    C                     PARM $PFMT     P3102I  1        原始格式
+|    C                     PARM $PTYPE    P3103I  1        原始曆別
+|    C                     PARM '2'       P3104I  1        轉換格式
+|    C                     PARM '1'       P3105I  1        轉換曆別
+|    C           TDATE     PARM           P3111O  80       轉換日期
+|    C*
+10===C                     ENDSR
+     C*=============================================================*
+     C*          R9030 ...日期格式轉換FILE TO SCREEN
+     C*=============================================================*
+11===C           R9030     BEGSR
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM FDATE     P3101I  80       原始日期
+|    C                     PARM '2'       P3102I  1        原始格式
+|    C                     PARM '1'       P3103I  1        原始曆別
+|    C                     PARM $PFMT     P3104I  1        轉換格式
+|    C                     PARM $PTYPE    P3105I  1        轉換曆別
+|    C           TDATE     PARM           P3111O  80       轉換日期
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+

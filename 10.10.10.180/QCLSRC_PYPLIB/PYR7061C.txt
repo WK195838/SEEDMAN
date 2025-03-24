@@ -1,0 +1,57 @@
+             PGM
+             DCL        VAR(&DPB01)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DPB03)    TYPE(*CHAR) LEN(3)
+             DCL        VAR(&WPB03)    TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DPB041)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DPB042)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DPC091)   TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DPC092)   TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DPB021)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DPB022)   TYPE(*CHAR) LEN(8)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DPB01)    VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&DPB03)    VALUE(%SST(*LDA 601 3))
+             CHGVAR     VAR(&WPB03)    VALUE(%SST(*LDA 567 4))
+             CHGVAR     VAR(&DPB041)   VALUE(%SST(*LDA 517 2))
+             CHGVAR     VAR(&DPB042)   VALUE(%SST(*LDA 519 2))
+             CHGVAR     VAR(&DPC091)   VALUE(%SST(*LDA 521 5))
+             CHGVAR     VAR(&DPC092)   VALUE(%SST(*LDA 526 5))
+             CHGVAR     VAR(&DPB021)   VALUE(%SST(*LDA 551 8))
+             CHGVAR     VAR(&DPB022)   VALUE(%SST(*LDA 559 8))
+
+             OVRDBF     FILE(PYPCPF) SHARE(*YES)
+             OPNQRYF    FILE((PYPCPF)) QRYSLT(' +
+                          PC01 *EQ "' *CAT &DPB01 *CAT '" +
+                       &  CPC03 *EQ "' *CAT &WPB03 *CAT '" +
+                       &  PC04  *EQ %RANGE("' *CAT &DPB041 *CAT '" +
+                                           "' *CAT &DPB042 *CAT '") +
+                       &  CPC09 *EQ %RANGE("' *CAT &DPC091 *CAT '" +
+                                           "' *CAT &DPC092 *CAT '") +
+                       &  PC02 *EQ %RANGE("' *CAT &DPB021 *CAT '" +
+                                           "' *CAT &DPB022 *CAT '")') +
+                          KEYFLD((PC04) (PC091) +
+                                 (PC092) (PC093) (PC02)) +
+                          MAPFLD((CPC09 'PC091 *CAT PC092 *CAT +
+                                         PC093') +
+                                  (CPC03 PC03 *CHAR 4))
+
+        /*   OVRPRTF    FILE(PYR706P) PAGESIZE(*N 158) CPI(12)   */
+             CALL       PYR7062
+             CLOF       OPNID(PYPCPF)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('PYR706P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             ENDPGM
+

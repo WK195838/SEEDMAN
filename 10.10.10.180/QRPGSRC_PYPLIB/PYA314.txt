@@ -1,0 +1,397 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYA314
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H****************************************************************
+     FPYPMPF  IF  E           K        DISK
+     FPYPYPF  IF  E           K        DISK
+     FPYPDPF  IF  E           K        DISK
+     FPYSSPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYCCPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYOSPF  UF  E           K        DISK                      A
+     FPYA314D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I/COPY PYDDSSRC,PYPMDS01
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     ILDA        UDS
+     I                                      211 2160DDATE
+     I                                      101 110 $USER
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      203 2060$A8YM
+     I*
+     I                                      501 502 DWD01
+     I                                      501 502 OS01
+     I                                      503 504 DWD05
+     I                                      503 504 OS05
+     I*                                     507 5100DWD03
+     I                                      511 5160WWD03
+     I                                      511 5160OS03
+     I                                      521 5231D01
+     I                                      531 5331D02
+     I                                      541 5460D03
+     I                                      551 555 DDS04
+     I                                      556 5560DOPT
+     I                                      601 6050DWD03
+     I                                      606 606 DWD04
+     I            DS
+     I                                        1   8 DWD02
+     I                                        1   8 OS02
+     I                                        1   8 EM02
+     I            DS
+     I                                        1   5 WDS04
+     I                                        1   1 DDS041
+     I                                        2   4 DDS042
+     I                                        5   5 DDS043
+     I*
+     I            DS
+     I                                        1  62 EM031
+     I                                        1  20 EM032
+     I                                       33  44 EM033
+     I                                       45  51 EM034
+     I                                       33  51 EM031P
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYOS     KLIST
+     C                     KFLD           DWD01
+     C                     KFLD           DWD02
+     C                     KFLD           WWD03
+     C                     KFLD           OS04
+     C                     KFLD           DWD05
+     C           KEYSS     KLIST
+     C                     KFLD           DWD01S  2
+     C                     KFLD           DWD05
+     C           KEYEM     KLIST
+     C                     KFLD           DWD01
+     C                     KFLD           DWD02
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DWD01
+     C           KEYCC     KLIST
+     C                     KFLD           DDS041
+     C                     KFLD           DDS042
+     C                     KFLD           DDS043
+     C           KEYPD     KLIST
+     C                     KFLD           DWD01
+     C                     KFLD           DWD02
+     C                     KFLD           PD03
+     C           KEYPD2    KLIST
+     C                     KFLD           DWD01
+     C                     KFLD           DWD02
+     C                     KFLD           DWD05
+     C           KEYPY     KLIST
+     C                     KFLD           DWD01
+     C                     KFLD           DWD02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     *INI. RTN.
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C                     EXSR RTN100                     *MAIN
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL ROUTINE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C*
+|    C                     Z-ADD0         DWD03
+|    C                     MOVEL*BLANK    DWD05
+|    C                     MOVEL*BLANK    DDS04
+|    C                     Z-ADD30        D01
+|    C                     Z-ADD1         D02
+|    C                     Z-ADD0         D03
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL'1'       DWD04
+|    C*
+|    C                     MOVEL$COR      DWD01
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C                     SETON                     10
+|    C                     MOVEL'1'       OS04
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100.... MAIN ROUTINE
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C*K         REFMT     TAG
+|    C*K                   SETOF                     9099
+|    C                     SETON                     97
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO END100
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'                        *PROMPT
+|   C                     EXSR R1E00
+|   C                     GOTO END100
+| 02-C                     END
+|    C*
+|    C                     EXSR RTN110                     *CHK SCREEN1
+|    C*
+|    C*K 99                GOTO REFMT
+|    C*
+| 03-C           *IN99     IFEQ '0'
+|   C*
+| 04-C           *IN13     IFEQ '1'
+|   C           DWD02     ANDEQ*BLANK
+|   C                     EXSR RTN120                     *PROCESS
+| 04-C                     END
+|   C*
+| 05-C           *IN90     IFEQ '1'
+|   C           *IN15     ANDEQ'1'
+|   C           DWD02     ANDEQ*BLANK
+|   C                     EXSR RTN120                     *PROCESS
+| 05-C                     END
+|   C*
+| 06-C           *IN13     IFEQ '1'
+|   C           DWD02     ANDNE*BLANK
+|   C                     EXSR RTN130                     *PROCESS
+| 06-C                     END
+| 03-C                     END
+|    C*
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1E00     BEGSR
+|    C*
+|    C           DWD01     CHAINCM0                  40
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*薪資項目DWD05
+| 01-C           #LIN      IFEQ 8
+|   C           #COL      ANDGE15
+|   C           #COL      ANDLE16
+|   C                     CALL 'PYI504'
+|   C           CM13      PARM CM13      P504I1  2         薪資組別
+|   C           DWD05     PARM DWD05     I504I2  2         薪資代碼
+|   C                     PARM           @RTNC   2          FUN KEY
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN110....CHECK SCREEN1
+     C*==============================================================*
+04===C           RTN110    BEGSR
+|    C*---------------------------------------------------------------
+|    C* << CHACK 公司別NOT *BLANK >>
+| 01-C           DWD01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DWD01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 02-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 02-C                     END
+|    C   99                GOTO END110
+|    C*
+| 03-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UMI0440' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     609299
+| 04-C                     END
+|    C   99                GOTO END110
+|    C*
+| 05-C           DWD05     IFEQ *BLANK
+|   C                     SETON                     6299
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 05*C                     ELSE
+|   C                     MOVE '01'      DWD01S
+|   C           KEYSS     CHAINSS0                  40
+| 06-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     629199
+| 06*C                     ELSE
+|   C*只針對變動項目變動金額做處理
+| 07-C           SS05      IFNE '2'
+|   C           SS06      ORNE 'C'
+|   C                     MOVEL'UPT6001' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     629199
+| 07-C                     END
+|   C*
+| 06-C                     END
+| 05-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     MOVE DDS04     WDS04
+|    C*
+| 08-C           DDS04     IFNE *BLANK
+|   C           KEYCC     CHAINCC0                  40
+| 09-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     639199
+| 09-C                     END
+| 08-C                     END
+|    C   99                GOTO END110
+|    C*
+| 10-C           DWD02     IFNE *BLANK
+|   C*
+|   C*
+|   C           KEYEM     CHAINEM0                  40
+| 11-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     639199
+| 11-C                     END
+| 10-C                     END
+|    C   99                GOTO END110
+|    C*
+| 12-C           D01       IFEQ *ZERO
+|   C           D02       ANDEQ*ZERO
+|   C           D03       ANDEQ*ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6465
+|   C                     SETON                     9499
+| 12-C                     END
+|    C*
+| 13-C           D02       IFNE *ZERO
+|   C           D01       ANDEQ*ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     64
+|   C                     SETON                     9499
+| 13-C                     END
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DWD03     P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           WWD03     PARM           P3911O  60
+|    C*
+| 14-C           DWD03     IFLE PM202
+|   C                     MOVEL'UMI0190' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     619099
+| 14-C                     END
+|    C   99                GOTO END110
+|    C*
+04===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN120.... PROCESS
+     C*==============================================================*
+05===C           RTN120    BEGSR
+|    C*
+|    C                     SETON                     96
+|    C                     WRITEDSPC1
+|    C                     OUT  *NAMVAR
+|    C*
+|    C                     CALL 'PYA3142C'
+|    C*
+|    C                     SETON                     93
+|    C                     SETOF                     96
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTN130.... PROCESS
+     C*==============================================================*
+06===C           RTN130    BEGSR
+|    C                     Z-ADD0         W1D     72
+|    C                     Z-ADD0         WD061   70
+|    C                     Z-ADD0         DOS06   70
+|    C*
+|    C           KEYPY     CHAINPY0                  40
+|    C   40                Z-ADD*ZERO     PY03
+|    C*個人底薪
+|    C*                    MOVEL'02'      PD03
+|    C           KEYPD2    CHAINPD0                  41
+|    C                     Z-ADDPY03      WBASE   90
+| 01-C           *IN41     IFEQ '0'
+|   C*
+|   C           KEYOS     CHAINOS0                  42
+|   C*
+| 02-C           D01       IFNE 0
+|   C           D02       ANDNE0
+|   C           WBASE     DIV  D01       W1D       H
+|   C           W1D       MULT D02       WD061     H
+| 02-C                     END
+|   C*
+| 03-C           D03       IFNE 0
+|   C           D03       ADD  WD061     DOS06
+| 03*C                     ELSE
+|   C                     Z-ADDWD061     DOS06
+| 03-C                     END
+|   C*
+|   C                     Z-ADD$A8YMD    OS97
+|   C                     MOVEL$USER     OS99
+|   C*
+|   C*新增不取代
+| 04-C           DOPT      IFEQ 1
+|   C                     Z-ADDDOS06     OS06
+|   C   42                WRITEOS0
+| 04-C                     END
+|   C*新增且取代
+| 05-C           DOPT      IFEQ 2
+|   C                     Z-ADDDOS06     OS06
+|   C  N42                UPDATOS0
+| 05-C                     END
+|   C*新增且累加
+| 06-C           DOPT      IFEQ 3
+|   C                     ADD  DOS06     OS06
+|   C  N42                UPDATOS0
+| 06-C                     END
+|   C*
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+

@@ -1,0 +1,124 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H* PROGRAM NAME : KIS0232                                       *
+     H* AUTHER       : A1650  DEREK                                  *
+     H* CREATE DATE  : 101/06/22                                     *
+     H* UPDATE DATE  :                                               *
+     H* SYSTEM       :茂世企業                                     *
+     H* SUBSYSTEM    :專櫃系統                                     *
+     H* REMARK       :銷售訂單確認報表(試飲訂單)                 *
+     H*===============================================================
+     H* MODI CODE |   DATE   | DESCRIPTION
+     H*---------------------------------------------------------------
+     H*---------------------------------------------------------------
+     F****************************************************************
+     FW2BAPF  IP  E           K        DISK
+     FW2BBPF  IF  E           K        DISK
+     FMTMAPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FW1AALF01IF  E           K        DISK
+     FW2DBPF  O   E           K        DISK
+     E*--------------------------------------------------------------*
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      119 1240$ADMDY
+     I                                      601 6080WBA01S
+     I                                      609 6160WBA01E
+     I                                      617 617 DTYPE
+     I                                      618 618 DATA
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEY#A     KLIST                           .PA#APF
+     C                     KFLD           #A01             代碼欄位
+     C                     KFLD           #A02             代碼內容
+     C           KEYAA     KLIST                           .W1AALF01
+     C                     KFLD           BB03             產品代號
+     C                     KFLD           BA01             訂單日期
+     C*==============================================================*
+     C*                    DEFINE
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100
+     C                     EXSR R1000
+     C*===============================================================*
+     C*          R0100 ... INIT
+     C*===============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C                     IN   LDA
+|    C                     MOVEL'Y'       DATA
+|    C                     OUT  LDA
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C           BA03      SETLLBB0
+|    C           BA03      READEBB0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C                     EXSR R1100
+|   C                     WRITEDB0
+|   C           BA03      READEBB0                      46
+| 01-C                     ENDDO
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1100 ... WRITE W2DAPF
+     C*==============================================================*
+03===C           R1100     BEGSR
+|    C*
+|    C                     Z-ADDBA01      DB01             訂單日期
+|    C                     MOVELBA03      DB02      P      訂單單號
+|    C                     MOVELBA02      DB03      P      物流點
+|    C*
+|    C                     MOVEL'STORAGE' #A01      P
+|    C                     MOVELBA02      #A02      P
+|    C           KEY#A     CHAIN#A0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVEL#A03      DB04      P      物流點名稱
+| 01*C                     ELSE
+|   C                     MOVEL*BLANK    DB04             物流點名稱
+| 01-C                     ENDIF
+|    C*
+|    C                     MOVELBB03      DB05      P      產品代號
+|    C           BB03      CHAINMA0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELMA03      DB06      P      產品名稱
+| 02*C                     ELSE
+|   C                     MOVEL*BLANK    DB06             產品名稱
+| 02-C                     ENDIF
+|    C*
+|    C                     Z-ADDBB06      DB07             試飲數量
+|    C*
+|    C           KEYAA     SETGTAA0
+|    C           BB03      REDPEAA0                      48
+| 03-C           *IN48     IFEQ '0'
+|   C                     Z-ADDAA04      DB08             牌價
+| 03*C                     ELSE
+|   C                     Z-ADD0         DB08             牌價
+| 03-C                     ENDIF
+|    C*
+|    C                     MOVELBA08      DB09      P      試飲代號
+|    C*
+|    C                     MOVEL'STOCK'   #A01      P
+|    C                     MOVELBA08      #A02      P
+|    C           KEY#A     CHAIN#A0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C                     MOVEL#A03      DB10      P      試飲原因
+| 04*C                     ELSE
+|   C                     MOVEL*BLANK    DB10             試飲原因
+| 04-C                     ENDIF
+|    C*
+03===C           E1100     ENDSR
+

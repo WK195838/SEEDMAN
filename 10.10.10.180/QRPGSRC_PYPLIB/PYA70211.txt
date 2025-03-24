@@ -1,0 +1,149 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYA7021                                     *
+     H*   AUTHER       : A1084 CHARLES                               *
+     H*   CREATE DATE  : 79/07/17                                    *
+     H*   UPDATE DATE  : 96/01/23 A1413 CLOUD                        *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H****************************************************************
+     FPYPTPF  IP  E           K        DISK
+     FPYTDPF  UF  E           K        DISK                      A
+     FPYENPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     I*
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      186 1920DDATE
+     I                                      201 2080$A8YMD
+     I                                      201 2040DYM
+     I*
+     I                                      571 5740WTD01
+     I                                      501 5020DTD01
+     I                                      506 506 DOPT
+     I                                      507 508 WTD11
+     I                                      509 516 DTD17
+     I                                      533 536 DTD02
+     I*
+     IPYDA03      DS                            512
+     I                                      302 303 PYD034
+     I            DS
+     I                                        1   1 EM321
+     I                                        2   6 EM04
+     I                                        2   2 EM041
+     I                                        3   3 EM042
+     I                                        4   4 EM043
+     I                                        5   8 EM044
+     I                                        1  10 TD99
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           PYDA03
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYTD     KLIST
+     C                     KFLD           WTD11
+     C                     KFLD           WTD01
+     C                     KFLD           PYD034
+     C                     KFLD           PT02
+     C           KEYEN     KLIST
+     C                     KFLD           PT01
+     C                     KFLD           PT02
+     C           KEYPT     KLIST
+     C                     KFLD           PT01
+     C                     KFLD           PT03
+     C                     KFLD           PT02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100
+     C*==============================================================*
+     C*   RTN010... INIT PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   *NAMVAR
+|    C*
+|    C*                    Z-ADDDYM       DTD01
+|    C*
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*   RTN100... ＭＡＩＮ
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C*
+|    C                     Z-ADDPT07      DPT07   60
+|    C                     Z-ADDPT10      DPT10   60
+|    C*
+|    C                     Z-ADD0         TD07
+|    C                     Z-ADD0         TD08
+|    C*
+|    C           KEYTD     CHAINTD0                  42
+|    C*
+|    C                     Z-ADD$A8YMD    TD97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     TD98
+|    C*                    MOVEL$USER     TD99
+|    C*
+| 01-C           *IN42     IFEQ '0'
+|   C                     ADD  PT05      TD07
+|   C                     ADD  PT06      TD07
+|   C                     SUB  DPT10     TD07              自提不計
+|   C                     ADD  DPT10     TD20              勞退自提
+|   C                     ADD  DPT07     TD08
+|   C*
+|   C                     UPDATTD0
+|   C*
+| 01*C                     ELSE
+|   C                     Z-ADDWTD01     TD01
+|   C                     MOVELDTD02     TD02
+|   C                     Z-ADD*ZERO     TD03
+|   C                     MOVELPYD034    TD04
+|   C                     MOVELPT02      TD05
+|   C                     MOVEL*BLANK    TD06
+|   C                     Z-ADD*ZERO     TD20
+|   C                     Z-ADDPT05      TD07
+|   C                     ADD  PT06      TD07
+|   C                     SUB  PT10      TD07              自提不計
+|   C                     ADD  PT10      TD20              勞退自提
+|   C                     Z-ADDPT07      TD08
+|   C                     MOVEL*BLANK    TD09
+|   C                     MOVEL*BLANK    TD10
+|   C*
+|   C*                    MOVEL'A'       TD10
+|   C                     MOVELWTD11     TD11
+|   C                     MOVEL*BLANK    TD12
+|   C           KEYEN     CHAINEN0                  40
+|   C  N40                MOVELEN03      TD13
+|   C  N40                MOVELEN04      TD14
+|   C   40                MOVEL*BLANK    TD13
+|   C   40                MOVEL*BLANK    TD14
+|   C                     MOVELTD01      TD15
+|   C                     MOVE '01'      TD15
+|   C                     MOVELTD01      TD16
+|   C                     MOVE '12'      TD16
+|   C                     MOVELDTD17     TD17
+|   C                     Z-ADD*ZERO     TD96
+|   C*
+| 02-C           TD07      IFNE *ZERO
+|   C           TD08      ORNE *ZERO
+|   C*
+|   C                     WRITETD0
+|   C*
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+

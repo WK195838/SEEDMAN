@@ -1,0 +1,122 @@
+     A****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA4191                                    *
+     H*    PROGRAM NAME :年休補發結算作業                          *
+     H*    AUTHOR       : SHARON                                     *
+     H*    CREATE DATE  : 94/01/20                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYLUPF  IP  E           K        DISK
+     FPYPYPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYSSPF  IF  E           K        DISK
+     FPYPD4PF IF  E           K        DISK
+     FPY2HPF  UF  E           K        DISK
+     I*================================================================
+     I/COPY PYDDSSRC,PYPMDS01
+     I           UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      201 2060$A8YM
+     I                                      201 2040$A8Y
+     I                                      211 2160DDATE
+     I*
+     I                                      501 502 DEM01
+     I                                      503 5050DYY
+     I                                      506 5090WYY
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYEM     KLIST
+     C                     KFLD           DEM01            公司編號
+     C                     KFLD           LU02             員工編號
+     C                     MOVEL'01'      KPM01   2
+     C           KEYPM     KLIST
+     C                     KFLD           KPM01
+     C                     KFLD           DEM01
+     C           KEY2H     KLIST
+     C                     KFLD           DEM01            公司編號
+     C                     KFLD           LU02             員工編號
+     C                     KFLD           WYY              年度
+     C           KEYPY     KLIST
+     C                     KFLD           DEM01            公司編號
+     C                     KFLD           LU02             員工編號
+     C           KEYPD     KLIST
+     C                     KFLD           DEM01            公司編號
+     C                     KFLD           EM05             員工編號
+     C           KEYSS     KLIST
+     C                     KFLD           CM13             薪資組別
+     C                     KFLD           PD403            薪資項目
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C           KEYPM     CHAINPM0                  47
+     C*
+     C           DEM01     CHAINCM0                  46
+     C   46                MOVEL*BLANK    CM13
+     C*年休補休金額計算
+     C*
+     C                     Z-ADD*ZERO     YSR     70       年休補發
+     C                     Z-ADD*ZERO     DSAR   103       時薪
+     C                     Z-ADD*ZERO     WPY03   70       底薪
+     C*
+     C           LU05      SUB  LU06      WLU     51
+     C           WLU       DIV  PM101     WLU1    95
+     C*
+     C           KEYPY     CHAINPY0                  47
+     C  N47                Z-ADDPY03      WPY03
+     C*
+     C           KEYEM     CHAINEM0                  43
+     C           *IN43     IFEQ '0'
+  01-C           EM100     IFEQ '1'                        月薪
+    C           WPY03     DIV  PM102     DSAR      H
+    C*                    DIV  PM101     HSAR      H
+  01*C                     ELSE
+  02-C           EM100     IFEQ '2'                        日薪
+    C*          WPY03     DIV  PM101     HSAR      H
+    C                     Z-ADDWPY03     DSAR      H
+     C*
+     C*日薪加上年休補發薪資項目設定，計算實際日薪
+     C                     Z-ADD*ZERO     COST    70
+|   C           KEYPD     SETLLPD40
+|   C           KEYPD     READEPD40                     46
+| 02-C           *IN46     DOWEQ'0'
+|   C           KEYSS     CHAINSS0                  45
+|   C  N45                ADD  SS07      COST             .BY日
+|   C           KEYPD     READEPD40                     46
+| 02-C                     END
+|   C*
+     C                     ADD  COST      DSAR
+  02-C                     END
+  01-C                     END
+  01-C                     END
+     C*
+     C           DSAR      MULT WLU1      YSR       H      年休補發
+     C*
+     C                     Z-ADD*ZERO     QQ      32
+     C           KEY2H     CHAINH20                  42
+     C           *IN42     IFEQ '0'
+     C           WLU       DIV  PM101     H205
+     C                     MVR            QQ
+     C                     Z-ADDQQ        H205H     H
+     C                     Z-ADDYSR       H206
+     C                     Z-ADD$A8YMD    H297
+     C                     TIME           H298
+     C                     MOVEL$USER     H299
+     C                     UPDATH20
+     C                     END
+     C*
+

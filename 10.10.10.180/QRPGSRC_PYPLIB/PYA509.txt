@@ -1,0 +1,204 @@
+      ****************************************************************
+      *            泛太資訊科技開發股份有限公司－版權所有          *
+      *--------------------------------------------------------------*
+      *    PROGRAM NAME : PYA509                                     *
+      *    AUTHOR       : A1084  CHARLES                             *
+      *    CREATE DATE  : 81/01/09                                   *
+      *    UPDATE DATE  :                                            *
+      *    SYSTEM       : MIRS                                       *
+      *    SUBSYSTEM    : PY                                         *
+      *    PURPOSE      :人事統計資料設定                          *
+      ****************************************************************
+     FPYR1PF  UF  E           K        DISK                      A
+     FPYA509D CF  E                    WORKSTN
+     F                                        RRN   KSFILE SFLSR
+     E                    WCHK       40  5 0
+     I           UDS
+     I                                      101 110 USER
+     I                                      203 2080DDATE
+     I                                      201 2080$A8YMD
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYR1     KLIST
+     C                     KFLD           R101
+     C                     KFLD           R102
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+     C                     MOVE '1'       DCHK
+     C                     EXSR RTN210                     *INIT
+     C                     EXSR RTN220                     *WRT FULL SFL
+  01-C           *IN03     DOWEQ'0'
+     *
+  02-C           *IN25     IFEQ '1'                        *ROLLUP
+    C                     SETON                     97    *LAST PAGE
+    C                     Z-ADDDRRN      DRRN
+  02-C                     END
+     *
+  03-C           *IN26     IFEQ '1'                        *ROLLDOWN
+    C                     SETON                     98    *FIRST PAGE
+    C                     Z-ADD1         DRRN
+  03-C                     END
+     *
+  04-C           *IN25     IFEQ '0'
+    C           *IN26     ANDEQ'0'
+    C                     EXSR RTN250
+  05-C           *IN99     IFEQ '0'
+    C                     EXSR RTN260
+    C                     EXSR RTN210                     *INIT
+    C                     EXSR RTN220                     *WRT FULL SFL
+  05-C                     END
+  04-C                     END
+     *
+    C  N03                EXSR RTN240                     *EXFMT
+  01-C                     END
+      *
+     C                     SETON                     LR
+      *==============================================================*
+      *          RTN210....SUBFILE INITIAL
+      *==============================================================*
+01===CSR         RTN210    BEGSR
+|     *INITIAL VALUES
+| 01-C           DCHK      IFEQ '1'
+|   C                     MOVEL'PYR111'  R101
+|   C                     SETOF                     31
+| 01*C                     ELSE
+|   C                     MOVEL'PYR112'  R101
+|   C                     SETON                     31
+| 01-C                     END
+|    C                     Z-ADD*ZEROS    RRN
+|    C                     Z-ADD1         DRRN
+|     *SFL CLEAR
+|    C                     SETON                     5254
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C           R101      SETLLPYR1PF
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN220....READ DATA TO SUBFILE
+      *==============================================================*
+02===CSR         RTN220    BEGSR
+|     *
+| 01-C           RRN       DOWLT10
+|    *
+|   C           R101      READEPYR1PF                   44*READ EQ DIV
+| 02-C           *IN44     IFEQ '0'
+|   C                     Z-ADDR103      DR103
+|   C                     Z-ADDR104      DR104
+|    *
+| 02*C                     ELSE
+|   C                     Z-ADD0         DR103
+|   C                     Z-ADD0         DR104
+| 02-C                     END                                   *DOUNE
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+| 01-C                     END
+02===C                     ENDSR
+      *==============================================================*
+      *          RTN240....EXFMT SFL
+      *==============================================================*
+03===CSR         RTN240    BEGSR
+|    C*
+| 01-C           RRN       IFGT 0
+|   C                     SETON                     50    *SFLDSP
+| 01*C                     ELSE
+|   C                     SETON                     90    *NO DTA
+| 01-C                     END
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     WRITEDSPC11
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|     *
+|    C                     SETOF                     51
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN250....CHECK VALUE
+     C*==============================================================*
+04===CSR         RTN250    BEGSR
+|    C*
+|    C                     Z-ADD0         WCHK
+|    C                     Z-ADD0         I       20
+|    C                     READCSFLSR                    56
+| 01-C           *IN56     DOWEQ'0'
+|   C           *IN03     ANDEQ'0'
+|    *
+|   C                     SETOF                     6162
+| 02-C           *IN99     IFEQ '0'
+| 03-C           DR103     IFNE 0
+|    *
+|   C                     ADD  1         I
+|   C                     Z-ADDDR103     WCHK,I
+|   C                     Z-ADD1         J       20
+| 04-C           J         DOWLTI
+| 05-C           DR103     IFEQ WCHK,J
+|   C                     SETON                     619199
+|   C                     Z-ADDRRN       DRRN
+| 05-C                     END
+|   C                     ADD  1         J
+| 04-C                     END
+|   C   99                GOTO UPD
+|    *
+| 06-C           DR103     IFGT DR104
+|   C                     SETON                       9993
+|   C                     SETON                       6162
+|   C                     Z-ADDRRN       DRRN
+| 06-C                     END
+|   C   99                GOTO UPD
+|    *
+| 03-C                     END
+| 02-C                     END
+|    *
+|   C           UPD       TAG
+|   C                     UPDATSFLSR
+|   C                     READCSFLSR                    56
+| 01-C                     END
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN260....SAVE DATA
+     C*==============================================================*
+05===CSR         RTN260    BEGSR
+|    C*CLRPFM
+|    C                     EXSR RTN270
+|    C                     Z-ADD0         WI      20
+|    C                     READCSFLSR                    56
+| 01-C           *IN56     DOWEQ'0'
+|    *
+| 02-C           DR103     IFNE 0
+|   C           DR104     ORNE 0
+|   C                     ADD  1         WI
+|   C                     Z-ADDWI        R102
+|   C           KEYR1     CHAINR10                  40
+|   C                     Z-ADDDR103     R103
+|   C                     Z-ADDDR104     R104
+|   C                     Z-ADD$A8YMD    R197
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     R198
+|   C                     MOVELUSER      R199
+| 03-C           *IN40     IFEQ '0'
+|   C                     UPDATR10
+| 03*C                     ELSE
+|   C                     WRITER10
+| 03-C                     END
+|    *
+| 02-C                     END
+|   C                     READCSFLSR                    56
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTN270....CLRPFM
+     C*==============================================================*
+06===CSR         RTN270    BEGSR
+|    C*CLRPFM
+|    C           R101      SETLLR10
+|    C           R101      READER10                      42
+| 01-C           *IN42     DOWEQ'0'
+|    *
+|   C                     DELETR10
+|   C           R101      READER10                      42
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+

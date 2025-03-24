@@ -1,0 +1,210 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYB0011                                    *
+     H*    PROGRAM NAME :調薪記錄轉檔作業　　                      *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 1999/08/09                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPCFILE  IP  E           K        DISK
+     FPYSHPF  UF  E           K        DISK                      A
+     FPT#YPF  IF  E           K        DISK
+     FPYSDLF01UF  E           K        DISK                      A
+     FPYPYPF  UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I           UDS
+     I                                      101 110 $USER
+     I                                      187 1920DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DSH01
+     I                                      503 5080DSH06
+     I                                      509 5160WSH06
+     I*
+     I/COPY PYDDSSRC,PCDS01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C                     MOVELPCD       PCDX             轉檔資料
+     I*
+     C                     Z-ADD*ZERO     WSH03   80
+     C           19110000  ADD  PCF01     WSH03            生效日期
+     C*
+     C*PYPYPF
+     C           KEYPY     KLIST
+     C                     KFLD           DSH01            公司
+     C                     KFLD           PCF03            員工編號
+     C*PYSHPF
+     C           KEYSH     KLIST
+     C                     KFLD           DSH01            公司
+     C                     KFLD           PCF03            員工
+     C                     KFLD           WSH03            生效日期
+     C*PT#YPF
+     C           KEY#Y     KLIST                           *DETIL FILE
+     C                     KFLD           KY01   10        代碼欄位
+     C                     KFLD           KY02   10        代碼編號
+     C*PYSDPF
+     C           KEYSD1    KLIST
+     C                     KFLD           DSH01            公司
+     C                     KFLD           PCF03            員工編號
+     C                     KFLD           WSH03            生效日期
+     C*
+     C           KEYSD2    KLIST
+     C                     KFLD           DSH01            公司
+     C                     KFLD           PCF03            員工編號
+     C*
+     C           KEYSD3    KLIST
+     C                     KFLD           DSH01            公司
+     C                     KFLD           PCF03            員工編號
+     C                     KFLD           KSD03   80       生效日期
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     SALARY 100
+|    C           PCF05     ADD  PCF07     SALARY           .底薪
+|    C*
+|    C*薪資主檔HEADING
+|    C                     EXSR R2001                      .PYPYPF
+|    C*調薪主檔HEADING
+|    C                     EXSR R2002                      .PYSHPF
+|    C*調薪主檔DETAIL
+|    C                     EXSR R2003                      .PYSDPF
+|    C*
+|    C                     Z-ADD*ZERO     SALARY
+|    C*
+02===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2001 ... DETAIL 1
+     C*==============================================================*
+03===C           R2001     BEGSR
+|    C*
+|    C*薪資主檔PYPYPF
+|    C           KEYPY     CHAINPY0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     Z-ADDSALARY    PY03             .底薪
+|   C                     Z-ADD$A8YMD    PY97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     PY98
+|   C                     MOVEL$USER     PY99
+|   C                     UPDATPY0
+|   C*
+| 01*C                     ELSE
+|   C                     MOVELDSH01     PY01             .公司
+|   C                     MOVELPCF03     PY02             .員工編號
+|   C                     Z-ADDSALARY    PY03             .底薪
+|   C                     MOVEL*BLANK    PY04
+|   C                     MOVEL*BLANK    PY05
+|   C                     MOVEL*BLANK    PY06
+|   C                     Z-ADD*ZERO     PY07
+|   C                     Z-ADD*ZERO     PY08
+|   C                     MOVEL*BLANK    PY09
+|   C                     Z-ADD$A8YMD    PY97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     PY98
+|   C                     MOVEL$USER     PY99
+|   C                     WRITEPY0
+| 01-C                     END
+|    C*
+03===C           E2001     ENDSR
+     C*==============================================================*
+     C*          R2002 ... DETAIL 2
+     C*==============================================================*
+04===C           R2002     BEGSR
+|    C*
+|    C*調薪主檔PYSHPF: HEADING
+|    C           KEYSH     CHAINSH0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELPCF02     SH04
+|   C                     Z-ADDWSH06     SH06
+|   C                     Z-ADDPCF05     SH07
+|   C                     Z-ADDSALARY    SH08
+|   C                     Z-ADD$A8YMD    SH97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     SH98
+|   C                     MOVEL$USER     SH99
+|   C*
+|   C                     MOVEL'SH04'    KY01
+|   C                     MOVELPCF02     KY02
+|   C           KEY#Y     CHAIN#Y0                  40
+|   C  N40                MOVEL#Y03      SH05
+|   C*
+|   C                     UPDATSH0
+|   C*
+| 01*C                     ELSE
+|   C                     MOVELDSH01     SH01             .公司
+|   C                     MOVELPCF03     SH02             .員工編號
+|   C                     Z-ADDWSH03     SH03
+|   C                     MOVELPCF02     SH04
+|   C                     Z-ADDWSH06     SH06
+|   C                     Z-ADDPCF05     SH07
+|   C                     Z-ADDSALARY    SH08
+|   C                     Z-ADD$A8YMD    SH97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     SH98
+|   C                     MOVEL$USER     SH99
+|   C*
+|   C                     MOVEL'SH04'    KY01
+|   C                     MOVELPCF02     KY02
+|   C           KEY#Y     CHAIN#Y0                  40
+|   C  N40                MOVEL#Y03      SH05
+|   C*
+|   C                     WRITESH0
+| 01-C                     END
+|    C*
+04===C           E2002     ENDSR
+     C*==============================================================*
+     C*          R2003 ... DETAIL 3
+     C*==============================================================*
+05===C           R2003     BEGSR
+|    C*
+|    C*調薪主檔PYSDPF: DETAIL
+|    C                     Z-ADD*ZERO     KSD03   80
+|    C                     SETON                     50
+|    C*
+|    C           KEYSD1    SETLLSD0
+|    C           KEYSD2    READESD0                      44
+|    C*
+| 01-C           *IN44     DOWEQ'0'
+|   C   50                MOVE SD03      KSD03
+|   C                     SETOF                     50
+|   C*
+| 02-C           SD02      IFEQ PCF03
+|   C           SD03      ANDEQKSD03
+|   C                     MOVELSD04      KSD04   2 P      .調薪項目
+|   C                     Z-ADDSD05      KSD05   70       .調薪前＄
+|   C                     Z-ADDSD06      KSD06   70       .調薪後＄
+|   C*
+| 03-C           SD03      IFNE WSH03
+|   C                     MOVELDSH01     SD01             .公司
+|   C                     MOVELPCF03     SD02             .員工編號
+|   C                     Z-ADDWSH03     SD03
+|   C                     MOVELKSD04     SD04
+|   C                     Z-ADDKSD05     SD05
+|   C                     Z-ADDKSD06     SD06
+|   C                     WRITESD0
+| 03-C                     END
+| 02-C                     END
+|   C*
+|   C           KEYSD3    READESD0                      44
+| 01-C                     END
+|    C*
+05===C           E2003     ENDSR
+

@@ -1,0 +1,106 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    AUTHOR       : KEVIN                                     */
+     /*    CREATE DATE  : 112/07/19                                 */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : SOR190C1                                  */
+     /*    SYSTEM       :                                       */
+     /*    SUBSYSTEM    :銷售訂單系統                             */
+     /*    REMARK       :不列印發票客戶銷售報表                   */
+     /*   需求單號    : 1120456                                   */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&$EVR)   TYPE(*CHAR) LEN(1)
+
+             /*客戶代號*/
+             DCL        VAR(&DF01S ) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DF01E ) TYPE(*CHAR) LEN(5)
+             /*日期範圍*/
+             DCL        VAR(&YMD8S1) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YMD8E1) TYPE(*CHAR) LEN(8)
+             /* DOPT */
+             DCL        VAR(&DOPT)  TYPE(*CHAR) LEN(1)
+             /* EXCEL */
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             CHGVAR     VAR(&DF01S)  VALUE(%SST(*LDA 601 5))
+             CHGVAR     VAR(&DF01E)  VALUE(%SST(*LDA 606 5))
+             CHGVAR     VAR(&YMD8S1) VALUE(%SST(*LDA 866 8))
+             CHGVAR     VAR(&YMD8E1) VALUE(%SST(*LDA 874 8))
+             CHGVAR     VAR(&DOPT)   VALUE(%SST(*LDA 667 1))
+
+             CHGVAR     VAR(&LIB)   VALUE('QTEMP')
+
+             IF         COND(&DOPT *EQ '1') THEN(DO)
+
+             CHGVAR     VAR(&FILE)  VALUE('SOR190F1')
+
+             CPYF       FROMFILE(SOR190F1) TOFILE(QTEMP/SOR190F1) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817)
+             CLRPFM     FILE(QTEMP/SOR190F1)
+
+             OVRDBF     FILE(SOR190F1) TOFILE(QTEMP/SOR190F1) SHARE(*YES)
+
+             OVRDBF     FILE(SOSCPF) SHARE(*YES)
+             OPNQRYF    FILE((SOSCPF) (MTMJPF)) OPTION(*INP)        +
+                          FORMAT(*LIBL/SOSCPF *ONLY)                +
+                          QRYSLT('                                  +
+                          SC04  *EQ %RANGE("' || &DF01S || '"       +
+                                           "' || &DF01E || '" )  &  +
+                          MSC08 *EQ %RANGE("' || &YMD8S1 || '"      +
+                                           "' || &YMD8E1 || '" ) &  +
+                          SC13 *NE "*"  & SC35  *NE "T"          &  +
+                          SC03 *NE "S4" & SC01A *NE "K"          &  +
+                          MJ03 *EQ "N"')                            +
+                          KEYFLD((SC04) (SC08) (SC30))              +
+                          JFLD((SC04 MJ01 *EQ))                     +
+                          MAPFLD((MSC08 SC08 *CHAR 8)               +
+                          (SC01A '%SST(SC01 1 1)'))
+
+             CALL       SOR1901
+
+                        ENDDO /*DOPT IF EQ '1' 送貨日期*/
+
+             IF         COND(&DOPT *EQ '2') THEN(DO)
+
+             CHGVAR     VAR(&FILE)  VALUE('SOR190F2')
+
+             CPYF       FROMFILE(SOR190F2) TOFILE(QTEMP/SOR190F2) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817)
+             CLRPFM     FILE(QTEMP/SOR190F2)
+
+             OVRDBF     FILE(SOR190F2) TOFILE(QTEMP/SOR190F2) SHARE(*YES)
+
+             OVRDBF     FILE(SOSCPF) SHARE(*YES)
+             OPNQRYF    FILE((SOSCPF) (MTMJPF)) OPTION(*INP)        +
+                          FORMAT(*LIBL/SOSCPF *ONLY)                +
+                          QRYSLT('                                  +
+                          SC04  *EQ %RANGE("' || &DF01S || '"       +
+                                           "' || &DF01E || '" )  &  +
+                          MSC39 *EQ %RANGE("' || &YMD8S1 || '"      +
+                                           "' || &YMD8E1 || '" ) &  +
+                          SC13 *NE "*"  & SC35  *NE "T"          &  +
+                          SC03 *NE "S4" & SC01A *NE "K"          &  +
+                          MJ03 *EQ "N"')                            +
+                          KEYFLD((SC04) (SC39) (SC30))              +
+                          JFLD((SC04 MJ01 *EQ))                     +
+                          MAPFLD((MSC39 SC39 *CHAR 8)               +
+                          (SC01A '%SST(SC01 1 1)'))
+
+             CALL       SOR1902
+
+                        ENDDO /*DOPT IF EQ '2' 確認日期*/
+
+             CLOF       OPNID(SOSCPF)
+
+             DLTOVR     FILE(*ALL)
+
+             /*將SOR190F1 OR SOR190F2 轉換成CSV FILE AND FTP TO PC*/
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

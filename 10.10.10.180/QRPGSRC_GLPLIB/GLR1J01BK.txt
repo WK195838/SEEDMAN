@@ -1,0 +1,142 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME : GLR1J01                                    *
+     H*    PROCSEDURE   : GLR1J01                                    *
+     H*    AUTHOR       : A1150                                      *
+     H*    CREATE DATE  : 81/11/18                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :泛太總帳                                  *
+     H*    REMARK       :傳票列印                                  *
+     H****************************************************************
+     FGLWF01  IP  E           K        DISK
+     FGLAHLF01IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLR1J0P O   E             39     PRINTER
+     I*
+     IGLWF01R
+     I                                              WF0102L1
+     C           *LIKE     DEFN AH03      WAH03
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY#B     KLIST
+     C                     KFLD           WF0101
+     C           KEYAF     KLIST
+     C                     KFLD           WF0101
+     C                     KFLD           WF0104
+     C           KEYAH     KLIST
+     C                     KFLD           WF0101
+     C                     KFLD           WF0102
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C           *IN10     IFEQ '0'
+     C                     EXSR RTN010
+     C                     SETON                     10
+     C                     END
+     C*
+     C   L1                EXSR RTN100                     計算總頁數
+     C                     EXSR RTN200                     *WRITEPD1
+     C*
+     CL1 10                WRITEPE2
+     C*==============================================================*
+     C*          RTN010....INIT
+     C*==============================================================*
+     C           RTN010    BEGSR
+     C*
+     C           KEY#B     CHAIN#B0                  40
+     C           *IN40     IFEQ '1'
+     C                     MOVE *BLANKS   #B16
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          RTN100....計算總頁數
+     C*==============================================================*
+     C           RTN100    BEGSR
+     C*
+     C           KEYAH     SETGTAH0
+     C                     READPAH0                      47
+     C           AH03      ADD  6         WAH03
+     C           WAH03     DIV  7         TOTPAG
+     C                     Z-ADD1         PAG
+     C*
+     C           AH20      IFEQ 'V'
+     C                     MOVE '作廢'  DDLT
+     C                     ELSE
+     C                     MOVE *BLANKS   DDLT
+     C                     END
+     C*
+     C           KEY#B     CHAINAK0                  40
+     C*製票日期格式轉換F->S
+     C                     CALL 'P31'
+     C                     PARM WF0125    P310I1  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM AK11      P3104I  1
+     C                     PARM AK09      P3105I  1
+     C           PF0125    PARM           P3101O  80
+     C*
+     C*表頭日期格式轉換F->中國年／月／日
+     C                     CALL 'P31'
+     C                     PARM WF0110    P310I1  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM '2'       P3104I  1
+     C                     PARM '2'       P3105I  1
+     C           PF0110    PARM           P3101O  80
+     C*
+     C                     WRITEPH1
+     C                     WRITEPH2
+     C*
+     C                     Z-ADD0         WNUM    10
+     C                     Z-ADD0         PAH12T
+     C                     Z-ADD0         PAH13T
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          RTN200.... WRITEPD1
+     C*==============================================================*
+     C           RTN200    BEGSR
+     C*
+     C*已列印滿一頁
+     C           WNUM      IFEQ 7
+     C                     EXSR RTN800
+     C                     END
+     C*
+     C           KEYAF     CHAINAF0                  40
+     C           *IN40     IFEQ '1'
+     C                     MOVE *BLANKS   PAF03D
+     C                     MOVE *BLANKS   PAF03C
+     C                     ELSE
+     C           WF0112    IFNE 0
+     C                     MOVELAF03      PAF03D
+     C                     SETON                     30
+     C                     ELSE
+     C                     MOVE AF03      PAF03C
+     C                     SETOF                     30
+     C                     END
+     C                     END
+     C*
+     C                     ADD  1         WNUM
+     C                     WRITEPD1
+     C                     ADD  WF0112    PAH12T
+     C                     ADD  WF0113    PAH13T
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          RTN800....
+     C*==============================================================*
+     C           RTN800    BEGSR
+     C*
+     C                     WRITEPE1
+     C                     ADD  1         PAG
+     C                     WRITEPH1
+     C                     WRITEPH2
+     C                     Z-ADD0         WNUM
+     C*
+     C                     ENDSR
+

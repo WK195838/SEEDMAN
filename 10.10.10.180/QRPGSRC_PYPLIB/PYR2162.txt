@@ -1,0 +1,601 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR2162                                    *
+     H*    PROGRAM NAME :工時表                                    *
+     H*    AUTHOR       : A1386 SHARON                               *
+     H*    CREATE DATE  : 2004/12/31                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     F*PYT1PF  IF  E           K        DISK
+     FPYT2PF  IF  E           K        DISK
+     FPYT1PF  IF  E           K        DISK
+     FPYLVLF02IF  E           K        DISK
+     FPYOVLF01IF  E           K        DISK
+     FPYPWPF  IF  E           K        DISK
+     FPYWDPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYR216W UF  E           K        DISK                      A
+     FPYR216WDUF  E           K        DISK                      A
+     FPYR216P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    @T1        31  2
+     E*---------------------------------------------------------------
+     IEM0
+     I                                              EM041 L1
+     I                                              EM042 L1
+     I                                              EM043 L1
+     I                                              EM044 L1
+     I*
+     I            DS
+     I                                        1   7 DS4
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I            DS
+     I                                        1   80XXEM16
+     I                                        1   60XXEMX6
+     I           UDS
+     I                                      125 1270$CPY
+     I                                      211 2160DDATE
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DT201
+     I                                      560 566 DEM041
+     I                                      567 573 DEM042
+     I                                      513 5180WT2031
+     I                                      519 5240WT2032
+     I*                                     525 5280DT203
+     I                                      529 5340WT203
+     I                                      600 6040DT203
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*
+     C           KEYT2     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WT203
+     C*
+     C           KEYLV     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WT203
+     C*
+     C           KEYOV     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WT203
+     C*
+     C                     MOVEL'1'       KPW04   1
+     C           KEYPW     KLIST
+     C                     KFLD           DT201
+     C                     KFLD           WT203
+     C                     KFLD           KPW04
+     C                     KFLD           EM02
+     C*
+     C           KEYWD     KLIST
+     C                     KFLD           DT201
+     C                     KFLD           WT203
+     C                     KFLD           KPW04
+     C                     KFLD           EM02
+     C                     KFLD           WD05
+     C*
+     C                     MOVEL'01'      KPM01   2
+     C           KEYPM     KLIST
+     C                     KFLD           KPM01
+     C                     KFLD           DT201
+     C           KEYW6     KLIST
+     C                     KFLD           WT01
+     C                     KFLD           WT02
+     C                     KFLD           WT4
+     C                     KFLD           WTSEX
+     C           KEYW6D    KLIST
+     C                     KFLD           WX01
+     C                     KFLD           WX02
+     C                     KFLD           WX4
+     C                     KFLD           WXNO
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100
+     C*
+     C           EM11      IFEQ 'Y'
+     C                     Z-ADDEM19      XXEM16
+  YKKC                     Z-ADD0         WKYYMM  60
+  YKKC           191100    ADD  DT203     WKYYMM
+  YKKC           XXEMX6    IFNE WKYYMM
+     C                     GOTO NEXTY
+     C                     END
+     C                     END
+     C*
+|    C   L1                DO
+|    C                     SETON                     31
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C                     END
+     C                     EXSR R8100                      .DETAIL
+|    C                     SETOF                     31
+     C*          F R8200
+     C           NEXTY     TAG
+     C*+ LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++
+     CL1 10                EXSR R8200
+     CLR 10                EXSR R8900
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R0100 ... INITIAL
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C           DT201     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C*
+|    C*                    SETON                     31
+|    C*          KEYDP     CHAINDP0                  40
+|    C*  40                MOVEL*BLANK    DP02
+|    C*
+|    C           KEYPM     CHAINPM0                  40
+|    C*
+|    C                     Z-ADD*ZERO     PD11
+|    C                     Z-ADD*ZERO     PD12
+|    C                     Z-ADD*ZERO     PD13
+|    C                     Z-ADD*ZERO     PD14
+|    C                     Z-ADD*ZERO     PD15
+|    C                     Z-ADD*ZERO     PD151
+|    C                     Z-ADD*ZERO     PD152
+|    C                     Z-ADD*ZERO     PD16
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT14
+|    C                     Z-ADD*ZERO     PT15
+|    C                     Z-ADD*ZERO     PT151
+|    C                     Z-ADD*ZERO     PT152
+|    C                     Z-ADD*ZERO     PT16
+|    C                     Z-ADD*ZERO     PT11F
+|    C                     Z-ADD*ZERO     PT12F
+|    C                     Z-ADD*ZERO     PT13F
+|    C                     Z-ADD*ZERO     PT14F
+|    C                     Z-ADD*ZERO     PT15F
+|    C                     Z-ADD*ZERO     PT15F1
+|    C                     Z-ADD*ZERO     PT15F2
+|    C                     Z-ADD*ZERO     PT16F
+|    C                     Z-ADD*ZERO     PT11M
+|    C                     Z-ADD*ZERO     PT12M
+|    C                     Z-ADD*ZERO     PT13M
+|    C                     Z-ADD*ZERO     PT14M
+|    C                     Z-ADD*ZERO     PT15M
+|    C                     Z-ADD*ZERO     PT15M1
+|    C                     Z-ADD*ZERO     PT15M2
+|    C                     Z-ADD*ZERO     PT16M
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C                     Z-ADD*ZERO     PT24
+|    C                     Z-ADD*ZERO     PT25
+|    C                     Z-ADD*ZERO     PT251
+|    C                     Z-ADD*ZERO     PT252
+|    C                     Z-ADD*ZERO     PT26
+|    C                     Z-ADD*ZERO     PT21F
+|    C                     Z-ADD*ZERO     PT22F
+|    C                     Z-ADD*ZERO     PT23F
+|    C                     Z-ADD*ZERO     PT24F
+|    C                     Z-ADD*ZERO     PT25F
+|    C                     Z-ADD*ZERO     PT25F1
+|    C                     Z-ADD*ZERO     PT25F2
+|    C                     Z-ADD*ZERO     PT26F
+|    C                     Z-ADD*ZERO     PT21M
+|    C                     Z-ADD*ZERO     PT22M
+|    C                     Z-ADD*ZERO     PT23M
+|    C                     Z-ADD*ZERO     PT24M
+|    C                     Z-ADD*ZERO     PT25M
+|    C                     Z-ADD*ZERO     PT25M1
+|    C                     Z-ADD*ZERO     PT25M2
+|    C                     Z-ADD*ZERO     PT26M
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C*正常工時
+|    C                     Z-ADD*ZERO     FLD01   51
+| 01-C*          EM100     IFEQ '1'                        *月薪
+|   C*          PM102     MULT PM101     FLD01
+| 01*C*                    ELSE                            *日薪
+|   C           KEYT2     CHAINT20                  42
+| 02-C           *IN42     IFEQ '0'
+|   C                     MOVEAT205      @T1
+| 03-C                     DO   31        I       20
+| 04-C           @T1,I     IFNE *BLANK
+|   C*                    ADD  PM101     FLD01
+|   C           @T1,I     CHAINPYT1PF               40
+|   C  N40                ADD  T114      FLD01
+|   C  N40      T115      DIV  60        TPHOUR  21H
+|   C  N40                ADD  TPHOUR    FLD01
+| 04-C                     END
+| 03-C                     END
+| 02-C*                    END
+|   C*
+| 01-C                     END
+|   C                     Z-ADDFLD01     PD11
+|    C*
+|    C*請假工時
+|    C                     Z-ADD*ZERO     FLD02   51
+|    C           KEYLV     SETLLLV0
+|    C           KEYLV     READELV0                      57
+| 05-C           *IN57     DOWEQ'0'
+|   C           LV09      MULT PM101     QQ1     51
+|   C                     ADD  LV08      QQ1
+     C                     ADD  QQ1       FLD02
+|   C           KEYLV     READELV0                      57
+| 05-C                     END
+|    C                     Z-ADDFLD02     PD12
+|    C*
+|    C*加班工時
+|    C                     Z-ADD*ZERO     FLD03   51
+|    C           KEYOV     SETLLOV0
+|    C           KEYOV     READEOV0                      58
+| 07-C           *IN58     DOWEQ'0'
+|   C           OV07      ADD  OV08      QQ2     51
+|   C                     ADD  OV10      QQ2
+|   C                     ADD  OV17      QQ2
+     C                     ADD  QQ2       FLD03
+|   C           KEYOV     READEOV0                      58
+| 07-C                     END
+|    C                     Z-ADDFLD03     PD13
+|    C*
+|    C*實際工時=正常工時-請假工時+加班工時
+|    C                     Z-ADD*ZERO     FLD04   51
+|    C           FLD01     SUB  FLD02     FLD04
+|    C                     ADD  FLD03     FLD04
+|    C                     Z-ADDFLD04     PD14
+|    C*薪資
+|    C                     Z-ADD*ZERO     FLD05   70
+|    C           KEYPW     CHAINPW0                  43
+| 09-C           *IN43     IFEQ '0'
+|   C           PW16      ADD  PW17      FLD05
+|   C                     ADD  PW27      FLD05
+|   C*                    SUB  PW18      FLD05
+| YKKC                     SUB  PW28      FLD05
+|   C*                    SUB  PW29      FLD05
+| 09-C                     END
+|    C*                    Z-ADDFLD05     PD15
+|    C*伙食費
+|    C                     MOVE '24'      WD05
+|    C           KEYWD     CHAINPYWDPF               40
+|    C  N40                Z-ADDWD06      PD151
+|    C   40                Z-ADD0         PD151
+|    C*加班費
+|    C                     MOVE '25'      WD05
+|    C           KEYWD     CHAINPYWDPF               40
+|    C  N40                Z-ADDWD06      PD152
+|    C   40                Z-ADD0         PD152
+|    C                     MOVE '26'      WD05
+|    C           KEYWD     CHAINPYWDPF               40
+|    C  N40                ADD  WD06      PD152
+|    C           FLD05     SUB  PD151     PD15
+|    C                     SUB  PD152     PD15
+|    C*平均成本
+| 10-C           FLD04     IFNE *ZERO
+|   C           FLD05     DIV  FLD04     PD16      H
+| 10*C                     ELSE
+|   C                     Z-ADD*ZERO     PD16
+| 10-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R8010 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+03===C           R8010     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT14
+|    C                     Z-ADD*ZERO     PT15
+|    C                     Z-ADD*ZERO     PT151
+|    C                     Z-ADD*ZERO     PT152
+|    C                     Z-ADD*ZERO     PT16
+|    C*
+|    C                     Z-ADD*ZERO     PT11F
+|    C                     Z-ADD*ZERO     PT12F
+|    C                     Z-ADD*ZERO     PT13F
+|    C                     Z-ADD*ZERO     PT14F
+|    C                     Z-ADD*ZERO     PT15F
+|    C                     Z-ADD*ZERO     PT15F1
+|    C                     Z-ADD*ZERO     PT15F2
+|    C                     Z-ADD*ZERO     PT16F
+|    C*
+|    C                     Z-ADD*ZERO     PT11M
+|    C                     Z-ADD*ZERO     PT12M
+|    C                     Z-ADD*ZERO     PT13M
+|    C                     Z-ADD*ZERO     PT14M
+|    C                     Z-ADD*ZERO     PT15M
+|    C                     Z-ADD*ZERO     PT15M1
+|    C                     Z-ADD*ZERO     PT15M2
+|    C                     Z-ADD*ZERO     PT16M
+03===C                     ENDSR
+     C*==============================================================*
+     C*                 .. WRITE DETAIL
+     C*==============================================================*
+04===C           R8100     BEGSR
+|    C*
+|    C                     EXSR R2000                      .DETAIL
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*產生工時明細
+|    C                     CLEARWX0
+|    C                     MOVE EM01      WX01
+|    C           191100    ADD  DT203     WX02
+|    C                     MOVE DS4       WX4
+|    C                     MOVE EM02      WXNO
+|    C           KEYW6D    CHAINPYR216WD             44
+|    C                     MOVE EM03      WXNAME
+| YKKC           KEYDP     CHAINDP0                  40
+| YKKC   40                MOVEL*BLANK    DP02
+| YKKC                     MOVE DP02      WX4NM
+|    C                     Z-ADDPD11      WX11
+|    C                     Z-ADDPD12      WX12
+|    C                     Z-ADDPD13      WX13
+|    C                     Z-ADDPD14      WX14
+|    C                     Z-ADDPD15      WX15
+|    C                     Z-ADDPD151     WX151
+|    C                     Z-ADDPD152     WX152
+|    C                     Z-ADDPD16      WX16
+|    C   44                WRITEWX0
+|    C  N44                UPDATWX0
+|    C*
+|    C                     WRITEPD1
+|    C                     SETOF                     31
+|    C*
+|    C           EM32      IFEQ 'F'
+|    C                     ADD  PD11      PT11F
+|    C                     ADD  PD12      PT12F
+|    C                     ADD  PD13      PT13F
+|    C*                    ADD  PD14      PT14F
+|    C                     ADD  PD15      PT15F
+|    C                     ADD  PD151     PT15F1
+|    C                     ADD  PD152     PT15F2
+|    C*                    ADD  PD16      PT16F
+|    C                     ELSE
+|    C                     ADD  PD11      PT11M
+|    C                     ADD  PD12      PT12M
+|    C                     ADD  PD13      PT13M
+|    C*                    ADD  PD14      PT14M
+|    C                     ADD  PD15      PT15M
+|    C                     ADD  PD151     PT15M1
+|    C                     ADD  PD152     PT15M2
+|    C*                    ADD  PD16      PT16M
+|    C                     END
+|    C*
+|    C                     ADD  PD11      PT11
+|    C                     ADD  PD12      PT12
+|    C                     ADD  PD13      PT13
+|    C*                    ADD  PD14      PT14
+|    C                     ADD  PD15      PT15
+|    C                     ADD  PD151     PT151
+|    C                     ADD  PD152     PT152
+|    C*                    ADD  PD16      PT16
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8200 ... LEVEL BREAK
+     C*==============================================================*
+05===C           R8200     BEGSR
+|    C*
+|    C*
+|    C                     SETON                     31
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+     C           PT11      SUB  PT12      PT14
+     C           PT11F     SUB  PT12F     PT14F
+     C           PT11M     SUB  PT12M     PT14M
+     C                     ADD  PT13      PT14
+     C                     ADD  PT13F     PT14F
+     C                     ADD  PT13M     PT14M
+     C*
+     C           PT15      ADD  PT151     TEMP15  90
+     C                     ADD  PT152     TEMP15
+     C*
+| 10-C           PT14      IFNE *ZERO
+|   C           TEMP15    DIV  PT14      PT16      H
+| 10*C                     ELSE
+|   C                     Z-ADD*ZERO     PT16
+| 10-C                     END
+     C*
+     C           PT15F     ADD  PT15F1    TEMP15
+     C                     ADD  PT15F2    TEMP15
+     C*
+| 10-C           PT14F     IFNE *ZERO
+|   C           TEMP15    DIV  PT14F     PT16F     H
+| 10*C                     ELSE
+|   C                     Z-ADD*ZERO     PT16F
+| 10-C                     END
+     C*
+     C           PT15M     ADD  PT15M1    TEMP15
+     C                     ADD  PT15M2    TEMP15
+     C*
+| 10-C           PT14M     IFNE *ZERO
+|   C           TEMP15    DIV  PT14M     PT16M     H
+| 10*C                     ELSE
+|   C                     Z-ADD*ZERO     PT16M
+| 10-C                     END
+|    C*
+|    C                     WRITEPT1F
+|    C                     WRITEPT1M
+|    C                     WRITEPT1
+|    C                     WRITEPH1
+|    C*
+|    C           EM041     IFNE *BLANKS
+|    C                     CLEARW60
+|    C                     MOVE EM01      WT01
+|    C           191100    ADD  DT203     WT02
+|    C                     MOVE DS4       WT4
+|    C                     MOVE 'T'       WTSEX
+|    C           KEYW6     CHAINPYR216W              44
+|    C                     Z-ADDPT11      WT11
+|    C                     Z-ADDPT12      WT12
+|    C                     Z-ADDPT13      WT13
+|    C                     Z-ADDPT14      WT14
+|    C                     Z-ADDPT15      WT15
+|    C                     Z-ADDPT151     WT151
+|    C                     Z-ADDPT152     WT152
+|    C                     Z-ADDPT16      WT16
+|    C   44                WRITEW60
+|    C  N44                UPDATW60
+|    C*
+|    C                     CLEARW60
+|    C                     MOVE EM01      WT01
+|    C           191100    ADD  DT203     WT02
+|    C                     MOVE DS4       WT4
+|    C                     MOVE 'F'       WTSEX
+|    C           KEYW6     CHAINPYR216W              44
+|    C                     Z-ADDPT11F     WT11
+|    C                     Z-ADDPT12F     WT12
+|    C                     Z-ADDPT13F     WT13
+|    C                     Z-ADDPT14F     WT14
+|    C                     Z-ADDPT15F     WT15
+|    C                     Z-ADDPT15F1    WT151
+|    C                     Z-ADDPT15F2    WT152
+|    C                     Z-ADDPT16F     WT16
+|    C   44                WRITEW60
+|    C  N44                UPDATW60
+|    C*
+|    C                     CLEARW60
+|    C                     MOVE EM01      WT01
+|    C           191100    ADD  DT203     WT02
+|    C                     MOVE DS4       WT4
+|    C                     MOVE 'M'       WTSEX
+|    C           KEYW6     CHAINPYR216W              44
+|    C                     Z-ADDPT11M     WT11
+|    C                     Z-ADDPT12M     WT12
+|    C                     Z-ADDPT13M     WT13
+|    C                     Z-ADDPT14M     WT14
+|    C                     Z-ADDPT15M     WT15
+|    C                     Z-ADDPT15M1    WT151
+|    C                     Z-ADDPT15M2    WT152
+|    C                     Z-ADDPT16M     WT16
+|    C   44                WRITEW60
+|    C  N44                UPDATW60
+|    C                     END
+|    C*
+|    C                     ADD  PT11      PT21
+|    C                     ADD  PT12      PT22
+|    C                     ADD  PT13      PT23
+|    C*                    ADD  PT14      PT24
+|    C                     ADD  PT15      PT25
+|    C                     ADD  PT151     PT251
+|    C                     ADD  PT152     PT252
+|    C*                    ADD  PT16      PT26
+|    C*
+|    C                     ADD  PT11F     PT21F
+|    C                     ADD  PT12F     PT22F
+|    C                     ADD  PT13F     PT23F
+|    C*                    ADD  PT14F     PT24F
+|    C                     ADD  PT15F     PT25F
+|    C                     ADD  PT15F1    PT25F1
+|    C                     ADD  PT15F2    PT25F2
+|    C*                    ADD  PT16F     PT26F
+|    C*
+|    C                     ADD  PT11M     PT21M
+|    C                     ADD  PT12M     PT22M
+|    C                     ADD  PT13M     PT23M
+|    C*                    ADD  PT14M     PT24M
+|    C                     ADD  PT15M     PT25M
+|    C                     ADD  PT15M1    PT25M1
+|    C                     ADD  PT15M2    PT25M2
+|    C*                    ADD  PT16M     PT26M
+|    C*
+|    C                     EXSR R8010
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR
+     C*==============================================================*
+06===C           R8900     BEGSR
+|    C*
+     C           PT21      SUB  PT22      PT24
+     C           PT21F     SUB  PT22F     PT24F
+     C           PT21M     SUB  PT22M     PT24M
+     C                     ADD  PT23      PT24
+     C                     ADD  PT23F     PT24F
+     C                     ADD  PT23M     PT24M
+     C*
+     C           PT25      ADD  PT251     TEMP15
+     C                     ADD  PT252     TEMP15
+     C*
+| 10-C           PT24      IFNE *ZERO
+|   C           TEMP15    DIV  PT24      PT26      H
+| 10*C                     ELSE
+|   C                     Z-ADD*ZERO     PT26
+| 10-C                     END
+     C*
+     C           PT25F     ADD  PT25F1    TEMP15
+     C                     ADD  PT25F2    TEMP15
+     C*
+| 10-C           PT24F     IFNE *ZERO
+|   C           TEMP15    DIV  PT24F     PT26F     H
+| 10*C                     ELSE
+|   C                     Z-ADD*ZERO     PT26F
+| 10-C                     END
+     C*
+     C           PT25M     ADD  PT25M1    TEMP15
+     C                     ADD  PT25M2    TEMP15
+     C*
+| 10-C           PT24M     IFNE *ZERO
+|   C           TEMP15    DIV  PT24M     PT26M     H
+| 10*C                     ELSE
+|   C                     Z-ADD*ZERO     PT26M
+| 10-C                     END
+|    C*
+|    C                     WRITEPT2F
+|    C                     WRITEPT2M
+|    C                     WRITEPT2
+|    C*
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C                     Z-ADD*ZERO     PT24
+|    C                     Z-ADD*ZERO     PT25
+|    C                     Z-ADD*ZERO     PT26
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+07===C           R8999     BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR R0100
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+

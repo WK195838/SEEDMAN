@@ -1,0 +1,73 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250  */
+     /*                                                             */
+     /*    AUTHOR       : A1650   DEREK                             */
+     /*    CREATE DATE  : 2015/09/24                                */
+     /*    PROGRAM NAME : DBR001C                                   */
+     /*    SYSTEM       :茂世進銷存                               */
+     /*    SUBSYSTEM    :銷售分析系統                             */
+     /*    REMARK       :銷售排行榜(FOR DBQT)                     */
+     /*-------------------------------------------------------------*/
+     /* MODI CODE |   DATE   | DESCRIPTION                          */
+     /***************************************************************/
+             PGM        PARM(&PARM1 &PARM2 &PARM3)
+
+             DCL        VAR(&PARM1) TYPE(*CHAR) LEN(20) /*產品起*/
+             DCL        VAR(&PARM2) TYPE(*CHAR) LEN(20) /*產品迄*/
+             DCL        VAR(&PARM3) TYPE(*CHAR) LEN(20) /*期間-月年*/
+
+             CLRPFM     FILE(SAR087PF)
+
+             CALL P63
+
+             CALL       PGM(SAR087) PARM(&PARM1 &PARM2 &PARM3)
+
+       /*出貨資料*/
+             CALL       PGM(SAR0871)
+
+       /*銷退資料*/
+             CALL       PGM(SAR0872)
+
+       /*庫存量*/
+             CALL       PGM(SAR0873)
+
+       /*數量排名*/
+             OVRDBF     FILE(SAR087PF) SHARE(*YES)
+             OPNQRYF    FILE((SAR087PF)) OPTION(*ALL) QRYSLT(*ALL) +
+                          KEYFLD((F8712A *DESCEND) (F8700))
+
+             CALL       PGM(SAR0874)
+
+             CLOF       OPNID(SAR087PF)
+             DLTOVR     FILE(*ALL)
+
+       /*金額排名*/
+             OVRDBF     FILE(SAR087PF) SHARE(*YES)
+             OPNQRYF    FILE((SAR087PF)) OPTION(*ALL) QRYSLT(*ALL) +
+                          KEYFLD((F8712B *DESCEND) (F8700))
+
+             CALL       PGM(SAR0875)
+
+             CLOF       OPNID(SAR087PF)
+             DLTOVR     FILE(*ALL)
+
+       /*更改SAR087PF COLUMN HEADING */
+             CHKOBJ     OBJ(QTEMP/SAR087R) OBJTYPE(*FILE)
+             MONMSG     MSGID(CPF9801) EXEC(CRTSRCPF +
+                          FILE(QTEMP/SAR087R))
+             CHKOBJ     OBJ(QTEMP/SAR087R) OBJTYPE(*FILE) MBR(SAR087R)
+             MONMSG     MSGID(CPF9815 CPF9801) EXEC(ADDPFM +
+                          FILE(QTEMP/SAR087R) MBR(SAR087R))
+             CLRPFM     FILE(QTEMP/SAR087R) MBR(SAR087R)
+             OVRDBF     FILE(SAR087R) TOFILE(QTEMP/SAR087R) +
+                          MBR(SAR087R)
+             CALL       PGM(SAR0876)
+             DLTOVR     FILE(SAR087R)
+
+             RUNSQLSTM  SRCFILE(QTEMP/SAR087R) SRCMBR(SAR087R) +
+                          COMMIT(*NONE)
+
+             CHGVAR     VAR(%SST(*LDA 601 100)) VALUE(' ')
+
+             ENDPGM
+

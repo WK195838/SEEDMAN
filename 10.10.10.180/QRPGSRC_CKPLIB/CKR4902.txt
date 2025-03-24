@@ -1,0 +1,168 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : CKR490                                     *
+     H*    PROGRAM NAME :票齡分析表                                *
+     H*    AUTHOR       : A1087  JOYCE                               *
+     H*    CREATE DATE  : 1992.10.06                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :票據系統                                  *
+     H****************************************************************
+     FCKHAPF  IF  E           K        DISK
+     FCKHDLF01IF  E           K        DISK
+     FPT#XPF  IF  E           K        DISK
+     FCKR490F UF  E           K        DISK                      A
+     I* LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      173 176 $COR
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      219 219 $PENV
+     I                                      220 229 $PRTNM
+     I* PROPRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DHA02
+     I                                      505 505 DHA01
+     I                                      506 511 DHA16F
+     I                                      512 517 DHA16T
+     I                                      518 518 DTYPE1
+     I                                      519 519 DTYPE2
+     T** SET RANGE FIELD
+     I                                      520 523 WHA02F
+     I                                      524 527 WHA02T
+     I                                      528 528 WHA01F
+     I                                      529 529 WHA01T
+     I                                      530 530 WTP2F
+     I                                      531 531 WTP2T
+     I/COPY QRPGSRC,PT#XDS01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHD     KLIST
+     C                     KFLD           HD01
+     C                     KFLD           HD04
+     C           KEYWF     KLIST
+     C                     KFLD           HA01
+     C                     KFLD           HA02
+     C                     KFLD           HD05
+     C                     KFLD           HA16
+     C           KEY#X     KLIST
+     C                     KFLD           #X01
+     C                     KFLD           #X02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C                     READ HA0                      46*EOF
+  01-C           *IN46     DOWEQ'0'
+     C                     EXSR R1000
+    C                     EXSR R2000
+    C                     READ HA0                      46*EOF
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R1000 ... INITIAL
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     MOVE *BLANK    #X01
+|    C                     MOVE *BLANK    #X02
+|    C                     MOVEL'CK'      #X01
+|    C                     MOVELHA02      #X02
+|    C           KEY#X     CHAIN#X0                  40
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R2000     BEGSR
+|    C*
+|    C                     MOVELHA02      HD01
+|    C                     MOVE *BLANK    HD04
+|    C                     MOVE HA16      HD04
+|    C           KEYHD     CHAINHD0                  40
+|   C*
+| 02-C           *IN40     IFEQ '1'                        庫存票
+|   C                     MOVE *BLANK    HD05
+|   C                     MOVE *BLANK    HD03
+|   C                     Z-ADD*ZERO     HD07
+|   C                     EXSR R2100
+|   C                     ELSE                            託收／貼現
+| 03-C           HD05      IFGE WTP2F
+|   C           HD05      ANDLEWTP2T
+|   C                     EXSR R2100
+| 03-C                     END
+| 02-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2100 ... DETAIL
+     C*==============================================================*
+02===C           R2100     BEGSR
+|    C*
+|    C           KEYWF     CHAINWF0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     EXSR R2A00                      *INIT FIELD
+|   C                     EXSR R2B00                      *計算
+|   C                     WRITEWF0
+| 01*C                     ELSE
+|   C                     EXSR R2B00                      *計算
+|   C                     UPDATWF0
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R2A00 ... CLEAR CKR490F'S FIELD
+     C*==============================================================*
+03===C           R2A00     BEGSR
+|    C*
+|    C                     MOVE HA01      WF01
+|    C                     MOVE HA02      WF02
+|    C                     MOVE HD05      WF03
+|    C                     MOVE HA16      WF04
+|    C                     MOVE HD03      WF05
+|    C                     MOVE HA05      WF06
+|    C                     Z-ADDHD07      WF07
+|    C                     Z-ADD0         WF08
+|    C                     Z-ADD0         WF09
+|    C                     Z-ADD0         WF10
+|    C                     Z-ADD0         WF11
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R2B00 ... 計算
+     C*==============================================================*
+04===C           R2B00     BEGSR
+|    C*
+|    C* 計算相距日數
+|    C                     CALL 'P32'
+|    C                     PARM $A8YMD    P3201I  80
+|    C                     PARM HA07      P3202I  80
+|    C                     PARM '2'       P3203I  1
+|    C                     PARM '1'       P3204I  1
+|    C                     PARM           P3211O  90
+|    C*
+| 02-C           P3211O    IFLT 30
+|   C                     ADD  HA10      WF08
+| 02-C                     END
+|    C*
+| 03-C           P3211O    IFGE 31
+|   C           P3211O    ANDLE60
+|   C                     ADD  HA10      WF09
+| 03-C                     END
+|    C*
+| 04-C           P3211O    IFGE 61
+|   C           P3211O    ANDLE90
+|   C                     ADD  HA10      WF10
+| 04-C                     END
+|    C*
+| 05-C           P3211O    IFGT 90
+|   C                     ADD  HA10      WF11
+| 05-C                     END
+|    C*
+04===C                     ENDSR
+

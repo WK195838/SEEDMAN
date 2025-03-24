@@ -1,0 +1,156 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR6181                                    *
+     H*    PROGRAM NAME :勞保投保資料明細表印                      *
+     H*    AUTHOR       : A1413 CLOUD                                *
+     H*    CREATE DATE  : 2006/05/04                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYL3PF  IF  E           K        DISK
+     FPYDELF01IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYR618WFO   E                    DISK
+     E*---------------------------------------------------------------
+     IEM0
+     I*                                             EM02  L1
+     I*                                             EM041 L2
+     I*                                             EM042 L2
+     I*                                             EM043 L2
+     I*                                             EM044 L2
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DEM01
+     I                                      540 546 DEM04S
+     I                                      547 553 DEM04E
+     I                                      554 561 DEM02S
+     I                                      564 571 DEM02E
+     I                                      575 575 DOPT
+     I                                      576 576 DSTORY
+     I                                      577 577 DSEQ
+     I*
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I*
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYL3     KLIST                           *PYL3PF
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C*
+     C           KEYDE     KLIST                           *PYDEPF
+     C                     KFLD           DE01
+     C                     KFLD           DE02
+     C                     KFLD           DE04
+     C*
+     C           KEYDP     KLIST                           *PYDPPF
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100                     *WRITE PD1
+     C*
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVE *BLANK    CM03
+|    C                     MOVE CM14      DFMT
+|    C                     MOVE CM15      DTYPE
+|    C*
+|    C                     MOVEL'Y'       $DATA
+|    C                     Z-ADD0         RWF91   30
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... INITIAL GET HEADING
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+| 01-C*          *INL2     IFEQ '1'
+|   C                     MOVELDEM01     DE01             公司編號
+|   C                     MOVEL'01'      DE02             列印種類
+|   C                     MOVELEM04      DE04             部門代號
+|   C           KEYDE     CHAINDE0                  40
+|   C   40                Z-ADD*ZERO     RWF91
+|   C  N40                MOVELDE03      RWF91
+| 01-C*                    ENDIF
+|    C*
+|    C           KEYL3     SETGTL30
+|    C           KEYL3     REDPEL30                      47
+| 03-C           *IN47     DOWEQ'0'
+|    C*退保是否呈現
+| 03-C           DOPT      IFEQ 'N'
+| 03-C           L307      IFEQ 'A3'
+| 03-C                     LEAVE
+| 03-C                     ENDIF
+| 03-C                     ENDIF
+|    C*資料寫入
+|   C                     MOVELEM041     WF011            部門編號１
+|   C                     MOVELEM042     WF012            部門編號２
+|   C                     MOVELEM043     WF013            部門編號３
+|   C                     MOVELEM044     WF014            部門編號４
+|   C           KEYDP     CHAINDP0                  40
+|   C   40                MOVEL*BLANK    WF02             部門簡稱
+|   C  N40                MOVELDP02      WF02             部門簡稱
+|   C*
+|   C                     MOVELEM02      WF03             員工編號
+|   C                     MOVELEM03      WF04             員工姓名
+|   C                     MOVELEM31      WF05             身份證號
+|   C                     Z-ADDEM33      WF06             出生日期
+|   C*
+|   C                     MOVELL307      WF07             異動類別
+|   C                     Z-ADDL303      WF08             生效日期
+|   C                     Z-ADDL304      WF09             投保金額
+|   C*
+|   C                     Z-ADDRWF91     WF91             部門順序
+|   C*
+|   C                     SELEC
+|   C           L307      WHEQ 'A1'
+|   C                     Z-ADD1         WF92             異動順序
+|   C           L307      WHEQ 'A2'
+|   C                     Z-ADD2         WF92             異動順序
+|   C           L307      WHEQ 'A3'
+|   C                     Z-ADD3         WF92             異動順序
+| 03-C                     ENDSL
+|   C*
+|   C                     WRITEWF0
+|   C*
+|   C*歷史資料是否呈現
+| 03-C           DSTORY    IFEQ 'N'
+| 03-C                     LEAVE
+| 03-C                     ENDIF
+|   C*
+|    C           KEYL3     REDPEL30                      47
+| 03-C                     ENDDO
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+

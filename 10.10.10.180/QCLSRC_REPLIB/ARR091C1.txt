@@ -1,0 +1,91 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250  */
+     /*                                                             */
+     /*    PROGRAM NAME : ARR091C1                                  */
+     /*    AUTHOR       : DEREK                                     */
+     /*    CREATE DATE  : 104/07/30                                 */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       :人頭馬匯東                               */
+     /*    SUBSYSTEM    :應收系統                                 */
+     /*    REMARK       :應收報表                                 */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&$EVR)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)   TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTID) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6601I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6602I) TYPE(*DEC)  LEN(1 0)
+             DCL        VAR(&P6603I) TYPE(*DEC)  LEN(3 0)
+             DCL        VAR(&P6604I) TYPE(*DEC)  LEN(2 0)
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&DAD10S) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DAD10E) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DAD02S) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DAD02E) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&YDATES) TYPE(*CHAR) LEN(8)
+
+             CHGVAR     VAR(&DAD10S) VALUE(%SST(*LDA 600 2))
+             CHGVAR     VAR(&DAD10E) VALUE(%SST(*LDA 602 2))
+             CHGVAR     VAR(&DAD02S) VALUE(%SST(*LDA 604 5))
+             CHGVAR     VAR(&DAD02E) VALUE(%SST(*LDA 609 5))
+             CHGVAR     VAR(&YDATES) VALUE(%SST(*LDA 620 8))
+             CHGVAR     VAR(&LIB)   VALUE('QTEMP')
+             CHGVAR     VAR(&FILE)  VALUE('ARR091PF')
+
+             CPYF       FROMFILE(ARR091WF) TOFILE(QTEMP/ARR091WF) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM +
+                          FILE(QTEMP/ARR091WF))
+
+             CPYF       FROMFILE(ARR091PF) TOFILE(QTEMP/ARR091PF) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM +
+                          FILE(QTEMP/ARR091PF))
+
+             OVRDBF     FILE(ARADPF) SHARE(*YES)
+
+             OPNQRYF    FILE((ARADPF)) QRYSLT(' AD10 *EQ %RANGE("' +
+                          *CAT &DAD10S *CAT '" "' *CAT &DAD10E *CAT +
+                          '") & AD10A *NE "K"  & AD10A *NE "C" & +
+                          AD02 *EQ %RANGE("' *CAT &DAD02S *CAT '" +
+                          "' *CAT &DAD02E *CAT '") & AD02 *NE +
+                          "A0002" &  AD12 *GT ' *CAT &YDATES *CAT ' +
+                          & AD11 *LE ' *CAT &YDATES *CAT ' ') +
+                          KEYFLD((AD02)) MAPFLD((AD10A '%SST(AD10 1 +
+                          1)' *CHAR 1) (AD10B '%SST(AD10 2 1)' +
+                          *CHAR 1) (AD02A '%SST(AD02 1 1)' *CHAR 1))
+
+             OVRDBF     FILE(ARR091WF) TOFILE(QTEMP/ARR091WF) +
+                          SHARE(*YES)
+
+             CALL       ARR0911
+
+             CLOF       OPNID(ARADPF)
+
+             OPNQRYF    FILE((ARR091WF)) QRYSLT(*ALL) KEYFLD((WF01) +
+                          (WF03) (WF05) (WF06))
+             OVRDBF     FILE(ARR091PF) TOFILE(QTEMP/ARR091PF) +
+                          SHARE(*YES)
+         /*  OVRPRTF    FILE(ARR091P) PAGESIZE(*N 198) CPI(15) +
+                        USRDTA('應收報表')  */
+             CALL       ARR0912
+             CLOF       OPNID(ARR091WF)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (162 1)) RTNVAR(&$EVR)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (598 2)) RTNVAR(&$PRTID)
+         /*  CHGVAR     VAR(&P6601I) VALUE('ARR091P')  */
+         /*  CHGVAR     VAR(&P6602I) VALUE(&$EVR)      */
+         /*  CHGVAR     VAR(&P6603I) VALUE(&$CPY)      */
+         /*  CHGVAR     VAR(&P6604I) VALUE(&$PRTID)    */
+         /*  CALL       PGM(P66) PARM(&P6601I &P6602I &P6603I &P6604I) */
+
+             /*將ARR091PF轉換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

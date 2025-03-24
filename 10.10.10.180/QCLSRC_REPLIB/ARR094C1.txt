@@ -1,0 +1,54 @@
+    /***************************************************************/
+    /***************************************************************/
+     PGM
+             DCL        VAR(&DSI08S) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DSI08E) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DSI21S) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&DSI21E) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&YMDS) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YMDE) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             CHGVAR     VAR(&DSI08S) VALUE(%SST(*LDA 601 5))
+             CHGVAR     VAR(&DSI08E) VALUE(%SST(*LDA 606 5))
+             CHGVAR     VAR(&DSI21S) VALUE(%SST(*LDA 615 6))
+             CHGVAR     VAR(&DSI21E) VALUE(%SST(*LDA 625 6))
+             CHGVAR     VAR(&YMDS) VALUE(%SST(*LDA 630 8))
+             CHGVAR     VAR(&YMDE) VALUE(%SST(*LDA 640 8))
+             CHGVAR     VAR(&LIB)   VALUE('QTEMP')
+             CHGVAR     VAR(&FILE)  VALUE('ARR094F')
+
+             DLTF       FILE(QTEMP/ARR094F)
+             MONMSG     MSGID(CPF2105)
+
+             CPYF       FROMFILE(ARR094F) TOFILE(QTEMP/ARR094F) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM +
+                          FILE(QTEMP/ARR094F))
+             CLRPFM     FILE(QTEMP/ARR094F)
+
+             OVRDBF     FILE(ARR094F) TOFILE(QTEMP/ARR094F) +
+                          SHARE(*YES)
+
+             OVRDBF     FILE(SOSILF94) SHARE(*YES)
+
+     /*      IF         COND(&DSI08S *NE ' ') THEN(DO)      */
+             OPNQRYF    FILE((SOSILF94)) QRYSLT('                  +
+                          SI08 *EQ %RANGE("' *CAT &DSI08S *CAT '" +
+                          "' *CAT &DSI08E *CAT '") &              +
+                          SI21 *EQ %RANGE("' *CAT &YMDS *CAT '" +
+                          "' *CAT &YMDE *CAT '") ') +
+                          KEYFLD((SI08) (SI21) (SI02))
+    /*       ENDDO    */
+
+             CALL       PGM(ARR0941)
+
+             CLOF       OPNID(SOSILF94)
+             DLTOVR     FILE(*ALL)
+
+             /*±NFILEÂà´«¦¨CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

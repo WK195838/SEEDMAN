@@ -1,0 +1,192 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : S#R4301                                    *
+     H*    PROGRAM NAME :授權清冊                                  *
+     H*    AUTHOR       : A1165 SERMON                               *
+     H*    CREATE DATE  : 85/08/09                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :程式安全管制系統                          *
+     H****************************************************************
+     FS#R430D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     IS#DA01      DS
+     I                                        1  10 ADMIN
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      125 1270$CPY
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 510 DSU03F
+     I                                      511 520 DSU03T
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           S#DA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN10     PARM *IN10     IN10    1
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C   10                EXSR R0200                      *INIT MSG.
+     C  N10                EXSR R0100                      *INIT VALUE
+     C*
+     C                     MOVEL*BLANK    @PRT    1        *PRINT
+     C           *IN03     DOUEQ'1'
+     C           @PRT      OREQ 'Y'
+     C                     EXSR R1000                      *SCRN
+     C                     END
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+     C*==============================================================*
+     C*          R0100 ....SCREEN INIT VALUE SET
+     C*==============================================================*
+     CSR         R0100     BEGSR
+     C*
+     C                     IN   S#DA01
+     C                     SETON                     1027
+     C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL*BLANK    DSU03F
+     C                     MOVEL*BLANK    DSU03T
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ....INITIAL VALUE
+     C*==============================================================*
+     CSR         R0200     BEGSR
+     C*
+     C                     SETON                     2799  報表格式MESSAGE
+     C*
+     C           $PENV     IFEQ '0'                        INQUIRY
+     C                     MOVEL'UPT2142' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C*
+     C           $PENV     IFEQ '1'                        ON-LINE
+     C                     MOVEL'UPT2140' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C*
+     C           $PENV     IFEQ '2'                        BATCH
+     C                     MOVEL'UPT2110' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C*
+     C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+     C           R1000     BEGSR
+     C*
+     C                     EXFMTDSPD1
+     C                     MOVEA*ALL'0'   *IN,60
+     C                     Z-ADD*ZERO     #LIN
+     C                     Z-ADD*ZERO     #COL
+     C*
+     C           *IN03     IFEQ '1'
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN04     IFEQ '1'
+     C                     EXSR R1E00                      .PROMPT
+     C                     GOTO E1000
+     C                     END
+     C*
+     C                     EXSR R1B00                      .CHECK      ?
+     C*
+     C           *IN14     IFEQ '1'
+     C           *IN99     ANDEQ*ZERO
+     C                     SETOF                     27
+     C                     SETON                     28    .執行中
+     C                     WRITEDSPD1
+     C                     SETOF                     28
+     C*
+     C                     OUT  LDA
+     C                     MOVEL'Y'       @PRT
+     C                     END
+     C*
+     C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00  ...CHECK DATA FROM SCREEN KEY-IN
+     C*===============================================================*
+     C           R1B00     BEGSR
+     C*
+     C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+     C*授權者編號
+     C*（空白表全部）
+     C           DSU03F    IFEQ *BLANK
+     C                     MOVEL*LOVAL    DSU03F
+     C                     END
+     C*
+     C           DSU03T    IFEQ *BLANK
+     C                     MOVEL*HIVAL    DSU03T
+     C                     END
+     C*（區間檢查）
+     C           DSU03F    IFGT DSU03T
+     C                     MOVEL'UPT0042' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6199
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C*非管制者只能查詢自己授權的資料
+     C           $USER     IFNE ADMIN
+     C                     MOVEL$USER     DSU03F
+     C                     MOVEL$USER     DSU03T
+     C                     END
+     C*
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     CSR         E1B00     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+     C           R1E00     BEGSR
+     C*
+     C           #CSR      DIV  256       #LIN             *LINE
+     C                     MVR            #COL             *COLUMN
+     C*授權者編號
+     C           #LIN      IFEQ 6
+     C           #COL      ANDGE42
+     C           #COL      ANDLE51
+     C                     CALL 'S#W110'
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           DSU03F    PARM DSU03F    S1201I 10        *使用者
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     PARM           @RTNC   2
+     C                     END
+     C*
+     C           #LIN      IFEQ 7
+     C           #COL      ANDGE42
+     C           #COL      ANDLE51
+     C                     CALL 'S#W110'
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           DSU03T    PARM DSU03T    S1201I 10        *使用者
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     PARM           @RTNC   2
+     C                     END
+     C*印表機
+     C           #LIN      IFEQ 19
+     C           #COL      ANDGE38
+     C           #COL      ANDLE39
+     C                     CALL 'P64I'
+     C           $PRTCD    PARM $PRTCD    P64II1  2
+     C                     END
+     C*
+     C                     ENDSR
+

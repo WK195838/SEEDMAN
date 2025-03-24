@@ -1,0 +1,237 @@
+     H*================================================================
+     H* MODI CODE |  AUTHOR  |  DATE  | DESCRIPTION
+     H*----------------------------------------------------------------
+     H*   M003    | MICHELLE |01.04.17|列印COMMITMENT檔案
+     A*----------------------------------------------------------------
+     A*   M005    | MICHELLE |01.08.03| A&P增加種類代碼及容量選項
+      *----------------------------------------------------------------
+      *   M006    | MICHELLE |01.08.24|增加傳票明細列印
+      *----------------------------------------------------------------
+      *   M007    | MICHELLE |01.12.06| INTEGRETED PROGRESS
+      *----------------------------------------------------------------
+     H*================================================================
+M003AFNPWF07  IP  E           K        DISK
+M006AFNPWF08  IF  E           K        DISK
+     FMTMCPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FNPNAPF  IF  E           K        DISK
+M003AFNPR048CPO   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    ARR1    1   1 30
+     IWF070
+     I                                              WF0788L1
+M005AI                                              WF7232L2
+M005AI                                              WF7231L2
+     I                                              WF0707L2
+     I                                              WF0706L2
+     I*
+     I*
+     I*DATA AREA
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* SCREEN INPUT FIELD  ++++++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DND01
+     I                                      509 5110DYEAR
+     I                                      512 5130DMM
+     I                                      535 5380$YEAR
+     I                                      541 542 DND03
+     I                                      545 546 DND04S
+     I                                      547 548 DND04E
+     I                                      551 5520M
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN NA02      WNA02
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY#A     KLIST
+     C                     KFLD           #A01
+     C                     KFLD           #A02
+     C           KEYNA     KLIST
+     C                     KFLD           $YEAR
+     C                     KFLD           WNA02
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+  01-C           *IN10     IFEQ '0'
+    C                     EXSR RTN010
+  01*C                     ELSE
+  02-C           *INL2     IFEQ '1'
+    C                     EXSR RTN010
+  02-C                     END
+  01-C                     END
+     C*
+     C                     EXSR RTN100
+     C*
+     CL1 10                EXSR RTNL1
+     CL2 10                EXSR RTNL2
+     CLR                   EXSR RTNLR
+     C*==============================================================*
+     C*          RTN010....GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           DYEAR     ADD  1         DYEAR1
+|    C*
+|    C                     MOVEL*BLANK    #A03
+     C           WF0707    IFEQ '99'
+|   C                     MOVELARR1,1    #A03
+      *
+| 04-C           WF0706    IFEQ '10'
+|   C                     MOVE 'BRANDY'  #A03
+| 04*C                     ELSE
+| 05-C           WF0706    IFEQ '20'
+|   C                     MOVE 'WISKY'   #A03
+| 05*C                     ELSE
+| 06-C           WF0706    IFEQ '30'
+|   C                     MOVE 'WINE'    #A03
+| 06-C                     END
+| 05-C                     END
+| 04-C                     END
+      *
+| 03*C                     ELSE
+|   C                     MOVEL'BRAND'   #A01
+|   C                     MOVELWF0707    #A02
+|   C           KEY#A     CHAIN#A0                  41
+| 03-C                     END
+|    C                     WRITEPH1
+|    C                     SETOF                     39
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN100....PD1
+      *==============================================================*
+02===C           RTN100    BEGSR
+|    C                     SETOF                     212223
+|    C*A&P CODE
+|    C                     MOVEL*BLANK    NA03
+|    C                     MOVELWF0708    WNA02
+|    C           KEYNA     CHAINNA0                  40
+     C           WF0712    SUB  WF07$     WVAR   112
+      *
+      *正負號
+| 01-C           WF0712    IFLT 0
+|   C                     SETON                     21
+| 01-C                     END
+| 01-C           WF07$     IFLT 0
+|   C                     SETON                     22
+| 01-C                     END
+     C           WVAR      IFLT 0
+     C                     SETON                     23
+     C                     END
+     C*申請人姓名
+     C           WF0724    CHAINMC0                  44
+     C           *IN44     IFEQ '0'
+     C                     ELSE
+     C                     MOVE *BLANKS   MC02
+     C                     END
+|    C   39                EXSR RTN900
+|    C                     WRITEPD1
+     C*
+M006AC           WF0702    SETLLWF08R
+M006AC           WF0702    READEWF08R                    49
+M006AC           *IN49     DOWEQ'0'
+M006AC                     MOVEL*BLANKS   LAH02
+M006AC                     MOVEL*BLANKS   LAH16
+M006AC                     Z-ADD0         LAH12
+M006AC*M07D                Z-ADD0         LAH13
+M006AC                     MOVELXAH02     LAH02
+M006AC                     Z-ADDAH1213    LAH12
+M006AC*M07D                Z-ADDAH13      LAH13
+M006AC                     MOVELXAH16     LAH16
+M006AC   39                EXSR RTN900
+M006AC                     WRITEPD11
+M006AC           WF0702    READEWF08R                    49
+M006AC                     END
+      *
+|    C                     ADD  WF0712    T1UX12
+|    C                     ADD  WF07$     T1ACT
+     C                     ADD  WVAR      T1VAR
+|    C*
+02===C                     ENDSR
+      *==============================================================*
+      *          RTNL1 ....PT1
+      *==============================================================*
+03===C           RTNL1     BEGSR
+|    C*
+|    C                     SETOF                     212223
+|    C                     MOVELWF0788    T1ND05
+|    C                     MOVE '00'      T1ND05
+|    C                     MOVEL*BLANK    NA03
+|    C                     MOVELT1ND05    WNA02
+|    C                     MOVE '00'      WNA02
+|    C           KEYNA     CHAINNA0                  40
+      *正負號
+| 01-C           T1UX12    IFLT 0
+|   C                     SETON                     21
+| 01-C                     END
+| 01-C           T1ACT     IFLT 0
+|   C                     SETON                     22
+| 01-C                     END
+| 01-C           T1VAR     IFLT 0
+|   C                     SETON                     23
+| 01-C                     END
+|    C   39                EXSR RTN900
+|    C                     WRITEPT1
+|    C                     ADD  T1UX12    T2UX12
+|    C                     ADD  T1ACT     T2ACT
+|    C                     ADD  T1VAR     T2VAR
+|    C                     Z-ADD0         T1UX12
+|    C                     Z-ADD0         T1ACT
+|    C                     Z-ADD0         T1VAR
+|    C*
+03===C                     ENDSR
+      *==============================================================*
+      *          RTNL2 ....PT2
+      *==============================================================*
+04===C           RTNL2     BEGSR
+|    C*
+|    C                     SETOF                     212223
+      *正負號
+| 01-C           T2UX12    IFLT 0
+|   C                     SETON                     21
+| 01-C                     END
+| 01-C           T2ACT     IFLT 0
+|   C                     SETON                     22
+| 01-C                     END
+| 01-C           T2VAR     IFLT 0
+|   C                     SETON                     23
+| 01-C                     END
+|    C   39                EXSR RTN900
+|    C                     WRITEPT2
+|    C                     Z-ADD0         T2UX12
+|    C                     Z-ADD0         T2ACT
+|    C                     Z-ADD0         T2VAR
+|    C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN900....OVERFLOW
+      *==============================================================*
+05===C           RTN900    BEGSR
+|    C*
+|    C                     WRITEPH1
+|    C                     SETOF                     39
+|    C*
+05===C                     ENDSR
+      *==============================================================*
+      *          RTNLR ....(NO DATA)
+      *==============================================================*
+06===C           RTNLR     BEGSR
+| 01-C           *IN10     IFEQ '0'
+|   C                     EXSR RTN010
+|   C                     WRITEPE9
+| 01-C                     END
+06===C                     ENDSR
+**
+MISCELLANEOUS
+

@@ -1,0 +1,136 @@
+     A****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYH2001                                    *
+     H*    PROGRAM NAME :轉退休金提撥主檔                          *
+     H*    AUTHOR       :                                            *
+     H*    CREATE DATE  : 91/11/19                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    UPDATE AUTHOR: MAX PENG 95/04/13                          *
+     H*    REASON       :轉入退休金提撥主檔                      *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYH4PF  UF  E           K        DISK                      A
+     F*PYH5PF  UF  E           K        DISK                      A
+     F*PYH8PF  IF  E           K        DISK
+     F*PYHDPF  IF  E           K        DISK
+     F*PYH7LF02IF  E           K        DISK
+     I*================================================================
+     I           UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      201 2060$A8YM
+     I                                      201 2040$A8Y
+     I                                      211 2160DDATE
+     I                                      201 2040DSYY
+     I*
+     I                                      501 502 DEM01
+     I                                      503 5050DYY
+     I                                      506 5090WYY
+     I*
+     I                                      600 6050DEYYMM
+     I                                      606 606 DETYPE
+     I            DS
+     I                                        1   80DXDATE
+     I                                        1   40DXYY
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYH4     KLIST
+     C                     KFLD           H401             公司編號
+     C                     KFLD           H402             員工編號
+     C*          KEYH5     KLIST
+     C*                    KFLD           H501             公司編號
+     C*                    KFLD           H502             員工編號
+     C*                    KFLD           H503             異動日期
+     C*                    KFLD           H504             異動別
+     C*          KEYH8     KLIST
+     C*                    KFLD           H801             公司編號
+     C*                    KFLD           H802             薪資項目
+     C*          KEYH8E    KLIST
+     C*                    KFLD           H801             公司編號
+     C*          KEYH7     KLIST
+     C*                    KFLD           H702             下限
+     C*          KEYHD     KLIST
+     C*                    KFLD           HD01             公司編號
+     C*                    KFLD           HD02             員工編號
+     C*                    KFLD           HD03             年月
+     C*                    KFLD           HD04             期別
+     C*                    KFLD           HD05             薪資項目
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     CLEARH40
+     C                     MOVE EM01      H401
+     C                     MOVE EM02      H402
+     C           KEYH4     CHAINPYH4PF               40
+     C*
+     C                     MOVE 'Y'       H404
+     C                     Z-ADDEM13      DXDATE
+     C*計算年資
+     C           DSYY      SUB  DXYY      TPYY    40
+     C           TPYY      IFGE 15
+     C                     MOVE '2'       H405
+     C                     ELSE
+     C                     MOVE '1'       H405
+     C                     Z-ADD20050701  H406
+     C                     Z-ADD20050701  H414
+     C                     END
+     C                     Z-ADD20050     H410
+     C                     Z-ADD20050     H411
+     C                     Z-ADD0         H407
+     C                     Z-ADD6         H408
+     C*計算月提繳工資
+     C*                    Z-ADD0         TPAMT   60
+     C*                    MOVE EM01      H801
+     C*                    MOVE *BLANKS   H802
+     C*          KEYH8     SETLLPYH8PF
+     C*          LOOP      TAG
+     C*          KEYH8E    READEPYH8PF                   33
+     C*  33                GOTO NEXT
+     C*                    MOVE H801      HD01
+     C*                    MOVE EM02      HD02
+     C*                    Z-ADDDEYYMM    HD03
+     C*                    MOVE DETYPE    HD04
+     C*                    MOVE H802      HD05
+     C*          KEYHD     CHAINPYHDPF               32
+     C* N32                ADD  HD06      TPAMT
+     C*                    GOTO LOOP
+     C*          NEXT      TAG
+     C*                    Z-ADDTPAMT     H702
+     C*          KEYH7     SETGTPYH7LF02
+     C*                    READPPYH7LF02                 31
+     C*                    Z-ADDH704      H409
+     C*
+     C                     Z-ADD$A8YMD    H497
+     C                     TIME           H498
+     C                     MOVEL$USER     H499
+     C   40                WRITEH40
+     C  N40                UPDATH40
+     C*產生退休金提撥異動檔
+     C*          TPYY      IFLT 10
+     C*
+     C*                    MOVE EM01      H501
+     C*                    MOVE EM02      H502
+     C*                    Z-ADD20050701  H503
+     C*                    MOVE '1'       H504
+     C*          KEYH5     CHAINPYH5PF               40
+     C*                    Z-ADD0         H505
+     C*                    Z-ADD6         H507
+     C*                    Z-ADDH704      H506
+     C*                    Z-ADD$A8YMD    H597
+     C*                    TIME           H598
+     C*                    MOVEL$USER     H599
+     C*  40                WRITEH50
+     C* N40                UPDATH50
+     C*                    END
+

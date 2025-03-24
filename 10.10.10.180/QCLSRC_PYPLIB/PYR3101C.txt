@@ -1,0 +1,73 @@
+             PGM
+             DCL        VAR(&DPY01)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DYMD)     TYPE(*CHAR) LEN(4)
+             DCL        VAR(&WDYM)     TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DPY07)    TYPE(*CHAR) LEN(6)
+             DCL        VAR(&DBN01)    TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DBN02)    TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DSEL)     TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DOP)      TYPE(*CHAR) LEN(1)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DPY01)   VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&DYMD)    VALUE(%SST(*LDA 601 4))
+             CHGVAR     VAR(&WDYM)    VALUE(%SST(*LDA 525 8))
+             CHGVAR     VAR(&DPY07)   VALUE(%SST(*LDA 606 6))
+             CHGVAR     VAR(&DBN01)   VALUE(%SST(*LDA 509 7))
+             CHGVAR     VAR(&DBN02)   VALUE(%SST(*LDA 516 7))
+             CHGVAR     VAR(&DSEL)    VALUE(%SST(*LDA 523 1))
+             CHGVAR     VAR(&DOP)     VALUE(%SST(*LDA 524 1))
+
+             CPYF       FROMFILE(PYR310F) TOFILE(QTEMP/PYR310F) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/PYR310F))
+             OVRDBF     FILE(PYR310F) TOFILE(QTEMP/PYR310F)
+
+             OVRDBF     FILE(PYPYPF) SHARE(*YES)
+             IF         COND(&DSEL *EQ '1') THEN(DO)
+             OPNQRYF    FILE((PYPYPF)) QRYSLT('PY01 *EQ "' *CAT +
+                          &DPY01 *CAT '" & CBN012 *EQ %RANGE("' +
+                          *CAT &DBN01 *CAT '" "' *CAT &DBN02 *CAT +
+                          '")') KEYFLD((PY04) (PY05) (PY06)) +
+                          MAPFLD((CBN012 'PY04 *CAT PY05 '))
+          /*              MAPFLD((CBN012 'PY04 *CAT PY05 ') (CPY07 + */
+          /*              PY07 *CHAR 2))                             */
+             ENDDO
+             ELSE       CMD(DO)
+             OPNQRYF    FILE((PYPYPF)) QRYSLT('PY01 *EQ "' *CAT +
+                          &DPY01 *CAT '" & CBN012 *EQ %RANGE("' +
+                          *CAT &DBN01 *CAT '" "' *CAT &DBN02 *CAT +
+                          '")') KEYFLD((PY04) (PY05) (PY06)) +
+                          MAPFLD((CBN012 'PY04 *CAT PY05 '))
+         /*               MAPFLD((CBN012 'PY04 *CAT PY05 ') (CPY08 + */
+         /*               PY08 *CHAR 2))                             */
+             ENDDO
+
+             CALL       PYR3102
+             CLOF       OPNID(PYPYPF)
+
+             OVRDBF     FILE(PYR310F) TOFILE(QTEMP/PYR310F) SHARE(*YES)
+             OPNQRYF    FILE((PYR310F)) QRYSLT('CBN012 *EQ %RANGE("' +
+                          *CAT &DBN01 *CAT '" "' *CAT &DBN02 *CAT +
+                          '")') KEYFLD((R3103) (R3108) (R3109) +
+                          (R3110) (R3111) (R3105) (R3102)) +
+                          MAPFLD((CBN012 'R3103 *CAT R3104'))
+
+             CALL       PYR3103
+             CLOF       OPNID(PYR310F)
+
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('PYR310P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             ENDPGM
+

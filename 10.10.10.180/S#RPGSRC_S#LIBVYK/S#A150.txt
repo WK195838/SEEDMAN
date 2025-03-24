@@ -1,0 +1,187 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : S#A150                                     *
+     H*    PROGRAM NAME :系統安裝資料維護                          *
+     H*    AUTHOR       : A1165 SERMON                               *
+     H*    CREATE DATE  : 85/08/16                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :程式安全管制系統                          *
+     F****************************************************************
+     FS#SUPF  IF  E           K        DISK
+     FS#SSPF  IF  E           K        DISK
+     FS#A150D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E                    @S01       30  1               安裝資料
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     IS#DA02      DS
+     I                                        1  30 @S01
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      201 2080$A8YMD
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           S#DA02
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C           *LIKE     DEFN RRN       @LRRN            LAST REC NUM
+     C           *LIKE     DEFN RRN       @LPAGE           LAST PAGE
+     C           *LIKE     DEFN RRN       @PRRN            PROMPT USE
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N99                EXSR R0100                      *INITIAL
+     C*
+     C           *IN03     DOWEQ'0'
+     C           SCID      ANDNE*BLANK
+     C           SCID      CASEQ'SC02'    R2000
+     C                     END
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C           *LOCK     IN   S#DA02
+     C                     MOVE 'SC02'    SCID    4
+     C*執行者名稱
+     C                     MOVEL*BLANK    SU02
+     C           $USER     CHAINSU0                  40
+     C                     MOVELSU02      $USERN
+     C*
+     C                     EXSR R1C00
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+     C           R1C00     BEGSR
+     C*
+     C                     EXSR R1CC0                      *INIT SFL
+     C                     EXSR R1CE0                      *READ DETAIL
+     C                     SETON                     53    *SFLEND
+     C*SFLDSP
+     C           @LRRN     IFGT 0
+     C                     Z-ADD1         DRRN
+     C                     SETON                     50    *SFLDSP
+     C                     ELSE
+     C                     SETON                     99    *NO DTA
+     C                     MOVEL'UPT2050' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1CC0 ....SUBFILE INIT
+     C*=============================================================*
+     C           R1CC0     BEGSR
+     C* SFL SETTING ++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     Z-ADD30        @PRCD            *PGE RCD
+     C                     Z-ADD6         @SFTOP  20       *SFL TOP LIN
+     C                     Z-ADD20        @SFBOT  20       *SFL BOT LIN
+     C                     Z-ADD1         @LNUM   20       *明細行數
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     Z-ADD0         DRRN
+     C                     Z-ADD0         RRN
+     C                     Z-ADD0         @LRRN            *LAST RRN
+     C                     Z-ADD0         @DRCD            *DSP RCD
+     C*
+     C                     SETOF                     51    *SFLDSPCTL
+     C                     SETON                     52    *SFLCLR
+     C                     WRITESFLCR
+     C                     SETOF                     52
+     C*
+     C                     SETON                     51    *SFLDSPCTL
+     C                     SETOF                     5053  *SFLDSP,END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1CE0 ....DETAIL DATA TO SFL
+     C*==============================================================*
+     C           R1CE0     BEGSR
+     C*
+     C                     SETON                     54    *54
+     C*
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           *LOVAL    SETLLSS0
+     C                     READ SS0                      46
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C           *IN46     DOWEQ'0'
+     C                     EXSR R1CE1
+     C                     ADD  1         RRN
+     C                     WRITESFLSR
+     C*
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     READ SS0                      46
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     END
+     C*
+     C                     Z-ADDRRN       @LRRN
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1CE1 ....DETAIL DATA TO SFL
+     C*==============================================================*
+     C           R1CE1     BEGSR
+     C*
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*已安裝
+     C                     MOVEL@S01,SS01 DSEL
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+     C           R2000     BEGSR
+     C*
+     C                     WRITEDSPC1
+     C                     EXFMTSFLCR
+     C                     MOVEA*ALL'0'   *IN,60
+     C                     Z-ADD*ZERO     #LIN
+     C                     Z-ADD*ZERO     #COL
+     C                     Z-ADD#DRRN     DRRN
+     C*
+     C           *IN03     IFEQ '1'                        *END
+     C                     GOTO E2000
+     C                     END
+     C*
+     C           *IN25     IFEQ '1'                        *NEXT PAGE
+     C                     SETON                     96    *EOP
+     C                     GOTO E2000
+     C                     END
+     C*
+     C           *IN99     IFEQ '0'                        *CHK OK
+     C                     EXSR R2D00                      *FILE UPD
+     C                     OUT  S#DA02
+     C                     MOVEL*BLANK    SCID
+     C                     END
+     C*
+     C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+     C           R2D00     BEGSR
+     C*
+     C                     READCSFLSR                  5757
+     C           *IN57     DOWEQ'0'
+     C                     Z-ADDSS01      X       20
+     C                     MOVELDSEL      @S01,X
+     C                     READCSFLSR                    57
+     C                     END
+     C*
+     C                     ENDSR
+

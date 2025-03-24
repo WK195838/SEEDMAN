@@ -1,0 +1,58 @@
+             PGM
+             DCL        VAR(&DH501) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DEM04F) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DEM04T) TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DOPT) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DH502F) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DH502T) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DH503) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DSYYMM) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&$PENV) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY) TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I) TYPE(*DEC) LEN(3 0)
+
+             CHGVAR     VAR(&DH501) VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&DEM04F) VALUE(%SST(*LDA 553 7))
+             CHGVAR     VAR(&DEM04T) VALUE(%SST(*LDA 557 7))
+             CHGVAR     VAR(&DOPT) VALUE(%SST(*LDA 513 1))
+             CHGVAR     VAR(&DH502F) VALUE(%SST(*LDA 514 8))
+             CHGVAR     VAR(&DH502T) VALUE(%SST(*LDA 522 8))
+             CHGVAR     VAR(&DSYYMM) VALUE(%SST(*LDA 530 6))
+             CHGVAR     VAR(&DH503) VALUE(%SST(*LDA 536 8))
+
+             IF COND(&DOPT *EQ '1')    THEN(DO)
+             OVRDBF     FILE(PYH9PF) SHARE(*YES)
+             OPNQRYF    FILE((PYH9PF)) QRYSLT('H901 *EQ "' || &DH501 +
+                          || '" & H903C *EQ "' || &DSYYMM || '"    +
+                                & H902  *GE "' || &DH502F || '"    +
+                                & H902  *LE "' || &DH502T || '"    +
+                                & H905  *NE H907                ') +
+                          KEYFLD((H901) (H902) (H903))         +
+                          MAPFLD((H903C H903 *CHAR 6))
+                                       ENDDO
+             IF COND(&DOPT *EQ '2')    THEN(DO)
+             OVRDBF     FILE(PYH9PF) SHARE(*YES)
+             OPNQRYF    FILE((PYH9PF)) QRYSLT('H901 *EQ "' || &DH501 +
+                          || '" & H903C *EQ "' || &DSYYMM || '"    +
+                                & H902  *GE "' || &DH502F || '"    +
+                                & H902  *LE "' || &DH502T || '"    +
+                                & H904  *NE H906                ') +
+                          KEYFLD((H901) (H902) (H903))         +
+                          MAPFLD((H903C H903 *CHAR 6))
+                                       ENDDO
+
+             OVRPRTF    FILE(PYH104P) PAGESIZE(*N 198) CPI(15)
+             CALL       PGM(PYH1042)
+             CLOF       OPNID(PYH9PF)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('PYH104P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             ENDPGM
+

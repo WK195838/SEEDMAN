@@ -1,0 +1,397 @@
+     A****************************************************************
+     A*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     A*                                                              *
+     A*    PROGRAM-ID   : PYA559                                     *
+     A*    PROGRAM NAME :年終獎金月數維護                          *
+     A*    AUTHOR       : A1379  MAX ALLEN                           *
+     A*    CREATE DATE  : 93.01.02                                   *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       :基本資料系統                              *
+     A****************************************************************
+     FPYBMPF  UF  E           K        DISK                      A
+     FSYCMPF  IF  E           K        DISK
+     FPYJTPF  IF  E           K        DISK
+     FPYA559D CF  E                    WORKSTN      KINFDS DSPFDS
+     I*---------------------------------------------------------------
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      217 2220DDATE
+     I                                      209 2160$C8YMD
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYCM     KLIST
+     C                     KFLD           DBM01
+     C           KEYBM     KLIST
+     C                     KFLD           DBM01
+     C                     KFLD           DBM02
+     C                     KFLD           DBMAA
+     C                     KFLD           DBM04
+     C                     KFLD           DBM06
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           BMID      CASEQ'BM01'    R1000
+    C           BMID      CASEQ'BM02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'BM01'    BMID    4
+|    C*
+     C*
+|    C* BMREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     Z-ADD$C8YMD    DDATE
+|    C* BM01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DBM01
+|    C                     MOVEL*BLANK    DBM02
+|    C                     Z-ADD0         DBM03
+|    C                     MOVEL*BLANK    DBM04
+|    C                     Z-ADD0         DBM05
+|    C                     MOVEL*BLANK    DBM06
+|    C*--------------------------------------------------------------*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'BM01' BMREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'                        *PROMPT
+|   C                     EXSR R1E00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+     C                     Z-ADD0         DBMAA   40
+     C           DBM03     ADD  1911      DBMAA
+|    C*
+|    C                     EXSR R1B00                      *BMR CHK
+|    C*
+| 04-C           *IN99     IFEQ '0'                        *BMR CHK OK
+|   C                     EXSR R1C00                      *PRE-BM02
+|   C                     MOVEL'BM02'    BMID
+| 04-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'BM01' BMREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+     C*
+|    C           DBM01     IFEQ *BLANK
+     C                     MOVEL'UPT0010' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6099
+     C                     END
+     C   99                GOTO E1B00
+|    C*
+     C*
+     C           DOPT      IFEQ 1
+     C           KEYBM     CHAINBM0                  40
+     C           *IN40     IFEQ '0'
+|   C                     MOVEL*BLANK    DOPT      P
+|   C                     MOVEL'UPT3002' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6199
+     C                     END
+     C                     END
+     C*   ｄｏｐｔ不是１但無值
+     C           DOPT      IFNE 1
+     C           KEYBM     CHAINBM0                  40
+     C           *IN40     IFEQ '1'
+|   C                     MOVEL*BLANK    DOPT      P
+|   C                     MOVEL'UPT3001' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6199
+     C                     END
+     C                     END
+     C*
+     C*帶公司名稱
+     C           KEYCM     CHAINCM0                  40
+     C                     MOVELCM02      CM02
+     C*
+     C* DBM02 職稱
+ 06--C           DBM02     IFEQ *BLANK
+ |   C                     MOVEL'UPT0030' ERRID
+ |   C                     MOVEL'PTMF'    ERRF
+ |   C                     SETON                     6699
+ |***C                     ELSE
+ |   C           DBM02     CHAINJT0                  42
+ |07-C           *IN42     IFEQ '1'
+ ||  C                     MOVE *BLANK    DBM02C
+ ||  C                     MOVEL'UPT0030' ERRID
+ ||  C                     MOVEL'PTMF'    ERRF
+ ||  C                     SETON                     6699
+ ||**C                     ELSE
+ ||  C                     MOVELJT02      DBM02C
+ |07-C                     END
+ 06--C                     END
+     C   99                GOTO E1B00
+     C* DBM03 年度
+     C           DBM03     IFEQ 0
+     C                     MOVEL'UPT0030' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6599
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C           DBM04     IFEQ 'A'
+     C           DBM04     OREQ 'B'
+     C           DBM04     OREQ 'C'
+     C           DBM04     OREQ 'D'
+     C           DBM04     OREQ 'E'
+     C           DBM04     OREQ 'S'
+     C           DBM04     OREQ '1'
+     C           DBM04     OREQ '2'
+     C           DBM04     OREQ '3'
+     C           DBM04     OREQ '4'
+     C           DBM04     OREQ '5'
+     C                     ELSE
+     C                     MOVEL'UPT0030' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6299
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C           DBM06     IFEQ 'M'
+     C           DBM06     OREQ 'F'
+     C                     ELSE
+     C                     MOVEL'UPT0030' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6399
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C*
+04===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'BM02'
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+| 01-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     SETON                     31    *CAN INPUT
+| 01*C                     ELSE                            *DEL, INQ
+|   C                     SETOF                     31    *INP PROTECT
+| 01-C                     END
+|    C*
+| 02-C           DOPT      IFEQ 1                          *ADD
+|   C                     EXSR R1C10
+| 02*C                     ELSE
+|   C                     EXSR R1C20                      *UPD,DEL,INQ
+| 02-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)----------------------------------*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C*          *LOVAL    SETLLRVB0
+| 03-C                     END
+|    C*---------------------------------------------------------------*
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....'BM02' FIELD INIT : ADD
+     C*==============================================================*
+06===C           R1C10     BEGSR
+|    C*
+     C                     MOVELDBM01     BM01
+     C                     MOVELDBM02     BM02
+|    C                     Z-ADDDBMAA     BM03
+     C                     MOVELDBM04     BM04
+     C*                    Z-ADDDBM05     BM05
+|    C                     MOVELDBM06     BM06
+     C*                    Z-ADD$A8YMD    BM97
+     C*                    TIME           BM98
+|    C*                    MOVEL$USER     BM99
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....'BM02' FIELD INIT : UPD, DEL, INQ,
+     C*==============================================================*
+07===C           R1C20     BEGSR
+|    C*
+     C           KEYBM     CHAINBM0                  40
+|    C                     MOVELBM01      DBM01
+|    C                     MOVELBM02      DBM02
+|    C                     Z-ADDBM03      DBMAA
+     C           DBMAA     SUB  1911      DBM03
+|    C                     MOVELBM04      DBM04
+     C                     Z-ADDBM05      DBM05
+     C                     MOVELBM06      DBM06
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+08===C           R1E00     BEGSR
+     C*
+     C           #CSR      DIV  256       #LIN             *LINE
+     C                     MVR            #COL             *COLUMN
+     C*-------------------------------------------------------------
+     C* 職稱代號
+     C           #LIN      IFEQ 5
+     C           #COL      ANDGE10
+     C           #COL      ANDLE12
+     C                     CALL 'PYI501'
+     C           DBM02     PARM DBM02     I501I1  3
+     C                     PARM           @RTNC   2
+     C           DBM02     CHAINJT0                  42
+     C   42                MOVE *BLANK    DBM02C
+     C  N42                MOVELJT02      DBM02C
+     C                     END
+     C*--------------------------------------------------------------*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'BM02' BMREEN MAIN ROUTINE
+     C*==============================================================*
+09===C           R2000     BEGSR
+|    C*
+|    C                     EXFMTDSPD2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C* RELEAS FILE --------------------------------------------------*
+|   C           *LOVAL    SETLLBM0
+     C           KEYBM     SETLLBM0
+     C           KEYBM     READEBM0                      40
+|   C*---------------------------------------------------------------*
+|   C                     MOVEL'BM01'    BMID
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R2B00                      *BM02 CHK
+| 03-C                     END
+|    C*
+| 04-C           *IN05     IFEQ '1'                        *CHECK ONLY
+|   C                     GOTO E2000
+| 04-C                     END
+|    C*
+| 05-C           *IN99     IFEQ '0'                        *CHK OK
+|   C                     EXSR R2D00                      *FILE UPD
+|   C                     MOVE 'BM01'    BMID
+| 05-C                     END
+|    C*
+09===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'BM02' CHECK
+     C*==============================================================*
+10===C           R2B00     BEGSR
+|    C*<<代碼說明應輸入>>
+| 01-C           DBM04     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 01-C                     END
+     C   99                GOTO E2B00
+     C*
+| 01-C*          DBM05     IFEQ 0
+|   C*                    MOVEL'UPT0010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6399
+| 01-C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+10===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+11===C           R2D00     BEGSR
+     C*
+     C           KEYBM     CHAINBM0                  40
+|   C           DOPT      CASEQ1         R2D10
+|   C           DOPT      CASEQ2         R2D20
+|   C           DOPT      CASEQ4         R2D30
+| 01-C                     END
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+12===C           R2D10     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     WRITEBM0
+     C                     Z-ADD0         DBM05
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R2D11 ....BMREEN FIELD TO FILE
+     C*==============================================================*
+13===C           R2D11     BEGSR
+|    C*
+     C                     MOVELDBM01     BM01
+     C                     MOVELDBM02     BM02
+|    C                     Z-ADDDBMAA     BM03
+     C                     MOVELDBM04     BM04
+     C                     Z-ADDDBM05     BM05
+|    C                     MOVELDBM06     BM06
+     C                     Z-ADD$A8YMD    BM97
+     C                     TIME           BM98
+|    C                     MOVEL$USER     BM99
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+14===C           R2D20     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     UPDATBM0
+     C                     Z-ADD0         DBM05
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+15===C           R2D30     BEGSR
+|    C*
+|    C                     DELETBM0
+     C                     Z-ADD0         DBM05
+|    C*
+15===C                     ENDSR
+     C*==============================================================*
+

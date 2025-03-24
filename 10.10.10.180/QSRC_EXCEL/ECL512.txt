@@ -1,0 +1,183 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID.    WSP820.
+       ENVIRONMENT    DIVISION.
+       CONFIGURATION  SECTION.
+       INPUT-OUTPUT   SECTION.
+       FILE-CONTROL.
+           SELECT     OUFILE        ASSIGN  TO  DISK-OUFILE.
+       DATA           DIVISION.
+       FILE           SECTION.
+       FD  OUFILE
+           LABEL   RECORD  ARE  STANDARD
+           RECORD  CONTAINS    92      CHARACTERS.
+       01  OUTPUT-REC          PIC X(92).
+       WORKING-STORAGE         SECTION.
+       01  OU-REC.
+           05  OU-SEQ          PIC X(06).
+           05  OU-DATE         PIC X(06).
+           05  OU-STAM         PIC X(80).
+      *
+       01  OU-REC1.
+           10  REC-11          OCCURS  80  TIMES.
+               15  REC11A      PIC X(01).
+      *
+       01  OU-REC2.
+           05  REC-21          PIC X(11)   VALUE "ltype c 950".
+           05  FILLER          PIC X(69)   VALUE SPACES.
+      *
+       01  OU-REC3.
+           05  REC-31          PIC X(03)   VALUE "cd ".
+           05  REC-32          PIC X(20)   VALUE SPACES.
+           05  REC-33          PIC X(57)   VALUE SPACES.
+      *
+       01  OU-REC33.
+           05  REC-331          PIC X(03)   VALUE "cd ".
+           05  REC-332          PIC X(20)   VALUE SPACES.
+           05  REC-333          PIC X(57)   VALUE SPACES.
+      *
+       01  OU-REC35.
+           05  REC-351         PIC X(03)   VALUE "MK ".
+           05  REC-352         PIC X(20)   VALUE SPACES.
+           05  REC-353         PIC X(57)   VALUE SPACES.
+      *
+       01  OU-REC36.
+           05  REC-361         PIC X(03)   VALUE "CD ".
+           05  REC-362         PIC X(20)   VALUE SPACES.
+           05  REC-363         PIC X(57)   VALUE SPACES.
+      *
+       01  OU-REC4.
+           05  REC-41          PIC X(04)   VALUE "put ".
+           05  REC-42          PIC X(11)   VALUE "QTEMP/FTP02".
+           05  FILLER          PIC X(01)   VALUE SPACES.
+           05  REC-44          PIC X(30).
+           05  FILLER          PIC X(23)   VALUE SPACES.
+      *
+       01  OU-REC5.
+           05  REC-51          PIC X(04)   VALUE "quit".
+           05  FILLER          PIC X(76)   VALUE SPACES.
+      *
+       01  WK-USERID.
+           05  WK-USERIDA      OCCURS  20  TIMES.
+               10  WK-USER1    PIC X(01).
+      *
+       01  WK-PASSWORD.
+           05  WK-PWD          OCCURS  20  TIMES.
+               10  WK-PWD1     PIC X(01).
+      *
+       01  WK-PATH             PIC X(50).
+      *
+       01  I                   PIC 9(02).
+       01  J                   PIC 9(02).
+      *
+       LINKAGE SECTION.
+      *
+       01  IN-USERID                   PIC X(20).
+       01  IN-PASSWORD                 PIC X(20).
+       01  IN-PATH                     PIC X(20).
+       01  IN-FILE                     PIC X(30).
+       01  IN-SPUSER                   PIC X(10).
+      *
+       PROCEDURE DIVISION  USING IN-USERID
+                                 IN-PASSWORD
+                                 IN-PATH
+                                 IN-FILE
+                                 IN-SPUSER.
+       BEG-RTN.
+           PERFORM   000-INIT-RTN    THRU    000-EXIT.
+           PERFORM   100-REC1-RTN    THRU    100-EXIT.
+           PERFORM   200-REC2-RTN    THRU    200-EXIT.
+           PERFORM   300-REC3-RTN    THRU    300-EXIT.
+           PERFORM   400-REC4-RTN    THRU    400-EXIT.
+           PERFORM   500-REC5-RTN    THRU    500-EXIT.
+           PERFORM   900-ENDJ-RTN    THRU    900-EXIT.
+           GOBACK.
+      *
+       000-INIT-RTN.
+           OPEN     OUTPUT      OUFILE.
+           MOVE     SPACES      TO  REC-44.
+           MOVE     IN-USERID   TO  WK-USERID.
+           MOVE     IN-PASSWORD TO  WK-PASSWORD.
+           MOVE     IN-PATH     TO  WK-PATH.
+       000-EXIT.    EXIT.
+      *
+       100-REC1-RTN.
+           MOVE  SPACES     TO  OU-REC1.
+           MOVE  WK-USERID  TO  OU-REC1.
+           MOVE  1  TO  I.
+           MOVE  0  TO  J.
+      ****  CACULATION USER ID LENGTH *****
+       100-10.
+           IF    I  >  20  GO  TO  100-20.
+           IF    WK-USERIDA (I)  NOT  =  SPACES
+                 ADD   1  TO  I
+                 GO  TO  100-10.
+       100-20.
+           ADD   1  TO  I.
+       100-30.
+           ADD   1  TO  J.
+           IF    J  >  20  GO  TO  100-90.
+           MOVE  WK-PWD (J)   TO  REC-11 (I).
+           GO  TO  100-20.
+       100-90.
+           MOVE   OU-REC1   TO  OU-STAM.
+           WRITE  OUTPUT-REC    FROM  OU-REC.
+       100-EXIT.    EXIT.
+      *
+       200-REC2-RTN.
+           MOVE   SPACES  TO  OU-REC2.
+           MOVE   "ltype c 950" TO  REC-21.
+           MOVE   OU-REC2   TO  OU-STAM.
+           WRITE  OUTPUT-REC    FROM  OU-REC.
+       200-EXIT.    EXIT.
+      *
+       300-REC3-RTN.
+           MOVE   SPACES    TO  OU-REC.
+           MOVE   SPACES    TO  OU-REC3.
+           MOVE   "cd "     TO  REC-31.
+           MOVE   "/"       TO  REC-32.
+           MOVE   OU-REC3   TO  OU-STAM.
+           WRITE  OUTPUT-REC    FROM  OU-REC.
+      *
+           MOVE   SPACES    TO  OU-REC.
+           MOVE   SPACES    TO  OU-REC3.
+           MOVE   "cd "     TO  REC-331.
+           MOVE   WK-PATH   TO  REC-332.
+           MOVE   OU-REC33  TO  OU-STAM.
+           WRITE  OUTPUT-REC    FROM  OU-REC.
+      *
+           MOVE   SPACES    TO  OU-REC.
+           MOVE   SPACES    TO  OU-REC35.
+           MOVE   "MK "     TO  REC-351.
+           MOVE   IN-SPUSER TO  REC-352.
+           MOVE   OU-REC35  TO  OU-STAM.
+           WRITE  OUTPUT-REC    FROM  OU-REC.
+      *
+           MOVE   SPACES    TO  OU-REC.
+           MOVE   SPACES    TO  OU-REC35.
+           MOVE   "CD "     TO  REC-361.
+           MOVE   IN-SPUSER TO  REC-362.
+           MOVE   OU-REC36  TO  OU-STAM.
+           WRITE  OUTPUT-REC    FROM  OU-REC.
+       300-EXIT.    EXIT.
+      *
+       400-REC4-RTN.
+           MOVE  SPACES                TO  OU-REC4.
+           MOVE  "put "                TO  REC-41.
+           MOVE  "qtemp/FTP02"         TO  REC-42.
+           MOVE  IN-FILE               TO  REC-44.
+           MOVE   OU-REC4   TO  OU-STAM.
+           WRITE  OUTPUT-REC    FROM  OU-REC.
+       400-EXIT.    EXIT.
+      *
+       500-REC5-RTN.
+           MOVE  SPACES     TO  OU-REC4.
+           MOVE   "QUIT"    TO  REC-51.
+           MOVE   OU-REC5   TO  OU-STAM.
+           WRITE  OUTPUT-REC    FROM  OU-REC.
+       500-EXIT.    EXIT.
+      *
+       900-ENDJ-RTN.
+           CLOSE             OUFILE.
+       900-EXIT.    EXIT.
+      *
+

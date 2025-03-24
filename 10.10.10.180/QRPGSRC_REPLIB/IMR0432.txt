@@ -1,0 +1,183 @@
+      ****************************************************************
+      *   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+      *                                                              *
+      * PROGRAM NAME : IMR0431                                       *
+      * AUTHER       : A1139  JANE                                   *
+      * CREATE DATE  : 81/02/26                                      *
+      * UPDATE DATE  :                                               *
+      * SYSTEM       :人頭馬匯東                                   *
+      * SUBSYSTEM    :庫存系統                                     *
+      * REMARK       :分車送貨明細表                               *
+      *--------------------------------------------------------------*
+      * 00A需求單號: 1130215                                       *
+      * 00A 2024/05/06 DEREK產生為EXCEL 格式                     *
+      ****************************************************************
+     FREWF09  IP  E           K        DISK
+     FMTMAPF  IF  E           K        DISK
+     FMTMEPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FIMR043BPO   E             39     PRINTER
+ 00A+FIMR043BFO   E           K        DISK
+     ISE0
+     I                                              SF03  L1
+     I                                              SF02  L2
+     I                                              SE10  L3
+     I                                              SE11  L3
+     I                                              SE22  L4
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      598 5990$LPRT
+     I                                      609 613 DSE07
+     I                                      614 621 DSE22S
+     I                                      622 629 DSE22E
+     I                                      630 6320DSE23
+     I*(MM/DD/YY)
+     I                                      633 6380DSE06
+ 00A+I                                      633 6340DSE06M
+ 00A+I                                      635 6360DSE06D
+ 00A+I                                      637 6380DSE06Y
+     I*(YY/MM/DD)
+M001MI                                      640 6470YSE06
+     I*
+ 00A+I*派車日期
+ 00A+I            DS
+ 00A+I                                        1   8 WF03
+ 00A+I                                        1   2 WF03M
+ 00A+I                                        3   3 WF03A
+ 00A+I                                        4   5 WF03D
+ 00A+I                                        6   6 WF03B
+ 00A+I                                        7   8 WF03Y
+ 00A+I*車號
+ 00A+I            DS
+ 00A+I                                        1  12 WF04
+ 00A+I                                        1   8 WF04A
+ 00A+I                                        9   9 WF04B
+ 00A+I                                       10  12 WF04C
+ 00A+I*客戶代號
+ 00A+I            DS
+ 00A+I                                        1  10 WF05
+ 00A+I                                        1   5 WF05A
+ 00A+I                                        6   6 WF05B
+ 00A+I                                        7  10 WF05C
+      *==============================================================*
+      *                    KEY LIST
+      *==============================================================*
+     C           KEY#A     KLIST
+     C                     KFLD           #A01
+     C                     KFLD           #A02
+     C           KEYME     KLIST
+     C                     KFLD           SE10
+     C                     KFLD           SE11
+     C*
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+     C           *IN10     IFEQ '0'
+     C                     EXSR RTN010                     *HEADING
+     C                     ELSE
+     C           *INL4     IFEQ '1'
+     C                     WRITEPE1
+     C                     EXSR RTN010                     *HEADING
+     C                     END
+     C                     END
+     C*
+     C   39                EXSR RTN900                     *OVRFLW-THE SAME
+     C                     EXSR RTN100                     *ADD TOT-THE SAME PRO
+     C                     SETON                     303132
+     C*
+     CL2 10                SETOF                     30
+     CL3 10                SETOF                     31
+     CLR                   WRITEPE2
+      *==============================================================*
+      *          RTN010....CHECK HEADING
+      *==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C*物流點
+|    C                     MOVEL'STORAGE' #A01
+|    C                     MOVELDSE07     #A02
+|    C           KEY#A     CHAIN#A0                  41
+| 02-C           *IN41     IFEQ '1'
+|   C                     MOVE *BLANK    #A031
+| 02*C                     ELSE
+|   C                     MOVEL#A03      #A031
+| 02-C                     END
+|    C*
+|    C                     WRITEPH1
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN100....WRITEPD1
+      *==============================================================*
+02===C           RTN100    BEGSR
+      *
+|    C           SF04      ADD  SF05      PTOT
+|    C*
+|    C*送貨地址
+|    C           KEYME     CHAINME0                  45
+| 03-C           *IN45     IFEQ '1'
+|   C                     MOVE *BLANK    ME056
+     C                     ELSE
+     C           ME05      IFNE *BLANKS
+     C                     MOVELME05      ME056
+     C                     ELSE
+     C                     MOVELME06      ME056
+     C                     END
+| 03-C                     END
+|    C*產品簡稱＆單位
+|    C           SF03      CHAINMA0                  47
+| 01-C           *IN47     IFEQ '1'
+|   C                     MOVE *BLANK    MA03
+|   C                     MOVE *BLANK    MA13
+| 01-C                     END
+|    C*
+     C                     WRITEPD1
+ 00A+C*寫入EXCEL
+ 00A+C                     EXSR RTN110
+|    C*
+02===C                     ENDSR
+ 00A+C*==============================================================*
+ 00A+C*          RTN110....寫入EXCEL
+ 00A+C*==============================================================*
+ 00A+C           RTN110    BEGSR
+ 00A+C*
+ 00A+C                     MOVELDSE07     WF01      P      物流點
+ 00A+C                     MOVEL#A031     WF02      P      物流點名稱
+ 00A+C                     MOVE DSE06M    WF03M     P      派車日期M
+ 00A+C                     MOVEL'/'       WF03A     P
+ 00A+C                     MOVE DSE06D    WF03D     P      派車日期D
+ 00A+C                     MOVEL'/'       WF03B     P
+ 00A+C                     MOVE DSE06Y    WF03Y     P      派車日期Y
+ 00A+C                     MOVELSE22      WF04A     P      車號
+ 00A+C                     MOVEL'-'       WF04B     P
+ 00A+C                     MOVE DSE23     WF04C     P      車次
+ 00A+C                     MOVELSE10      WF05A     P      客戶代號- 總店
+ 00A+C                     MOVEL'-'       WF05B     P
+ 00A+C                     MOVELSE11      WF05C     P      客戶代號- 分店
+ 00A+C                     MOVELME04      WF06      P      客戶簡稱
+ 00A+C                     MOVELSF02      WF07      P      送貨單號
+ 00A+C                     MOVELSF03      WF08      P      產品代號
+ 00A+C                     MOVELMA03      WF09      P      產品簡稱
+ 00A+C                     MOVELMA13      WF10      P      單位
+ 00A+C                     Z-ADDPTOT      WF11             數量
+ 00A+C                     MOVELME056     WF12      P      送貨地址
+ 00A+C                     MOVELSE12      WF13      P      備註
+ 00A+C*
+ 00A+C                     WRITEWF0
+ 00A+C*
+ 00A+C                     ENDSR
+      *==============================================================*
+      *          RTN900....OVERFLOW --同一車號
+      *==============================================================*
+04===C           RTN900    BEGSR
+|    C*
+|    C                     WRITEPE1
+|    C                     WRITEPH1
+|    C                     SETOF                     39
+|    C*
+04===C                     ENDSR
+

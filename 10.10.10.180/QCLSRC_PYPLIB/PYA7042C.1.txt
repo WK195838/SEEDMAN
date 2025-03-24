@@ -1,0 +1,49 @@
+             PGM
+             DCL        VAR(&DTD02)    TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DTAP)     TYPE(*CHAR) LEN(10)
+             DCL        VAR(&WTD01)    TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DTD17)    TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DTD17E)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&TD17N)    TYPE(*CHAR) LEN(6)
+
+             CHGVAR     VAR(&DTD02)    VALUE(%SST(*LDA 541 4))
+             CHGVAR     VAR(&DTAP)     VALUE(%SST(*LDA 507 10))
+             CHGVAR     VAR(&WTD01)    VALUE(%SST(*LDA 545 4))
+             CHGVAR     VAR(&DTD17)    VALUE(%SST(*LDA 557 8))
+             CHGVAR     VAR(&DTD17E)   VALUE(%SST(*LDA 565 8))
+             CHGVAR     VAR(&TD17N)    VALUE(%SST(*LDA 573 6))
+
+             ALCOBJ     OBJ((PYTTPF *FILE *EXCLRD))
+             MONMSG     MSGID(CPF0000) EXEC(DO)
+             GOTO       CMDLBL(ENDTAG)
+             ENDDO
+             CLRPFM     FILE(*LIBL/PYTTPF)
+             OVRDBF     FILE(PYTTPF) SHARE(*YES)
+
+             OVRDBF     FILE(PYTDPF) SHARE(*YES)
+             OPNQRYF    FILE((PYTDPF)) OPTION(*ALL) QRYSLT(' +
+                            CTD01 *EQ "' *CAT &WTD01 *CAT '" +
+                          & TD02 *EQ "' *CAT &DTD02 *CAT '" +
+                          & TD17 *EQ %RANGE("' *CAT &DTD17 *CAT '" +
+                          "' *CAT &DTD17E *CAT '") +
+                          & TD96 *NE 0 ') +
+                          KEYFLD((TD03)) +
+                          MAPFLD((CTD01 TD01 *CHAR 4))
+
+             CALL       PYA7042
+             CLOF       OPNID(PYTDPF)
+             DLTOVR     FILE(*ALL)
+
+             IF         COND(&DTAP *NE ' ') THEN(DO)
+             INZTAP     DEV(&DTAP) NEWVOL(PY) NEWOWNID(PAYROLL) +
+                        CHECK(*NO) DENSITY(6250)
+             OVRTAPF    FILE(QTAPE) DEV(&DTAP) REELS(*SL) RCDLEN(80) +
+                        BLKLEN(4000)
+             CPYTOTAP   FROMFILE(*LIBL/PYTTPF) TOFILE(QTAPE) +
+                        TOREELS(*SL) TORCDLEN(80) TOBLKLEN(4000) +
+                        TORCDBLK(*F)
+             DLTOVR     FILE(QTAPE)
+             ENDDO
+
+ ENDTAG:     ENDPGM
+

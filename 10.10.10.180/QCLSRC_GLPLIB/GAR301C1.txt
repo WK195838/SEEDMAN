@@ -1,0 +1,56 @@
+     /***************************************************************/
+     /*   人頭馬匯東洋酒股份有限公司－版權所有      TEL:5042266   */
+     /*                                                             */
+     /*    AUTHOR       : MERCURY                                   */
+     /*    CREATE DATE  : 82/01/19                                  */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : GAR301C1                                  */
+     /*    SYSTEM       :人頭馬匯東                               */
+     /*    SUBSYSTEM    :總帳系統                                 */
+     /*    REMARK       :會帳期間列印                             */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&$PENV)  TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)   TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I) TYPE(*DEC)  LEN(3 0)
+
+             DCL        VAR(&DAC01S) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DAC01E) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DAC02S) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DAC02E) TYPE(*CHAR) LEN(4)
+
+             CHGVAR     VAR(&DAC01S) VALUE(%SST(*LDA 601 2))
+             CHGVAR     VAR(&DAC01E) VALUE(%SST(*LDA 603 2))
+             CHGVAR     VAR(&DAC02S) VALUE(%SST(*LDA 605 4))
+             CHGVAR     VAR(&DAC02E) VALUE(%SST(*LDA 609 4))
+
+
+             OVRPRTF    FILE(GAR301P) +
+                        USRDTA('會期列印')
+             OVRDBF     FILE(GLACPF) SHARE(*YES)
+
+
+             OPNQRYF    FILE((GLACPF)) QRYSLT(' AC01 *EQ %RANGE("' +
+                          *CAT &DAC01S *CAT '" "' *CAT &DAC01E *CAT +
+                          '") & MAC02 *EQ %RANGE("' *CAT &DAC02S +
+                          *CAT '" "' *CAT &DAC02E *CAT '") ') +
+                          KEYFLD((AC01) (AC02)) MAPFLD((MAC02 AC02 +
+                          *CHAR 4 ))
+
+             CALL       GAR3011
+
+             CLOF       OPNID(GLACPF)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('GAR301P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+
+             ENDPGM
+

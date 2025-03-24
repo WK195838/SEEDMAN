@@ -1,0 +1,290 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME : MEA060                                     *
+     H*    AUTHOR       : A1084   CHARLES                            *
+     H*    CREATE DATE  : 80/08/20                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :三險共用系統                              *
+     H*    SUBSYSTEM    :保費作業系統                              *
+     H*    PURPOSE      :應收保費明細過帳                          *
+     H****************************************************************
+     FSYCMPF  IF  E           K        DISK
+     FPYBTPF  UF  E           K        DISK
+     FSYBNPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYA707D CF  E                    WORKSTN
+     I*
+     I/COPY PYDDSSRC,PYPMDS01
+     ILDA        UDS
+     I                                      111 1160DDATE
+     I                                      101 110 $USER
+     I                                      139 139 $RMK01
+     I                                      125 1270$CPY
+     I                                      128 1280$PRTID
+     I                                      162 1620$EVR
+     I*
+     I                                      501 502 DBT01
+     I                                      503 505 DBT061
+     I                                      506 509 DBT062
+     I                                      510 521 DBT09
+     I                                      522 522 DBT03
+     I                                      523 5260DBT04
+     I                                      527 5280DBT05
+     I                                      533 533 DOPT
+     I                                      534 5350DPY07
+     I                                      536 545 DM406
+     I                                      546 5540TCNT
+     I                                      555 5661TAMT
+     IPYDA02      DS
+     I                                        1 256 PYDA
+     I                                        1   3 PYD021
+     I                                        4   6 PYD022
+     I                                        7   9 PYD023
+     I                                       10  12 PYD024
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYBT     KLIST
+     C                     KFLD           DBT01
+     C                     KFLD           DBT03
+     C                     KFLD           DBT04
+     C                     KFLD           DBT05
+     C                     KFLD           DBT061
+     C           KEYBN     KLIST
+     C                     KFLD           DBT061
+     C                     KFLD           DBT062
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DBT01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INI. RTN.
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C                     EXSR RTN100                     *MAIN
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL ROUTINE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C           *NAMVAR   DEFN           PYDA02
+|    C                     IN   LDA
+|    C                     IN   PYDA02
+|    C*
+|    C                     MOVEL*BLANK    DBT01
+|    C                     MOVEL*BLANK    DBT061
+|    C                     MOVEL*BLANK    DBT062
+|    C                     MOVEL*BLANK    DBT09
+|    C                     MOVEL'1'       DBT03
+|    C                     Z-ADD*ZERO     DBT04
+|    C                     Z-ADD*ZERO     DBT05
+|    C                     Z-ADD*ZERO     DPY07
+|    C                     MOVEL*BLANK    DM406
+|    C                     Z-ADD*ZERO     TCNT
+|    C                     Z-ADD*ZERO     TAMT
+|    C                     MOVEL'N'       DOPT
+|    C                     SETON                     97
+|    C*
+|    C                     Z-ADD1         $CPY
+|    C                     Z-ADD1         $PRTID
+|    C                     Z-ADD2         $EVR
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100.... MAIN ROUTINE
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO END100
+| 01-C                     END
+|    C*
+|    C                     EXSR RTN110                     *CHK SCREEN1
+|    C*
+| 02-C           *IN99     IFEQ '0'
+| 03-C           *IN13     IFEQ '1'
+|   C                     EXSR RTN120                     *PROCESS
+| 03*C                     ELSE
+|   C                     SETON                     97
+| 03-C                     END
+| 02-C                     END
+|    C*
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          RTN110....CHECK SCREEN1
+     C*==============================================================*
+03===C           RTN110    BEGSR
+|    C*
+| 01-C           DBT01     IFEQ *BLANK
+|   C                     SETON                     609599
+| 01*C                     ELSE
+|   C           DBT01     CHAINCM0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     SETON                     609299
+| 02-C                     END
+| 01-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+| 03-C           *IN40     IFEQ '1'
+|   C                     SETON                     609299
+| 03-C                     END
+|    C   99                GOTO END110
+|    C*
+| 04-C           DBT061    IFEQ *BLANK
+|   C                     SETON                     619599
+| 04-C                     END
+|    C   99                GOTO END110
+|    C*
+| 05-C           DBT062    IFEQ *BLANK
+| 06-C           DBT061    IFEQ '007'                      .一銀
+|   C                     MOVELPM401     DBT062
+| 06-C                     END
+|   C*@         DBT061    IFEQ '009'                      .彰銀
+|   C*@                   MOVELPM403     DBT062
+|   C*@                   END
+|   C*@         DBT061    IFEQ '050'                      .臺企
+|   C*@                   MOVELPM407     DBT062
+|   C*@                   END
+| 07-C           DBT061    IFEQ '012'                      .市銀
+|   C                     MOVELPM411     DBT062
+| 07-C                     END
+| 05-C                     END
+|    C*
+|    C           KEYBN     CHAINBN0                  40
+| 08-C           *IN40     IFEQ '1'
+|   C                     SETON                     619299
+| 08-C                     END
+|    C   99                GOTO END110
+|    C*
+| 09-C           DBT09     IFEQ *BLANK
+| 10-C           DBT061    IFEQ '007'                      .一銀
+|   C                     MOVELPM402     DBT09
+| 10-C                     END
+|   C*@         DBT061    IFEQ '009'                      .彰銀
+|   C*@                   MOVELPM404     DBT09
+|   C*@                   END
+|   C*@         DBT061    IFEQ '050'                      .臺企
+|   C*@                   MOVELPM408     DBT09
+|   C*@                   END
+| 11-C           DBT061    IFEQ '012'                      .市銀
+|   C                     MOVELPM412     DBT09
+| 11-C                     END
+| 09-C                     END
+|    C*
+| 12-C           DBT09     IFEQ *BLANK
+|   C                     SETON                     629599
+| 12-C                     END
+|    C   99                GOTO END110
+|    C*
+| 13-C           DBT04     IFEQ *ZERO
+|   C                     SETON                     649599
+| 13*C                     ELSE
+|   C                     MOVELDBT04     P0401I
+|   C                     MOVE DBT05     P0401I
+|   C                     CALL 'P04'
+|   C                     PARM           P0401I  60
+|   C                     PARM           P0411O  1
+| 14-C           P0411O    IFEQ 'N'
+|   C                     SETON                     649499
+| 14-C                     END
+| 13-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     Z-ADDDBT04     P2201I  40
+|    C                     CALL 'P22'
+|    C                     PARM           P2201I
+|    C                     PARM           P2211O  1
+|    C                     PARM           P2212O  20
+|    C*
+|    C                     Z-ADDDBT05     DPY07
+| 15-C           DBT05     IFEQ P2212O
+|   C                     Z-ADD99        DPY07
+| 15-C                     END
+|    C*
+| 16-C           $RMK01    IFNE 'Y'
+|   C           DOPT      ANDEQ'Y'
+|   C                     SETON                     679199
+| 16-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C           KEYBT     SETLLBT0
+|    C           KEYBT     READEBT0                      40
+|    C           *LOVAL    SETLLBT0
+| 17-C           *IN40     IFEQ '1'
+|   C                     SETON                     606163
+|   C                     SETON                     649299
+| 17-C                     END
+|    C   99                GOTO END110
+|    C*
+| 18-C           DOPT      IFEQ 'N'
+|   C           BT09      ANDNE*BLANK
+|   C                     SETON                     606163
+|   C                     SETON                     649099
+| 18-C                     END
+|    C   99                GOTO END110
+|    C*
+03===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN120.... PROCESS
+     C*==============================================================*
+04===C           RTN120    BEGSR
+|    C*
+|    C                     SETON                     96
+|    C                     WRITEDSPC1
+|    C*UPDAT BT
+|    C                     Z-ADD*ZERO     TCNT
+|    C                     Z-ADD*ZERO     TAMT
+|    C           KEYBT     SETLLBT0
+|    C           KEYBT     READEBT0                      40
+| 01-C           *IN40     DOWEQ'0'
+|   C*
+|   C                     MOVELDBT09     BT09
+| 02-C           DBT061    IFEQ '012'                      北市銀
+|   C                     MOVEL*BLANK    BT10
+|   C                     MOVELPM413     BT10
+| 02-C                     END
+|   C                     Z-ADDDDATE     BT97
+|   C                     TIME           BT98
+|   C                     MOVEL$USER     BT99
+|   C*
+|   C                     ADD  1         TCNT
+|   C                     ADD  BT08      TAMT
+|   C                     UPDATBT0
+|   C           KEYBT     READEBT0                      40
+| 01-C                     END
+|    C*
+|    C                     OUT  LDA
+|    C*
+|    C*          DBT061    IFEQ PYD021                     .一銀
+|    C*                    CALL 'PYA7072C'
+|    C*                    END
+|    C*
+|    C**         DBT061    IFEQ PYD022                     .彰銀
+|    C**                   CALL 'PYA7073C'
+|    C**                   IN   LDA
+|    C**                   END
+|    C*
+|    C*          DBT061    IFEQ PYD023                     .臺企
+|    C                     CALL 'PYA7074C'
+|    C*                    END
+|    C*
+|    C*          DBT061    IFEQ PYD024                     .市銀
+|    C*                    CALL 'PYA7075C'
+|    C*                    END
+|    C*
+|    C                     SETON                     93
+|    C                     SETOF                     96
+|    C*
+04===C                     ENDSR
+

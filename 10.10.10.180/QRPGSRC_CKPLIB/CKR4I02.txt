@@ -1,0 +1,186 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : CKR4I0                                     *
+     H*    PROGRAM NAME :列印票據作業－變動                        *
+     H*    AUTHOR       : A1162                                      *
+     H*    CREATE DATE  : 84/02/08                                   *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FCKHFPF  UP  E           K        DISK
+     FCKHFLF01IF  E           K        DISK
+     F            HF0                               KRENAMEHFL1
+     FCKHFLF02IF  E           K        DISK
+     F            HF0                               KRENAMEHFL2
+     FCKR4I0F O   E                    DISK
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I* LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      138 138 $INQ
+     I                                      173 176 $COR
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DHF02
+     I                                      505 510 DHF16
+     I                                      511 5180WHF06F
+     I                                      519 5260WHF06T
+     I                                      527 5300DHF71F
+     I                                      531 5340DHF71T
+     I                                      535 535 DHF76
+     I                                      536 536 DTYPE
+     I                                      537 537 DTEST
+     I                                      538 538 DHI15
+     I                                      539 539 DHI13
+     I                                      540 542 DHI03
+     I            DS
+     I                                        1   80WHF07
+     I                                        2   40PHF07Y
+     I                                        5   60PHF07M
+     I                                        7   80PHF07D
+     I            DS
+     I                                        1   80WHF06
+     I                                        3   40PHF06Y
+     I                                        5   60PHF06M
+     I                                        7   80PHF06D
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN HF02      WHF021
+     C           *LIKE     DEFN HF06      WHF061
+     C           *LIKE     DEFN HF71      WHF711
+     C           *LIKE     DEFN HF02      WHF022
+     C           *LIKE     DEFN HF72      WHF722
+     C           *LIKE     DEFN HF73      WHF73O
+     C*
+     C           *LIKE     DEFN HF02      #B001I
+     C           *LIKE     DEFN HF02      #D001I
+     C           *LIKE     DEFN HF04      #D002I
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHF1    KLIST
+     C                     KFLD           WHF021
+     C                     KFLD           WHF061
+     C                     KFLD           WHF711
+     C           KEYHF2    KLIST
+     C                     KFLD           WHF022
+     C           KEY#S     KLIST
+     C                     KFLD           HF04
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C  NLR                EXSR R2000
+     C*
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+     C           R1000     BEGSR
+     C*
+     C                     SETON                     10
+     C*試印
+     C           DTEST     IFNE 'N'
+     C                     EXSR R3000
+     C                     END
+     C*KEEP DATA
+     C                     MOVELHF02      WHF021
+     C                     Z-ADDHF06      WHF061
+     C                     Z-ADDHF71      WHF711
+     C*NEW NO.
+     C                     MOVELHF02      WHF022
+     C                     Z-ADD$A8YMD    WHF722
+     C           KEYHF2    SETGTHFL2
+     C           KEYHF2    REDPEHFL2                     46
+     C           *IN46     IFEQ '0'
+     C                     Z-ADDHF73      WHF73O
+     C                     ELSE
+     C                     Z-ADD*ZERO     WHF73O
+     C                     END
+     C*RE-CHAIN
+     C           KEYHF1    CHAINHFL1                 40
+     C*
+     C           E1000     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL --正式
+     C*==============================================================*
+     C           R2000     BEGSR
+     C*---開票日
+     C                     Z-ADDHF06      WF02
+     C*---廠商資料
+     C*                    CALL 'CKS#D0'
+     C*                    PARM HF02      #D001I
+     C*                    PARM HF04      #D002I
+     C*                    PARM           #D003O 10
+     C*          WF01      PARM           #D004O 42
+     C*                    PARM           #D005O 62
+     C*                    PARM           #D098O 50
+     C*                    PARM           #D099O  1
+     C                     MOVELHF77      WF01
+     C*---列印抬頭
+     C           HF74      IFNE 'Y'
+     C                     MOVEL*BLANKS   WF01
+     C                     END
+     C*---到期日
+     C                     Z-ADDHF07      WF03
+     C*金額大寫
+     C           DHI13     IFEQ '1'
+     C*---中文金額
+     C                     CALL 'P47'
+     C                     PARM HF10      P4701I  90       原數字
+     C           WF05      PARM           P4701O 72        轉換後中文
+     C                     ELSE
+     C*---英文金額
+     C                     CALL 'P42'
+     C                     PARM *BLANK    P4201I  3
+     C                     PARM HF10      P4202I 142       原數字
+     C           WF05      PARM           P4201O180        轉換後中文
+     C                     END
+     C*---支票金額
+     C                     Z-ADDHF10      WF04
+     C*
+     C                     WRITEWF0
+     C*
+     C                     Z-ADD$A8YMD    HF72
+     C                     ADD  1         WHF73O
+     C                     Z-ADDWHF73O    HF73
+     C                     UPDATHF0
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R3000 ... DETAIL --試印
+     C*==============================================================*
+     C           R3000     BEGSR
+     C*---開票日
+     C                     Z-ADD99999999  WF02
+     C*---廠商資料
+     C                     MOVEL*ALL'X'   WF01
+     C*---到期日
+     C                     Z-ADD99999999  WF03
+     C*---大寫金額
+     C                     MOVEL*ALL'X'   WF05
+     C*---支票金額
+     C                     Z-ADD99999999  WF04
+     C*
+     C                     WRITEWF0
+     C*                    CLOSECKR4I0F
+     C*
+     C                     SETON                     LR
+     C*                    RETRN
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+     C           R8999     BEGSR
+     C*
+     C*
+     C                     ENDSR
+     C*==============================================================
+

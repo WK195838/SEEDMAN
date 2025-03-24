@@ -1,0 +1,693 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLA650                                     *
+     H*    PROGRAM NAME :預算資料拷貝－預算                        *
+     H*    AUTHOR       : A1150                                      *
+     H*    CREATE DATE  : 81/12/08                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     F****************************************************************
+     FGLAUPF  UF  E           K        DISK                      A
+     FGLATPF  UF  E           K        DISK                      A
+     FGLAFPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FPT#APF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLA650D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E*                   @A01        5  1               作業權利
+     E                    FRR        13 13 2
+     E                    WRR        13 13 2
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I            DS
+     I                                        1  50 WAT05
+     I                                        1   6 AT051
+     I                                        7  18 AT052
+     I                                       19  210DAU02F
+     I                                       22  25 AT053
+     I                                       26  270DAU03F
+     I                                       28  35 AT054
+     I                                       36  44 WTEMP
+     I                                       45  45 AT055
+     I                                       46  50 AT056
+     I            DS
+     I                                        1 169 FRR
+     I                                        1  132AU07
+     I                                       14  262AU08
+     I                                       27  392AU09
+     I                                       40  522AU10
+     I                                       53  652AU11
+     I                                       66  782AU12
+     I                                       79  912AU13
+     I                                       92 1042AU14
+     I                                      105 1172AU15
+     I                                      118 1302AU16
+     I                                      131 1432AU17
+     I                                      144 1562AU18
+     I                                      157 1692AU19
+     I            DS
+     I                                        1 169 WRR
+     I                                        1  132WAU07
+     I                                       14  262WAU08
+     I                                       27  392WAU09
+     I                                       40  522WAU10
+     I                                       53  652WAU11
+     I                                       66  782WAU12
+     I                                       79  912WAU13
+     I                                       92 1042WAU14
+     I                                      105 1172WAU15
+     I                                      118 1302WAU16
+     I                                      131 1432WAU17
+     I                                      144 1562WAU18
+     I                                      157 1692WAU19
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*
+     C           *LIKE     DEFN AU02      WAU02F
+     C           *LIKE     DEFN AU02      WAU02T
+     C           *LIKE     DEFN AU04      WAU04
+     C           *LIKE     DEFN AU05      WAU05
+     C           *LIKE     DEFN AU06      WA06O
+     C           *LIKE     DEFN AU06      WA06N
+     C*
+     C           *LIKE     DEFN AU06      TOTAL
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAU     KLIST                           *SETLL AU0
+     C                     KFLD           DAU01F
+     C                     KFLD           WAU02F
+     C                     KFLD           DAU03F
+     C                     KFLD           DAU04F
+     C                     KFLD           DAU05F
+     C           KEYWAU    KLIST                           *NEXT REC
+     C                     KFLD           DAU01F            SETGT
+     C                     KFLD           WAU02F
+     C                     KFLD           DAU03F
+     C                     KFLD           WAU04
+     C                     KFLD           AU05
+     C           KEYEAU    KLIST                           *READE AU0
+     C                     KFLD           DAU01F
+     C                     KFLD           WAU02F
+     C                     KFLD           DAU03F
+     C           KEYCAU    KLIST                           *CHAIN AU0
+     C                     KFLD           DAU01T
+     C                     KFLD           WAU02T
+     C                     KFLD           DAU03T
+     C                     KFLD           AU04
+     C                     KFLD           AU05
+     C           KEYAF     KLIST
+     C                     KFLD           DAU01T           *至公司別
+     C                     KFLD           AU04             *會計科目
+     C           KEY#A     KLIST
+     C                     KFLD           DAU05            *成本中心
+     C           KEYAT     KLIST
+     C                     KFLD           DAU01T
+     C                     KFLD           WAU02T
+     C                     KFLD           DAU03T
+     C                     KFLD           WAU04
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DAU01F
+|    C                     MOVEL*BLANK    DAU01T
+|    C                     Z-ADD0         DAU02F
+|    C                     Z-ADD0         DAU02T
+|    C                     Z-ADD0         DAU03F
+|    C                     Z-ADD0         DAU03T
+|    C                     Z-ADD0         DFLD
+|    C                     MOVEL*BLANK    DAU04F
+|    C                     MOVEL*BLANK    DAU04T
+|    C                     MOVEL*BLANK    DAU05F
+|    C                     MOVEL*BLANK    DAU05T
+|    C                     Z-ADD0         TOTAL
+|    C*--------------------------------------------------------------*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 02-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *拷貝選擇
+| 02-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*
+|    C*自.....
+|    C*公司別．．
+| 01-C           DAU01F    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           DAU01F    CHAIN#B0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C           #B12      ORNE '1'
+|   C                     MOVEL'UGL0004' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           DAU01F    CHAINAK0                  40    *公司別
+| 03-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*年度．．．
+| 04-C           DAU02F    IFEQ 0
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 04*C                     ELSE
+|   C           DAU02F    MULT 10000     P3101I
+|   C                     CALL 'P31'
+|   C                     PARM           P3101I  80
+|   C                     PARM AK09      P3102I  1
+|   C                     PARM AK09      P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C                     PARM           P3101O  80
+|   C           P3101O    DIV  10000     WAU02F
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*版次．．．
+| 05-C           DAU03F    IFEQ 0
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*調整比率．．．
+|    C                     Z-ADD0         WFLD    74
+| 06-C           DFLD      IFEQ 0
+|   C                     Z-ADD1         WFLD
+| 06*C                     ELSE
+|   C           DFLD      DIV  100       WFLD
+| 06-C                     END
+|    C*
+|    C*科目代碼．．．
+| 07-C           DAU04F    IFEQ *BLANK
+|   C                     MOVEL*LOVAL    DAU04F
+| 07-C                     END
+|    C*
+| 08-C           DAU04T    IFEQ *BLANK
+|   C                     MOVE *ALL'9'   DAU04T
+| 08-C                     END
+|    C*
+| 09-C           DAU04F    IFGT DAU04T
+|   C                     MOVEL'UPT0042' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 09-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*成本中心．．．
+| 10-C           DAU05F    IFEQ *BLANK
+|   C                     MOVEL*LOVAL    DAU05F
+| 10-C                     END
+|    C*
+| 11-C           DAU05T    IFEQ *BLANK
+|   C                     MOVEL*ALL'9'   DAU05T
+| 11-C                     END
+|    C*
+| 12-C           DAU05F    IFGT DAU05T
+|   C                     MOVEL'UPT0042' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 12-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*至．．公司別
+|    C*
+| 13-C           DAU01T    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 13-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           DAU01T    CHAIN#B0                  40
+| 14-C           *IN40     IFEQ '1'
+|   C           #B12      ORNE '1'
+|   C                     MOVEL'UGL0004' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6599
+| 14-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           DAU01T    CHAINAK0                  40
+| 15-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 15-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*年度．．．
+| 16-C           DAU02T    IFEQ 0
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 16*C                     ELSE
+|   C           DAU02T    MULT 10000     P3101I
+|   C                     CALL 'P31'
+|   C                     PARM           P3101I  80
+|   C                     PARM AK09      P3102I  1
+|   C                     PARM AK09      P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C                     PARM           P3101O  80
+|   C           P3101O    DIV  10000     WAU02T
+| 16-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*版次．．．
+| 17-C           DAU03T    IFEQ 0
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6799
+| 17-C                     END
+|    C   99                GOTO E1B00
+|    C*
+03===C           E1B00     ENDSR
+     C*
+     C*==============================================================*
+     C*          R1C00 ....拷貝選擇
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+| 01-C           *IN14     IFEQ '1'                        拷貝作業
+|   C                     Z-ADD0         WA06N
+|   C*
+| 02-C           DOPT      CASEQ1         R1C10
+|   C           DOPT      CASEQ2         R1C20
+|   C           DOPT      CASEQ3         R1C30
+| 02-C                     END
+|   C*
+|   C                     MOVEL'UPT2142' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+|   C*
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....不存在WRITE,存在　放棄拷貝
+     C*==============================================================*
+05===C           R1C10     BEGSR
+|    C*
+|    C*----------------------------------------------------------------
+|    C           KEYAU     SETLLAU0
+|    C           KEYEAU    READEAU0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C           AU04      ANDLEDAU04T
+|   C*82/01/08↓
+| 02-C           AU05      IFGE DAU05F
+|   C           AU05      ANDLEDAU05T
+|   C*
+|   C                     EXSR R1C11                      .KEEP DATA
+|   C*82/01/08↓
+|   C*WA06N *NE 0
+| 03-C           WA06N     IFNE 0
+|   C*
+|   C*存在放棄拷貝....
+|   C*
+|   C           KEYCAU    CHAINAU0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     Z-ADD0         WA06O
+|   C                     EXSR R1D00                      拷貝
+|   C                     WRITEAU0
+| 04-C                     END
+| 03-C                     END
+|   C*82/01/08↑
+|   C*<從自公司別NEXT REC FIND>
+|   C           KEYWAU    SETGTAU0
+|   C           KEYEAU    READEAU0                      44
+| 02*C                     ELSE
+|   C           KEYEAU    READEAU0                      44
+| 02-C                     END
+|   C*82/01/08↑
+|   C*會計科目不同時
+|   C*新增或更新一筆至＜＜預算資料檔＞＞
+|   C*
+| 05-C           *IN32     IFEQ '1'
+| 06-C           *IN44     IFEQ '1'
+|   C           AU04      ORGT DAU04T
+|   C           AU05      ORGT DAU05T
+|   C           AU04      ORNE WAU04
+|   C                     EXSR R2C00
+| 06-C                     END
+| 05-C                     END
+| 01-C                     END
+|    C*
+05===C           E1C10     ENDSR
+     C*==============================================================*
+     C*          R1C11 ....KEEP DATA
+     C*==============================================================*
+06===C           R1C11     BEGSR
+|    C*
+|    C                     MOVELAU04      WAU04
+|    C                     MOVELAU05      WAU05
+|    C*
+|    C************
+|    C*求科目類別
+|    C************
+|    C           KEYAF     CHAINAF0                  40
+| 01-C           AF05      IFEQ '1'                        *實帳戶
+|   C******************
+|   C*求會計年度月數*
+|   C******************
+|   C           DAU01T    CHAINAK0                  40
+| 02-C           AK10      IFEQ '1'
+|   C           AU18      MULT WFLD      TOT    110H
+|   C                     Z-ADD12        Z       20
+| 02*C                     ELSE
+|   C           AU19      MULT WFLD      TOT    110H
+|   C                     Z-ADD13        Z       20
+| 02-C                     END
+| 03-C           1         DO   Z         A       20
+|   C                     Z-ADDTOT       WRR,A
+| 03-C                     END  1
+|   C                     Z-ADDTOT       WA06N
+| 01*C                     ELSE
+|   C************
+|   C*虛帳戶***
+|   C************
+| 04-C           1         DO   13        A       20
+|   C           FRR,A     MULT WFLD      TOT    110H
+|   C                     Z-ADDTOT       WRR,A
+|   C                     ADD  WRR,A     WA06N
+| 04-C                     END  1
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....不存在WRITE,存在　覆蓋－無須確認
+     C*==============================================================*
+07===C           R1C20     BEGSR
+|    C*
+|    C           KEYAU     SETLLAU0
+|    C           KEYEAU    READEAU0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C           AU04      ANDLEDAU04T
+|   C*82/01/08↓
+| 02-C           AU05      IFGE DAU05F
+|   C           AU05      ANDLEDAU05T
+|   C*
+|   C                     EXSR R1C11                      .KEEP DATA
+|   C*82/01/08↓
+|   C*WA06N *NE 0
+| 03-C           WA06N     IFNE 0
+|   C*
+|   C*<至．．．是否存在>
+|   C           KEYCAU    CHAINAU0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     Z-ADD0         WA06O
+|   C                     EXSR R1D00                      拷貝
+|   C                     WRITEAU0
+| 04*C                     ELSE
+|   C                     Z-ADDAU06      WA06O
+|   C                     EXSR R1D00                      拷貝
+|   C                     UPDATAU0
+| 04-C                     END
+| 03-C                     END
+|   C*82/01/08↑
+|   C*
+|   C*<從自公司別NEXT REC FIND>
+|   C           KEYWAU    SETGTAU0
+|   C           KEYEAU    READEAU0                      44
+| 02*C                     ELSE
+|   C           KEYEAU    READEAU0                      44
+| 02-C                     END
+|   C*82/01/08↑
+|   C*會計科目不同時
+|   C*新增或更新一筆至＜＜預算資料檔＞＞
+|   C*
+| 05-C           *IN32     IFEQ '1'
+| 06-C           *IN44     IFEQ '1'
+|   C           AU04      ORGT DAU04T
+|   C           AU05      ORGT DAU05T
+|   C           AU04      ORNE WAU04
+|   C                     EXSR R2C00
+| 06-C                     END
+| 05-C                     END
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*  R1C30 ....不存在WRITE,存在　覆蓋－逐筆確認
+     C*==============================================================*
+08===C           R1C30     BEGSR
+|    C*
+|    C           KEYAU     SETLLAU0
+|    C           KEYEAU    READEAU0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C           AU04      ANDLEDAU04T
+|   C*82/01/08↓
+| 02-C           AU05      IFGE DAU05F
+|   C           AU05      ANDLEDAU05T
+|   C*
+|   C                     EXSR R1C11                      .KEEP DATA
+|   C*82/01/08↓
+|   C*WA06N *NE 0
+| 03-C           WA06N     IFNE 0
+|   C*
+|   C*<至．．．是否存在>
+|   C           KEYCAU    CHAINAU0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     Z-ADD0         WA06O
+|   C                     EXSR R1D00                      拷貝
+|   C                     WRITEAU0
+| 04*C                     ELSE
+|   C                     EXSR R1C31                      逐筆確認
+| 04-C                     END
+| 03-C                     END
+|   C*82/01/08↑
+|   C*
+|   C*<從自公司別NEXT REC FIND>
+|   C           KEYWAU    SETGTAU0
+|   C           KEYEAU    READEAU0                      44
+| 02*C                     ELSE
+|   C           KEYEAU    READEAU0                      44
+| 02-C                     END
+|   C*82/01/08↑
+|   C*會計科目不同時
+|   C*新增或更新一筆至＜＜預算資料檔＞＞
+|   C*
+| 05-C           *IN32     IFEQ '1'
+| 06-C           *IN44     IFEQ '1'
+|   C           AU04      ORGT DAU04T
+|   C           AU05      ORGT DAU05T
+|   C           AU04      ORNE WAU04
+|   C                     EXSR R2C00
+| 06-C                     END
+| 05-C                     END
+| 01-C                     END
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R1C31 ....逐筆確認是否拷貝PROCESS
+     C*==============================================================*
+09===C           R1C31     BEGSR
+|    C*
+|    C                     MOVEL' '       COVE
+|    C                     MOVELAU04      DAU04
+|    C                     MOVELAU05      DAU05
+|    C           KEYAF     CHAINAF0                  40
+|    C   40                MOVEL*BLANK    AF03
+|    C*
+|    C           KEY#A     CHAIN#A0                  40
+|    C   40                MOVEL*BLANK    #A02
+|    C*
+|    C                     EXFMTDSPD2
+| 01-C           COVE      IFEQ 'Y'
+|   C                     Z-ADDAU06      WA06O
+|   C                     EXSR R1D00                      拷貝
+|   C                     UPDATAU0
+|   C*82/01/14↓
+| 01*C                     ELSE
+|   C                     Z-ADD0         WA06N
+|   C*82/01/14↑
+| 01-C                     END
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R1D00 ....拷貝PROCESS
+     C*==============================================================*
+10===C           R1D00     BEGSR
+|    C*
+|    C                     SETON                     32
+|    C*
+|    C                     MOVELDAU01T    AU01
+|    C                     Z-ADDWAU02T    AU02
+|    C                     Z-ADDDAU03T    AU03
+|    C                     MOVELWAU04     AU04
+|    C                     MOVELWAU05     AU05
+|    C                     Z-ADDWA06N     AU06
+|    C*******************************************
+|    C*實帳戶* 年度月數 AK10='1' -->12 月 *
+|    C*******************************************
+| 01-C           AF05      IFEQ '1'
+| 02-C           AK10      IFEQ '1'
+| 03-C           1         DO   12        A       20
+|   C                     Z-ADDWRR,A     FRR,A
+| 03-C                     END  1
+|   C                     Z-ADD0         AU19
+| 02*C                     ELSE
+|   C**************************************
+|   C* AK10='2' ---> 13　月
+|   C**************************************
+| 04-C           1         DO   13        A       20
+|   C                     Z-ADDWRR,A     FRR,A
+| 04-C                     END  1
+| 02-C                     END
+|   C*
+| 01*C                     ELSE
+|   C*************
+|   C*虛帳戶****
+|   C*************
+| 05-C           1         DO   13        A       20
+|   C                     Z-ADDWRR,A     FRR,A
+| 05-C                     END  1
+| 01-C                     END
+|    C*
+|    C                     TIME           AU97
+|    C                     Z-ADD$A8YMD    AU98
+|    C                     MOVEL$USER     AU99
+|    C*
+|    C*將總金額加新減舊．．．．
+|    C*
+|    C           WA06N     SUB  WA06O     TOT1   132
+|    C*
+|    C*累加總金額
+|    C                     ADD  TOT1      TOTAL
+|    C*CLEAR INIT
+|    C                     Z-ADD0         WA06N
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R2C00 ....新增或更新預算資料主檔
+     C*==============================================================*
+11===C           R2C00     BEGSR
+|    C*
+|    C*版次說明AT05..
+|    C           DAU01F    CHAIN#B0                  40
+|    C*82/01/08↓
+| 01-C           DFLD      IFNE 0
+|   C                     CALL 'P55'                      *P55(GET,.)
+|   C                     PARM DFLD      P5501I 185
+|   C                     PARM 2         P5502I  10
+|   C                     PARM           P5501O 24
+|   C                     MOVELP5501O    W01     9
+|   C                     MOVE W01       WTEMP
+| 01*C                     ELSE
+|   C                     MOVE *BLANK    WTEMP
+|   C                     MOVE '0.00'    WTEMP
+| 01-C                     END
+|    C*82/01/08↑
+|    C                     MOVEL'拷貝'  AT051
+|    C                     MOVEL#B02      AT052
+|    C                     MOVEL'年'    AT053
+|    C                     MOVEL'版預算'AT054
+|    C                     MOVEL'%'       AT055
+|    C                     MOVEL*BLANK    AT056
+|    C*
+|    C           KEYAT     CHAINAT0                  40
+|    C*
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELWAT05     AT05
+|   C                     ADD  TOTAL     AT06
+|   C                     TIME           AT97
+|   C                     Z-ADD$A8YMD    AT98
+|   C                     MOVEL$USER     AT99
+|   C                     UPDATAT0
+| 02*C                     ELSE
+|   C                     MOVELDAU01T    AT01
+|   C                     Z-ADDWAU02T    AT02
+|   C                     Z-ADDDAU03T    AT03
+|   C                     MOVELWAU04     AT04
+|   C                     MOVELWAT05     AT05
+|   C                     Z-ADDTOTAL     AT06
+|   C                     TIME           AT97
+|   C                     Z-ADD$A8YMD    AT98
+|   C                     MOVEL$USER     AT99
+|   C                     WRITEAT0
+| 02-C                     END
+|    C*
+|    C                     Z-ADD0         TOTAL
+|    C                     SETOF                     32
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+

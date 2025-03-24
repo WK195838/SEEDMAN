@@ -1,0 +1,214 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : CKB310                                     *
+     H*    PROGRAM NAME :產生會計傳票　　                          *
+     H*    AUTHOR       : A1149   HUANG.SHU-MEI                      *
+     H*    CREATE DATE  : 1995.02.08                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 票據系統                                 *
+     F****************************************************************
+     FCKHAPF1 UP  E           K        DISK
+     FCKHBLF01IF  E           K        DISK
+     FCKHDLF01IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLAHLF01O   E           K        DISK
+     E*LOCAL DATA AREA ++++++++++++++++++++++++++++++++++++++++
+     IHA1
+     I                                              HA02  L2
+     I                                              HA15  L2
+     I                                              HA16  L1
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      201 2080$A8YMD
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I            DS
+     I                                        1  14 WHA16
+     I                                        9  14 HA16$
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN AH03      WAH03
+     C           *LIKE     DEFN AH02      WAH02
+     C           *LIKE     DEFN HA10      WHA10
+     C           *LIKE     DEFN HA10      @HA10
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAF     KLIST
+     C                     KFLD           AH01               公司別
+     C                     KFLD           AH04               會計科目
+     C           KEYHD     KLIST
+     C                     KFLD           AH01
+     C                     KFLD           HA16$   6
+     C*==============================================================*
+     C*                    MAIN ROUNTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C   L1                EXSR R7100
+     C   L2                EXSR R7200
+     C                     EXSR R2000
+     CL1 10                EXSR R8100
+     CL2 10                EXSR R8200
+     CLR 10                EXSR R8900
+     C*==============================================================*
+     C*          R1000     INITIAL VALUES
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C                     Z-ADD*ZEROS    WHA10
+|    C                     Z-ADD*ZEROS    @HA10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000     累計金額
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C                     ADD  HA10      WHA10
+|    C                     MOVELHA16      WHA16
+|    C*
+|    C                     MOVELAH02      HA18
+|    C                     UPDATHA1
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R7100     銀行帳號
+     C*==============================================================*
+03===C           R7100     BEGSR
+|    C*
+|    C                     MOVELHA16      WHA16
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R7200 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+04===C           R7200     BEGSR
+|    C* ---取得傳票號碼
+|    C                     MOVELHA02      AH01              公司別
+|    C                     MOVELHA15      AH10              傳票日期
+|    C                     CALL 'GLS002'
+|    C                     PARM AH01      S002I1  2
+|    C                     PARM AH10      S002I2  80
+|    C                     PARM 'F'       S002I3  1
+|    C           AH02      PARM           S002O1  9         傳票號碼
+|    C                     MOVELAH02      HA18
+|    C*
+|    C                     Z-ADD*ZEROS    AH03
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8100     WRITE GLAHPF
+     C*==============================================================*
+05===C           R8100     BEGSR
+|    C*清除欄位
+|    C                     EXSR R71A0
+|    C*
+|    C*----先寫入借方會計科目
+|    C*  --取得存入帳號之會計科目
+|    C                     MOVEL*BLANKS   HD08
+|    C           KEYHD     CHAINHD0                  40
+|    C           *LOVAL    SETLLHD0
+|    C                     MOVELHD08      AH04              會計科目
+|    C                     MOVELHA16$     AH07              銀行帳號
+|    C                     Z-ADDWHA10     AH12
+|    C*摘要
+|    C                     MOVEL*BLANKS   HB03
+|    C           HD03      CHAINHB0                  40
+|    C                     MOVELHB03      AH16
+|    C*----------------------------------
+|    C* CHAIN 會計科目檔GLAFPF        |
+|    C*---------------------------------------------
+|    C* AH05A,AH06A,AH07A,AH08A,AH09A,AH14A,AH15A  |
+|    C*---------------------------------------------
+|    C           KEYAF     CHAINAF0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELAF11      AH05A
+|   C                     MOVELAF12      AH06A
+|   C                     MOVELAF13      AH07A
+|   C                     MOVELAF14      AH08A
+|   C                     MOVELAF15      AH09A
+|   C                     MOVELAF16      AH14A
+|   C                     MOVELAF17      AH15A
+| 01-C                     END
+|    C                     ADD  1         AH03              傳票項次
+|    C                     TIME           AH97
+|    C                     Z-ADD$A8YMD    AH98
+|    C                     MOVEL$USER     AH99
+|    C                     WRITEAH0
+|    C*
+|    C                     ADD  WHA10     @HA10
+|    C                     Z-ADD*ZEROS    WHA10
+|    C                     MOVEL*BLANKS   WHA16
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8200     WRITE GLAHPF
+     C*==============================================================*
+06===C           R8200     BEGSR
+|    C*----清除欄位
+|    C                     EXSR R71A0
+|    C*----寫入貸方會計科目－應收票據1131
+|    C                     MOVELHA02      AH01              公司別
+|    C                     ADD  1         AH03              傳票項次
+|    C                     MOVELHA15      AH10              傳票日期
+|    C                     MOVEL'1131'    AH04              會計科目
+|    C                     Z-ADD@HA10     AH13              金額
+|    C                     TIME           AH97
+|    C                     Z-ADD$A8YMD    AH98
+|    C                     MOVEL$USER     AH99
+|    C                     WRITEAH0
+|    C                     Z-ADD*ZEROS    @HA10
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R71A0 ....清除欄位
+     C*==============================================================*
+07===C           R71A0     BEGSR
+|    C*
+|    C                     MOVEL*BLANKS   AH04
+|    C                     MOVEL*BLANKS   AH05
+|    C                     MOVEL*BLANKS   AH05A
+|    C                     MOVEL*BLANKS   AH06
+|    C                     MOVEL*BLANKS   AH06A
+|    C                     MOVEL*BLANKS   AH07
+|    C                     MOVEL*BLANKS   AH07A
+|    C                     MOVEL*BLANKS   AH08
+|    C                     MOVEL*BLANKS   AH08A
+|    C                     Z-ADD*ZEROS    AH09
+|    C                     MOVEL*BLANKS   AH09A
+|    C                     Z-ADD*ZEROS    AH12
+|    C                     Z-ADD*ZEROS    AH13
+|    C                     Z-ADD*ZEROS    AH14
+|    C                     MOVEL*BLANKS   AH14A
+|    C                     MOVEL*BLANKS   AH15
+|    C                     MOVEL*BLANKS   AH15A
+|    C                     MOVEL*BLANKS   AH16
+|    C                     MOVEL'CK'      AH17
+|    C                     MOVEL*BLANKS   AH18
+|    C                     MOVEL*BLANKS   AH19
+|    C                     MOVEL*BLANKS   AH20
+|    C                     Z-ADD*ZEROS    AH21
+|    C                     MOVEL*BLANKS   AH22
+|    C                     MOVEL*BLANKS   AH23
+|    C                     MOVEL*BLANKS   AH24
+|    C                     Z-ADD$A8YMD    AH25
+|    C                     MOVEL$USER     AH26
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... NOTHING
+     C*==============================================================*
+08===C           R8900     BEGSR
+|    C*
+|    C*
+08===C                     ENDSR
+

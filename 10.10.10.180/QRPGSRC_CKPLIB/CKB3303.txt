@@ -1,0 +1,230 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : CKB3303                                    *
+     H*    PROGRAM NAME :票據資料批次列印傳票作業                  *
+     H*    AUTHOR       : A1162  IVORY                               *
+     H*    CREATE DATE  : 1994/01/27                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :票據系統                                  *
+     H****************************************************************
+     FCKB330F IP  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     F            AF0                               KRENAMEGL0
+     FPA#APF  IF  E           K        DISK
+     FGLWFPF  UF  E           K        DISK                      A
+     FCKB330P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     IGL0
+     I              AF01                            DGL01
+     I              AF02                            DGL02
+     I              AF03                            DGL04
+     ICKB330R
+     I                                              WF01  L1
+     I              WF01                            PA15
+     I              WF04                            PA05
+     I              WF05                            PA07
+     I              WF06                            PA08
+     I              WF07                            PA09
+     I              WF08                            PA11
+     I              WF09                            PA12
+     I              WF10                            PA13
+     I              WF11                            PA06
+     I              WF12                            WCASH1
+     I              WF13                            WCASH2
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I           UDS
+     I                                      111 1160$CHYMD
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      551 551 @PAST
+     I*
+     I            DS
+     I I                                      1   80WDATE
+     I            DS
+     I I                                      1   80PDATE
+     I                                        3   40PRTY
+     I                                        5   60PRTM
+     I                                        7   80PRTD
+     I*
+     I            DS
+     I I                                      1  10 PA05
+     I                                        1  10 PA05@
+     I*
+     I            DS
+     I I                                      1  24 PA05N
+     I                                        1  24 PA05N@
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYGL     KLIST                           .APPALF02 KEY
+     C                     KFLD           DGL01
+     C                     KFLD           DGL02
+     C           KEY#A     KLIST                           .APPALF02 KEY
+     C                     KFLD           #A01
+     C                     KFLD           #A02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100
+     C*+ LEVEL BREAK INIT PROCESS +++++++++++++++++++++++++++++++++++
+     C   L1                EXSR R7100
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     EXSR R2000
+     C*
+     C*+ LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++
+     CL1 10                EXSR R8100
+     C*==============================================================*
+     C*          R0100 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*CLEAR TOTAL FIELD
+|    C                     Z-ADD*ZERO     PT01
+|    C                     Z-ADD*ZERO     PT02
+|    C                     Z-ADD*ZERO     X       10
+|    C                     Z-ADD*ZERO     WDATE   80
+|    C*
+|    C                     MOVEL'ATT'     DGL01
+|    C                     MOVEL'PH05'    #A01
+     C                     SETON                     1039
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ... CHAIN會計科目中文說明
+     C*==============================================================*
+02===C           R0200     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    DGL02
+|    C                     MOVELPA05      DGL02
+|    C           KEYGL     CHAINGL0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     MOVEL*BLANK    PA05N
+| 01*C                     ELSE
+|   C                     CALL 'P65'
+|   C                     PARM DGL04     P6501I 80
+|   C                     PARM 23        P6502I  30
+|   C           PA05N     PARM           P6503I 80
+|   C                     PARM           P6504I 80
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R0300 ... CHAIN部門中文說明
+     C*==============================================================*
+03===C           R0300     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    #A02
+|    C                     MOVELPA07      #A02
+|    C           KEY#A     CHAIN#A0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     MOVEL*BLANK    PA07N
+| 01*C                     ELSE
+|   C                     CALL 'P65'
+|   C                     PARM #A03      P6501I 80
+|   C                     PARM 9         P6502I  30
+|   C           PA07N     PARM           P6503I 80
+|   C                     PARM           P6504I 80
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R0400 ... TRANS傳票日期　（西＞中）
+     C*==============================================================*
+04===C           R0400     BEGSR
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM WDATE     P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '2'       P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+07===C           R2000     BEGSR
+|    C*
+|    C* HEADING ( PH1 )
+| 03-C           X         IFGE 7
+|   C                     Z-ADD0         X
+|   C                     SETON                     39
+| 03-C                     END
+|   C*
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           *IN39     IFEQ '1'
+     C                     ADD  1         PAGE@
+     C                     WRITEPH1
+     C                     SETOF                     39
+     C                     END
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C                     ADD  WCASH1    PT01
+|   C                     ADD  WCASH2    PT02
+|   C*
+|   C                     EXSR R0300                      .GET PA05N
+|   C                     EXSR R0200                      .GET PA07N
+|   C*
+     C           PA06      IFEQ 'D'
+     C                     SETON                     31
+     C                     ELSE
+     C                     SETOF                     31
+     C                     END
+     C**
+|   C                     WRITEPD1
+     C*
+     C           @PAST     IFEQ 'N'
+     C                     EXSR @@RTN
+     C                     END
+|   C*
+|   C                     ADD  1         X
+|    C********
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+     C           R7100     BEGSR
+     C*
+|    C                     Z-ADDWF03      WDATE
+|    C                     EXSR R0400                      .TRANS DATE
+|    C*
+     C                     SETON                     39
+|   C                     Z-ADD0         X
+|   C                     Z-ADD0         PAGE@
+     C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+     C           R8100     BEGSR
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* << TOTAL LINE DATA PREPARE >>
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     WRITEPT1
+     C*
+     C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+     C                     Z-ADD*ZERO     PT01
+     C                     Z-ADD*ZERO     PT02
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+    C*==============================================================*
+     C/COPY QRPGSRC,APS010
+

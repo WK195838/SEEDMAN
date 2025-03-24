@@ -1,0 +1,322 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : CKGL101                                    *
+     H*    PROGRAM NAME : 收／開票產生傳票                         *
+     H*    AUTHOR       : A1139                                      *
+     H*    CREATE DATE  : 1995.04.07                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     F****************************************************************
+     FCKHALF01UF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FMTMBPF  IF  E           K        DISK
+     FMTMEPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FCKGL101DCF  E                    WORKSTN
+     F                                        RRN   KSFILE SFLSR
+     F*為開票傳票號碼寫回應付帳款系統******************************
+     FPT#XPF  IF  E           K        DISK
+     FAPUCLF02UF  E           K        DISK
+     FAPUDLF02UF  E           K        DISK
+     FRVRGLF03UF  E           K        DISK
+     FAPUALF08UF  E           K        DISK
+     FAPUBLF01UF  E           K        DISK
+     F***************************************************************
+     E*---------------------------------------------------------------*
+     E                    @N      1   2 10
+     E                    @C1     6   6  1   @C2     4
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      152 161 $USERN
+     I*-------------------------------------------------------------
+     I                                      501 502 DHA02
+     I                                      503 503 DHA01
+     I**                                    504 504 DHA05
+     I                                      505 514 DHA04F
+     I                                      515 524 DHA04T
+     I                                      525 534 DHA03F
+     I                                      535 544 DHA03T
+     I                                      545 5520WHA07F
+     I                                      553 5600WHA07T
+     I                                      561 561 WHA05F
+     I                                      562 562 WHA05T
+     I*為開票傳票號碼寫回應付帳款系統******************************
+     I/COPY QRPGSRC,PT#XDS01
+     I***************************************************************
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHA     KLIST
+     C                     KFLD           DHA01
+     C                     KFLD           DHA02
+     C                     KFLD           HA03
+     C           KEY#      KLIST
+     C                     KFLD           HA04X   5
+     F*為開票傳票號碼寫回應付帳款系統******************************
+     C           KEY#X     KLIST
+     C                     KFLD           W#X01   2
+     C                     KFLD           DHA02
+     F***************************************************************
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C           *IN12     ANDEQ'0'
+    C                     EXSR R1000                      *SCR PROCESS
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C* INIT VALUE SET *---------------------------------------------*
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C           DHA02     CHAINAK0                  40
+|    C*--------------------------------------------------------------*
+|    C                     EXSR R1A00                      .SFL INIT
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END PRO
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C           *LOVAL    SETLLHA0
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1D00                      *SUB PRO
+|    C*
+02===C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C                     Z-ADD1         DRRN
+|    C                     Z-ADD0         RRN
+|    C*
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     5053  *SFLDSP,END
+|    C*
+|    C                     EXSR R1A20                      *SFL HEAD
+|    C* <<SFL INITIAITAL DATA ADD>>
+|    C*
+|    C****                 MOVEL'6'       DOPT
+|    C*
+|    C                     EXSR R1A10                      *ADD SFL DTA
+|    C*
+| 01-C           RRN       IFGT 0
+|   C                     SETON                     50    *SFLDSP
+| 01*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+04===C           R1A10     BEGSR
+|    C*
+|    C                     READ HA0                      46
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C                     EXSR R1A11                      *WRITE SFL
+|   C                     READ HA0                      46
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*=============================================================*
+     C*          R1A11 .... WRITE SUBFILE DATA
+     C*=============================================================*
+05===C           R1A11     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << SUBFILE DATA VALUE SET >>
+|    C*票類
+|    C                     MOVEL*BLANK    DHA05N
+|    C                     Z-ADD1         P       20
+|    C           HA05      LOKUP@C1,P                    49
+| 01-C           *IN49     IFEQ '1'
+|   C                     MOVEL@C2,P     DHA05N
+| 01-C                     END
+|    C*廠商／客戶名稱
+     C                     MOVELHA04      HA04X
+| 02-C           DHA01     IFEQ '1'
+|   C           KEY#      CHAINME0                  40
+|   C  N40                MOVELME04      DHA04N
+| 02*C                     ELSE
+|   C           KEY#      CHAINMB0                  40
+|   C  N40                MOVELMB03      DHA04N
+| 02-C                     END
+|    C*收／開票日
+| 03-C           HA06      IFNE 0
+|   C                     CALL 'P31'
+|   C                     PARM HA06      P3101I  80
+|   C                     PARM '2'       P3102I
+|   C                     PARM '1'       P3103I
+|   C                     PARM AK11      P3104I
+|   C                     PARM AK09      P3105I
+|   C           DHA06     PARM           P3111O  80
+| 03-C                     END
+|    C*到期日
+| 04-C           HA07      IFNE 0
+|   C                     CALL 'P31'
+|   C                     PARM HA07      P3101I  80
+|   C                     PARM '2'       P3102I
+|   C                     PARM '1'       P3103I
+|   C                     PARM AK11      P3104I
+|   C                     PARM AK09      P3105I
+|   C           DHA07     PARM           P3111O  80
+| 04-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  1         RRN
+|    C                     SETON                     3154
+|    C                     WRITESFLSR
+|    C*
+05===C                     ENDSR
+     C*=============================================================*
+     C*          R1A20 .... SFL HEADING (SFL CONTROL DATA PREPARE)
+     C*=============================================================*
+06===C           R1A20     BEGSR
+|    C*
+|    C           DHA02     CHAIN#B0                  40
+| 01-C           DHA01     IFEQ '1'
+|   C                     MOVEL@N,1      DHA01N
+| 01*C                     ELSE
+|   C                     MOVEL@N,2      DHA01N
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*=============================================================*
+     C*          R1C00 ....UPADTE GLAHLF01 (*ALL)
+     C*=============================================================*
+07===C           R1C00     BEGSR
+|    C*
+|    C*
+07===C                     ENDSR
+     C*=============================================================*
+     C*          R1D00 ....UPADTE GLAHLF01 & CALL SUB PRO
+     C*=============================================================*
+08===C           R1D00     BEGSR
+|    C*
+|    C                     READCSFLSR                  4242
+|    C*
+| 01-C           *IN42     DOWEQ'0'
+|   C                     SETON                     54
+| 02-C           DOPT      IFEQ '6'
+|   C                     MOVEL*BLANK    WHA51   9
+|   C                     CALL 'GLA990'
+|   C                     PARM DHA02     P990I1  2
+|   C                     PARM DHA01N    P990I2 10
+|   C                     PARM DHA01     P990I3  1
+|   C           WHA51     PARM           P990O1  9
+|   C           KEYHA     CHAINHA0                  40
+|   C                     MOVELWHA51     HA51
+|   C                     TIME           HA97
+|   C                     Z-ADD$A8YMD    HA98
+|   C                     MOVEL$USER     HA99
+|   C                     UPDATHA0
+     C*為開票傳票號碼寫回應付帳款系統******************************
+     C**若PT#XDS01之#X130='Y'時，則傳票號碼要UPDATE回應付帳款系統
+     C                     MOVEL'CK'      W#X01
+     C           KEY#X     CHAIN#X0                  40
+     C           #X130     IFEQ 'Y'
+     C           DHA01     ANDEQ'2'
+     C                     EXSR R1D10
+     C                     END
+|   C***************************************************************
+|   C                     MOVEL*BLANK    DOPT
+| 03-C           WHA51     IFNE *BLANK
+|   C                     SETOF                     31    *PR
+| 03-C                     END
+|   C                     UPDATSFLSR
+|   C                     GOTO E1D00
+| 02-C                     END
+|   C*
+| 04-C           DOPT      IFEQ '5'
+|   C                     CALL 'CKA990'
+|   C                     PARM DHA02     PA99I1  2
+|   C                     PARM HA03      PA99I2 10
+|   C                     PARM DHA01     PA99I3  1
+|   C           @RTNC     PARM           @RTNC   2
+|   C*** DPDATE BY GRACE AT 94/06/20 ***
+|   C***                  MOVEL'6'       DOPT
+|   C                     MOVEL*BLANK    DOPT
+|   C*** END AT 94/06/20
+|   C                     SETON                     31
+|   C                     UPDATSFLSR
+|   C*
+| 05-C           @RTNC     IFEQ '03'
+|   C                     MOVEL'1'       *IN03            END
+|   C           *LOVAL    SETLLHA0
+|   C                     GOTO E1D00
+| 05-C                     END
+|   C*
+| 06-C           @RTNC     IFEQ '12'                       PREVIOUS
+|   C           *LOVAL    SETLLHA0
+|   C                     GOTO E1D00
+| 06-C                     END
+| 04-C                     END
+|   C*
+|   C                     READCSFLSR                    42
+| 01-C                     END
+|    C                     SETOF                     54
+|    C*
+08===C           E1D00     ENDSR
+     C*=============================================================*
+     C*為開票傳票號碼寫回應付帳款系統******************************
+     C/COPY QRPGSRC,CKGL101C
+     C*=============================================================*
+**
+應收票據
+應付票據
+**
+1本2客3支4保5商6承
+

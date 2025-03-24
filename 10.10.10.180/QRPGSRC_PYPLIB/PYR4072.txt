@@ -1,0 +1,249 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR4072                                    *
+     H*    PROGRAM NAME :特別休假代金明細表                        *
+     H*    AUTHOR       : SANTOS                                     *
+     H*    CREATE DATE  : 90/02/06                                   *
+     H*    UPDATE DATE  : 90/04/07 A1274 EVA                         *
+     H*    SYSTEM       :音教講師管理系統                          *
+     H****************************************************************
+     FPY2HJF01IP  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYR407P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     IH2JF01
+     I                                              H201  L1
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      152 161 $USERN
+     I                                      173 174 $COR
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I                                      606 612 DEM04S
+     I                                      613 619 DEM04E
+     I                                      521 528 DEM02S
+     I                                      531 538 DEM02E
+     I                                      541 5430DYEAR
+     I                                      571 5750DYM
+     I                                      574 5750DMM
+     I                                      581 581 DSEL
+     I                                      591 5960WYM
+     I                                      597 6000WYEAR
+     I*911119     DS
+     I*911119                                 1   50PMD1
+     I*911119                                 1   30PMM1
+     I*911119                                 4   50PDD1
+     I*911119     DS
+     I*911119                                 1   50PMD2
+     I*911119                                 1   30PMM2
+     I*911119                                 4   50PDD2
+     I*
+     I/COPY PYDDSSRC,PYPMDS01
+     I*
+     I              '員工編號'          C         D1
+     I              '部門編號'          C         D2
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C           *LIKE     DEFN $A8YMD    WTR041
+     C           *LIKE     DEFN $A8YMD    WTR042
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*
+     C                     MOVEL'01'      KPM01   2
+     C           KEYPM     KLIST
+     C                     KFLD           KPM01
+     C                     KFLD           DEM01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      .DETAIL
+     CL1 10                EXSR R8100                      .L1
+     C*
+     CLR 10                EXSR R8900
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DEM01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C*公司名稱
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C*篩選人員條件：當月１６日～下月１５日
+|    C*911119              Z-ADD*ZERO     PMD1             起日
+|    C*911119              Z-ADD16        PDD1
+|    C*911119              Z-ADDDMM       PMM1
+|    C*
+|    C*911119              Z-ADD*ZERO     PMD2             迄日
+|    C*911119              Z-ADD15        PDD2
+| 01-C*911119    DMM       IFEQ 12
+|   C*911119              Z-ADD1         PMM2
+| 01*C*911119              ELSE
+|   C*911119    DMM       ADD  1         PMM2
+| 01-C*911119              END
+|    C*
+|    C*GET PAYROLL PARAMETER
+|    C           KEYPM     CHAINPM0                  40
+|    C*
+|    C           WYM       SUB  191100    PYM
+|    C           WYEAR     SUB  1911      PYEAR
+|    C                     Z-ADD*ZERO     TT11
+|    C                     Z-ADD*ZERO     TT12
+|    C                     Z-ADD*ZERO     PRRN
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+|    C*部門名稱
+|    C           KEYDP     CHAINDP0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELDP02      PDP02
+| 02*C                     ELSE
+|   C                     MOVEL*BLANK    PDP02
+| 02-C                     END
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM EM13      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM DFMT      P3104I  1
+|    C                     PARM DTYPE     P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    PEM13            到職日期
+|    C*
+|    C*可休日數（四捨五入）
+|    C           H208H     DIV  PM101     A1      42
+|    C           H208H     DIV  PM101     A10     41
+|    C           A1        SUB  A10       A11     32
+| 03-C           A11       IFGE 0.05
+|   C           H208      ADD  A10       PH208
+|   C                     ADD  0.1       PH208
+| 03*C                     ELSE
+|   C           H208      ADD  A10       PH208
+| 03-C                     END
+|    C*
+|    C*已休日數（四捨五入）
+|    C           H209H     DIV  PM101     A2      42
+|    C           H209H     DIV  PM101     A20     41
+|    C           A2        SUB  A20       A21     32
+| 04-C           A21       IFGE 0.05
+|   C           H209      ADD  A20       PH209
+|   C                     ADD  0.1       PH209
+| 04*C                     ELSE
+|   C           H209      ADD  A20       PH209
+| 04-C                     END
+|    C*
+|    C*可折日數（四捨五入）
+|    C           H205H     DIV  PM101     A5      42
+|    C           H205H     DIV  PM101     A50     41
+|    C           A5        SUB  A50       A51     32
+| 05-C           A51       IFGE 0.05
+|   C           H205      ADD  A50       PH205
+|   C                     ADD  0.1       PH205
+| 05*C                     ELSE
+|   C           H205      ADD  A50       PH205
+| 05-C                     END
+|    C*年資
+     C           H216      DIV  12        H216Y
+     C                     MVR            H216M
+|    C*
+|    C*上年度可休日（四捨五入）
+|    C           H210H     DIV  PM101     A3      42
+|    C           H210H     DIV  PM101     A30     41
+|    C           A3        SUB  A30       A31     32
+| 05-C           A31       IFGE 0.05
+|   C           H210      ADD  A30       PH210
+|   C                     ADD  0.1       PH210
+| 05*C                     ELSE
+|   C           H210      ADD  A30       PH210
+| 05-C                     END
+|    C*
+|    C*合計欄位
+|    C                     ADD  1         TT11
+|    C                     ADD  H206      TT12
+|    C*
+|    C*                    MOVEL*BLANK    MEMO
+|    C                     ADD  1         PRRN
+|    C*
+|    C                     WRITEPD1
+|    C*
+02===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK L1        公司合計
+     C*==============================================================*
+03===C           R8100     BEGSR
+|    C*
+|    C                     WRITEPT1
+|    C                     SETON                     39
+|    C*
+|    C                     Z-ADD*ZERO     TT11
+|    C                     Z-ADD*ZERO     TT12
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR --- HAS DATA
+     C*==============================================================*
+04===C           R8900     BEGSR
+|    C*
+|    C                     WRITEPE1
+|    C*
+04===C           E8900     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+05===C           R8999     BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+05===C           E8999     ENDSR
+     C*==============================================================*
+

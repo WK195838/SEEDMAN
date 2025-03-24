@@ -1,0 +1,180 @@
+     H****************************************************************
+     H*                                                              *
+     H* PROGRAM NAME : VTA0231                                       *
+     H* AUTHER       : DEREK                                         *
+     H* CREATE DATE  : 2012/07/03                                    *
+     H* UPDATE DATE  :                                               *
+     H* SYSTEM       :寰盛洋酒                                     *
+     H* SUBSYSTEM    :媒體申報                                     *
+     H* REMARK       :銷項憑證永不轉檔查詢及取消－銷退折讓         *
+     A*===============================================================
+     A* CODE | AUTHOR |  DATE  | DESCRIPTION
+     A*---------------------------------------------------------------
+      ****************************************************************
+     FVTA0231DCF  E                    WORKSTN
+     I*
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      152 161 $USERN
+     I                                      111 1160$CHYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      139 139 $RMK01
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      201 2080DATE
+     I                                      203 2040$A8Y
+     I                                      205 2060$A8M
+     I                                      598 5990$LPRT
+     I                                      501 505 $WRHUS
+     I                                      513 513 $WRHTY
+     I*公司別
+     I                                      601 601 DVP91
+     I                                      605 606 CMPS
+     I                                      607 608 CMPE
+     I*YYMM
+     I                                      614 6170DVP04S
+     I                                      614 6150MMS
+     I                                      616 6170YYS
+     I                                      620 6230YYMMS
+     I*
+     I                                      634 6370DVP04E
+     I                                      634 6350MME
+     I                                      636 6370YYE
+     I                                      640 6430YYMME
+     I                                      800 8070YMD8S
+     I                                      810 8170YMD8E
+     I*DATE
+     I            DS
+     I                                        1   80DATES
+     I                                        1   60DATSYM
+     I                                        7   80DDS
+     I*
+     I            DS
+     I                                        1   80DATEE
+     I                                        1   60DATEYM
+     I                                        7   80DDE
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN98     PARM *IN98     IN98    1
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N98                EXSR RTN010                     *INIT ENVIRM
+     C*
+  01-C           *IN03     DOUEQ'1'
+    C           *IN99     OREQ '0'
+    C*
+    C                     EXFMTDSPD1
+    C                     MOVEA*ALL'0'   *IN,60
+    C*
+  02-C           *IN03     IFEQ '0'
+    C                     EXSR RTN100                     *CHECK SCR01?
+  02-C                     END
+  01-C                     END
+     C*
+     C                     EXSR OUTLDA
+     C   03                SETON                     LR
+     C                     RETRN
+     C*===============================================================*
+     C*          RTN010....INIT SCREEN
+     C*===============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   LDA
+|    C*
+|    C                     MOVE 'W'       DVP91
+|    C                     MOVE '1'       DVP92
+|    C                     MOVE $A8Y      YYS
+|    C                     MOVE $A8Y      YYE
+|    C                     MOVE $A8M      MMS
+|    C                     MOVE $A8M      MME
+|    C*                    Z-ADD0102      DVP04S  40
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*          RTN100....CHECK SCREEN
+     C*===============================================================*
+02===C           RTN100    BEGSR
+|    C*預設起始年月
+| 01-C           DVP91     IFEQ 'W'
+|   C                     Z-ADD0302      DVP04S  40
+| 01*C                     ELSE
+|   C                     Z-ADD0502      DVP04S  40
+| 01-C                     END
+|    C*
+| 02-C           MMS       IFGT 12
+|   C           MMS       ORLT 1
+|   C                     SETON                     639995
+| 02-C                     END
+|    C   99                GOTO END100
+|    C                     Z-ADDMMS       YYMMS
+|    C                     MOVELYYS       YYMMS
+|    C*資料歸屬年月
+| 03-C           MME       IFGT 12
+|   C           MME       ORLT 1
+|   C                     SETON                     649995
+| 03-C                     END
+|    C   99                GOTO END100
+|    C                     Z-ADDMME       YYMME
+|    C                     MOVELYYE       YYMME
+|    C*
+|    C                     MOVE '004N7'   HB2@FA
+|    C                     MOVE YYMMS     HB2@F
+|    C                     MOVE '006N7'   HB2@TA
+|    C                     EXSR HB@ADD                     ADD CENTURY
+|    C                     MOVE HB2@T     YMD6S   60
+|    C*
+|    C                     MOVE '004N7'   HB2@FA
+|    C                     MOVE YYMME     HB2@F
+|    C                     MOVE '006N7'   HB2@TA
+|    C                     EXSR HB@ADD                     ADD CENTURY
+|    C                     MOVE HB2@T     YMD6E   60
+|    C*
+| 04-C           YMD6S     IFGT YMD6E
+|   C                     SETON                     636491
+|   C                     SETON                     99
+| 04-C                     END
+|    C   99                GOTO END100
+|    C*
+|    C                     Z-ADDYMD6S     DATSYM
+|    C                     Z-ADDYMD6E     DATEYM
+|    C                     Z-ADD01        DDS
+|    C                     CALL 'P34'
+|    C                     PARM DATEYM    P3401I  60
+|    C                     PARM '2'       P3402I  1
+|    C                     PARM '1'       P3403I  1
+|    C                     PARM           P3401O  1
+|    C           DDE       PARM           P3402O  20
+|    C*
+|    C                     Z-ADDDATES     YMD8S
+|    C                     Z-ADDDATEE     YMD8E
+|    C*
+|    C                     MOVELDVP91     CMPS
+|    C                     MOVELDVP91     CMPE
+|    C                     MOVE DVP92     CMPS
+|    C                     MOVE DVP92     CMPE
+| 05-C           DVP92     IFEQ ' '
+|   C                     MOVE '1'       CMPS
+|   C                     MOVE '9'       CMPE
+| 05-C                     END
+|    C*
+02===C           END100    ENDSR
+     C*===============================================================*
+     C*          OUTLDA....OUT LDA
+     C*===============================================================*
+03===C           OUTLDA    BEGSR
+|    C*
+|    C                     OUT  *NAMVAR
+|    C*
+03===C           ENDLDA    ENDSR
+     C*
+     C/COPY HBP2CVTR
+

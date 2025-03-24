@@ -1,0 +1,490 @@
+     H****************************************************************
+     H*
+     H*    PROGRAM ID   : PCR044B
+     H*    PROGRAM NAME : 專案明細表－登帳日期排序
+     H*    CREATE DATE  : 1992.12.31
+     H*    UPDATE DATE  :
+     H****************************************************************
+     FGLWF17  IP  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FGLAAPF  IF  E           K        DISK
+     FPCR044BPO   E             39     PRINTER
+     E*
+     E*欄位名稱
+     E*******             W01         5 20
+     E*欄位代碼GROM *LDA
+     E                    W02L        5  2
+     E*檢核程式
+     E                    W03         5 10
+     E*欄位內容
+     E                    W04         5 20
+     E*欄位內容說明
+     E                    W05         5 20
+     E*傳入參數名稱
+     E                    W08         7 10
+     I*
+     IGLWF17R
+     I                                              WF1701L7
+     I                                              WF1702L6
+     I                                              WF1703L5
+     I                                              WF1704L4
+     I                                              WF1705L3
+     I                                              WF1708L2
+     I                                              WF1706L1
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DCA01
+     I                                      503 510 DCA04S
+     I                                      511 518 DCA04E
+     I                                      519 5250DCA10S
+     I                                      526 5320DCA10E
+     I                                      533 5400DCA10F
+     I                                      541 5480DCA10T
+     I                                      549 549 DOP
+     I                                      550 550 DSORT
+     I*
+     I                                      951 960 W02L
+     I*
+     I                                      773 773 DL1
+     I                                      774 774 DL2
+     I                                      775 775 DL3
+     I                                      776 776 DL4
+     I                                      777 777 DL5
+     I                                      778 778 DL6
+     I                                      779 779 DL7
+     I                                      931 931 DCA17
+     I                                      934 942 DCA02S
+     I                                      943 951 DCA02E
+     I*檢核程式之參數
+     ICHKPGM      DS
+     I                                        1   2 WAK01
+     I                                        3  22 WPARM1
+     I                                       23  32 WPARM2
+     I                                       33  33 WCHK
+     I            DS
+     I                                        1 100 W04
+     I                                        1  20 WF1701
+     I                                       21  40 WF1702
+     I                                       41  60 WF1703
+     I                                       61  80 WF1704
+     I                                       81 100 WF1705
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAA     KLIST
+     C                     KFLD           DCA01
+     C                     KFLD           W02L,I
+     C           KEYAF     KLIST
+     C                     KFLD           DCA01
+     C                     KFLD           WF1706
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C   L2                EXSR R2000                      .GET 說明
+     C                     EXSR R3000                      .PRT DETAIL
+     C*
+     CL2 10                EXSR R8100
+     CL3 10                EXSR R8200
+     CL4 10                EXSR R8300
+     CL5 10                EXSR R8400
+     CL6 10                EXSR R8500
+     CL7 10                EXSR R8600
+     CLR 10                WRITEPE2
+     C*
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C*
+|    C                     MOVE DCA01     WAK01
+|    C* GET表頭公司別
+|    C           DCA01     CHAIN#B0                  40
+|    C   40                MOVEL*BLANK    #B16
+|    C           DCA01     CHAINAK0                  40
+|    C**
+|    C* CALL 'GLS005' GET 本期結帳碼
+|    C**
+|    C                     CALL 'GLS005'
+|    C                     PARM DCA01     P005I1  2
+|    C                     PARM DCA10E    P005I2  80
+|    C                     PARM 'S'       P005I3  1
+|    C                     PARM           P005O1  40
+|    C                     PARM           P005O2  20
+|    C                     PARM           P005O3  1
+|    C                     PARM           P005O4  1
+|    C*
+|    C                     SETON                     3132
+|    C*
+|    C*CLEAR TOTAL FIELD
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT31
+|    C                     Z-ADD*ZERO     PT41
+|    C                     Z-ADD*ZERO     PT51
+|    C                     Z-ADD*ZERO     PT61
+|    C*
+| 01-C                     DO   5         I       10
+|   C* KEYAA=DCA01+W02,I
+| 02-C           W02L,I    IFNE *BLANKS
+|   C           KEYAA     CHAINAA0                  40
+|   C*******              MOVE AA03      W01,I
+|   C                     MOVE AA04      W03,I
+|   C                     MOVE AA05      W08,I
+     C*
+|   C                     CALL 'GLS001'
+|   C                     PARM PDEC      S001I1 80
+|   C                     PARM AA03      S001I2 80
+|   C                     PARM 50        S001I3  30
+|   C           PDEC      PARM           S001O1 80
+     C*
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C*
+     C           DCA17     IFEQ '1'
+     C                     MOVEL'台北'  CA17D
+     C                     ELSE
+     C           DCA17     IFEQ '2'
+     C                     MOVEL'台中'  CA17D
+     C                     ELSE
+     C           DCA17     IFEQ '3'
+     C                     MOVEL'高雄'  CA17D
+     C                     ELSE
+     C                     MOVEL'*ALL  '  CA17D
+| 01-C                     END
+| 01-C                     END
+| 01-C                     END
+|    C*
+     C           DOP       IFEQ '1'
+     C                     SETON                     51
+     C                     ELSE
+     C           DOP       IFEQ '2'
+     C                     SETON                     52
+     C                     ELSE
+     C                     SETON                     53
+     C                     END
+     C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ....GET 欄位說明
+     C*==============================================================*
+03===C           R2000     BEGSR
+|    C*
+| 01-C                     DO   5         I
+| 02-C           W03,I     IFEQ *BLANKS
+|   C           W04,I     OREQ *BLANKS
+|   C                     MOVE W04,I     W05,I
+| 02*C                     ELSE
+|   C                     MOVE W04,I     WPARM1
+|   C                     MOVE W08,I     WPARM2
+|   C                     CALL W03,I
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C           W05,I     PARM           DESC   20
+| 02-C                     END
+| 01-C                     END
+|    C****************
+|    C* 摘要重新串連
+| 03-C           *IN31     IFEQ '1'
+|   C                     MOVE *BLANK    PCA16
+| 04-C                     DO   5         I
+| 05-C           W05,I     IFNE *BLANKS
+|   C                     CALL 'GLS001'
+|   C                     PARM PCA16     S001I1 80
+|   C                     PARM W05,I     S001I2 80
+|   C                     PARM 50        S001I3  30
+|   C           PCA16     PARM           S001O1 80
+| 05-C                     END
+| 04-C                     END
+| 03-C                     END
+     C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R3000 ... DETAIL
+     C*==============================================================*
+02===C           R3000     BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     3739
+|   C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|   C                     SETON                     3132
+| 01-C                     END
+|    C*
+| 02-C           *IN37     IFEQ '1'
+|   C                     WRITEPE1
+| 02-C                     END
+|    C                     SETOF                     37
+|    C*
+|    C* CHG日期(FILE->SCREEN)
+|    C                     MOVE WF1708    P3101I
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C           PCA10     PARM           P3101O  80
+|    C***************
+|    C* GET會計科目
+|    C                     MOVE WF1706    PCA04
+|    C*
+|    C                     WRITEPD1
+|    C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|    C                     SETOF                     3132
+|    C* ACCUMULATE TOTAL
+|    C                     ADD  WF1709    PT11
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+05===C           R8100     BEGSR
+|    C*
+| 01-C           DL7       IFNE *BLANKS
+|   C*
+|   C                     Z-ADDPCA10     PCA10T
+|   C                     WRITEPT1
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     32
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  PT11      PT21
+|    C                     Z-ADD*ZERO     PT11
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8200 ... LEVEL BREAK 2
+     C*==============================================================*
+06===C           R8200     BEGSR
+|    C*
+| 01-C           DL5       IFNE *BLANKS
+|   C****************
+|   C* 摘要重新串連
+|   C                     MOVE *BLANK    PCA16T
+| 02-C                     DO   5         I
+| 03-C           W05,I     IFNE *BLANKS
+|   C                     CALL 'GLS001'
+|   C                     PARM PCA16T    S001I1 80
+|   C                     PARM W05,I     S001I2 80
+|   C                     PARM 50        S001I3  30
+|   C           PCA16T    PARM           S001O1 80
+| 03-C                     END
+| 02-C                     END
+|   C*
+|   C                     MOVE *BLANK    P011I1
+|   C                     MOVELPCA16T    P011I1
+|   C*
+|   C* 小計說明部份右靠
+|   C                     CALL 'GLS011'
+|   C                     PARM           P011I1 80
+|   C                     PARM 50        P011I2  30
+|   C                     PARM '3'       P011I3  1
+|   C           PCA16T    PARM           P011O1 80
+|   C*
+|   C                     WRITEPT2
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     3132
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  PT21      PT31
+|    C                     Z-ADD*ZERO     PT21
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8300 ... LEVEL BREAK 3
+     C*==============================================================*
+07===C           R8300     BEGSR
+|    C*
+| 01-C           DL4       IFNE *BLANKS
+|   C****************
+|   C* 摘要重新串連
+|   C                     MOVE *BLANK    PCA16T
+| 02-C                     DO   4         I
+| 03-C           W05,I     IFNE *BLANKS
+|   C                     CALL 'GLS001'
+|   C                     PARM PCA16T    S001I1 80
+|   C                     PARM W05,I     S001I2 80
+|   C                     PARM 50        S001I3  30
+|   C           PCA16T    PARM           S001O1 80
+| 03-C                     END
+| 02-C                     END
+|   C*
+|   C                     MOVE *BLANK    P011I1
+|   C                     MOVELPCA16T    P011I1
+|   C*
+|   C* 小計說明部份右靠
+|   C                     CALL 'GLS011'
+|   C                     PARM           P011I1 80
+|   C                     PARM 50        P011I2  30
+|   C                     PARM '3'       P011I3  1
+|   C           PCA16T    PARM           P011O1 80
+|   C*
+|   C                     WRITEPT3
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     3132
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  PT31      PT41
+|    C                     Z-ADD*ZERO     PT31
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R8400 ... LEVEL BREAK 4
+     C*==============================================================*
+08===C           R8400     BEGSR
+|    C*
+| 01-C           DL3       IFNE *BLANKS
+|   C****************
+|   C* 摘要重新串連
+|   C                     MOVE *BLANK    PCA16T
+| 02-C                     DO   3         I
+| 03-C           W05,I     IFNE *BLANKS
+|   C                     CALL 'GLS001'
+|   C                     PARM PCA16T    S001I1 80
+|   C                     PARM W05,I     S001I2 80
+|   C                     PARM 50        S001I3  30
+|   C           PCA16T    PARM           S001O1 80
+| 03-C                     END
+| 02-C                     END
+|   C*
+|   C                     MOVE *BLANK    P011I1
+|   C                     MOVELPCA16T    P011I1
+|   C*
+|   C* 小計說明部份右靠
+|   C                     CALL 'GLS011'
+|   C                     PARM           P011I1 80
+|   C                     PARM 50        P011I2  30
+|   C                     PARM '3'       P011I3  1
+|   C           PCA16T    PARM           P011O1 80
+|   C*
+|   C                     WRITEPT4
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     3132
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  PT41      PT51
+|    C                     Z-ADD*ZERO     PT41
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R8500 ... LEVEL BREAK 5
+     C*==============================================================*
+09===C           R8500     BEGSR
+|    C*
+| 01-C           DL2       IFNE *BLANKS
+|   C****************
+|   C* 摘要重新串連
+|   C                     MOVE *BLANK    PCA16T
+| 02-C                     DO   2         I
+| 03-C           W05,I     IFNE *BLANKS
+|   C                     CALL 'GLS001'
+|   C                     PARM PCA16T    S001I1 80
+|   C                     PARM W05,I     S001I2 80
+|   C                     PARM 50        S001I3  30
+|   C           PCA16T    PARM           S001O1 80
+| 03-C                     END
+| 02-C                     END
+|   C*
+|   C                     MOVE *BLANK    P011I1
+|   C                     MOVELPCA16T    P011I1
+|   C*
+|   C* 小計說明部份右靠
+|   C                     CALL 'GLS011'
+|   C                     PARM           P011I1 80
+|   C                     PARM 50        P011I2  30
+|   C                     PARM '3'       P011I3  1
+|   C           PCA16T    PARM           P011O1 80
+|   C*
+|   C                     WRITEPT5
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     3132
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  PT51      PT61
+|    C                     Z-ADD*ZERO     PT51
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R8600 ... LEVEL BREAK 6
+     C*==============================================================*
+10===C           R8600     BEGSR
+|    C*
+| 01-C           DL1       IFNE *BLANKS
+|   C****************
+|   C* 摘要重新串連
+|   C                     MOVE *BLANK    PCA16T
+|   C                     MOVELW05,1     PCA16T
+|   C*
+|   C                     MOVE *BLANK    P011I1
+|   C                     MOVELPCA16T    P011I1
+|   C*
+|   C* 小計說明部份右靠
+|   C                     CALL 'GLS011'
+|   C                     PARM           P011I1 80
+|   C                     PARM 50        P011I2  30
+|   C                     PARM '3'       P011I3  1
+|   C           PCA16T    PARM           P011O1 80
+|   C*
+|   C                     WRITEPT6
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     3132
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD*ZERO     PT61
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+11===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R1000
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+11===C                     ENDSR
+

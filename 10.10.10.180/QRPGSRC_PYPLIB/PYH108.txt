@@ -1,0 +1,186 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     A*    PROGRAM-ID   : PYH108                                     *
+     A*    PROGRAM NAME :員工退休金提撥明細                        *
+     A*    AUTHOR       : SHARON A1386                               *
+     A*    CREATE DATE  :94/03/31                                    *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       :勞退新制系統                              *
+     F****************************************************************
+     FPYH5PF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYH108D CF  E                    WORKSTN
+    *F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E                    @A01    1   3  8               異動類別
+     E*---------------------------------------------------------------*
+    *I*LOCAL DATA AREA
+    *I           UDS
+    *I                                      101 110 $USER
+    *I                                      187 1920DDATE
+    *I                                      152 161 $USERN
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+    *C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+    *C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           DH501     PARM           P1071I  2         公司編號
+     C           DH502     PARM           P1072I  8         員工編號
+     C           DH409     PARM           P1073I  60        月提工資
+     C           DH408     PARM           P1074I  32        企提率
+     C           DH407     PARM           P1075I  32        自提率
+     C                     PARM           @RTNC   2          FUN KEY
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYEM     KLIST                           *PYEMPF
+     C                     KFLD           DH501
+     C                     KFLD           DH502
+     C           KEYH5     KLIST                           *PYH5PF
+     C                     KFLD           DH501
+     C                     KFLD           DH502
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+    *C  N10                EXSR R0100                      *INIT
+     C*
+     C           @RTNC     DOWEQ*BLANK
+    *C                     EXSR R1000                      *SCR PROCESS
+     C                     END
+     C*
+    *C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+    *C           R0100     BEGSR
+     C*
+     C* INIT VALUE SET *---------------------------------------------*
+    *C                     MOVEL*BLANK    @RTNC
+     C                     Z-ADD14        @PRCD            .PAGE SIZE
+     C                     MOVEL*BLANK    DH504
+     C                     MOVEL*BLANK    DH514
+     C*--------------------------------------------------------------*
+     C*
+     C           KEYEM     CHAINEM0                  42
+     C  N42                MOVELEM03      DEM03
+     C*
+     C           DH501     CHAINCM0                  43
+     C  N43                MOVELCM02      DCM02
+     C*　　　　　　　
+    *C                     EXSR R1A00                      .SFL INIT
+     C*　　　　　　　
+     C                     SETON                     10
+     C*
+    *C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+    *C           R1000     BEGSR
+     C*
+    *C                     WRITEDSPC1
+    *C                     EXFMTSFLCR
+    *C                     MOVEA*ALL'0'   *IN,60
+     C*
+    *C           *IN03     IFEQ '1'                        *END
+    *C                     MOVEL'03'      @RTNC
+    *C                     GOTO E1000
+     C                     END
+     C*
+    *C           *IN12     IFEQ '1'                        *PREVIOUS
+    *C                     MOVEL'12'      @RTNC
+    *C                     GOTO E1000
+    *C                     END
+     C*
+    *C           *IN25     IFEQ '1'                        *NEXT PAGE
+    *C                     EXSR R1N00
+    *C                     GOTO E1000
+    *C                     END
+     C*
+     C*
+    *C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+    *C           R1A00     BEGSR
+     C*
+    *C                     Z-ADD0         DRRN
+    *C                     Z-ADD0         RRN
+    *C                     Z-ADD0         @DRCD            *DSP RCD
+    *C                     MOVEL'N'       @BOTOM  1        *BOTTOM
+     C*
+    *C                     SETOF                     51    *SFLDSPCTL
+    *C                     SETON                     52    *SFLCLR
+    *C                     WRITESFLCR
+    *C                     SETOF                     52
+     C*
+    *C                     SETON                     51    *SFLDSPCTL
+    *C                     SETOF                     5053  *SFLDSP,END
+     C*
+    *C   99                GOTO E1A00
+     C* <<SFL INITIAITAL DATA ADD>>
+     C*
+     C           KEYH5     SETGTH50
+    *C                     EXSR R1A10                      *ADD SFL DTA
+     C*
+    *C           RRN       IFGT 0
+    *C                     SETON                     50    *SFLDSP
+    *C                     ELSE
+    *C                     SETON                     99    *NO DTA
+    *C                     MOVEL'UPT2050' ERRID
+    *C                     MOVEL'PTMF'    ERRF
+    *C                     END
+     C*
+    *C           E1A00     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+    *C           R1A10     BEGSR
+     C*
+     C                     Z-ADD*ZERO     I       10
+     C*一筆異動WRITE一筆,當作一筆資料
+     C           KEYH5     REDPEH50                      46
+     C           *IN46     DOWEQ'0'
+     C                     MOVELH504      I
+     C                     MOVEL@A01,I    DH504
+     C                     ADD  1         RRN
+     C                     WRITESFLSR
+     C           KEYH5     REDPEH50                      46
+     C                     END
+     C*
+     C           *IN46     IFEQ '1'
+    *C                     Z-ADDRRN       @DRCD
+    *C                     MOVE 'Y'       @BOTOM
+    *C                     SETON                     9653  *SFLEND
+    *C                     END
+     C*
+    *C                     Z-ADDRRN       DRRN
+     C*
+    *C                     ENDSR
+     C*=============================================================*
+     C*          R1N00 ....ROLLUP MAIN ROUTINE
+     C*=============================================================*
+    *C           R1N00     BEGSR
+     C*
+    *C           @BOTOM    IFEQ 'Y'                        *EOF
+     C                     SETON                         96*LST PAG
+    *C                     MOVEL'CPF5203' ERRID
+    *C                     MOVEL'PTMF'    ERRF
+    *C                     SETON                     99
+    *C                     Z-ADDRRN       DRRN
+    *C                     ELSE
+    *C                     EXSR R1A10                      *ADD SFL DTA
+    *C                     END
+     C*
+    *C                     ENDSR
+     C*==============================================================*
+**
+1.開始
+2.調整
+3.停止
+

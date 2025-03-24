@@ -1,0 +1,302 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA3041                                    *
+     H*    PROGRAM NAME :員工調薪試算作業                        *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 90/07/25                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYPYPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FPYSCPF  IF  E           K        DISK
+     FPYSEPF  IF  E           K        DISK
+     FPYSFPF  IF  E           K        DISK
+     FPYSGPF  IF  E           K        DISK
+     FPYSJPF  IF  E           K        DISK
+     FPYRV4L01IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYSHPF  UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I/COPY PYDDSSRC,PYPMDS01
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DRV01
+     I                                      503 5050DRV03
+     I                                      509 5120WRV03
+     I                                      517 5230DYMD
+     I                                      525 5320WYMD
+     I                                      601 6020DRV04
+     I            DS
+     I                                        1   8 ZYMD1
+     I                                        1   80WYMD1
+     I                                        1   40YY1
+     I                                        5   60MM1
+     I                                        7   80DD1
+     I            DS
+     I                                        1   8 ZYMD2
+     I                                        1   80WYMD2
+     I                                        1   40YY2
+     I                                        5   60MM2
+     I                                        7   80DD2
+     I*
+     I            DS
+     I                                        1   80EM13
+     I                                        1   40EM13Y
+     I*
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPY     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           EM02             員工編號
+     C           KEYSC     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           EM32             性別
+     C                     KFLD           EM93             學歷
+     C           KEYSE     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           EM32             性別
+     C                     KFLD           EM93             學歷
+     C                     KFLD           WSG04            資格
+     C           KEYSF     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           EM32             性別
+     C                     KFLD           EM93             學歷
+     C           KEYSG     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           EM32             性別
+     C                     KFLD           WSF04            標準年齡
+     C           KEYSJ     KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           EM32             性別代碼
+     C                     KFLD           EM05             職稱代碼
+     C                     KFLD           RVD05            等級
+     C                     KFLD           WSG04            資格
+     C           KEYRV     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           WRV03            年度
+     C                     KFLD           EM02             員工編號
+     C           KEYSH     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           WYMD             生效日期
+     C                     MOVEL'99'      WSD     2
+     C           KEYSD     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           WYMD             生效日期
+     C                     KFLD           WSD              調薪項目
+     C*
+     C                     MOVEL'SH04'    W#Y01  10 P
+     C                     MOVEL*BLANK    W#Y02  10 P
+     C           KEY#Y     KLIST
+     C                     KFLD           W#Y01
+     C                     KFLD           W#Y02
+     C*
+     C                     MOVEL'01'      DPM01   2
+     C           KEYPM     KLIST
+     C                     KFLD           DPM01
+     C                     KFLD           EM01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C  N01                EXSR R0001
+     C                     Z-ADD*ZERO     SALA    70
+     C                     Z-ADD*ZERO     SALB    70
+     C                     Z-ADD*ZERO     SALC    70
+     C                     Z-ADD*ZERO     SALTAL  70
+     C*                                                    PYSGPF
+     C           KEYPM     CHAINPM0                  40
+     C           *IN40     IFEQ '0'
+     C*                                                    PYSGPF
+     C                     EXSR R2010                      PYSFPF
+     C*
+     C                     EXSR R1010                      PYSCPF
+     C                     EXSR R1020                      PYSJPF
+     C                     EXSR R1030                      PYSEPF
+     C*
+     C                     EXSR R1000                      PYSHPF
+     C*
+     C                     END
+     C*
+     C*==============================================================*
+     C*          R1010 ... 基本薪資調升(PYSCPF)
+     C*==============================================================*
+01===C           R1010     BEGSR
+|    C*
+|    C           KEYSC     CHAINSC0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+| 02-C           SC04      IFNE 0
+|   C                     Z-ADDSC04      SALA
+| 02*C                     ELSE
+| 03-C           SC05      IFNE 0
+|   C                     Z-ADD0         DPY03   70
+|   C                     Z-ADD0         WSC05   74
+|   C           KEYPY     CHAINPY0                  40
+| 04-C           *IN40     IFEQ '0'
+     C*
+     C                     SELEC
+|   C           EM100     WHEQ '1'                        *月薪
+|   C                     Z-ADDPY03      DPY03
+|   C           EM100     WHEQ '2'                        *日薪
+|   C           PY03      MULT PM102     DPY03     H
+|   C                     OTHER
+|   C           PM101     MULT PM102     DPY#3   70H
+     C           PY03      MULT DPY#3     DPY03     H
+| 04-C                     ENDSL
+     C*
+| 04-C                     END
+|   C           SC05      DIV  100       WSC05     H      小數位
+|   C           DPY03     MULT WSC05     SALA      H
+| 03-C                     END
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C                     ADD  SALA      SALTAL
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1020 ... 依能力資格等級調升(PYSJPF)
+     C*==============================================================*
+02===C           R1020     BEGSR
+|    C*
+|    C           KEYRV     CHAINRVD0                 40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+|   C           KEYSJ     CHAINSJ0                  46
+| 02-C           *IN46     IFEQ '0'
+|   C                     Z-ADDSJ06      SALB
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+|    C                     ADD  SALB      SALTAL
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R1030 ... 依標準年齡蓄積給(PYSEPF)
+     C*==============================================================*
+03===C           R1030     BEGSR
+|    C*
+|    C           KEYSE     CHAINSE0                  40
+|    C  N40                Z-ADDSE05      SALC
+|    C*
+|    C                     ADD  SALC      SALTAL
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R2010 ... 計算標準年齡及資格(WSF04&WSG04)
+     C*==============================================================*
+04===C           R2010     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     WSF04   20       標準年齡
+|    C                     MOVEL*BLANK    WSG04   2        資格
+|    C                     Z-ADD*ZERO     WRV03   40       調薪西元年
+|    C                     Z-ADD*ZERO     WAGE    40
+|    C*
+|    C*計算標準年齡
+|    C           KEYSF     CHAINSF0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+|   C*調薪年度-到職年+上班基準年齡=標準年齡
+|   C           DRV03     ADD  1911      WRV03
+|   C           WRV03     SUB  EM13Y     WAGE
+|   C           WAGE      ADD  SF04      WSF04
+| 01-C                     END
+|    C*
+|    C*取資格
+|    C           KEYSG     SETGTSG0
+|    C                     READPSG0                      45
+|    C  N45                MOVELSG04      WSG04
+|    C   45                MOVEL'99'      WSG04
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... WRITE PYSHPF
+     C*==============================================================*
+05===C           R1000     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     WPY03   70
+|    C*
+|    C                     SETOF                     404142
+|    C           KEYPY     CHAINPY0                  40
+| 01-C           *IN40     IFEQ '0'
+     C*
+     C                     SELEC
+|   C           EM100     WHEQ '1'                        *月薪
+|   C                     Z-ADDPY03      WPY03
+|   C           EM100     WHEQ '2'                        *日薪
+|   C           PY03      MULT PM102     WPY03     H
+|   C                     OTHER
+|   C           PM101     MULT PM102     WPY#3   70H
+     C           PY03      MULT WPY#3     WPY03     H
+| 04-C                     ENDSL
+     C*
+| 01-C                     END
+|    C*
+|    C           KEYSH     CHAINSH0                  41
+| 02-C*          *IN41     IFEQ '1'
+|   C                     MOVELEM01      SH01
+|   C                     MOVELEM02      SH02
+|   C                     Z-ADDWYMD      SH03
+|   C           WPY03     ADD  SALTAL    SH08
+|   C*
+|   C                     MOVEL'1'       SH04
+|   C                     MOVELSH04      W#Y02
+|   C           KEY#Y     CHAIN#Y0                  42
+| 03-C           *IN42     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #Y03      P6501I 80
+|   C                     PARM 13        P6502I  30
+|   C           SH05      PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 03-C                     END
+|   C*
+|   C                     Z-ADD*ZERO     SH06
+|   C                     Z-ADDWPY03     SH07
+|   C                     Z-ADD$A8YMD    SH97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     SH98
+|   C                     MOVEL$USER     SH99
+|   C   41                WRITESH0
+     C*                    ELSE
+     C  N41                UPDATSH0
+| 02-C*                    END
+|    C*
+05===C                     ENDSR
+     C***********************************************************
+     C           R0001     BEGSR
+     C                     Z-ADDWYMD      WYMD1
+     C                     Z-ADDWYMD      WYMD2
+     C                     Z-ADD01        MM1
+     C                     Z-ADD01        DD1
+     C                     Z-ADD12        MM2
+     C                     Z-ADD31        DD2
+     C           DRV01     SETLLSH0
+     C           DRV01     READESH0                      90
+     C           *IN90     DOWEQ'0'
+     C           SH03      IFGE WYMD1
+     C           SH03      ANDLEWYMD2
+     C           SH06      ANDEQ0
+     C                     DELETSH0
+     C                     END
+     C           DRV01     READESH0                      90
+     C                     ENDDO
+     C                     SETON                     01
+     C                     ENDSR
+

@@ -1,0 +1,255 @@
+      ****************************************************************
+      *   人頭馬匯東洋酒股份有限公司－版權所有      TEL:7313250    *
+      *                                                              *
+      * PROGRAM NAME : SOR1702                                       *
+      * AUTHER       : CAROL                                         *
+      * CREATE DATE  : 108/10/23                                     *
+      * UPDATE DATE  :                                               *
+      * SYSTEM       :茂世進銷存系統                               *
+      * SUBSYSTEM    :銷售系統                                     *
+      * REMARK       :寄賣客戶產品異動報表                         *
+     /*=============================================================*/
+     /*  CODE       AUTHOR.     DATE    DESCRIPTION
+     /*-------------------------------------------------------------
+     /*=============================================================*/
+      ****************************************************************
+     FSOSEPF  IF  E           K        DISK
+     FSOSFPF  IF  E           K        DISK
+     FMTMAPF  IF  E           K        DISK
+     FMTMEPF  IF  E           K        DISK
+     FSOR170F UF  E           K        DISK                      A
+     FSOR170W O   E           K        DISK
+      *==============================================================*
+     E                    ARY        30  8 0
+      *==============================================================*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      135 135 $ADD
+     I*客戶代號
+     I                                      601 605 DSE04
+     I*分店代號
+     I                                      610 613 DSE05
+     I*送／退貨年月
+     I                                      630 6330DSE06
+     I                                      630 6310MM
+     I                                      632 6330YY
+     I                                      635 6420DSE06S
+     I                                      645 6520DSE06E
+     I*確認年月
+     I                                      660 6630DSE24
+     I                                      660 6610MM2
+     I                                      662 6630YY2
+     I                                      665 6720DSE24S
+     I                                      675 6820DSE24E
+     I*
+     I                                      690 6930DYYMM
+     I                                      690 6910WYY
+     I                                      692 6930WMM
+     I                                      700 7050YMD
+     I*
+     I                                      750 750 IN20
+     I*
+      *==============================================================*
+      *          IDENTIFY A PARAMETER LIST
+      *==============================================================*
+      *==============================================================*
+      *                    KLIST
+      *==============================================================*
+     C           KEYME     KLIST
+     C                     KFLD           SE04
+     C                     KFLD           SE05
+     C           KEYWF     KLIST
+     C                     KFLD           SE04
+     C                     KFLD           SE05
+     C                     KFLD           SF03
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+     C*
+     C                     MOVE *BLANKS   ARY
+     C                     Z-ADD1         X       30       *目前元素
+     C                     Z-ADD0         Y       30       *已寫入至
+     C                     READ SE0                      45
+  01-C           *IN45     DOWEQ'0'
+    C           SE02      SETLLSF0
+    C           SE02      READESF0                      55
+  02-C           *IN55     DOWEQ'0'
+    C           SF03      CHAINMA0                  40
+  03-C           *IN40     IFEQ '0'
+    C           MA55      ANDEQ'Y'
+    C*LOKUP ARY
+    C                     EXSR DTL100
+    C*WRITE PRODUCT
+    C                     EXSR DTL300
+    C*
+  03-C                     END
+    C           SE02      READESF0                      55
+  02-C                     END
+    C                     READ SE0                      45
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*================================================================
+     C*          DTL100....LOOKUP ARY
+     C*================================================================
+     C           DTL100    BEGSR
+     C*
+     C           SE06      LOKUPARY,X                    10
+  01-C           *IN10     IFEQ '0'                        *NOT FOUND
+    C                     ADD  1         Y
+    C                     Z-ADDSE06      ARY,Y
+    C                     Z-ADDY         X
+    C*WRITE DATE
+  02-C           X         IFEQ Y
+    C                     EXSR DTL200
+  02-C                     END
+  01-C                     END
+     C                     ENDSR
+     C*================================================================
+     C*          DTL200....SELECT DETAIL TO WORKFILE
+     C*================================================================
+     C           DTL200    BEGSR
+     C*
+     C                     Z-ADDY         WK01
+     C                     Z-ADDARY,Y     WK02
+     C                     WRITEWK0
+     C*
+     C                     ENDSR
+     C*================================================================
+     C*          DTL300....SELECT DETAIL TO WORKFILE
+     C*================================================================
+     C           DTL300    BEGSR
+     C*INIT
+     C                     Z-ADD0         WF001
+     C                     Z-ADD0         WF002
+     C                     Z-ADD0         WF003
+     C                     Z-ADD0         WF004
+     C                     Z-ADD0         WF005
+     C                     Z-ADD0         WF006
+     C                     Z-ADD0         WF007
+     C                     Z-ADD0         WF008
+     C                     Z-ADD0         WF009
+     C                     Z-ADD0         WF010
+     C                     Z-ADD0         WF011
+     C                     Z-ADD0         WF012
+     C                     Z-ADD0         WF013
+     C                     Z-ADD0         WF014
+     C                     Z-ADD0         WF015
+     C                     Z-ADD0         WF016
+     C                     Z-ADD0         WF017
+     C                     Z-ADD0         WF018
+     C                     Z-ADD0         WF019
+     C                     Z-ADD0         WF020
+     C                     Z-ADD0         WF000
+     C           KEYWF     CHAINWF0                  41
+     C           *IN41     IFEQ '1'                        *NOT FOUND
+     C                     MOVELSE04      WF01
+     C                     MOVELSE05      WF02
+     C                     MOVELSF03      WF04
+     C*
+     C           KEYME     CHAINME0                  42
+     C  N42                MOVELME04      WF03
+     C   42                MOVEL*BLANK    WF03
+     C*
+     C           SF03      CHAINMA0                  43
+     C  N43                MOVELMA03      WF05
+     C   43                MOVEL*BLANK    WF05
+     C*
+     C                     SELEC
+     C           X         WHEQ 1
+     C                     Z-ADDSF04      WF001
+     C           X         WHEQ 2
+     C                     Z-ADDSF04      WF002
+     C           X         WHEQ 3
+     C                     Z-ADDSF04      WF003
+     C           X         WHEQ 4
+     C                     Z-ADDSF04      WF004
+     C           X         WHEQ 5
+     C                     Z-ADDSF04      WF005
+     C           X         WHEQ 6
+     C                     Z-ADDSF04      WF006
+     C           X         WHEQ 7
+     C                     Z-ADDSF04      WF007
+     C           X         WHEQ 8
+     C                     Z-ADDSF04      WF008
+     C           X         WHEQ 9
+     C                     Z-ADDSF04      WF009
+     C           X         WHEQ 10
+     C                     Z-ADDSF04      WF010
+     C           X         WHEQ 11
+     C                     Z-ADDSF04      WF011
+     C           X         WHEQ 12
+     C                     Z-ADDSF04      WF012
+     C           X         WHEQ 13
+     C                     Z-ADDSF04      WF013
+     C           X         WHEQ 14
+     C                     Z-ADDSF04      WF014
+     C           X         WHEQ 15
+     C                     Z-ADDSF04      WF015
+     C           X         WHEQ 16
+     C                     Z-ADDSF04      WF016
+     C           X         WHEQ 17
+     C                     Z-ADDSF04      WF017
+     C           X         WHEQ 18
+     C                     Z-ADDSF04      WF018
+     C           X         WHEQ 19
+     C                     Z-ADDSF04      WF019
+     C           X         WHEQ 20
+     C                     Z-ADDSF04      WF020
+     C                     ENDSL
+     C                     Z-ADDSF04      WF000
+     C*
+     C                     WRITEWF0
+     C                     ELSE
+     C*
+     C                     SELEC
+     C           X         WHEQ 1
+     C                     ADD  SF04      WF001
+     C           X         WHEQ 2
+     C                     ADD  SF04      WF002
+     C           X         WHEQ 3
+     C                     ADD  SF04      WF003
+     C           X         WHEQ 4
+     C                     ADD  SF04      WF004
+     C           X         WHEQ 5
+     C                     ADD  SF04      WF005
+     C           X         WHEQ 6
+     C                     ADD  SF04      WF006
+     C           X         WHEQ 7
+     C                     ADD  SF04      WF007
+     C           X         WHEQ 8
+     C                     ADD  SF04      WF008
+     C           X         WHEQ 9
+     C                     ADD  SF04      WF009
+     C           X         WHEQ 10
+     C                     ADD  SF04      WF010
+     C           X         WHEQ 11
+     C                     ADD  SF04      WF011
+     C           X         WHEQ 12
+     C                     ADD  SF04      WF012
+     C           X         WHEQ 13
+     C                     ADD  SF04      WF013
+     C           X         WHEQ 14
+     C                     ADD  SF04      WF014
+     C           X         WHEQ 15
+     C                     ADD  SF04      WF015
+     C           X         WHEQ 16
+     C                     ADD  SF04      WF016
+     C           X         WHEQ 17
+     C                     ADD  SF04      WF017
+     C           X         WHEQ 18
+     C                     ADD  SF04      WF018
+     C           X         WHEQ 19
+     C                     ADD  SF04      WF019
+     C           X         WHEQ 20
+     C                     ADD  SF04      WF020
+     C                     ENDSL
+     C                     ADD  SF04      WF000
+     C*
+     C                     UPDATWF0
+     C                     END
+     C*
+     C                     ENDSR
+

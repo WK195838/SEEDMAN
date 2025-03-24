@@ -1,0 +1,225 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR7112                                    *
+     H*    PROGRAM NAME :各類所得扣繳資料表－明細                  *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 90/08/23                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYTBPF  IP  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR711P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     ITB0
+     I                                              TB05  L2
+     I                                              TB04  L1
+     I*
+     I           UDS
+     I                                      125 1270$CPY
+     I                                      211 2160DDATE
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*公司
+     I                                      501 502 DEM01
+     I*作帳單位（部門）
+     I                                      620 626 DEM041
+     I                                      627 633 DEM042
+     I*身份證號
+     I                                      549 558 DTB051
+     I                                      559 568 DTB052
+     I*扣繳年月(YY) IN CHINESE
+     I*                                     529 5300DYEAR
+     I*扣繳年月(YY) IN CHINESE
+     I                                      601 6030DYEAR
+     I*扣繳年月(YYYY) IN ENGLISH
+     I                                      531 5340WYEAR
+     I*(YYYY/MM) IN ENGLISH
+     I                                      535 5400SYYMM
+     I                                      535 5380SYY
+     I                                      539 5400SMM
+     I                                      541 5460EYYMM
+     I                                      541 5440EYY
+     I                                      545 5460EMM
+     I*所得類別
+     I                                      547 548 DTB041
+     I                                      569 570 DTB042
+     I*作帳單位
+     I            DS
+     I                                        1   7 TB19
+     I                                        1   1 WEM41
+     I                                        2   2 WEM42
+     I                                        3   3 WEM43
+     I                                        4   7 WEM44
+     I*所得月份－起
+     I            DS
+     I                                        1   60TB15
+     I                                        1   40TB15Y
+     I                                        5   60TB15M
+     I*--------------------------------------------------------------**
+     I              '（身份證號）'      C         SORT1
+     I              '（統一編號）'      C         SORT2
+     I              '（外籍無地址）'    C         SORT3
+     I              '（外籍有地址）'    C         SORT4
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     CL1 10                EXSR R8100
+     CL2 10                EXSR R8200
+     C*
+     CLR 10                EXSR R8900
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C*------------------------------------------------------------***
+|    C                     MOVEL*BLANK    PTB06
+|    C                     Z-ADD*ZERO     PRATE
+|    C                     Z-ADD*ZERO     PNET
+|    C*------------------------------------------------------------***
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C*------------------------------------------------------------***
+|    C*證號類別
+| 01-C           TB06      IFEQ *BLANK                     身份證號
+|   C                     MOVELSORT1     PTB06     P
+| 01-C                     END
+|    C*
+| 02-C           TB06      IFEQ '1'                        統一編號
+|   C                     MOVELSORT2     PTB06     P
+| 02-C                     END
+|    C*
+| 03-C           TB06      IFEQ '3'                        外籍無地址
+|   C                     MOVELSORT3     PTB06     P
+| 03-C                     END
+|    C*
+| 04-C           TB06      IFEQ '4'                        外籍有地址
+|   C                     MOVELSORT4     PTB06     P
+| 04-C                     END
+|   C           TB18      SUB  19110000  PTB18
+|   C           TB15      SUB  191100    PTB15
+|   C           TB16      SUB  191100    PTB16
+|    C*------------------------------------------------------------***
+| 05-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     WRITEPD1
+|   C                     SETOF                     39
+| 05-C                     END
+|    C*------------------------------------------------------------***
+|    C*個人扣繳明細資料
+|    C*給付淨額
+|    C           TB07      SUB  TB08      PNET
+|    C*扣繳率
+|    C                     Z-ADD*ZERO     WTB08   90
+|    C           TB08      MULT 100       WTB08
+|    C           WTB08     DIV  TB07      PRATE     H
+|    C*
+|    C                     WRITEPD2
+|    C*
+|    C                     ADD  TB07      PT11
+|    C                     ADD  TB08      PT12
+|    C                     ADD  PNET      PT13
+|    C                     ADD  TB07      PT21
+|    C                     ADD  TB08      PT22
+|    C                     ADD  PNET      PT23
+|    C*------------------------------------------------------------***
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1         格式代號
+     C*==============================================================*
+03===C           R8100     BEGSR
+|    C*
+|    C*------------------------------------------------------------***
+|    C                     WRITEPT1
+|    C*
+|    C                     Z-ADD*ZERO     PNET
+|    C                     Z-ADD*ZERO     PRATE
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8200 ... LEVEL BREAK 2         身份證號
+     C*==============================================================*
+04===C           R8200     BEGSR
+|    C*
+|    C*------------------------------------------------------------***
+|    C*
+|    C                     WRITEPT2
+|    C                     SETON                     39
+|    C*
+|    C                     Z-ADD*ZERO     PNET
+|    C                     Z-ADD*ZERO     PRATE
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR
+     C*==============================================================*
+05===C           R8900     BEGSR
+|    C*
+|    C*------------------------------------------------------------***
+|    C*
+|    C                     WRITEPE1
+|    C                     SETON                     39
+|    C*
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+06===C           R8999     BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     Z-ADD*ZERO     PT11
+|   C                     Z-ADD*ZERO     PT12
+|   C                     Z-ADD*ZERO     PT13
+|   C                     Z-ADD*ZERO     PT21
+|   C                     Z-ADD*ZERO     PT22
+|   C                     Z-ADD*ZERO     PT23
+|   C                     Z-ADD*ZERO     PRATE
+|   C                     Z-ADD*ZERO     PNET
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+

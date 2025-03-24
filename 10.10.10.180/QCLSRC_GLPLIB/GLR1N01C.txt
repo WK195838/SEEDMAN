@@ -1,0 +1,73 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM ID   : GLR1N01C                                  */
+     /*    PROGRAM NAME :憑證未到資料列印                         */
+     /*    AUTHOR       : TINA                                      */
+     /*    CREATE DATE  : 83/07/25                                  */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       :                                           */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&DA701)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DA705F)   TYPE(*CHAR) LEN(12)
+             DCL        VAR(&DA705T)   TYPE(*CHAR) LEN(12)
+             DCL        VAR(&DA702F)   TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DA702T)   TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DSEL)   TYPE(*CHAR) LEN(1)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DA701)   VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&DA705F)   VALUE(%SST(*LDA 503 12))
+             CHGVAR     VAR(&DA705T)   VALUE(%SST(*LDA 515 12))
+             CHGVAR     VAR(&DA702F)   VALUE(%SST(*LDA 527 9))
+             CHGVAR     VAR(&DA702T)   VALUE(%SST(*LDA 536 9))
+             CHGVAR     VAR(&DSEL)   VALUE(%SST(*LDA 551 1))
+
+             OVRDBF     FILE(GLA7LF02) SHARE(*YES)
+
+             IF         COND(&DSEL *EQ 'A') THEN(DO)
+             OPNQRYF    FILE((GLA7LF02)) QRYSLT(' A701 *EQ "' *CAT +
+                          &DA701 *CAT '" & A705  *EQ %RANGE("' *CAT +
+                          &DA705F *CAT '" "' *CAT &DA705T *CAT '") +
+                          & A702 *EQ %RANGE("' *CAT &DA702F *CAT '" +
+                          "' *CAT &DA702T *CAT '") & A704 *EQ "V" +
+                          ') KEYFLD(*FILE)
+                          ENDDO
+             IF         COND(&DSEL *EQ 'B') THEN(DO)
+             OPNQRYF    FILE((GLA7LF02)) QRYSLT(' A701 *EQ "' *CAT +
+                          &DA701 *CAT '" & A705  *EQ %RANGE("' *CAT +
+                          &DA705F *CAT '" "' *CAT &DA705T *CAT '") +
+                          & A702 *EQ %RANGE("' *CAT &DA702F *CAT '" +
+                          "' *CAT &DA702T *CAT '")& A704 *EQ " " ') +
+                          KEYFLD(*FILE)
+                          ENDDO
+             IF         COND(&DSEL *EQ 'C') THEN(DO)
+             OPNQRYF    FILE((GLA7LF02)) QRYSLT(' A701 *EQ "' *CAT +
+                          &DA701 *CAT '" & A705  *EQ %RANGE("' *CAT +
+                          &DA705F *CAT '" "' *CAT &DA705T *CAT '") +
+                          & A702 *EQ %RANGE("' *CAT &DA702F *CAT '" +
+                          "' *CAT &DA702T *CAT '") & A704 *NE "D" ') +
+                          KEYFLD(*FILE)
+                          ENDDO
+
+             OVRPRTF    FILE(GLR1N0P) PAGESIZE(*N 198) CPI(15)
+             CALL       GLR1N01
+             CLOF       OPNID(GLA7LF02)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('GLR1N0P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             ENDPGM
+

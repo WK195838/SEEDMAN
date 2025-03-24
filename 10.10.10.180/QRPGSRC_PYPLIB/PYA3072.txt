@@ -1,0 +1,473 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA3072                                    *
+     H*    PROGRAM NAME :薪資確認作業-下期                       *
+     H*    AUTHOR       :                                            *
+     H*    CREATE DATE  : 78/09/06                                   *
+     H*    UPDATE DATE  : 90/08/06 A1274 EVA                         *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYPWJF12IP  E           K        DISK
+     FPYWDPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYPHPF  UF  E           K        DISK                      A
+     FPYHDPF  UF  E           K        DISK                      A
+     FPYCHPF  O   E           K        DISK
+     FPYCDPF  O   E           K        DISK
+     FPYDSPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     E                    C1         99  1               .成本中心１
+     E                    C2         99  3               .成本中心２
+     E                    C3         99  1               .成本中心３
+     E                    A1         99  5 2             .分攤率
+     E                    A2         99  7 0             .分攤金額
+     E*---------------------------------------------------------------
+     I           UDS
+     I                                      101 110 $USER
+     I                                      140 140 $RMK02
+     I                                      187 1920DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DPW01
+     I*                                     503 5060DPW03
+     I                                      511 5160WPW03
+     I                                      507 507 DPW04
+     I                                      603 6070DPW03
+     I*
+     I            DS
+     I                                        1   80WNYMD
+     I                                        1   60WNYM
+     I                                        1   40WNY
+     I                                        5   60WNM
+     I                                        7   80WND
+     I            DS
+     I                                        1   7 PH34
+     I                                        1   1 PH341
+     I                                        2   2 PH342
+     I                                        3   3 PH343
+     I                                        4   7 PH344
+     I/COPY PYDDSSRC,PYEMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN PW05      PW05S
+     C           *LIKE     DEFN PW07      PW07S
+     C           *LIKE     DEFN PW14      PW14S
+     C           *LIKE     DEFN PW16      PW16S
+     C           *LIKE     DEFN PW17      PW17S
+     C           *LIKE     DEFN PW18      PW18S
+     C           *LIKE     DEFN PW27      PW27S
+     C           *LIKE     DEFN PW28      PW28S
+     C           *LIKE     DEFN PW29      PW29S
+     C           *LIKE     DEFN PW30      PW30S
+     C           *LIKE     DEFN PW31      PW31S
+     C           *LIKE     DEFN PW32      PW32S
+     C           *LIKE     DEFN PW33      PW33S
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYEM1    KLIST
+     C                     KFLD           PW01
+     C                     KFLD           PW02
+     C           KEYWD     KLIST
+     C                     KFLD           PW01
+     C                     KFLD           PW03
+     C                     KFLD           PW04
+     C                     KFLD           PW02
+     C           KEYPH     KLIST
+     C                     KFLD           PW01
+     C                     KFLD           PW02
+     C                     KFLD           PW03
+     C                     KFLD           PW04
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C  N10                EXSR RTN010                     .INIT
+     C*
+     C                     EXSR RTN040                     .MAIN
+     C*
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C*GET THIS MONTH FIRST DATE (WFYMD)
+|    C                     MOVELWPW03     WFYMD   80
+|    C                     MOVE '01'      WFYMD
+|    C*
+|    C*GET NEXT MONTH FIRST DATE(WNYMD)
+|    C                     Z-ADDWPW03     WNYM
+|    C                     ADD  1         WNM
+| 01-C           WNM       IFGT 12
+|   C                     ADD  1         WNY
+|   C                     SUB  12        WNM
+| 01-C                     END
+|    C                     Z-ADD01        WND
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN040... MAIN PROCESS
+     C*==============================================================*
+02===C           RTN040    BEGSR
+|    C*
+|    C*910823K
+|    C*假如$RMK02=' '則可提供強迫再確認。
+|    C*在安全控管中，使用者管制資料維護或程式管制資料維護中設定使用者權限。
+|    C*強迫再確認前，必須先清除已確認過的資料。PYPHPF & PYPDPF
+| 01-C           $RMK02    IFEQ ' '
+|   C*
+|   C           KEYPH     SETLLPH0
+|   C           KEYPH     READEPH0                      40
+| 02-C           *IN40     DOWEQ'0'
+|   C                     DELETPH0
+|   C           KEYPH     READEPH0                      40
+| 02-C                     END
+|   C*
+|   C           KEYPH     SETLLHD0
+|   C           KEYPH     READEHD0                      41
+| 03-C           *IN41     DOWEQ'0'
+|   C                     DELETHD0
+|   C           KEYPH     READEHD0                      41
+| 03-C                     END
+| 01-C                     END
+|    C*910823K
+|    C*
+|    C*員工基本資料(PYEMPF)
+|    C                     EXSR RTN105
+|    C*
+|    C*員工是否有薪資判定
+|    C                     EXSR RTN135
+|    C*
+|    C*本月有薪資資料才處理歷史資料
+| 04-C           SWPY      IFEQ 'Y'
+|   C*薪資資料HEADING (PYPWPF --> PYPHPF)
+|   C                     EXSR RTN140
+|   C*薪資資料DETAIL  (PYWDPF --> PYHDPF)
+|   C                     EXSR RTN150
+| 04-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*   RTN105... 員工基本資料 PYEMPF
+     C*==============================================================*
+03===C           RTN105    BEGSR
+|    C*
+|    C           KEYEM1    CHAINEM0                  40
+|    C*--------
+|    C*設定成本中心
+|    C                     MOVEA*BLANK    C1
+|    C                     MOVEA*BLANK    C2
+|    C                     MOVEA*BLANK    C2
+|    C                     Z-ADD*ZERO     A1
+|    C                     Z-ADD*ZERO     IC      10
+|    C*
+|    C           KEYEM1    SETLLDS0
+|    C           KEYEM1    READEDS0                      40
+| 01-C           *IN40     DOWEQ'0'
+|   C*
+|   C                     ADD  1         IC
+|   C                     MOVELDS041     C1,IC
+|   C                     MOVELDS042     C2,IC
+|   C                     MOVELDS043     C3,IC
+|   C                     Z-ADDDS05      A1,IC
+|   C*
+|   C           KEYEM1    READEDS0                      40
+| 01-C                     END
+|    C*
+|    C*          EM561     IFNE *BLANK
+|    C*                    ADD  1         IC
+|    C*                    MOVELEM561     C1,IC
+|    C*                    MOVELEM562     C2,IC
+|    C*                    MOVELEM563     C3,IC
+|    C*                    Z-ADDEM591     A1,IC
+|    C*                    END
+|    C*
+|    C*          EM571     IFNE *BLANK
+|    C*                    ADD  1         IC
+|    C*                    MOVELEM571     C1,IC
+|    C*                    MOVELEM572     C2,IC
+|    C*                    MOVELEM573     C3,IC
+|    C*                    Z-ADDEM592     A1,IC
+|    C*                    END
+|    C*
+|    C*          EM581     IFNE *BLANK
+|    C*                    ADD  1         IC
+|    C*                    MOVELEM581     C1,IC
+|    C*                    MOVELEM582     C2,IC
+|    C*                    MOVELEM583     C3,IC
+|    C*                    Z-ADDEM593     A1,IC
+|    C*                    END
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*   RTN135...員工本月份是否有薪資判定
+     C*==============================================================*
+04===C           RTN135    BEGSR
+|    C*
+|    C                     MOVEL'N'       SWPY    1        .無薪資
+|    C*
+| 01-C           PW16      IFNE *ZERO
+|   C           PW17      ORNE *ZERO
+|   C           PW18      ORNE *ZERO
+|   C           PW27      ORNE *ZERO
+|   C           PW28      ORNE *ZERO
+|   C           PW29      ORNE *ZERO
+|   C                     MOVEL'Y'       SWPY
+|   C                     GOTO END135
+| 01-C                     END
+|    C*
+|    C           KEYWD     SETLLWD0
+|    C           KEYWD     READEWD0                      42
+|    C*
+| 02-C           *IN42     DOWEQ'0'
+|   C           SWPY      ANDEQ'N'
+| 03-C           WD06      IFNE *ZERO
+|   C                     MOVEL'Y'       SWPY
+| 03-C                     END
+|   C           KEYWD     READEWD0                      42
+| 02-C                     END
+|    C*
+04===C           END135    ENDSR
+     C*==============================================================*
+     C*   RTN140...薪資資料HEADING, PYPWPF --> PYPHPF, PYCHPF
+     C*==============================================================*
+05===C           RTN140    BEGSR
+|    C*
+|    C*本月薪資歷史檔
+|    C                     MOVELPW01      PH01
+|    C                     MOVELPW02      PH02
+|    C                     Z-ADDPW03      PH03
+|    C                     MOVELPW04      PH04
+|    C                     Z-ADDPW05      PH05
+|    C                     Z-ADDPW07      PH07
+|    C                     Z-ADDPW14      PH14
+|    C                     Z-ADDPW15      PH15
+|    C                     Z-ADDPW16      PH16
+|    C                     Z-ADDPW17      PH17
+|    C                     Z-ADDPW18      PH18
+|    C                     Z-ADDPW19      PH19
+|    C                     MOVELPW20      PH20
+|    C                     Z-ADDPW24      PH24
+|    C                     Z-ADDPW26      PH26
+|    C                     Z-ADDPW27      PH27
+|    C                     Z-ADDPW28      PH28
+|    C                     Z-ADDPW29      PH29
+|    C                     Z-ADDPW30      PH30
+|    C                     Z-ADDPW31      PH31
+|    C                     Z-ADDPW32      PH32
+|    C                     Z-ADDPW33      PH33
+|    C*
+|    C*記錄當月份該員工所屬的工作地點及部門別　          *YH USE ONLY
+|    C*以方便分區計算及報繳所得稅
+|    C           KEYEM1    CHAINEM0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELEM041     PH341     P
+|   C                     MOVELEM042     PH342     P
+|   C                     MOVELEM043     PH343     P
+|   C                     MOVELEM044     PH344     P
+|   C                     MOVELEM135     PH35      P
+| 01*C                     ELSE
+|   C                     MOVEL*BLANK    PH34
+|   C                     MOVEL*BLANK    PH35
+| 01-C                     END
+|    C*
+|    C                     Z-ADD$A8YMD    PH97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     PH98
+|    C                     MOVEL$USER     PH99
+|    C                     WRITEPH0
+|    C*
+|    C*------------------------------------------------------------***
+|    C*本月成本資料
+|    C                     MOVELPW01      CH01
+|    C                     MOVELPW02      CH02
+|    C                     Z-ADDPW03      CH03
+|    C                     MOVELPW04      CH04
+|    C                     MOVELPW20      CH20
+|    C                     Z-ADD$A8YMD    CH97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     CH98
+|    C                     MOVEL$USER     CH99
+|    C*
+|    C                     Z-ADD*ZERO     PW05S
+|    C                     Z-ADD*ZERO     PW07S
+|    C                     Z-ADD*ZERO     PW14S
+|    C                     Z-ADD*ZERO     PW16S
+|    C                     Z-ADD*ZERO     PW17S
+|    C                     Z-ADD*ZERO     PW18S
+|    C                     Z-ADD*ZERO     PW27S
+|    C                     Z-ADD*ZERO     PW28S
+|    C                     Z-ADD*ZERO     PW29S
+|    C                     Z-ADD*ZERO     PW30S
+|    C                     Z-ADD*ZERO     PW31S
+|    C                     Z-ADD*ZERO     PW32S
+|    C                     Z-ADD*ZERO     PW33S
+|    C*
+|    C                     Z-ADD1         I1      10
+| 02-C           I1        DOWLEIC
+|   C                     EXSR RTN210
+|   C                     ADD  1         I1
+| 02-C                     END
+|    C*
+05===C           END140    ENDSR
+     C*==============================================================*
+     C*   RTN150...薪資資料DETAIL, PYWDPF --> PYHDPF, PYCDPF
+     C*==============================================================*
+06===C           RTN150    BEGSR
+|    C*
+|    C           KEYWD     SETLLWD0
+|    C           KEYWD     READEWD0                      42
+|    C*
+| 01-C           *IN42     DOWEQ'0'
+|   C                     EXSR RTN220
+|   C           KEYWD     READEWD0                      42
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*   RTN210... 成本資料HEADING PYCHPF
+     C*==============================================================*
+07===C           RTN210    BEGSR
+|    C*
+|    C                     MOVELC1,I1     CH061
+|    C                     MOVELC2,I1     CH062
+|    C                     MOVELC3,I1     CH063
+|    C                     Z-ADDA1,I1     CH24
+|    C*
+| 01-C           I1        IFEQ IC
+|   C*
+|   C           PW05      SUB  PW05S     CH05
+|   C           PW07      SUB  PW07S     CH07
+|   C           PW14      SUB  PW14S     CH14
+|   C           PW16      SUB  PW16S     CH16
+|   C           PW17      SUB  PW17S     CH17
+|   C           PW18      SUB  PW18S     CH18
+|   C           PW27      SUB  PW27S     CH27
+|   C           PW28      SUB  PW28S     CH28
+|   C           PW29      SUB  PW29S     CH29
+|   C           PW30      SUB  PW30S     CH30
+|   C           PW31      SUB  PW31S     CH31
+|   C           PW32      SUB  PW32S     CH32
+|   C           PW33      SUB  PW33S     CH33
+|   C*
+| 01*C                     ELSE
+|   C           PW05      MULT A1,I1     WAMT   197
+|   C           WAMT      DIV  100       CH05      H
+|   C                     ADD  CH05      PW05S
+|   C*
+|   C           PW07      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH07      H
+|   C                     ADD  CH07      PW07S
+|   C*
+|   C           PW14      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH14      H
+|   C                     ADD  CH14      PW14S
+|   C*
+|   C           PW16      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH16      H
+|   C                     ADD  CH16      PW16S
+|   C*
+|   C           PW17      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH17      H
+|   C                     ADD  CH17      PW17S
+|   C*
+|   C           PW18      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH18      H
+|   C                     ADD  CH18      PW18S
+|   C*
+|   C           PW27      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH27      H
+|   C                     ADD  CH27      PW27S
+|   C*
+|   C           PW28      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH28      H
+|   C                     ADD  CH28      PW28S
+|   C*
+|   C           PW29      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH29      H
+|   C                     ADD  CH29      PW29S
+|   C*
+|   C           PW30      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH30      H
+|   C                     ADD  CH30      PW30S
+|   C*
+|   C           PW31      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH31      H
+|   C                     ADD  CH31      PW31S
+|   C*
+|   C           PW32      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH32      H
+|   C                     ADD  CH32      PW32S
+|   C*
+|   C           PW33      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       CH33      H
+|   C                     ADD  CH33      PW33S
+|   C*
+| 01-C                     END
+|    C*
+|    C                     WRITECH0
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*   RTN220... 薪資資料DETAIL
+     C*==============================================================*
+08===C           RTN220    BEGSR
+|    C*本月薪資歷史檔
+|    C                     MOVELWD01      HD01
+|    C                     MOVELWD02      HD02
+|    C                     Z-ADDWD03      HD03
+|    C                     MOVELWD04      HD04
+|    C                     MOVELWD05      HD05
+|    C                     Z-ADDWD06      HD06
+|    C                     WRITEHD0
+|    C*
+|    C*本月薪資成本檔
+|    C                     Z-ADDWD06      #AMT    92
+|    C                     EXSR RTN810
+|    C*
+|    C                     MOVELWD01      CD01
+|    C                     MOVELWD02      CD02
+|    C                     Z-ADDWD03      CD03
+|    C                     MOVELWD04      CD04
+|    C                     MOVELWD05      CD05
+|    C*
+|    C                     Z-ADD1         I1
+| 01-C           I1        DOWLEIC
+|   C                     Z-ADDA2,I1     CD06
+|   C                     MOVELC1,I1     CD071
+|   C                     MOVELC2,I1     CD072
+|   C                     MOVELC3,I1     CD073
+|   C                     WRITECD0
+|   C                     ADD  1         I1
+| 01-C                     END
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*   RTN810... 金額分攤計算
+     C*==============================================================*
+09===C           RTN810    BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     A2
+|    C                     Z-ADD1         I1
+|    C                     Z-ADD*ZERO     #AMTS   92
+|    C*
+| 01-C           I1        DOWLEIC
+|   C*
+| 02-C           I1        IFEQ IC
+|   C           #AMT      SUB  #AMTS     A2,I1     H
+| 02*C                     ELSE
+|   C           #AMT      MULT A1,I1     WAMT
+|   C           WAMT      DIV  100       A2,I1     H
+|   C                     ADD  A2,I1     #AMTS
+| 02-C                     END
+|   C*
+|   C                     ADD  1         I1
+| 01-C                     END
+|    C*
+09===C                     ENDSR
+     C*--------------------------------------------------------------*
+

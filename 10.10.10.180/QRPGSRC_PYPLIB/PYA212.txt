@@ -1,0 +1,447 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     F****************************************************************
+     FPYLVPF  UF  E           K        DISK                      A
+     FPYEMPF  UF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYA212D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      152 161 $USERN
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*WORK DATA AREA
+     ILVDS      E DSPYLVPF
+     ILVDSW       DS                             62
+     I*
+     I            DS
+     I                                        1   60WLV03
+     I                                        1   40WLV3YM
+     I/COPY PYDDSSRC,PYPMDS01
+     I/COPY PYRPGSRC,PYC03I
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN LV08      SLV08
+     C           *LIKE     DEFN LV09      SLV09
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C           *LIKE     DEFN LV03      WLV03F
+     C           *LIKE     DEFN LV03      WLV03T
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPM     KLIST                           *PYPMPF
+     C                     KFLD           PM01
+     C                     KFLD           DLV01T
+     C           KEYEMF    KLIST
+     C                     KFLD           DLV01F
+     C                     KFLD           DLV02F
+     C           KEYEMT    KLIST                           *NEXT REC SETLL
+     C                     KFLD           DLV01T
+     C                     KFLD           DLV02T
+     C           KEYLV     KLIST
+     C                     KFLD           DLV01F
+     C                     KFLD           DLV02F
+     C                     KFLD           WLV03F
+     C           KEYLVT    KLIST
+     C                     KFLD           DLV01T
+     C                     KFLD           DLV02T
+     C                     KFLD           LV03
+     C                     KFLD           LV04
+     C           KEYLVW    KLIST
+     C                     KFLD           DLV01F
+     C                     KFLD           DLV02F
+     C                     KFLD           LV03
+     C                     KFLD           LV04
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DLV01F
+|    C                     MOVEL*BLANK    DLV02F
+|    C                     Z-ADD*ZERO     DLV03F
+|    C                     Z-ADD*ZERO     DLV03T
+|    C                     MOVEL*BLANK    DLV01T
+|    C                     MOVEL*BLANK    DLV02T
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 02-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C           *IN14     ANDEQ'1'
+|   C                     EXSR R1C00                      *拷貝選擇
+| 02-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*
+| 01-C           DLV01F    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DLV01F    CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+| 02-C           DLV02F    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           KEYEMF    CHAINEM0                  40
+| 03-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606199
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 04-C           DLV03F    IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P30'
+|    C                     PARM DLV03F    P3001I  80
+|    C                     PARM DFMT      P3002I  1
+|    C                     PARM DTYPE     P3003I  1
+|    C                     PARM           P3011O  1
+| 05-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DLV03F    P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WLV03F    PARM           P3101O  80
+|    C*
+| 06-C           DLV03T    IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P30'
+|    C                     PARM DLV03T    P3001I  80
+|    C                     PARM DFMT      P3002I  1
+|    C                     PARM DTYPE     P3003I  1
+|    C                     PARM           P3011O  1
+| 07-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DLV03T    P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WLV03T    PARM           P3101O  80
+|    C*
+|    C*
+| 08-C           WLV03T    IFLT WLV03F
+|   C                     MOVEL'UPT0041' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     626399
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 09-C           DLV01T    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 09-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+| 10-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 10-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 11-C           DLV02T    IFEQ *BLANK
+|   C                     MOVELDLV02F    DLV02T
+| 11-C                     END
+|    C*
+|    C           KEYEMT    CHAINEM0                  40
+| 12-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     646599
+| 12-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVELEM02      DEM02
+|    C                     MOVELEM03      DEM03
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....拷貝選擇
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R1C10
+|   C           DOPT      CASEQ2         R1C20
+|   C           DOPT      CASEQ3         R1C30
+| 01-C                     END
+|    C*
+|    C                     MOVEL'UPT2142' ERRID
+|    C                     MOVEL'PTMF'    ERRF
+|    C                     SETON                     99
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....不存在WRITE,存在　放棄拷貝
+     C*==============================================================*
+05===C           R1C10     BEGSR
+|    C*
+|    C           KEYLV     SETLLLV0
+|    C           KEYEMF    READELV0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C           LV03      ANDLEWLV03T
+|   C*
+|   C*DATA EXIST CHECK
+|   C           KEYLVT    CHAINLV0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     EXSR R1D00                      拷貝
+|   C                     Z-ADD*ZERO     LV96
+|   C                     WRITELV0
+|   C                     Z-ADD*ZERO     SLV08
+|   C                     Z-ADD*ZERO     SLV09
+|   C                     EXSR R1E00
+| 02-C                     END
+|   C*NEXT REC FIND
+|   C           KEYLVW    SETGTLV0
+|   C           KEYEMF    READELV0                      46
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....不存在WRITE,存在　覆蓋－無須確認
+     C*==============================================================*
+06===C           R1C20     BEGSR
+|    C*
+|    C           KEYLV     SETLLLV0
+|    C           KEYEMF    READELV0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C           LV03      ANDLEWLV03T
+|   C*
+|   C                     MOVELLVDS      LVDSW            .KEEP DATA
+|   C*EXISTED RECORD
+|   C           KEYLVT    CHAINLV0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     EXSR R1D00                      拷貝
+|   C                     Z-ADD*ZERO     LV96
+|   C                     WRITELV0
+|   C                     Z-ADD*ZERO     SLV08
+|   C                     Z-ADD*ZERO     SLV09
+|   C                     EXSR R1E00
+| 02*C                     ELSE
+|   C                     Z-ADDLV08      SLV08
+|   C                     Z-ADDLV09      SLV09
+|   C                     MOVELLVDSW     LVDS             .RESTORE QB
+|   C                     EXSR R1D00                      拷貝
+|   C                     UPDATLV0
+|   C                     EXSR R1E00
+| 02-C                     END
+|   C*NEXT REC FIND
+|   C           KEYLVW    SETGTLV0
+|   C           KEYEMF    READELV0                      46
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*  R1C30 ....不存在WRITE,存在　覆蓋－逐筆確認
+     C*==============================================================*
+07===C           R1C30     BEGSR
+|    C*
+|    C           KEYLV     SETLLLV0
+|    C           KEYEMF    READELV0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C           LV03      ANDLEWLV03T
+|   C*
+|   C                     MOVELLVDS      LVDSW            .KEEP DATA
+|   C*ITEM EXISTED
+|   C           KEYLVT    CHAINLV0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     EXSR R1D00                      拷貝
+|   C                     Z-ADD*ZERO     LV96
+|   C                     WRITELV0
+|   C                     Z-ADD*ZERO     SLV08
+|   C                     Z-ADD*ZERO     SLV09
+|   C                     EXSR R1E00
+| 02*C                     ELSE
+|   C                     EXSR R1C31                      逐筆確認
+| 02-C                     END
+|   C*<NEXT REC FIND>
+|   C           KEYLVW    SETGTLV0
+|   C           KEYEMF    READELV0                      46
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1C31 ....逐筆確認是否拷貝PROCESS
+     C*==============================================================*
+08===C           R1C31     BEGSR
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM LV03      P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WLV03     PARM           P3101O  80
+|    C*
+|    C                     MOVEL' '       COVE
+|    C                     MOVELWLV03     DLV03
+|    C                     MOVELLV04      DLV04
+|    C                     EXFMTDSPD2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           COVE      IFEQ 'Y'
+|   C                     Z-ADDLV08      SLV08
+|   C                     Z-ADDLV09      SLV09
+|   C                     MOVELLVDSW     LVDS
+|   C                     EXSR R1D00                      拷貝
+|   C                     UPDATLV0
+|   C                     EXSR R1E00
+| 01-C                     END
+|    C*
+08===C           E1C31     ENDSR
+     C*==============================================================*
+     C*          R1D00 ....拷貝PROCESS
+     C*==============================================================*
+09===C           R1D00     BEGSR
+|    C*ITEM
+|    C                     MOVELDLV01T    LV01
+|    C                     MOVELDLV02T    LV02
+|    C                     TIME           LV98
+|    C                     Z-ADD$A8YMD    LV97
+|    C                     MOVEL$USER     LV99
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....特休，轉休
+     C*==============================================================*
+10===C           R1E00     BEGSR
+|    C*
+|    C                     Z-ADDLV03      WLV03
+|    C                     Z-ADDWLV3YM    #C03I1  40
+|    C                     EXSR #C0300
+|    C*
+| 01-C           #C03O1    IFNE PM108
+|   C           LV04      ORNE PM106
+|   C           LV04      ANDNEPM110
+|   C           *LOVAL    SETLLEM0
+|   C                     GOTO E1E00
+| 01-C                     END
+|    C*
+|    C           KEYEMT    CHAINEM0                  40
+|    C   40                GOTO E1E00
+|    C*
+|    C*轉休
+| 02-C           LV04      IFEQ PM110
+|   C*
+|   C*          SLV09     MULT PM101     WTMT
+|   C*                    SUB  WTMT      EM55
+|   C*                    SUB  SLV08     EM55
+|   C*
+|   C*          LV09      MULT PM101     WTMT
+|   C*                    ADD  WTMT      EM55
+|   C*                    ADD  LV08      EM55
+|   C*
+| 02-C                     END
+|    C*----------
+|    C*特休
+| 03-C           LV04      IFEQ PM106
+|   C*
+|   C*                    Z-ADDEM49      WEM49   50
+|   C*                    Z-ADDEM50      WEM50   50
+|   C*
+|   C*                    SUB  SLV09     WEM49
+|   C*                    SUB  SLV08     WEM50
+|   C*
+|   C*                    ADD  LV09      WEM49
+|   C*                    ADD  LV08      WEM50
+|   C*
+|   C*          WEM49     MULT PM101     WTMT    81
+|   C*                    ADD  WEM50     WTMT
+|   C*          WTMT      DIV  PM101     EM49
+|   C*                    MVR            EM50
+|   C*
+| 03-C                     END
+|    C*---------
+|    C                     Z-ADD$A8YMD    EM97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     EM98
+|    C                     MOVEL$USER     EM99
+|    C                     UPDATEM0
+|    C*
+10===C           E1E00     ENDSR
+     C*==============================================================*
+     I/COPY PYRPGSRC,PYC03
+

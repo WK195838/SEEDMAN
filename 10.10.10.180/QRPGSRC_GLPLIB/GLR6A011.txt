@@ -1,0 +1,463 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLR6A011                                   *
+     H*    PROGRAM NAME : 年度預算明細表部門明細                   *
+     H*    AUTHOR       : A1139 JANE                                 *
+     H*    CREATE DATE  : DEC 09,92'                                 *
+     H*    UPDATE DATE  : 82/01/06  A1150                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     H****************************************************************
+     FGLAKPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FPT#APF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLACPF  IF  E           K        DISK
+     FGLAULF01IF  E           K        DISK
+     FGLR6A0P O   E             39     PRINTER
+     E*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAU01
+     I                                      503 5050DAU02
+     I                                      506 5070DAU03
+     I                                      508 515 DAU04S
+     I                                      516 523 DAU04E
+     I                                      524 524 DOP
+     I*
+     I            DS
+     I                                        1   80WAC03A
+     I I            0                         3   60PAC03A
+     I            DS
+     I                                        1   80WAC03B
+     I I            0                         3   60PAC03B
+     I            DS
+     I                                        1   80WAC04B
+     I I            0                         3   60PAC04B
+     I            DS
+     I                                        1   80WAC05B
+     I I            0                         3   60PAC05B
+     I            DS
+     I                                        1   80WAC06B
+     I I            0                         3   60PAC06B
+     I            DS
+     I                                        1   80WAC07B
+     I I            0                         3   60PAC07B
+     I            DS
+     I                                        1   80WAC08B
+     I I            0                         3   60PAC08B
+     I            DS
+     I                                        1   80WAC09B
+     I I            0                         3   60PAC09B
+     I            DS
+     I                                        1   80WAC10B
+     I I            0                         3   60PAC10B
+     I            DS
+     I                                        1   80WAC11B
+     I I            0                         3   60PAC11B
+     I            DS
+     I                                        1   80WAC12B
+     I I            0                         3   60PAC12B
+     I            DS
+     I                                        1   80WAC13B
+     I I            0                         3   60PAC13B
+     I            DS
+     I                                        1   80WAC14B
+     I I            0                         3   60PAC14B
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAF     KLIST
+     C                     KFLD           AF01
+     C                     KFLD           AF02
+     C           KEYAC     KLIST
+     C                     KFLD           AC01
+     C                     KFLD           AC02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RI100
+     C*
+     C                     READ AU0                      46
+  01-C           *IN46     DOWEQ'0'
+    C*
+  02-C           AU01      IFEQ DAU01
+    C           AU02      ANDEQWAU02
+    C           AU03      ANDEQDAU03
+    C           AU04      ANDGEDAU04S
+    C           AU04      ANDLEDAU04E
+    C*----------------------------------------------------------------
+    C                     SETON                         59*HAVE DATA
+    C  N10                MOVELAU05      DAU05
+    C  N10                EXSR R0100
+    C  N10                SETON                         10
+    C*----------------------------------------------------------------
+  03-C           AU05      IFNE DAU05
+    C                     EXSR R2000                      *印合計
+    C                     MOVELAU05      DAU05
+    C                     EXSR R0100                      *HEADING
+  03-C                     END
+    C*
+    C                     EXSR R1000                      *DETAIL
+  02-C                     END
+    C*
+    C                     READ AU0                      46
+  01-C                     END
+     C   59                EXSR R2000                      *印合計
+     C*NO DATA
+  04-C           *IN59     IFEQ '0'
+    C                     EXSR R0100
+    C                     WRITEPE9
+  04-C                     END
+     C*
+     C                     SETON                         LR
+     C*==============================================================*
+     C*          RI100 ....INIT VALUE SET
+     C*==============================================================*
+01===CSR         RI100     BEGSR
+|    C*INITIAL VALUES
+|    C                     MOVEL*BLANK    DAU05
+|    C                     Z-ADD0         INP     80
+|    C                     Z-ADD0         OUT     80
+|    C                     Z-ADD0         RESL    80
+|    C                     Z-ADD0         TEMP1   64
+|    C                     Z-ADD0         TEMP2   64
+|    C                     SETOF                         59
+|    C*轉換年度
+|    C*年制為１－西元年，日期格式＝１　ＹＹＭＭＤＤ
+|    C*年制為２－中國年，日期格式＝２　ＹＹＹＹＭＭＤＤ
+|    C           DAU01     CHAINAK0                  40
+|    C           DAU02     MULT 10000     P3101I
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM AK09      P3102I  1
+|    C                     PARM AK09      P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C                     PARM           P3101O  80
+|    C           P3101O    DIV  10000     WAU02   40
+|    C*會計年度月數
+|    C                     SETOF                     30
+| 05-C           AK10      IFEQ '2'
+|   C                     SETON                     30
+| 05-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R0100 ....PRINT HEADING
+     C*==============================================================*
+02===CSR         R0100     BEGSR
+|    C*---------------------------------------------------------------
+|    C                     IN   PTDA01
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C*---------------------------------------------------------------
+|    C*CHAIN PT#BPF
+|    C           DAU01     CHAIN#B0                  40
+|    C   40                MOVEL*BLANK    #B16
+|    C*CHAIN PT#APF(成本中心)
+|    C           DAU05     CHAIN#A0                  40
+|    C   40                MOVEL*BLANK    #A02
+|    C*---------------------------------------------------------------
+|    C*          DAU01     CHAINAK0                  40
+|    C*
+|    C                     MOVELDAU01     AC01
+|    C                     Z-ADDWAU02     AC02
+|    C           KEYAC     CHAINAC0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*AC03A
+|   C                     Z-ADDAC03A     INP
+|   C*A1150 -↓         EXSR R0200
+|   C*****************
+|   C*日期格式轉換 FILE->SCREEN
+|   C*****************
+|   C                     CALL 'P31'
+|   C                     PARM INP       P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM AK09      P3104I  1
+|   C                     PARM AK09      P3105I  1
+|   C           OUT       PARM           P3101O  80
+|   C*A1150 -↑
+|   C                     Z-ADDOUT       WAC03A
+|   C*AC03B
+|   C                     Z-ADDAC03B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC03B
+|   C*AC04B
+|   C                     Z-ADDAC04B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC04B
+|   C*AC05B
+|   C                     Z-ADDAC05B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC05B
+|   C*AC06B
+|   C                     Z-ADDAC06B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC06B
+|   C*AC07B
+|   C                     Z-ADDAC07B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC07B
+|   C*AC08B
+|   C                     Z-ADDAC08B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC08B
+|   C*AC09B
+|   C                     Z-ADDAC09B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC09B
+|   C*AC10B
+|   C                     Z-ADDAC10B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC10B
+|   C*AC11B
+|   C                     Z-ADDAC11B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC11B
+|   C*AC12B
+|   C                     Z-ADDAC12B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC12B
+|   C*AC13B
+|   C                     Z-ADDAC13B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC13B
+|   C*AC14B
+|   C                     Z-ADDAC14B     INP
+|   C                     EXSR R0200
+|   C                     Z-ADDOUT       WAC14B
+|   C*
+| 01-C                     END
+|    C*
+|    C                     WRITEPH1
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ....CALL 'P37'已知日期之後一天
+     C*==============================================================*
+03===CSR         R0200     BEGSR
+|    C*
+|    C                     CALL 'P37'
+|    C                     PARM INP       P3701I  80
+|    C                     PARM '2'       P3702I  1
+|    C                     PARM '1'       P3703I  1
+|    C                     PARM 1         P3704I  40
+|    C                     PARM           P3701O  80
+|    C*A1150 -↓
+|    C                     Z-ADDP3701O    P3101I
+|    C*****************
+|    C*日期格式轉換 FILE->SCREEN
+|    C*****************
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK09      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C           OUT       PARM           P3101O  80
+|    C*A1150 -↑
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....PRINT DETAIL
+     C*==============================================================*
+04===C           R1000     BEGSR
+|    C***
+|    C*會計名稱
+|    C***
+|    C                     MOVELDAU01     AF01
+|    C                     MOVELAU04      AF02
+|    C           KEYAF     CHAINAF0                  40
+|    C   40                MOVEL*BLANK    AF03
+|    C*
+| 01-C           AU06      IFNE 0
+|   C*
+|   C*A1150修改R01-R14之四捨五入↓
+|   C*
+|   C*AU07
+|   C           AU07      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R01       H
+|   C*AU08
+|   C           AU08      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R02       H
+|   C*AU09
+|   C           AU09      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R03       H
+|   C*AU10
+|   C           AU10      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R04       H
+|   C*AU11
+|   C           AU11      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R05       H
+|   C*AU12
+|   C           AU12      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R06       H
+|   C*AU13
+|   C           AU13      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R08       H
+|   C*AU14
+|   C           AU14      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R09       H
+|   C*AU15
+|   C           AU15      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R10       H
+|   C*AU16
+|   C           AU16      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R11       H
+|   C*AU17
+|   C           AU17      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R12       H
+|   C*AU18
+|   C           AU18      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R13       H
+|   C*AU19
+|   C           AU19      DIV  AU06      TEMP1
+|   C           TEMP1     MULT 100       R14       H
+|   C*
+|   C*A1150 -↓
+| 01*C                     ELSE
+|   C                     Z-ADD0         R01
+|   C                     Z-ADD0         R02
+|   C                     Z-ADD0         R03
+|   C                     Z-ADD0         R04
+|   C                     Z-ADD0         R05
+|   C                     Z-ADD0         R06
+|   C                     Z-ADD0         R08
+|   C                     Z-ADD0         R09
+|   C                     Z-ADD0         R10
+|   C                     Z-ADD0         R11
+|   C                     Z-ADD0         R12
+|   C                     Z-ADD0         R13
+|   C                     Z-ADD0         R14
+| 01-C                     END
+|    C*A1150 -↑
+|    C*
+|    C*ADD TO TOTAL
+|    C                     ADD  AU07      T01
+|    C                     ADD  AU08      T02
+|    C                     ADD  AU09      T03
+|    C                     ADD  AU10      T04
+|    C                     ADD  AU11      T05
+|    C                     ADD  AU12      T06
+|    C                     ADD  AU06      T07
+|    C                     ADD  AU13      T08
+|    C                     ADD  AU14      T09
+|    C                     ADD  AU15      T10
+|    C                     ADD  AU16      T11
+|    C                     ADD  AU17      T12
+|    C                     ADD  AU18      T13
+|    C                     ADD  AU19      T14
+|    C*
+|    C                     EXSR R9000
+|    C                     WRITEPD1
+|    C*
+04===C                     ENDSR
+     C*===============================================================*
+     C*          R2000  ...PRINT TOTAL
+     C*===============================================================*
+05===C           R2000     BEGSR
+|    C*
+| 01-C           T07       IFNE 0
+|   C*
+|   C*A1150修改TR01-TR14之四捨五入↓
+|   C*
+|   C           T01       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR01      H
+|   C           T02       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR02      H
+|   C           T03       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR03      H
+|   C           T04       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR04      H
+|   C           T05       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR05      H
+|   C           T06       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR06      H
+|   C           T08       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR08      H
+|   C           T09       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR09      H
+|   C           T10       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR10      H
+|   C           T11       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR11      H
+|   C           T12       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR12      H
+|   C           T13       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR13      H
+|   C           T14       DIV  T07       TEMP2
+|   C           TEMP2     MULT 100       TR14      H
+|   C*
+| 01-C                     END
+|    C*
+|    C                     EXSR R9000
+|    C                     WRITEPT1
+|    C*CLEAR TOTAL FIELDS
+|    C                     Z-ADD0         T01
+|    C                     Z-ADD0         T02
+|    C                     Z-ADD0         T03
+|    C                     Z-ADD0         T04
+|    C                     Z-ADD0         T05
+|    C                     Z-ADD0         T06
+|    C                     Z-ADD0         T07
+|    C                     Z-ADD0         T08
+|    C                     Z-ADD0         T09
+|    C                     Z-ADD0         T10
+|    C                     Z-ADD0         T11
+|    C                     Z-ADD0         T12
+|    C                     Z-ADD0         T13
+|    C                     Z-ADD0         T14
+|    C                     Z-ADD0         TR01
+|    C                     Z-ADD0         TR02
+|    C                     Z-ADD0         TR03
+|    C                     Z-ADD0         TR04
+|    C                     Z-ADD0         TR05
+|    C                     Z-ADD0         TR06
+|    C                     Z-ADD0         TR08
+|    C                     Z-ADD0         TR09
+|    C                     Z-ADD0         TR10
+|    C                     Z-ADD0         TR11
+|    C                     Z-ADD0         TR12
+|    C                     Z-ADD0         TR13
+|    C                     Z-ADD0         TR14
+|    C*
+05===C           E1000     ENDSR
+     C*===============================================================*
+     C*          R9000  ...OVERFLOW
+     C*===============================================================*
+06===C           R9000     BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPE1
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+

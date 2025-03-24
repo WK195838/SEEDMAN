@@ -1,0 +1,78 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM-ID   : GLR2A0                                    */
+     /*    PROGRAM NAME : 分類帳                                  */
+     /*    AUTHOR       :  A1149    MAY                             */
+     /*    CREATE DATE  :  1992.11.13                               */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       : 泛太總帳                                */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&DAH01)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DOPT)     TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DAH04S)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DAH04E)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DATE)     TYPE(*CHAR)  LEN(8)
+             DCL        VAR(&P006O1)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&P006O2)   TYPE(*CHAR)  LEN(8)
+             DCL        VAR(&P006O3)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&P006O4)   TYPE(*CHAR) LEN(1)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DAH01)    VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&DOPT)     VALUE(%SST(*LDA 503 1))
+             CHGVAR     VAR(&DAH04S)   VALUE(%SST(*LDA 504 8))
+             CHGVAR     VAR(&DAH04E)   VALUE(%SST(*LDA 512 8))
+             CHGVAR     VAR(&DATE)     VALUE(%SST(*LDA 520 8))
+             CHGVAR     VAR(&P006O1)   VALUE(%SST(*LDA 528 8))
+             CHGVAR     VAR(&P006O2)   VALUE(%SST(*LDA 536 8))
+             CHGVAR     VAR(&P006O3)   VALUE(%SST(*LDA 544 1))
+             CHGVAR     VAR(&P006O4)   VALUE(%SST(*LDA 545 1))
+
+             CHKOBJ     OBJ(QTEMP/GLWF02) OBJTYPE(*FILE)
+             MONMSG     MSGID(CPF9801) EXEC(GOTO CMDLBL(NOEXIST))
+             CLRPFM     FILE(QTEMP/GLWF02)
+             GOTO EXIST
+ NOEXIST:    CRTPF      FILE(QTEMP/GLWF02) SRCFILE(GLFLIB/QDDSSRC)
+ EXIST:      /* PROCESS : COMULIATE DATAS TO GLWF02 */
+
+             OVRDBF     FILE(GLAHLF01) SHARE(*YES)
+             OPNQRYF    FILE((GLAHLF01)) QRYSLT(' AH01 *EQ ("' *CAT +
+                          &DAH01 *CAT '" ) & AH04 *EQ %RANGE("' +
+                          *CAT &DAH04S *CAT '" "' *CAT &DAH04E +
+                          *CAT '")  & AH10C *EQ %RANGE("' *CAT +
+                          &P006O1 *CAT '" "' *CAT &DATE *CAT '") +
+                          & AH18 *EQ ("V")') KEYFLD((AH01) (AH04)) +
+                          MAPFLD((AH10C AH10 *CHAR 8))
+
+             CALL       GLR2A01
+    /*總分類帳－日計表*/
+             IF         COND(&DOPT *EQ '1') THEN(DO)
+                        CALL GLR2A011
+                        CHGVAR  VAR(&P6401I) VALUE('GLR2A0P')
+                        ENDDO
+
+    /*明細分類帳*/
+             IF         COND(&DOPT *EQ '2') THEN(DO)
+             OVRPRTF    FILE(GLR2A1P) CPI(15)
+                        CALL GLR2A012
+                        CHGVAR  VAR(&P6401I) VALUE('GLR2A1P')
+                        ENDDO
+
+             CLOF       OPNID(GLAHLF01)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             ENDPGM
+

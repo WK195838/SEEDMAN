@@ -1,0 +1,228 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYA7021                                     *
+     H*   AUTHER       : A1084 CHARLES                               *
+     H*   CREATE DATE  : 79/07/17                                    *
+     H*   UPDATE DATE  : 96/01/23 A1413 CLOUD                        *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H****************************************************************
+     FPYPHPF  IP  E           K        DISK
+     FPYTDPF  UF  E           K        DISK                      A
+     FPYTDPF1 UF  E           K        DISK                      A
+     FPYPMPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYHDPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     I/COPY QDDSSRC,PYPMDS01
+     I*
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      186 1920DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      571 5740WTD01
+     I                                      501 5020DTD01
+     I                                      506 506 DOPT
+     I                                      507 508 DTD11
+     I                                      509 516 DTD17
+     I                                      529 532 DTD02
+     I*
+     IPYDA03      DS                            512
+     I                                      302 303 PYD034
+     I            DS
+     I                                        1   80EM13
+     I                                        1   60EM13YM
+     I            DS
+     I                                        1   60CHKYM
+     I                                        1   40CHKYY
+     I                                        5   60CHKMM
+     I            DS
+     I                                        1   80EM19
+     I                                        1   60EM19YM
+     I            DS
+     I                                        1   1 EM321
+     I                                        2   6 EM04
+     I                                        2   2 EM041
+     I                                        3   3 EM042
+     I                                        4   4 EM043
+     I                                        5   8 EM044
+     I                                        1  10 TD99
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           PYDA03
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYTD     KLIST
+     C                     KFLD           DTD11
+     C                     KFLD           WTD01
+     C                     KFLD           PYD034
+     C                     KFLD           EM31
+     C           KEYEM     KLIST
+     C                     KFLD           PH01
+     C                     KFLD           PH02
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DTD11
+     C           KEYHD     KLIST
+     C                     KFLD           PH01
+     C                     KFLD           PH02
+     C                     KFLD           PH03
+     C                     KFLD           PH04
+     C                     KFLD           PM318
+     C           KEYHD1    KLIST
+     C                     KFLD           PH01
+     C                     KFLD           PH02
+     C                     KFLD           PH03
+     C                     KFLD           PH04
+     C                     KFLD           PM311
+     C           KEYHD2    KLIST
+     C                     KFLD           PH01
+     C                     KFLD           PH02
+     C                     KFLD           PH03
+     C                     KFLD           PH04
+     C                     KFLD           SS01    2         勞退自提
+     C                     MOVEL'70'      SS01              勞退自提
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100
+     C*==============================================================*
+     C*   RTN010... INIT PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   *NAMVAR
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C                     Z-ADDWTD01     CHKYY
+|    C                     Z-ADD07        CHKMM
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*   RTN100... ＭＡＩＮ
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     MOVEL*BLANK    EM321
+|    C           KEYEM     CHAINEM0                  40
+| 01-C           EM321     IFEQ 'F'
+|   C                     MOVEL'4'       TD06
+| 01-C                     END
+|    C*
+|    C                     Z-ADD*ZERO     HD061   70
+|    C           KEYHD     CHAINHD0                  40
+|    C  N40                Z-ADDHD06      HD061
+|    C*
+|    C                     Z-ADD*ZERO     HD062   70
+|    C           KEYHD1    CHAINHD0                  40
+|    C  N40                Z-ADDHD06      HD062
+|    C*
+|    C                     Z-ADD*ZERO     HD063   70
+|    C           KEYHD2    CHAINHD0                  40
+|    C  N40                Z-ADDHD06      HD063   70        勞退自提
+|    C*
+|    C                     Z-ADD0         TD07
+|    C                     Z-ADD0         TD08
+| 02-C           EM13YM    IFGE CHKYM
+|   C           EM321     ANDEQ'F'
+|   C           KEYTD     CHAINTD1                  42
+| 02*C                     ELSE
+|   C           KEYTD     CHAINTD0                  42
+| 02-C                     END
+|    C*
+|    C                     Z-ADD$A8YMD    TD97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     TD98
+|    C*                    MOVEL$USER     TD99
+|    C*
+| 03-C           *IN42     IFEQ '0'
+|   C                     ADD  PH17      TD07
+|   C                     ADD  PH27      TD07
+|   C                     SUB  PH28      TD07
+|   C                     SUB  PH29      TD07
+|   C                     SUB  HD063     TD07              自提不計
+|   C                     ADD  HD063     TD20              勞退自提
+|   C                     ADD  HD061     TD08
+|   C                     ADD  HD062     TD08
+| 04-C           EM13YM    IFGE CHKYM
+|   C           EM321     ANDEQ'F'
+|   C                     UPDATTD1
+| 04*C                     ELSE
+|   C                     UPDATTD0
+| 04-C                     END
+|   C*
+| 03*C                     ELSE
+|   C                     Z-ADDWTD01     TD01
+|   C                     MOVELDTD02     TD02
+|   C                     Z-ADD*ZERO     TD03
+|   C                     MOVELPYD034    TD04
+|   C                     MOVELEM31      TD05
+|   C                     MOVEL*BLANK    TD06
+|   C                     Z-ADD*ZERO     TD20
+| 05-C           EM311     IFEQ '2'
+|   C                     MOVEL'4'       TD06
+| 05-C                     END
+|   C                     Z-ADDPH17      TD07
+|   C                     ADD  PH27      TD07
+|   C                     SUB  PH28      TD07
+|   C                     SUB  PH29      TD07
+|   C                     SUB  HD063     TD07              自提不計
+|   C                     ADD  HD063     TD20              勞退自提
+|   C                     Z-ADDHD061     TD08
+|   C                     ADD  HD062     TD08
+|   C                     MOVEL*BLANK    TD09
+|   C*                    MOVEL*BLANK    TD091
+|   C*                    MOVEL*BLANK    TD092
+|   C*                    MOVEL*BLANK    TD093
+|   C*                    MOVEL*BLANK    TD094
+|   C                     MOVEL*BLANK    TD10
+| 06-C           EM311     IFEQ '1'
+|   C                     MOVEL'A'       TD10
+| 06-C                     END
+|   C                     MOVELDTD11     TD11
+|   C                     MOVEL*BLANK    TD12
+|   C                     MOVELEM02      TD12
+|   C                     MOVELEM03      TD13
+|   C                     MOVELEM39      TD14
+|   C                     MOVELTD01      TD15
+|   C                     MOVE '01'      TD15
+| 07-C           TD15      IFLT EM13YM
+|   C                     Z-ADDEM13YM    TD15
+| 07-C                     END
+|   C                     MOVELTD01      TD16
+|   C                     MOVE '12'      TD16
+| 08-C           TD16      IFGT EM19YM
+|   C           EM19YM    ANDNE*ZERO
+|   C                     Z-ADDEM19YM    TD16
+| 08-C                     END
+|   C                     MOVELDTD17     TD17
+|   C                     Z-ADD*ZERO     TD96
+|   C*
+| 09-C           TD07      IFNE *ZERO
+|   C           TD08      ORNE *ZERO
+|   C*
+| 10-C           EM13YM    IFGE CHKYM
+|   C           EM321     ANDEQ'F'
+|   C                     WRITETD1
+| 10*C                     ELSE
+|   C                     WRITETD0
+| 10-C                     END
+|   C*
+| 09-C                     END
+|   C*
+| 03-C                     END
+|    C*
+02===C                     ENDSR
+

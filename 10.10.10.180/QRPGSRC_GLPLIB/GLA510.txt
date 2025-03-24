@@ -1,0 +1,515 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLA510                                     *
+     H*    PROGRAM NAME :月底結轉　　　　                          *
+     H*    AUTHOR       : A1150                                      *
+     H*    CREATE DATE  : 81/12/02                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FGLACPF  UF  E           K        DISK
+     FGLAHLF08IF  E           K        DISK
+     FGLAKPF  UF  E           K        DISK
+     FS#SUPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLA510D CF  E                    WORKSTN      KINFDS DSPFDS
+     FGLA510P O   E             39     PRINTER                        UC
+     E*---------------------------------------------------------------*
+     E                    ARR        13  1
+     E*---------------------------------------------------------------*
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      138 138 $INQ
+     I                                      136 136 $UPD
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I*                                     125 1270$CPY
+     I*                                     217 218 $PRTCD
+     I*                                     219 219 $PENV
+     I            DS
+     I                                        1  13 ARR
+     I                                        1   1 AC03
+     I                                        2   2 AC04
+     I                                        3   3 AC05
+     I                                        4   4 AC06
+     I                                        5   5 AC07
+     I                                        6   6 AC08
+     I                                        7   7 AC09
+     I                                        8   8 AC10
+     I                                        9   9 AC11
+     I                                       10  10 AC12
+     I                                       11  11 AC13
+     I                                       12  12 AC14
+     I                                       13  13 AC15
+     I            DS
+     I                                        1   50WAK14
+     I                                        1   30W01
+     I                                        4   50W02
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*
+     C           *LIKE     DEFN AH10      AH10F
+     C           *LIKE     DEFN AH10      AH10T
+     C           *LIKE     DEFN AH02      WAH02
+     C           *LIKE     DEFN AK14      WAK14#
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAK     KLIST
+     C                     KFLD           DAC01            *公司別
+     C*---螢幕--
+     C           KEYAC     KLIST
+     C                     KFLD           DAC01
+     C                     KFLD           WTMP1   40       *會計年度
+     C*---報表--
+     C           KEYSU     KLIST
+     C                     KFLD           AH26             *製票人
+     C           KEYSL     KLIST
+     C                     KFLD           DAC01
+     C                     KFLD           AH10F            *傳票日期
+     C           KEYSG     KLIST
+     C                     KFLD           DAC01
+     C                     KFLD           AH10T            *傳票日期
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT VALUE
+     C*
+  01-C           *IN03     DOUEQ'1'
+    C                     EXSR R1000                      *SCRN
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....SCREEN INIT VALUE SET
+     C*==============================================================*
+01===CSR         R0100     BEGSR
+|    C*
+|    C                     SETON                     27
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C                     Z-ADDDDATE     PDATE
+|    C*
+|    C                     MOVEL*BLANK    DAC01
+|    C                     Z-ADD0         DFLD1
+|    C                     Z-ADD0         DFLD2
+|    C                     Z-ADD0         DFLD3
+|    C                     Z-ADD0         GLS1F
+|    C                     Z-ADD0         GLS1T
+|    C                     Z-ADD0         GLS2F
+|    C                     Z-ADD0         GLS2T
+|    C                     Z-ADD1         $CPY
+|    C                     MOVEL'0'       $PRTCD
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+|   C                     EXSR R1E00                      .PROMPT
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1B00                      .CHECK      ?
+|    C*
+|    C*產生錯誤報表....
+|    C*
+| 03-C           *IN14     IFEQ '1'
+|   C           *IN32     ANDEQ'1'
+|   C                     MOVEL'UGL0031' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     99
+|   C                     EXSR R2A00
+| 03-C                     END
+|    C*
+|    C*更新會計期間檔.....
+|    C*
+| 04-C           *IN14     IFEQ '1'
+|   C           *IN32     ANDEQ*ZERO
+|   C                     EXSR R1C00
+| 04-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00  ...CHECK DATA FROM SCREEN KEY-IN
+     C*===============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD0         DFLD3
+|    C                     Z-ADD0         GLS2F
+|    C                     Z-ADD0         GLS2T
+|    C*公司別------
+| 01-C           DAC01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           KEYAK     CHAINAK0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C********************************
+|    C*上次月結*********************
+|    C********************************
+|    C*
+|    C           AK14      DIV  100       W00     40
+|    C                     MVR            W02     20
+|    C*
+|    C           W00       MULT 10000     P3101I
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK09      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C                     PARM           P3101O  80
+|    C           P3101O    DIV  10000     W01
+|    C*
+|    C                     Z-ADDWAK14     DFLD3
+|    C*
+|    C* CALL GLS006 得日期起迄*********
+|    C                     Z-ADD0         P006O1
+|    C                     Z-ADD0         P006O2
+|    C*
+|    C                     CALL 'GLS006'
+|    C                     PARM DAC01     P006I1  2        *公司別
+|    C                     PARM W01       P006I2  40       *會計年度
+|    C                     PARM W02       P006I3  20       *會計期間
+|    C                     PARM 'S'       P006I4  1        *日期型態
+|    C           GLS2F     PARM           P006O1  80       *日期起
+|    C           GLS2T     PARM           P006O2  80       *日期迄
+|    C                     PARM           P006O3  1
+|    C                     PARM           P006O4  1
+|    C****************************
+|    C*會計年度&會計期間-----
+|    C****************************
+|    C*
+|    C                     Z-ADD0         GLS1F
+|    C                     Z-ADD0         GLS1T
+|    C*
+| 03-C***        DFLD1     IFEQ 0
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6299
+| 03-C*                    END
+|    C***99                GOTO E1B00
+|    C*
+| 04-C           DFLD2     IFLT 1
+|   C           DFLD2     ORGT 13
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           DFLD1     MULT 10000     P3101I
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM AK09      P3102I  1
+|    C                     PARM AK09      P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C                     PARM           P3101O  80
+|    C           P3101O    DIV  10000     WTMP1   40
+|    C*
+|    C           KEYAC     CHAINAC0                  40
+| 05-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 05*C                     ELSE
+|   C******************************************************
+|   C*相應對（會計期間）之結帳碼(AC03-AC15)須為空白----
+|   C******************************************************
+|   C                     Z-ADDDFLD2     A       20       *會期期間
+| 06-C           ARR,A     IFNE *BLANK
+|   C                     MOVEL'UGL0032' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6399
+| 06-C                     END
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* CALL GLS006 得日期起迄*********
+|    C*
+|    C                     CALL 'GLS006'
+|    C                     PARM DAC01     P006I1  2        *公司別
+|    C                     PARM DFLD1     P006I2  40       *會計年度
+|    C                     PARM DFLD2     P006I3  20       *會計期間
+|    C                     PARM 'S'       P006I4  1        *日期型態
+|    C           GLS1F     PARM           P006O1  80       *日期起
+|    C           GLS1T     PARM           P006O2  80       *日期迄
+|    C                     PARM           P006O3  1
+|    C                     PARM           P006O4  1
+|    C*****************************************************************
+|    C*讀取會計傳票檔
+|    C*****************************************************************
+|    C           KEYAK     CHAINAK0                  40
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM GLS1F     P3101I  80
+|    C                     PARM AK11      P3102I  1
+|    C                     PARM AK09      P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           AH10F     PARM           P3101O  80
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM GLS1T     P3101I  80
+|    C                     PARM AK11      P3102I  1
+|    C                     PARM AK09      P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           AH10T     PARM           P3101O  80
+|    C************************************************
+|    C*判斷傳票日期是否在會計期間之日期起迄間*******
+|    C************************************************
+|    C           KEYSL     SETLLAH0
+|    C           KEYAK     READEAH0                      44
+|    C  N44                Z-ADDAH10      AH10SL  80
+|    C   44                Z-ADD0         AH10SL  80
+|    C*
+|    C           KEYSG     SETGTAH0
+|    C           KEYAK     REDPEAH0                      45
+|    C  N45                Z-ADDAH10      AH10SG  80
+|    C   45                Z-ADD0         AH10SG  80
+|    C*
+| 07-C           AH10SL    IFGE AH10F
+|   C           AH10SL    ANDLEAH10T
+|   C           AH10SG    ANDGEAH10F
+|   C           AH10SG    ANDLEAH10T
+|   C                     SETON                     32
+| 07*C                     ELSE
+|   C                     SETOF                     32
+| 07-C                     END
+|    C* CHK FUN AUT
+|    C*無錯誤報表須做更新....
+|    C*
+| 08-C           *IN32     IFEQ '0'
+| 09-C           $UPD      IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 09-C                     END
+| 08*C                     ELSE
+|   C*須產生錯誤報表....
+|   C*
+| 10-C           $INQ      IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 10-C                     END
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*
+03===CSR         E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....更新會計期間檔
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+|    C           KEYAC     CHAINAC0                  40
+|    C********************************************
+|    C*將相應對（會計期間）之結帳碼更新為�洘褙�*
+|    C********************************************
+|    C                     Z-ADDDFLD2     A       20       *會期期間
+|    C*
+|    C                     MOVEL'Y'       ARR,A
+|    C                     UPDATAC0
+|    C*
+|    C                     MOVEL'UPT2142' ERRID
+|    C                     MOVEL'PTMF'    ERRF
+|    C                     SETON                     99
+|    C*
+     C                     MOVELAC02      WAK14#
+     C                     MOVE DFLD2     WAK14#
+|    C           KEYAK     CHAINAK0                  40
+     C           WAK14#    IFGT AK14
+     C                     Z-ADDWAK14#    AK14
+     C                     UPDATAK0
+     C                     END
+     C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+05===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*會計期間視窗----
+| 01-C           #LIN      IFEQ 7
+|   C           #COL      ANDGE43
+|   C           #COL      ANDLE45
+|   C                     CALL 'GLS007'
+|   C                     PARM DAC01     P007I1  2
+|   C                     PARM DFLD1     P007I2  30
+|   C           DFLD2     PARM           P007O1  20
+| 01-C                     END
+|    C*
+| 02-C           #LIN      IFEQ 8
+|   C           #COL      ANDGE43
+|   C           #COL      ANDLE44
+|   C                     CALL 'GLS007'
+|   C                     PARM DAC01     P007I1  2
+|   C                     PARM DFLD1     P007I2  30
+|   C           DFLD2     PARM           P007O1  20
+| 02-C                     END
+|    C*
+|    C*印表機
+| 03-C           #LIN      IFEQ 17
+|   C           #COL      ANDGE43
+|   C           #COL      ANDLE44
+|   C                     CALL 'P64I'
+|   C           $PRTCD    PARM $PRTCD    P64II1  2
+| 03-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R2A00 ....產生錯誤報表 MAIN-ROUTINE
+     C*==============================================================*
+06===C           R2A00     BEGSR
+|    C*
+     C                     OPEN GLA510P
+     C*
+|    C           KEYSL     SETLLAH0
+|    C*
+|    C           KEYAK     READEAH0                      44
+| 01-C           *IN44     IFEQ '0'
+|   C           KEYAK     CHAIN#B0                  40
+|   C   40                MOVEL*BLANK    #B16
+| 01-C                     END
+|    C*
+| 02-C           *IN44     DOWEQ'0'
+|   C           AH10      ANDLEAH10T
+|   C                     EXSR R2A10
+|   C           KEYAK     READEAH0                      44
+| 02-C                     END
+|    C**********************
+|    C* END OF FILE
+|    C**********************
+|    C   10                EXSR R2A22
+|    C*
+     C                     CLOSEGLA510P
+     C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R2A10 ....產生錯誤報表
+     C*==============================================================*
+07===C           R2A10     BEGSR
+|    C*
+|    C***************************************************
+|    C*控制傳票號碼相同者，列印一筆至報表**************
+|    C***************************************************
+| 01-C           *IN10     IFEQ '0'
+|   C                     SETON                     3910
+|   C                     MOVELAH02      WAH02
+|   C                     EXSR R2A21
+| 01-C                     END
+|    C*
+| 02-C           AH02      IFNE WAH02
+|   C                     EXSR R2A21
+|   C                     MOVELAH02      WAH02
+| 02-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R2A21 .... L1 ON  & LR OFF
+     C*==============================================================*
+08===C           R2A21     BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*********************
+|    C*傳票日期**********
+|    C*********************
+|    C           KEYAK     CHAINAK0                  40
+|    C                     CALL 'P31'
+|    C                     PARM AH10      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C           PAH10     PARM           P3101O  80
+|    C*********************
+|    C*製票人　**********
+|    C*********************
+|    C           KEYSU     CHAINSU0                  40
+|    C   40                MOVEL*BLANK    PSU02
+|    C  N40                MOVELSU02      PSU02
+|    C*********************
+|    C*製票日期**********
+|    C*********************
+|    C                     CALL 'P31'
+|    C                     PARM AH25      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C           PAH25     PARM           P3101O  80
+|    C*
+|    C                     WRITEPD1
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R2A22 .... LR ON
+     C*==============================================================*
+09===C           R2A22     BEGSR
+|    C*
+|    C                     SETOF                       10
+|    C*
+|    C                     WRITEPE1
+|    C*
+|    C                     MOVEL'GLA510P' P6401I
+|    C*
+|    C                     CALL 'P64'
+|    C                     PARM           P6401I 10
+|    C                     PARM '1'       P6402I  1
+|    C                     PARM           $CPY
+|    C                     PARM           $PRTCD
+|    C*
+09===C                     ENDSR
+

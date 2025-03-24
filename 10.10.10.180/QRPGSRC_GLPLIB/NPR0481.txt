@@ -1,0 +1,342 @@
+     H*================================================================
+      * MODI CODE |  AUTHOR  |  DATE  | DESCRIPTION
+      *----------------------------------------------------------------
+      *   M001    | MICHELLE |01.01.19|試飲退回量A&P CODE = 999
+      *----------------------------------------------------------------
+      *   M005    | MICHELLE |01.08.03| A&P增加種類代碼及容量選項
+      *----------------------------------------------------------------
+      *   M007    | MICHELLE |01.10.04|刪除M005. A&P CODE改抓取
+      *           |          |        | SOSOPFX / SOSDPFX
+      *----------------------------------------------------------------
+      *   M08     | MICHELLE |01.12.03| INTEGRATED PROGRESS
+      *----------------------------------------------------------------
+     H*================================================================
+     FNPNDPF  IF  E           K        DISK
+     FMTMALF02IF  E           K        DISK
+     FPA#5PF  IF  E           K        DISK
+     FPA#3PF  IF  E           K        DISK
+M004MF*SOSCPF  IF  E           K        DISK
+M004MFSOSCLF06IF  E           K        DISK
+     FSOSDPF  IF  E           K        DISK
+M007AFSOSDPFX IF  E           K        DISK
+     F            SD0                               KRENAMESDX0
+M001AFSOSNPF  IF  E           K        DISK
+M001AFSOSOPF  IF  E           K        DISK
+M007AFSOSOPFX IF  E           K        DISK
+     F            SO0                               KRENAMESOX0
+     FNPWF01  UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     E                    @W02       13 13 2
+     I*
+     I*DATA AREA
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* SCREEN INPUT FIELD  ++++++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DND01
+     I                                      509 5110DYEAR
+     I                                      512 5130DMM
+     I                                      535 5380$YEAR
+     I                                      541 542 DND03S
+     I                                      543 544 DND03E
+     I                                      545 546 DND04S
+     I                                      547 548 DND04E
+     I                                      551 5580WAH10S
+     I                                      561 5680WAH10E
+     I            DS
+     I                                        1 169 @W02
+     I                                        1  132ND06B
+     I                                       14  262ND07B
+     I                                       27  392ND08B
+     I                                       40  522ND09B
+     I                                       53  652ND10B
+     I                                       66  782ND11B
+     I                                       79  912ND12B
+     I                                       92 1042ND13B
+     I                                      105 1172ND14B
+     I                                      118 1302ND15B
+     I                                      131 1432ND16B
+     I                                      144 1562ND17B
+     I                                      157 1692ND18B
+     I            DS
+     I                                        1   9 SD03
+     I                                        3   4 SD03A
+     I                                        1   6 SD03B
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYWF     KLIST
+     C                     KFLD           WF0101
+     C                     KFLD           WF0102
+     C                     KFLD           WF0103
+     C                     KFLD           WF0104
+M005AC                     KFLD           WF0107
+M005AC                     KFLD           WF0108
+     C                     KFLD           WF0105
+M007AC           KEYSDX    KLIST
+M007AC                     KFLD           WSD02  12
+M007AC                     KFLD           WSD03   9
+M007AC           KEYSOX    KLIST
+M007AC                     KFLD           WSO02  12
+M007AC                     KFLD           WSO03   9
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+     C*
+     C                     MOVELDND01     WF0101
+     C                     Z-ADD$YEAR     WF0102
+     C                     EXSR RTN100                     預算數
+     C                     EXSR RTN200                     試飲實績
+M001AC                     EXSR RTN400                     試飲收回
+     C*
+     C                     SETON                     LR
+      *==============================================================*
+      *          RTN100....NPNDPF
+      *==============================================================*
+01===C           RTN100    BEGSR
+|    C                     READ ND0                      42
+| 01-C           *IN42     DOWEQ'0'
+|   C*A&P CODE
+|   C                     MOVE ND04      WF0104
+|   C                     MOVELND05      WF0105
+|   C                     MOVELND051     WF0106
+|   C                     MOVELND03      WF0103
+M005AC                     MOVELND19      WF0107
+M005AC                     MOVELND20      WF0108
+|   C           KEYWF     CHAINWF010                40
+|   C*
+|   C                     Z-ADD1         X       20
+| 02-C           X         DOWLT13
+|   C                     ADD  @W02,X    TBUG   132
+|   C                     ADD  1         X
+| 02-C                     END
+| 03-C           *IN40     IFEQ '0'
+|   C                     ADD  TBUG      WF0110
+|   C                     UPDATWF010
+| 03*C                     ELSE
+|   C                     Z-ADDTBUG      WF0110
+| 04-C           WF0110    IFNE 0
+|   C                     WRITEWF010
+| 04-C                     END
+| 03-C                     END
+|   C                     Z-ADD0         TBUG
+|   C                     Z-ADD0         @W02
+|   C                     READ ND0                      42
+| 01-C                     END
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN200....SOSCPF
+      *==============================================================*
+03===C           RTN200    BEGSR
+     C                     READ SC0                      45
+     C                     SETOF                     66
+  01-C           *IN45     DOWEQ'0'
+     C           SC10      IFNE 'F1'
+     C           SC02      SETLLSD0
+     C           SC02      READESD0                      46
+     C           *IN46     DOWEQ'0'
+     C           SC10      CHAIN#50                  44
+     C           *IN44     IFEQ '0'
+     C                     MOVEL#502      WF0105
+     C                     MOVEL#502      WF0106
+     C                     ELSE
+     C                     MOVEL'999'     WF0105
+     C                     MOVEL'9'       WF0106
+     C                     END
+     C           SC04      CHAIN#30                  48
+     C  N48                MOVEL#302      WF0104
+     C   48                MOVELSD03A     WF0104
+M007AC                     MOVELSD02      WSD02
+M007AC                     MOVELSD03      WSD03
+M007AC           KEYSDX    CHAINSDX0                 47
+M007AC           *IN47     IFEQ '0'
+M007AC                     MOVELSD99      WF0107
+M007AC                     MOVELSD98      WF0108
+M007AC                     ELSE
+M007AC                     MOVEL*BLANKS   WF0107
+M007AC                     MOVEL*BLANKS   WF0108
+M007AC                     END
+     C           WF0104    IFGT DND04E                     品牌在範圍
+     C           WF0104    ORLT DND04S
+     C                     SETON                     66
+     C                     END
+     C           WF0104    CHAINMA0                  49
+     C           *IN49     IFEQ '0'
+     C                     MOVELMA11      WF0103
+     C                     MOVE '0'       WF0103
+     C                     ELSE
+     C                     MOVE *BLANKS   WF0103
+     C                     END
+     C           WF0103    IFGT DND03E                     組別在範圍
+     C           WF0103    ORLT DND03S
+     C                     SETON                     66
+     C                     END
+     C           *IN66     IFEQ '0'
+     C                     Z-ADD0         WF0112
+    C           KEYWF     CHAINWF010                40
+    C                     EXSR RTN210
+     C                     END
+     C                     SETOF                     66
+    C           SC02      READESD0                      46
+  02-C                     END
+    C*
+     C                     END                             SC10<>F1
+    C                     READ SC0                      45
+  01-C                     END
+  01-C                     ENDSR
+      *==============================================================*
+      *          RTN210....WRITE OR UPDATE NPWF01
+      *==============================================================*
+01===C           RTN210    BEGSR
+|    C*
+     C                     MOVELWF0103    W0103   2
+     C                     MOVELWF0104    W0104   2
+     C                     MOVELWF0107    W0107   2
+     C                     MOVELWF0108    W0108   1
+     C                     MOVELWF0105    W0105   3
+     C*
+     C                     Z-ADD0         UNIT1  112
+     C                     Z-ADD0         UNIT2  112
+     C                     Z-ADD0         QTY     60
+     C                     Z-ADD0         WTOT1  112
+     C                     Z-ADD0         WTOT2  112
+     C           SD04      ADD  SD05      QTY
+     C*
+     C           SD10      ADD  SD11      UNIT1
+     C                     ADD  SD12      UNIT1
+     C*
+     C           SD22      ADD  SD23      UNIT2
+     C                     ADD  SD24      UNIT2
+     C           UNIT1     MULT QTY       WTOT1
+     C           UNIT2     MULT QTY       WTOT2
+     C           WTOT1     SUB  WTOT2     WFLD   112
+     C           SC10      IFNE 'G1'
+     C                     ADD  WTOT1     WF0112
+  04*C           *IN40     IFEQ '0'
+  |  C           WTOT1     IFNE 0
+  |  C                     UPDATWF010
+  |  C                     END
+  04*C                     ELSE
+    C                     Z-ADD0         WF0110
+    C                     Z-ADD0         WF0111
+    C                     Z-ADD0         WF0113
+  |  C           WTOT1     IFNE 0
+  |  C                     WRITEWF010
+  |  C                     END
+  04*C                     END
+     C                     END
+     C*
+     C                     Z-ADD0         WF0110
+     C                     Z-ADD0         WF0111
+     C                     Z-ADD0         WF0112
+     C                     Z-ADD0         WF0113
+     C           WFLD      IFNE 0
+     C                     MOVEL'999'     WF0105
+     C                     MOVEL'9'       WF0106
+     C                     MOVELW0103     WF0103
+     C                     MOVELW0104     WF0104
+     C                     MOVELW0107     WF0107
+     C                     MOVELW0108     WF0108
+     C*
+     C           KEYWF     CHAINWF010                41
+     C                     MULT -1        WFLD
+     C                     ADD  WFLD      WF0112
+  04*C           *IN41     IFEQ '0'
+  |  C                     UPDATWF010
+  04*C                     ELSE
+    C                     Z-ADD0         WF0110
+    C                     Z-ADD0         WF0111
+     C                     Z-ADD0         WF0113
+  |  C                     WRITEWF010
+  04*C                     END
+     C                     END
+     C*
+01===C                     ENDSR
+      *==============================================================*
+M001A *          RTN400....SOSNPF
+      *==============================================================*
+03===C           RTN400    BEGSR
+     C                     READ SN0                      45
+     C                     SETOF                     66
+  01-C           *IN45     DOWEQ'0'
+     C                     MOVEL'999'     WF0105
+     C                     MOVEL'9'       WF0106
+     C           SN02      SETLLSO0
+     C           SN02      READESO0                      46
+     C           *IN46     DOWEQ'0'
+     C           SN03      IFGE '10001'
+     C           SN03      ANDLE'19999'
+     C           SN03      CHAIN#30                  48
+     C  N48                MOVEL#302      WF0104
+     C   48                MOVELSD03A     WF0104
+M007AC                     MOVELSO02      WSO02
+M007AC                     MOVELSO03      WSO03
+M007AC           KEYSOX    CHAINSOX0                 47
+M007AC           *IN47     IFEQ '0'
+M007AC                     MOVELSO99      WF0107
+M007AC                     MOVELSO98      WF0108
+M007AC                     ELSE
+M007AC                     MOVEL*BLANKS   WF0107
+M007AC                     MOVEL*BLANKS   WF0108
+M007AC                     END
+     C           WF0104    IFGT DND04E                     品牌在範圍
+     C           WF0104    ORLT DND04S
+     C                     SETON                     66
+     C                     END
+     C           WF0104    CHAINMA0                  49
+     C           *IN49     IFEQ '0'
+     C                     MOVELMA11      WF0103
+     C                     MOVE '0'       WF0103
+     C                     ELSE
+     C                     MOVE *BLANKS   WF0103
+     C                     END
+     C           WF0103    IFGT DND03E                     組別在範圍
+     C           WF0103    ORLT DND03S
+     C                     SETON                     66
+     C                     END
+     C           *IN66     IFEQ '0'
+     C                     Z-ADD0         WF0112
+    C           KEYWF     CHAINWF010                40
+    C                     EXSR RTN410
+     C                     END
+  02-C                     END
+     C                     SETOF                     66
+    C           SN02      READESO0                      46
+  02-C                     END
+    C*
+    C                     READ SN0                      45
+  01-C                     END
+  01-C                     ENDSR
+      *==============================================================*
+M001A *          RTN410....WRITE OR UPDATE NPWF01
+      *==============================================================*
+01===C           RTN410    BEGSR
+|    C*
+     C                     Z-ADD0         AMT
+     C           SO16      ADD  SO17      AMT    112
+     C                     ADD  SO18      AMT
+     C                     SUB  AMT       WF0112
+  04*C           *IN40     IFEQ '0'
+  |  C           AMT       IFNE 0
+  |  C                     UPDATWF010
+  |  C                     END
+  04*C                     ELSE
+    C                     Z-ADD0         WF0110
+    C                     Z-ADD0         WF0111
+  |  C           AMT       IFNE 0
+  |  C                     WRITEWF010
+  |  C                     END
+  04*C                     END
+     C*
+01===C                     ENDSR
+      *==============================================================*
+

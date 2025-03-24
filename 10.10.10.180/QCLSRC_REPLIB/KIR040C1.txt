@@ -1,0 +1,54 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250  */
+     /*                                                             */
+     /*    AUTHOR       : DEREK                                     */
+     /*    CREATE DATE  : 2016/12/16                                */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : KIR040C1                                  */
+     /*    SYSTEM       :茂世進銷存                               */
+     /*    SUBSYSTEM    :專櫃進銷存系統                           */
+     /*    REMARK       :供應商請款銷售報表                       */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&DEE01S) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&DEE04S) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DEE04E) TYPE(*CHAR) LEN(5)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6402I)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+             DCL        VAR(&P6404I)   TYPE(*CHAR) LEN(2)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+
+             CHGVAR     VAR(&DEE01S)   VALUE(%SST(*LDA 505 6))
+             CHGVAR     VAR(&DEE04S)   VALUE(%SST(*LDA 521 5))
+             CHGVAR     VAR(&DEE04E)   VALUE(%SST(*LDA 526 5))
+
+             OVRDBF     FILE(W3EEPF) SHARE(*YES)
+             OPNQRYF    FILE((W3EEPF)) OPTION(*INP) QRYSLT(' EE01 = +
+                          "' || &DEE01S || '" & EE04 = %RANGE("' || +
+                          &DEE04S || '" "' || &DEE04E || '") & EE06 +
+                          = 0 ') KEYFLD((EE04) (EE03) (EE02)) +
+                          MAPFLD((CEE01 EE01 *CHAR 6))
+
+             OVRPRTF    FILE(KIR040P) PAGESIZE(66 198) CPI(15)
+
+             CALL       KIR0402
+             CLOF       OPNID(W3EEPF)
+             DLTOVR     FILE(*ALL)
+
+             CHGVAR     VAR(&P6401I) VALUE('KIR040P')
+             CHGVAR     VAR(&P6402I) VALUE(&$PENV)
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CHGVAR     VAR(&P6404I) VALUE(&$PRTCD)
+             CALL       PGM(P64) PARM(&P6401I &P6402I &P6403I &P6404I)
+
+             ENDPGM
+

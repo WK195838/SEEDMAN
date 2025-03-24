@@ -1,0 +1,131 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLA180                                     *
+     H*    PROGRAM NAME :過帳處理控制                              *
+     H*    AUTHOR       : A1150                                      *
+     H*    CREATE DATE  : 81/11/03                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FGLAKPF  UF  E           K        DISK
+     FGLA180D CF  E                    WORKSTN
+     E*---------------------------------------------------------------
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      152 161 $USERN
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAK     KLIST
+     C                     KFLD           DAK01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT VALUE
+     C*
+     C           *IN03     DOUEQ'1'
+     C                     EXSR R1000                      *SCRN
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+     CSR         R0100     BEGSR
+|    C*
+     C                     IN   PTDA01
+     C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*
+     C                     MOVEL*BLANK    DAK01
+     C                     MOVEL*BLANK    DAK15
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+     C           R1000     BEGSR
+     C*
+     C                     EXFMTDSPD1
+     C                     MOVEA*ALL'0'   *IN,60
+     C*
+     C           *IN03     IFEQ '1'
+     C                     GOTO E1000
+     C                     END
+     C*
+     C                     EXSR R1B00                      .CHECK      ?
+     C*
+     C           *IN05     IFEQ '1'
+     C*過帳控制---------
+     C                     MOVELAK15      DAK15
+     C*
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN99     IFEQ *ZERO
+     C                     EXSR R2B00                      .UPDAT
+     C                     END
+     C*
+     C*
+     C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00  ...CHECK DATA FROM SCREEN KEY-IN
+     C*===============================================================*
+     C           R1B00     BEGSR
+     C*
+     C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+     C           DAK01     IFEQ *BLANK
+     C                     MOVEL'UPT0010' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6199
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C           KEYAK     CHAINAK0                  40
+     C           *IN40     IFEQ '1'
+     C                     MOVEL'UPT2010' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6199
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     CSR         E1B00     ENDSR
+     C*==============================================================*
+     C*          R2B00 .... UPDAT TO GLAKPF
+     C*==============================================================*
+     C           R2B00     BEGSR
+     C*
+     C           DAK15     IFEQ 'Y'
+     C                     MOVEL'Y'       AK15
+     C                     ELSE
+     C                     MOVEL*BLANK    AK15
+     C                     END
+     C*
+     C                     UPDATAK0
+     C*
+     C                     MOVEL'UPT2075' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     99
+     C*
+     C                     ENDSR
+

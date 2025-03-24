@@ -1,0 +1,88 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM ID   : PYR6441C                                  */
+     /*    PROGRAM NAME :全民健保費用証明表　　　 　　　        */
+     /*    AUTHOR       : 1328 JEFFREY                              */
+     /*    CREATE DATE  : 90/05/17                                  */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       :                                           */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&DEM01)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DEM041)   TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DEM042)   TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DEM021)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DEM022)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DPENK)    TYPE(*CHAR) LEN(4)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DEM01)    VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&DEM041)   VALUE(%SST(*LDA 511 7))
+             CHGVAR     VAR(&DEM042)   VALUE(%SST(*LDA 521 7))
+             CHGVAR     VAR(&DEM021)   VALUE(%SST(*LDA 531 8))
+             CHGVAR     VAR(&DEM022)   VALUE(%SST(*LDA 541 8))
+             CHGVAR     VAR(&DPENK)    VALUE(%SST(*LDA 611 4))
+
+
+             CPYF       FROMFILE(PYR644WF) TOFILE(*LIBL/PYR644WF) +
+                        CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM +
+                        FILE(*LIBL/PYR644WF))
+             OVRDBF     FILE(PYR644WF) TOFILE(*LIBL/PYR644WF) +
+                        SHARE(*YES)
+
+             OVRDBF     FILE(PYEMPF) SHARE(*YES)
+             OPNQRYF    FILE((PYEMPF)) QRYSLT('EM01 *EQ "' *CAT +
+                          &DEM01 *CAT '" & CEM04 *EQ %RANGE("' *CAT +
+                          &DEM041 *CAT '" "' *CAT &DEM042 *CAT '") +
+                          & EM02 *EQ %RANGE("' *CAT &DEM021 *CAT '" +
+                          "' *CAT &DEM022 *CAT '")  ') +
+                         KEYFLD((EM01) (EM02) (EM041) (EM042) (EM043) +
+                          (EM044)) MAPFLD((CEM04 +
+                          'EM041 *CAT EM042 *CAT EM043 *CAT EM044'))
+
+     /*      OVRDBF     FILE(PYTIPF) SHARE(*YES)                      */
+     /*      IF         COND(&DEM01 *EQ '01'                        +
+                         *OR &DEM01 *EQ '02' ) THEN(DO)               */
+     /*      OPNQRYF    FILE((PYTIPF)) QRYSLT('                     +
+                          TI01 *EQ        "' *CAT &DEM01 *CAT '"    +
+                        & TI024 *EQ "' *CAT &DPENK *CAT '"          +
+                                                                 ') +
+                          KEYFLD(*FILE)                             +
+                          MAPFLD((TI021 TI02 *CHAR 6)               +
+     /*                          (TI024 '%SST(TI021 1 4)' *CHAR 4))   */
+     /*      ENDDO     */
+
+             OVRPRTF    FILE(PYR644P) PAGESIZE(33 132) CPI(10) +
+                          OVRFLW(33)
+
+/*將符合的資料寫入暫存檔(PYR643WF)                           */
+             CALL       PYR6442
+
+/*將資料按部門代碼做排序                                       */
+        /*   OPNQRYF    FILE((PYR643WF))                           +
+                        KEYFLD((WF09)(WF08)(WF02))              */
+
+             CALL       PYR6443
+
+             CLOF       OPNID(PYEMPF)
+        /*   CLOF       OPNID(PYTIPF)     */
+        /*   CLOF       OPNID(PYR644WF)   */
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('PYR644P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             ENDPGM
+

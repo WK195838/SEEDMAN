@@ -1,0 +1,77 @@
+             PGM
+
+             DCL        VAR(&DEM01)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DEM04S)   TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DEM04E)   TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DEM02S)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DEM02E)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DOPT)     TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DSTORY)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DSEQ)     TYPE(*CHAR) LEN(1)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DEM01)    VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&DEM04S)   VALUE(%SST(*LDA 540 7))
+             CHGVAR     VAR(&DEM04E)   VALUE(%SST(*LDA 547 7))
+             CHGVAR     VAR(&DEM02S)   VALUE(%SST(*LDA 554 8))
+             CHGVAR     VAR(&DEM02E)   VALUE(%SST(*LDA 564 8))
+             CHGVAR     VAR(&DOPT)     VALUE(%SST(*LDA 575 1))
+             CHGVAR     VAR(&DSTORY)   VALUE(%SST(*LDA 576 1))
+             CHGVAR     VAR(&DSEQ)     VALUE(%SST(*LDA 577 1))
+
+             CPYF       FROMFILE(PYR618WF) TOFILE(QTEMP/PYR618WF) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/PYR618WF))
+             OVRDBF     FILE(PYR618WF) TOFILE(QTEMP/PYR618WF) SHARE(*YES)
+             CLRPFM     FILE(QTEMP/PYR618WF)
+
+             OVRDBF     FILE(PYEMPF) SHARE(*YES)
+             OPNQRYF    FILE((PYEMPF)) QRYSLT('EM01 *EQ "' *CAT +
+                          &DEM01 *CAT '" & CEM04 *EQ %RANGE("' *CAT +
+                          &DEM04S *CAT '" "' *CAT &DEM04E *CAT '") +
+                          & EM02 *EQ %RANGE("' *CAT &DEM02S *CAT '" +
+                          "' *CAT &DEM02E *CAT '") ') +
+                          KEYFLD((EM041) (EM042) (EM043) (EM044) +
+                          (EM05) (EM02)) +
+                          MAPFLD((CEM04 'EM041 *CAT EM042 +
+                          *CAT EM043 *CAT EM044'))
+
+             /*ºg§uß@¿…*/
+             CALL       PYR6182
+
+             /*¶C¶L∂∂ß«*/
+             IF (&DSEQ = '1') THEN(DO)
+             OPNQRYF    FILE((PYR618WF)) KEYFLD((WF91)              +
+                                                (WF92)(WF08)(WF03))
+             ENDDO
+             IF (&DSEQ='2') THEN(DO)
+             OPNQRYF    FILE((PYR618WF)) KEYFLD((WF91)              +
+                                                (WF08)(WF92)(WF03))
+             ENDDO
+             IF (&DSEQ='3') THEN(DO)
+             OPNQRYF    FILE((PYR618WF)) KEYFLD((WF91)              +
+                                                (WF03)(WF08)(WF92))
+             ENDDO
+
+             /*¶C¶L§uß@¿…*/
+             OVRPRTF    FILE(PYR618P) PAGESIZE(*N 132) CPI(15)
+             CALL       PYR6183
+
+             CLOF       OPNID(PYEMPF)
+             CLOF       OPNID(PYR618WF)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('PYR618P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             ENDPGM
+

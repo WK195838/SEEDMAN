@@ -1,0 +1,266 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR3103                                     *
+     H*   AUTHER       : A1084 CHARLES                               *
+     H*   CREATE DATE  : 82/02/14                                    *
+     H*   UPDATE DATE  :                                             *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR3101C                                    *
+     H*   PURPOSE      :
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYR310F IP  E                    DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FSYBNPF  IF  E           K        DISK
+     FPYR310P O   E             39     PRINTER
+     E*                   WTAB    1   2 10
+     E*下期薪資
+     E*上期薪資
+     IR310
+     I                                              R3103 L5
+     I                                              R3108 L4
+     I                                              R3109 L3
+     I                                              R3110 L2
+     I                                              R3111 L1
+     ILDA        UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DPY01
+     I*                                     503 5080DYMD
+     I*                                     503 5060DYM
+     I*                                     505 5060DMM
+     I*                                     507 5080DPY07
+     I                                      509 511 DBN01
+     I                                      516 518 DBN02
+     I                                      523 523 DSEL
+     I                                      524 524 DOP
+     I                                      525 5320WDYMD
+     I                                      525 5280WDYM
+     I                                      529 5300WDMM
+     I                                      525 5300WYM
+     I                                      531 5320WDPY07
+     I                                      601 6040DYMD
+     I                                      601 6040DYM
+     I                                      603 6040DMM
+     I                                      606 6110DPY07
+     I*
+     I            DS
+     I                                        1   80PYMD
+     I                                        1   60PYM
+     I                                        1   40PYY
+     I                                        5   60PMM
+     I                                        7   80PDD
+     I/COPY QDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DPY01
+     C           KEYEM     KLIST                           *PYEMPF
+     C                     KFLD           R3101
+     C                     KFLD           R3102
+     C           KEYBNH    KLIST                           *SYBNPF
+     C                     KFLD           R3103
+     C                     KFLD           WPY05   4
+     C           KEYBND    KLIST                           *SYBNPF
+     C                     KFLD           R3103
+     C                     KFLD           R3104
+     C           KEYDP     KLIST                           *PYDPPF
+     C                     KFLD           R3108
+     C                     KFLD           R3109
+     C                     KFLD           R3110
+     C                     KFLD           R3111
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+  01-C           *INL5     IFEQ '1'
+    C                     MOVEL*BLANK    BN04
+    C           KEYBNH    CHAINBN0                  40
+    C                     MOVELBN04      BN04N
+    C                     SETON                     39
+  01-C                     END
+     C*
+     C                     EXSR RTN300
+     C*
+     CL1 10                EXSR RTN810
+     CL5 10                EXSR RTN820
+     CLR 10                EXSR RTN890
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C*
+|    C*                    MOVELDSEL      N       10
+|    C*                    MOVELWTAB,N    DSELC
+|    C*
+|    C           DPY01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C*
+|    C                     SETON                     1031
+|    C                     MOVEL'Y'       $DATA
+|    C                     MOVE *BLANKS   WPY05
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT31
+|    C*                    Z-ADD*ZERO     PAMT1
+|    C*                    Z-ADD*ZERO     PAMT2
+|    C*                    Z-ADD*ZERO     PAMT3
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C                     Z-ADD0         PM203
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DPY01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C*Z-ADDDYMD      PYMD
+|    C                     CALL 'P39'
+|    C                     PARM DYMD      P3901I  60
+|    C                     PARM '1'       P3902I  1
+|    C                     PARM '1'       P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           PYMD      PARM           P3911O  60
+|    C*
+| 01-C           DSEL      IFEQ '1'                        .下期
+|   C                     ADD  PM203     PMM
+| 02-C           PMM       IFGT 12
+|   C                     SUB  12        PMM
+|   C                     ADD  1         PYY
+| 02-C                     END
+| 01-C                     END
+|    C*
+| 03-C           PDD       IFEQ 99
+|   C                     CALL 'P34'
+|   C                     PARM PYM       P3401I  60
+|   C                     PARM '2'       P3403I  1
+|   C                     PARM '1'       P3404I  1
+|   C                     PARM           P3411O  1
+|   C           PDD       PARM           P3412O  20
+| 03-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN300... WRITE DETAIL
+     C*==============================================================*
+02===C           RTN300    BEGSR
+|    C*
+|    C           KEYBND    CHAINBN0                  40
+|    C   40                MOVEL*BLANK    BN04
+|    C*
+|    C           KEYEM     CHAINEM0                  40
+|    C   40                MOVEL*BLANK    EM03
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETON                     31
+| 01-C                     END
+|    C*
+| 02-C           R3107     IFNE *BLANK
+|   C                     MOVELR3107     R3105
+| 02-C                     END
+|    C*
+| 03-C           *INL1     IFEQ '0'
+|   C                     MOVEL*BLANK    DR3108
+|   C                     MOVEL*BLANK    DR3109
+|   C                     MOVEL*BLANK    DR3110
+|   C                     MOVEL*BLANK    DR3111
+|   C                     MOVEL*BLANK    DP02C
+| 03*C                     ELSE
+|   C                     MOVELR3108     DR3108
+|   C                     MOVELR3109     DR3109
+|   C                     MOVELR3110     DR3110
+|   C                     MOVELR3111     DR3111
+|   C           KEYDP     CHAINDP0                  40
+|   C  N40                MOVELDP02      DP02C
+| 03-C                     END
+|    C*
+|    C                     WRITEPD1
+|    C                     ADD  1         PT11
+|    C*                    ADD  R3106     PAMT1
+|    C*
+|    C                     SETOF                     31
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK 1
+     C*==============================================================*
+03===C           RTN810    BEGSR
+|    C*
+| 01-C*          PAMT1     IFNE 0
+|   C                     WRITEPT1
+|   C                     ADD  PT11      PT21
+|   C*                    ADD  PAMT1     PAMT2
+| 01-C*                    END
+|     *
+|    C                     Z-ADD*ZERO     PT11
+|    C*                    Z-ADD*ZERO     PAMT1
+|    C                     SETON                     31
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN820... LEVEL BREAK 2
+     C*==============================================================*
+04===C           RTN820    BEGSR
+|    C*
+|    C                     WRITEPT2
+|    C                     WRITEPE1
+|    C*
+|    C                     ADD  PT21      PT31
+|    C*                    ADD  PAMT2     PAMT3
+|    C                     Z-ADD*ZERO     PT21
+|    C*                    Z-ADD*ZERO     PAMT2
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR --- HAS DATA
+     C*==============================================================*
+05===C           RTN890    BEGSR
+|    C*
+|    C                     WRITEPT3
+|    C                     WRITEPE2
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+06===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+

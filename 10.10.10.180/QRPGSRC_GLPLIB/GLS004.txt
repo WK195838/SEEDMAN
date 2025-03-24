@@ -1,0 +1,334 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLS004                                     *
+     H*    PROGRAM NAME :傳票來源視窗查詢                          *
+     H*    AUTHOR       : A1034 STEPHANIE                            *
+     H*    CREATE DATE  : 81/11/17                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     F****************************************************************
+     FGLA5PF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FGLS004D CF  E                    WORKSTN
+     E*----------------------------------------------------------------
+     E                    @SL         8  1               資料選擇
+     E                    @CD         8  2               代碼
+     E                    @NM         8  6               說明
+     E                    @ND         8  7 0             日期
+     E*----------------------------------------------------------------
+     I*OLD STARE KEY (FOR COMPARE START KEY CHANGE)
+     I            DS
+     I                                        1   2 @KA5O
+     I*NEW STARE KEY (FOR COMPARE START KEY CHANGE)
+     I            DS
+     I                                        1   2 @KA5N
+     I                                        1   2 DA502
+     I*SUBFILE TOP KEY
+     I            DS
+     I                                        1   2 @KA5T
+     I                                        1   2 KA502T
+     I*SUBFILE BOTTOM KEY
+     I            DS
+     I                                        1   2 @KA5B
+     I                                        1   2 KA502B
+     I*FILE KEY (FOR COMPARE KEY TOP)
+     I            DS
+     I                                        1   2 @KA5
+     I                                        1   2 A502
+     I*DEFINE SCREEN FIELD
+     I            DS
+@    I                                        1   8 @SL
+     I                                        1   1 DSEL1
+     I                                        2   2 DSEL2
+     I                                        3   3 DSEL3
+     I                                        4   4 DSEL4
+     I                                        5   5 DSEL5
+     I                                        6   6 DSEL6
+     I                                        7   7 DSEL7
+     I                                        8   8 DSEL8
+     I            DS
+@    I                                        1  16 @CD
+     I                                        1   2 DA5021
+     I                                        3   4 DA5022
+     I                                        5   6 DA5023
+     I                                        7   8 DA5024
+     I                                        9  10 DA5025
+     I                                       11  12 DA5026
+     I                                       13  14 DA5027
+     I                                       15  16 DA5028
+     I            DS
+@    I                                        1  48 @NM
+     I                                        1   6 D#Y031
+     I                                        7  12 D#Y032
+     I                                       13  18 D#Y033
+     I                                       19  24 D#Y034
+     I                                       25  30 D#Y035
+     I                                       31  36 D#Y036
+     I                                       37  42 D#Y037
+     I                                       43  48 D#Y038
+     I            DS
+@    I                                        1  560@ND
+     I                                        1   70DA5031
+     I                                        8  140DA5032
+     I                                       15  210DA5033
+     I                                       22  280DA5034
+     I                                       29  350DA5035
+     I                                       36  420DA5036
+     I                                       43  490DA5037
+     I                                       50  560DA5038
+     I*==============================================================*
+     I*                    DEFN
+     I*==============================================================*
+     I              '*EOF*       '        C         @EMSG
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM           P004I1  2         公司別
+     C                     PARM           P004O1  2         傳票來源
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYA5T    KLIST
+     C                     KFLD           P004I1           *TOP
+     C                     KFLD           KA502T           *TOP
+     C           KEYA5B    KLIST
+     C                     KFLD           P004I1           *BOTTOM
+     C                     KFLD           KA502B           *BOTTOM
+     C           KEY#Y     KLIST
+     C                     KFLD           #Y01
+     C                     KFLD           #Y02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+     C           @RTNC     DOWEQ*BLANK
+     C                     EXSR R1000                      *SCR PROCESS
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C* SET INIT VALUE *---------------------------------------------*
+     C                     MOVEL*BLANK    @RTNC   2        *OUT PARM
+@   C                     Z-ADD8         @PRCD   20       *PAGE RCD
+     C                     Z-ADD60        @INFR   20       *INDICATOR FROM
+     C*
+     C           P004I1    CHAIN#B0                  40
+     C                     MOVE #B02      D#B02
+     C*
+     C           P004I1    CHAINAK0                  40
+     C                     CALL 'P31'
+     C                     PARM AK12      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM AK11      P3104I  1
+     C                     PARM AK09      P3105I  1
+     C           DAK12     PARM           P3111O  80
+     C*
+     C*--------------------------------------------------------------*
+     C                     EXSR R1A00                      .SFL INIT
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+     C           R1000     BEGSR
+     C*
+     C                     EXFMTDSPD1
+     C*
+     C           *IN03     IFEQ '1'                        *END
+     C                     MOVEL'03'      @RTNC
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN12     IFEQ '1'                        *PREVIOUS
+     C                     MOVEL'12'      @RTNC
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN25     IFEQ '1'                        *NEXT PAGE
+     C           KEYA5B    SETGTA50
+     C                     EXSR R1N00
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN26     IFEQ '1'                        *PREV PAGE
+     C           KEYA5T    SETLLA50
+     C                     EXSR R1P00
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           @KA5O     IFNE @KA5N                      *START KEY
+     C                     EXSR R1A00                      *SFL INIT
+     C                     GOTO E1000
+     C                     END
+     C*
+     C                     EXSR R1C00                      *OPTION
+     C*
+     C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+     C           R1A00     BEGSR
+     C*
+     C                     MOVEL@KA5N     @KA5O            *KEY SAVE
+     C                     MOVEL@KA5N     @KA5T            *KEY TOP
+     C                     MOVEL@KA5B     @KA5B            *KEY BOTTOM
+     C*
+     C* INIT SUBFILE
+     C                     EXSR R1Z04                      *CLEAR SUBF
+     C                     Z-ADD1         @R
+     C                     MOVEL@EMSG     @NM,@R           *EOF
+     C* START
+     C           KEYA5T    SETLLA50
+     C                     EXSR R1N00                      *ADD SFL DTA
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1C00 ....挑選資料
+     C*=============================================================*
+     C           R1C00     BEGSR
+     C*
+     C                     Z-ADD1         @R
+     C           @R        DOWLE@PRCD
+     C*
+     C           @SL,@R    IFNE *BLANK
+     C* <<SET OUTPUT PARM>>++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL@CD,@R    P004O1
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL'00'      @RTNC
+     C                     Z-ADD@PRCD     @R
+     C                     END
+     C*
+     C                     ADD  1         @R
+     C                     END
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1N00 .... PREPARE NEXT PAGE
+     C*=============================================================*
+     C           R1N00     BEGSR
+     C*
+     C           P004I1    READEA50                      46
+     C           *IN46     IFEQ '0'
+     C                     EXSR R1Z03                      *KEY TOP
+     C                     ELSE                            *LAST PAGE
+     C                     GOTO E1N00
+     C                     END
+     C*
+     C                     EXSR R1Z04                      *CLEAR SUBF
+     C* PREPARE SUBFILE
+     C                     Z-ADD0         @R      20
+     C           @R        DOWLT@PRCD
+     C           *IN46     ANDEQ'0'
+     C*
+     C                     ADD  1         @R
+     C                     EXSR R1Z01                      *ADD SFL
+     C                     EXSR R1Z02                      *KEY BOTTOM
+     C*
+     C           P004I1    READEA50                      46
+     C                     END
+     C*
+     C           @R        IFLT @PRCD
+     C                     ADD  1         @R
+     C                     MOVEL@EMSG     @NM,@R
+     C                     END
+     C*
+     C           E1N00     ENDSR
+     C*=============================================================*
+     C*          R1P00 .... PREPARE PREVIOUS  PAGE
+     C*=============================================================*
+     C           R1P00     BEGSR
+     C*
+     C           P004I1    REDPEA50                      46
+     C           *IN46     IFEQ '0'
+     C           @KA5      ANDGE@KA5N
+     C                     EXSR R1Z02                      *KEY BOTTOM
+     C                     ELSE                            *FIRST PAGE
+     C                     GOTO E1P00
+     C                     END
+     C*
+     C           @PRCD     ADD  1         @R
+     C           @R        DOWGT1
+     C           *IN46     ANDEQ'0'
+     C           @KA5      ANDGE@KA5N
+     C*
+     C                     SUB  1         @R
+     C                     EXSR R1Z01                      *ADD SFL
+     C                     EXSR R1Z03                      *KEY TOP
+     C*
+     C           P004I1    REDPEA50                      46
+     C                     END
+     C*
+     C           @R        IFGT 1
+     C                     MOVEL@KA5T     @KA5B
+     C           KEYA5T    SETLLA50
+     C                     EXSR R1N00
+     C                     END
+     C*
+     C           E1P00     ENDSR
+     C*=============================================================*
+     C*          R1Z01 .... SUBFILE DATA SET
+     C*=============================================================*
+     C           R1Z01     BEGSR
+     C*
+     C           @R        ADD  @INFR     @I      20
+     C                     MOVEL'1'       *IN,@I
+     C                     MOVEL*BLANK    @SL,@R
+     C                     MOVELA502      @CD,@R
+     C*
+     C                     MOVEL'AH17'    #Y01
+     C                     MOVELA502      #Y02
+     C           KEY#Y     CHAIN#Y0                  40
+     C           *IN40     IFEQ '0'
+     C                     MOVEL#Y03      @NM,@R
+     C                     ELSE
+     C                     MOVE *BLANKS   @NM,@R
+     C                     END
+     C*
+     C                     CALL 'P31'
+     C                     PARM A503      P3101I  80
+     C                     PARM '2'       P3102I
+     C                     PARM '1'       P3103I
+     C                     PARM AK11      P3104I
+     C                     PARM AK09      P3105I
+     C           @ND,@R    PARM           P3111O  80
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1Z02 .... SET KEY BOTTOM
+     C*=============================================================*
+     C           R1Z02     BEGSR
+     C*
+     C                     MOVELA502      KA502B
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1Z03 .... SET KEY TOP
+     C*=============================================================*
+     C           R1Z03     BEGSR
+     C*
+     C                     MOVELA502      KA502T
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1Z04 .... CLEAR SUBFILE
+     C*=============================================================*
+     C           R1Z04     BEGSR
+     C*
+     C                     MOVEA*ALL'0'   *IN,60
+     C                     MOVEL*BLANK    @SL
+     C                     MOVEL*BLANK    @CD
+     C                     MOVEL*BLANK    @NM
+     C                     Z-ADD0         @ND
+     C*
+     C                     ENDSR
+

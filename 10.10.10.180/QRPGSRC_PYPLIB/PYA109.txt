@@ -1,0 +1,1784 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA109                                     *
+     H*    PROGRAM NAME :人事調動資料建立  *YH USE ONLY (說明)   *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 2001/06/07                                 *
+     H*    UPDATE DATE  : 2001/06/18 A1336 KLAUS                     *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYTRPF  UF  E           K        DISK                      A
+     FPYEMPF  UF  E           K        DISK                      A
+     FPYEMPFH IF  E           K        DISK                      A
+     FPYSHPF  UF  E           K        DISK                      A
+     F*PYSDPF  UF  E           K        DISK                      A
+     FPYPYPF  IF  E           K        DISK
+     F*PYPDPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYPSPF  IF  E           K        DISK
+     FPYDSPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYJTPF  IF  E           K        DISK
+     FPYCCPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FPYA109D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E                    WFUN    5   5  6
+     E*---------------------------------------------------------------*
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      203 2080DDATE
+     I*
+     IPYDA01      DS
+     I                                        1 256 PYDA
+     I                                        1   1 PYD011
+     I            DS
+     I                                        1   7 DTR05
+     I                                        1   1 DTR051
+     I                                        2   2 DTR052
+     I                                        3   3 DTR053
+     I                                        4   7 DTR054
+     I            DS
+     I                                        1   7 DTR06
+     I                                        1   1 DTR061
+     I                                        2   2 DTR062
+     I                                        3   3 DTR063
+     I                                        4   7 DTR064
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I            DS
+     I                                        1   5 DTR21S
+     I                                        1   1 DTR211
+     I                                        2   4 DTR212
+     I                                        5   5 DTR213
+     I            DS
+     I                                        1   5 DTR21E
+     I                                        1   1 DTR214
+     I                                        2   4 DTR215
+     I                                        5   5 DTR216
+     I/COPY QDDSSRC,PYEMDS01
+     I/COPY QDDSSRC,PYPMDS01
+     I*生產獎金註記
+     I              '按工時'            C         CODE1
+     I              '按部門'            C         CODE2
+     I              '績效獎金＋工時'    C         CODE3
+     I              '績效獎金'          C         CODE4
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PYDA01
+     C           *LIKE     DEFN DTR04     KTR04
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYDP     KLIST                           *SYAAPF
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C           KEYEM     KLIST                           *PYEMPF
+     C                     KFLD           DTR01
+     C                     KFLD           DTR02
+     C           KEYEM1    KLIST                           *PYEMPF
+     C                     KFLD           DTR012
+     C                     KFLD           DTR02
+     C           KEYTR     KLIST                           *PYTRPF
+     C                     KFLD           DTR01
+     C                     KFLD           DTR02
+     C                     KFLD           WTR04   80
+     C                     KFLD           DTR03
+     C           KEYTR1    KLIST                           *PYTRPF
+     C                     KFLD           DTR01
+     C                     KFLD           DTR02
+     C                     KFLD           WTR04
+     C           KEYTR2    KLIST                           *PYTRPF
+     C                     KFLD           DTR01
+     C                     KFLD           DTR02
+     C           KEYPS     KLIST                           *PYPSPF
+     C                     KFLD           DTR10
+     C                     KFLD           DTR16
+     C           KEYPS0    KLIST                           *PYPSPF
+     C                     KFLD           DTR09
+     C                     KFLD           DTR15
+     C*
+     C                     MOVEL*BLANK    W#Y01  10
+     C                     MOVEL*BLANK    W#Y02  10
+     C           KEY#Y     KLIST                           *PT#YPF
+     C                     KFLD           W#Y01  10
+     C                     KFLD           W#Y02  10
+     C           KEYCC     KLIST                           *PYCCPF
+     C                     KFLD           DTR211
+     C                     KFLD           DTR212
+     C                     KFLD           DTR213
+     C           KEYCC1    KLIST                           *PYCCPF
+     C                     KFLD           DTR214
+     C                     KFLD           DTR215
+     C                     KFLD           DTR216
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C**                   EXSR R0100                      *INITIAL
+     C***
+  01-C           *IN03     DOWEQ'0'
+    C*
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+    C*
+  01-C                     END
+     C***
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100.....INITIAL VALUE
+     C*==============================================================*
+01===C           *INZSR    BEGSR
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*-----------------------------------------------------------***
+|    C                     MOVEL'SC01'    SCID    4
+|    C                     MOVEL*BLANK    DTR02
+|    C                     MOVEL*BLANK    DTR03
+|    C                     MOVEL*BLANK    TR03N
+|    C                     Z-ADDDDATE     DTR04
+|    C                     MOVE '1'       DOPT
+|    C*-----------------------------------------------------------***
+|    C                     MOVEL$COR      DTR01
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+|    C                     IN   PYDA01
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+|   C                     EXSR R1E00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 03-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00
+|   C                     GOTO E1000
+| 03-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 04-C           *IN99     IFEQ '0'
+|   C                     EXSR R1C00
+|   C                     MOVEL'SC02'    SCID             *SCR2
+| 04-C                     END
+|     *
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'PYI102'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C*----------------------------------------------------------------
+|    C                     CALL 'PYI102'
+|    C                     PARM DTR01     I102I1  2         公司編號
+|    C           DTR02     PARM DTR02     I102I2  8         員工編號
+|    C           DTR03     PARM DTR03     I102I3  1         調動類別
+|    C           DTR04     PARM DTR04     I102I4  70        加班日期
+|    C                     PARM           @RTNC   2          FUN KEY
+|    C*
+|    C                     MOVEL*BLANK    TR03N
+| 02-C           DTR03     IFNE *BLANK
+|   C                     MOVEL'TR03'    W#Y01
+|   C                     MOVELDTR03     W#Y02
+|   C           KEY#Y     CHAIN#Y0                  40
+| 03-C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #Y03      P6501I 80
+|   C                     PARM 14        P6502I  30
+|   C           TR03N     PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 03-C                     END
+| 02-C                     END
+|    C*----------------------------------------------------------------
+|    C*
+| 04-C           @RTNC     IFEQ '03'
+|   C                     SETON                     03
+| 04-C                     END
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+04===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*-------------------------------------------------------------***
+|    C*員工編號DTR02
+| 01-C           #FLD      IFEQ 'DTR02'
+|   C                     CALL 'PYI101'
+|   C                     PARM DTR01     P101I1  2         公司別
+|   C           DTR02     PARM DTR02     P101I2  8         員工　
+|   C                     PARM           @RTNC   2          FUN KEY
+| 01-C                     END
+|    C*-------------------------------------------------------------***
+|    C*調動類別DTR03
+| 02-C           #FLD      IFEQ 'DTR03'
+|   C                     CALL 'TRW001'
+|   C                     PARM 'TR03'    TR101I 10        調動類別
+|   C           DTR03     PARM DTR03     TR102I 10
+|   C                     PARM           TR103I 32
+|   C                     PARM           TR104I  2
+|   C*
+|   C                     MOVEL*BLANK    TR03N  14 P
+| 03-C           TR103I    IFNE *BLANK
+|   C                     CALL 'P65'
+|   C                     PARM TR103I    P6501I 80
+|   C                     PARM 14        P6502I  30
+|   C           TR03N     PARM           P6511O 80        類別說明
+|   C                     PARM           P6512O 80
+| 03-C                     END
+| 02-C                     END
+|    C*-------------------------------------------------------------***
+|    C*
+04===C                     ENDSR
+      *==============================================================*
+      *          R1B00.....SCREEN CHECK
+      *==============================================================*
+05===C           R1B00     BEGSR
+|    C* CHK FUN AUT
+|    C                     MOVE DOPT      WNUM    10
+| 01-C           @A01,WNUM IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C* << CHACK 公司別NOT *BLANK >>
+| 02-C           DTR01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DTR01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 03-C*          CM099O    IFEQ 'N'
+|   C*                    SETON                     6099
+|   C*                    MOVEL'US#0099' ERRID
+|   C*                    MOVEL'S#MF'    ERRF
+| 03-C*                    END
+|    C*  99                GOTO E1B00
+|    C*
+| 04-C*          CM099O    IFEQ *BLANK
+|   C*                    SETON                     6099
+|   C*                    MOVEL'UPT2010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+| 04-C*                    END
+|    C*  99                GOTO E1B00
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|     *: CHECK BLANK :
+|    C           DTR01     CHAINCM0                  40
+|    C  N40                MOVELCM02      DTR01N
+|    C   40                MOVEL*BLANK    DTR01N
+|    C           DTR01     CHAINPM0                  40
+|     *
+| 05-C           DTR02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 05*C                     ELSE
+|   C           KEYEM     CHAINEM0                  40
+| 06-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 06-C                     END
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*部門別
+|    C                     CALL 'PYSCM1'
+|    C                     PARM EM01      CM101I  2         公司代號
+|    C                     PARM EM04      CM102I  7         部門代號
+|    C                     PARM           CM103O 14         部門名稱
+|    C                     PARM           CM199O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 07-C           CM199O    IFEQ 'N'
+|   C                     SETON                     6199
+|   C                     MOVEL'US#0098' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 08-C           CM199O    IFEQ *BLANK
+|   C                     SETON                     606199
+|   C                     MOVEL'US#1111' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*調動類別
+| 09-C           DTR03     IFEQ *BLANK
+|   C                     SETON                     6399
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 09-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVEL*BLANK    W#Y01
+|    C                     MOVEL*BLANK    W#Y02
+|    C                     MOVEL*BLANK    TR03N
+| 10-C           DTR03     IFNE *BLANK
+|   C                     MOVEL'TR03'    W#Y01
+|   C                     MOVELDTR03     W#Y02
+|   C           KEY#Y     CHAIN#Y0                  40
+| 11-C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #Y03      P6501I 80
+|   C                     PARM 14        P6502I  30
+|   C           TR03N     PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 11*C                     ELSE
+|   C                     SETON                     6399
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 11-C                     END
+|   C   99                GOTO E1B00
+| 10-C                     END
+|    C*---------------------------------------------------------------
+| 12-C           DOPT      IFEQ '1'
+| 13-C           EM11      IFEQ 'Y'
+|   C           EM11      OREQ '*'
+|   C                     MOVEL'UPT0090' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 13-C                     END
+| 12-C                     END
+|    C   99                GOTO E1B00
+|     *
+| 14-C           DTR04     IFEQ 0
+|   C                     MOVEL'UPT0080' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 14*C                     ELSE
+|   C                     CALL 'P30'
+|   C                     PARM DTR04     P3001I  80
+|   C                     PARM '1'       P3002I  1
+|   C                     PARM '1'       P3003I  1
+|   C                     PARM           P3011O  1
+| 15-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 15-C                     END
+| 14-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DTR04     P3101I  80
+|    C                     PARM '1'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WTR04     PARM           P3111O  80
+|    C*
+| 16-C           DOPT      IFEQ '1'
+|   C           WTR04     ANDLEEM13
+|   C                     MOVEL'UMI0360' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     6299
+| 16-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVEL*HIVAL    KTR04
+|    C           KEYEM     SETGTPYTRPF
+|    C                     READPPYTRPF                   40
+|    C*
+|   C           TR01      IFEQ DTR01
+|   C           TR02      ANDEQDTR02
+|    C*
+| 17-C           DOPT      IFEQ '1'
+|   C           *IN40     ANDEQ'0'
+|   C           WTR04     ANDLETR04
+|   C                     MOVEL'UMI0300' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     6299
+| 17-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 18-C           DOPT      IFEQ '4'
+| 19-C           *IN40     IFEQ '0'
+|   C           WTR04     ANDNETR04
+|   C                     MOVEL'UMI0310' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     6299
+| 19-C                     END
+| 18-C                     END
+|    C*
+|    C           KEYTR     CHAINTR0                  40    *NF
+| 20-C           DOPT      IFEQ '1'                        *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+|   C                     SETON                     616263
+| 20-C                     END
+|    C   99                GOTO E1B00
+|     *
+| 21-C           DOPT      IFNE '1'                        *UPD,DEL,INQ
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+|   C                     SETON                     616263
+| 21-C                     END
+|     *
+| 21-C                     END
+|     *
+05===C           E1B00     ENDSR
+      *==============================================================*
+      *          R1C00.....'SC02' SCREEN INITIAL
+      *==============================================================*
+06===C           R1C00     BEGSR
+|    C*
+|    C                     MOVE DOPT      WNUM    10
+|    C                     MOVE WFUN,WNUM DFUN
+|    C*-----------------------------------------------------------***
+|    C*調動類別說明
+|    C                     MOVEL*BLANK    TR03N
+| 01-C           DTR03     IFNE *BLANK
+|   C                     MOVEL'TR03'    W#Y01
+|   C                     MOVELDTR03     W#Y02
+|   C           KEY#Y     CHAIN#Y0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #Y03      P6501I 80
+|   C                     PARM 14        P6502I  30
+|   C           TR03N     PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 02-C                     END
+| 01-C                     END
+|    C*-----------------------------------------------------------***
+| 03-C           DOPT      IFEQ '1'
+|   C                     EXSR R1C10
+| 03*C                     ELSE
+|   C                     EXSR R1C20
+| 03-C                     END
+|    C*
+| 04-C           DOPT      IFEQ '1'
+|   C                     SETON                     31
+| 04*C                     ELSE
+|   C                     SETOF                     31
+| 04-C                     END
+|    C*
+06===C                     ENDSR
+      *==============================================================*
+     C*          R1C10.....CLEAR FIELD WHEN ADD
+     C*==============================================================*
+07===C           R1C10     BEGSR
+|    C*
+|    C                     MOVE *BLANK    DTR012           公司（至）
+|    C                     MOVE *BLANK    CM022            公司名稱（至）
+|    C                     MOVE *BLANK    DTR06            部門（至）
+|    C                     MOVE *BLANK    DDP022           部門簡稱（至）
+|    C                     MOVE *BLANK    DTR08            職稱（至）
+|    C                     MOVE *BLANK    DJT022           職稱說明（至）
+|    C                     MOVE *BLANK    DTR10            職等（至）
+|    C                     MOVE *BLANK    DTR20            副職稱（至）
+|    C                     MOVE *BLANK    DJT024           副職稱說明（至）
+|    C                     MOVE *BLANK    DTR16            職級（至）
+|    C**                   MOVE *BLANK    DTR14
+|    C                     MOVE *BLANK    DTR222           工作類別（至）
+|    C                     MOVE *BLANK    TR222N           工作類別（至）
+|    C                     MOVE *BLANK    DTR232           生產獎金註記（至）
+|    C                     MOVE *BLANK    DTR21E           成本中心（至）
+|    C                     MOVE *BLANK    DTR132           工作地點（至）
+|    C                     MOVE *BLANK    CC021            成本中心說明（自）
+|    C                     MOVE *BLANK    CC022            成本中心說明（至）
+|    C*
+|    C                     MOVELEM01      DTR011           公司別
+|    C                     MOVELEM01      DTR012           公司別
+|    C                     MOVELEM041     DTR051           部門
+|    C                     MOVELEM042     DTR052
+|    C                     MOVELEM043     DTR053
+|    C                     MOVELEM044     DTR054
+|    C                     MOVELEM041     DTR061           部門
+|    C                     MOVELEM042     DTR062
+|    C                     MOVELEM043     DTR063
+|    C                     MOVELEM044     DTR064
+|    C                     MOVELEM05      DTR07            職稱
+|    C                     MOVELEM05      DTR08
+|    C                     MOVELEM06      DTR09            職等
+|    C                     MOVELEM06      DTR10
+|    C                     MOVELEM051     DTR19            副職稱
+|    C                     MOVELEM051     DTR20
+|    C                     MOVELEM07      DTR15            職級
+|    C                     MOVELEM07      DTR16            　　　　　
+|    C                     MOVELEM111     DTR221           工作類別
+|    C                     MOVELEM111     DTR222
+|    C                     MOVELEM133     DTR231           生產獎金註記
+|    C                     MOVELEM133     DTR232
+|    C                     MOVELEM130     DTR131           工作地點
+|    C                     MOVELEM130     DTR132
+|    C*                    MOVELEM08      DTR13            班別
+|    C*                    MOVELEM08      DTR14
+|    C*
+|    C           KEYEM     CHAINDS0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELDS041     DTR211           成本中心
+|   C                     MOVELDS042     DTR212
+|   C                     MOVELDS043     DTR213
+|   C                     MOVELDS041     DTR214           成本中心
+|   C                     MOVELDS042     DTR215
+|   C                     MOVELDS043     DTR216
+| 01*C                     ELSE
+|   C                     MOVEL*BLANK    DTR211           成本中心
+|   C                     MOVEL*BLANK    DTR212
+|   C                     MOVEL*BLANK    DTR213
+|   C                     MOVEL*BLANK    DTR214           成本中心
+|   C                     MOVEL*BLANK    DTR215
+|   C                     MOVEL*BLANK    DTR216
+| 01-C                     END
+|    C*
+|    C                     MOVELDTR051    EM041
+|    C                     MOVELDTR052    EM042
+|    C                     MOVELDTR053    EM043
+|    C                     MOVELDTR054    EM044
+|    C*
+|    C           DTR011    CHAINCM0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELCM02      CM021
+| 02*C                     ELSE
+|   C                     MOVEL*BLANK    CM021
+| 02-C                     END
+|    C*
+|    C           KEYDP     CHAINDP0                  40
+| 03-C           *IN40     IFEQ '0'
+|   C                     MOVELDP02      DDP021
+| 03*C                     ELSE
+|   C                     MOVEL*BLANK    DDP021
+| 03-C                     END
+|     *
+|    C           DTR07     CHAINJT0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C                     MOVELJT02      DJT021
+| 04*C                     ELSE
+|   C                     MOVEL*BLANK    DJT021
+| 04-C                     END
+|     *
+|    C           DTR19     CHAINJT0                  40
+| 05-C           *IN40     IFEQ '0'
+|   C                     MOVELJT02      DJT023
+| 05*C                     ELSE
+|   C                     MOVEL*BLANK    DJT023
+| 05-C                     END
+|     *
+|    C           KEYCC     CHAINCC0                  40
+| 06-C           *IN40     IFEQ '0'
+|   C                     MOVELCC02      CC021
+| 06*C                     ELSE
+|   C                     MOVEL*BLANK    CC021
+| 06-C                     END
+|     *
+|    C*工作地點起
+|    C                     MOVELDTR131    EM04
+|    C           KEYDP     CHAINDP0                  41
+|    C   41                MOVEL*BLANK    TR131N
+|    C  N41                MOVELDP02      TR131N
+|    C*
+|    C*工作類別起
+|    C                     MOVEL*BLANK    W#Y01
+|    C                     MOVEL*BLANK    W#Y02
+| 07-C           DTR221    IFNE *BLANK
+|   C                     MOVEL'EM111'   W#Y01
+|   C                     MOVELDTR221    W#Y02
+|   C           KEY#Y     CHAIN#Y0                  40
+| 08-C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #Y03      P6501I 80
+|   C                     PARM 10        P6502I  30
+|   C           TR221N    PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 08-C                     END
+| 07*C                     ELSE
+|   C                     MOVEL*BLANK    TR221N
+| 07-C                     END
+|    C*
+|    C*生產獎金註記起
+| 09-C           DTR231    IFEQ 'A'
+|   C                     MOVELCODE1     TR231N           按工時
+| 09-C                     END
+|    C*
+| 10-C           DTR231    IFEQ 'B'
+|   C                     MOVELCODE2     TR231N           按部門
+| 10-C                     END
+|    C*
+| 11-C           DTR231    IFEQ 'C'
+|   C                     MOVELCODE3     TR231N           領績效獎金＋按工時
+| 11-C                     END
+|    C*
+| 12-C           DTR231    IFEQ ' '
+|   C                     MOVELCODE4     TR231N           績效獎金
+| 12-C                     END
+|    C*
+07===C           E1C10     ENDSR
+      *==============================================================*
+      *          R1C20.....MOVE DATA TO 'SC02' SCREEN
+      *==============================================================*
+08===C           R1C20     BEGSR
+|    C*
+|    C                     MOVELTR011     DTR011           公司Ｓ
+|    C                     MOVELTR011N    CM021
+|    C                     MOVELTR012     DTR012
+|    C                     MOVELTR012N    CM022
+|    C                     MOVELTR051     DTR051           部門Ｓ
+|    C                     MOVELTR052     DTR052
+|    C                     MOVELTR053     DTR053
+|    C                     MOVELTR054     DTR054
+|    C                     MOVELTR05N     DDP021
+|    C                     MOVELTR061     DTR061
+|    C                     MOVELTR062     DTR062
+|    C                     MOVELTR063     DTR063
+|    C                     MOVELTR064     DTR064
+|    C                     MOVELTR06N     DDP022
+|    C                     MOVELTR07      DTR07            職稱Ｓ
+|    C                     MOVELTR07N     DJT021
+|    C                     MOVELTR08      DTR08
+|    C                     MOVELTR08N     DJT022
+|    C                     MOVELTR09      DTR09            職等Ｓ
+|    C                     MOVELTR10      DTR10
+|    C*                    MOVELTR13      DTR13            班別Ｓ
+|    C*                    MOVELTR14      DTR14
+|    C                     MOVELTR15      DTR15            職級Ｓ
+|    C                     MOVELTR16      DTR16
+|    C                     MOVELTR19      DTR19            副職稱Ｓ
+|    C                     MOVELTR19N     DJT023
+|    C                     MOVELTR20      DTR20
+|    C                     MOVELTR20N     DJT024
+|    C                     MOVELTR221     DTR221           工作類別Ｓ
+|    C                     MOVELTR221N    TR221N
+|    C                     MOVELTR222     DTR222
+|    C                     MOVELTR222N    TR222N
+|    C                     MOVELTR231     DTR231           生產獎金註記Ｓ
+|    C                     MOVELTR231N    TR231N
+|    C                     MOVELTR232     DTR232
+|    C                     MOVELTR232N    TR232N
+|    C                     MOVELTR211     DTR211           成本中心Ｓ
+|    C                     MOVELTR212     DTR212           　　　　　
+|    C                     MOVELTR213     DTR213
+|    C                     MOVELTR21SN    CC021
+|    C                     MOVELTR214     DTR214
+|    C                     MOVELTR215     DTR215
+|    C                     MOVELTR216     DTR216
+|    C                     MOVELTR21EN    CC022
+|    C                     MOVELTR131     DTR131           工作地點Ｓ
+|    C                     MOVELTR131N    TR131N
+|    C                     MOVELTR132     DTR132
+|    C                     MOVELTR132N    TR132N
+|    C*
+| 01-C           DOPT      IFEQ '5'
+|   C           *LOVAL    SETLLTR0
+|   C           *LOVAL    SETLLEM0
+| 01-C                     END
+|    C*
+08===C                     ENDSR
+      *==============================================================*
+      *          R2000.....'SC02' SCREEN MAIN ROUTINE
+      *==============================================================*
+09===C           R2000     BEGSR
+|    C*
+|    C                     EXFMTDSPC2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+| 03-C           DOPT      IFEQ '1'
+|   C                     EXSR R2E00                      .PROMPT
+| 03-C                     END
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 03-C           *IN12     IFEQ '1'
+|   C                     MOVE 'SC01'    SCID
+|   C                     GOTO E2000
+| 03-C                     END
+|    C*
+| 04-C*          *IN06     IFEQ '1'
+|   C*                    CALL 'PYA302'
+|   C*                    GOTO E2000
+| 04-C*                    END
+|    C*
+| 05-C           *IN05     IFEQ '1'
+|   C                     EXSR R2A00
+|   C                     GOTO E2000
+| 05-C                     END
+|    C*
+| 06-C           DOPT      IFEQ '1'
+|   C                     EXSR R2B00                      *CHK SCR
+| 06-C                     END
+|    C*
+| 07-C           *IN99     IFEQ '0'
+|   C           *IN13     ANDEQ'1'
+| 08-C           DOPT      IFNE '5'
+|   C                     EXSR R2D00                      *TR
+| 09-C           PYD011    IFEQ 'U'
+|   C                     EXSR R2D12                      *EM
+| 09-C                     END
+| 09-C                     ELSE
+|   C                     MOVEL'UPT5026' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+|   C   99                GOTO E2000
+| 08-C                     END
+|   C                     MOVE 'SC01'    SCID
+|   C                     GOTO E2000
+| 07-C                     END
+|    C*
+09===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+10===C           R2E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*--------------------------------------------------------------**
+|    C*公司
+| 01-C           #FLD      IFEQ 'DTR012'
+|   C                     CALL 'PYI517'
+|   C           DTR012    PARM DTR012    I517I1  2
+|   C                     PARM           @RTNC   2
+| 01-C                     END
+|    C           DTR012    CHAINCM0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELCM02      CM022
+| 02-C                     END
+|    C*部門編號DTR06
+| 03-C           #FLD      IFEQ 'DTR06'
+|   C                     CALL 'PYI512'
+|   C           DTR06     PARM DTR06     I512I1  7         部門代碼
+|   C                     PARM           @RTNC   2          FUN KEY
+| 03-C                     END
+|    C                     MOVELDTR06     EM04
+|    C           KEYDP     CHAINDP0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C                     MOVELDP02      DDP022
+| 04-C                     END
+|    C*職稱編號DTR08
+| 05-C           #FLD      IFEQ 'DTR08'
+|   C                     CALL 'PYI501'
+|   C           DTR08     PARM DTR08     I501I1  3         職稱編號
+|   C                     PARM           @RTNC   2          FUN KEY
+| 05-C                     END
+|    C           DTR08     CHAINJT0                  40
+| 06-C           *IN40     IFEQ '0'
+|   C                     MOVELJT02      DJT022
+| 06-C                     END
+|    C*副職稱代號
+| 07-C           #FLD      IFEQ 'DTR20'
+|   C                     CALL 'PYI501'
+|   C           DTR20     PARM DTR20     I501I1  3
+|   C                     PARM           @RTNC   2
+|   C           DTR20     CHAINJT0                  42
+|   C   42                MOVE *BLANK    DJT024
+|   C  N42                MOVELJT02      DJT024
+| 07-C                     END
+|    C*職等職級
+| 08-C           #FLD      IFEQ 'DTR10'
+|   C           #FLD      OREQ 'DTR16'
+|   C                     CALL 'PYI505'
+|   C           DTR10     PARM DTR10     I505I1  2
+|   C           DTR16     PARM DTR16     I505I2  20
+|   C                     PARM           @RTNC   2
+| 08-C                     END
+|    C*工作地點
+| 09-C           #FLD      IFEQ 'DTR132'
+|   C                     CALL 'PYI512'
+|   C           DTR132    PARM DTR132    I512I1  7
+|   C                     PARM           @RTNC   2
+|   C                     MOVELDTR132    EM04
+|   C           KEYDP     CHAINDP0                  40
+|   C   40                MOVEL*BLANK    TR132N
+|   C  N40                MOVELDP02      TR132N
+| 09-C                     END
+|    C*成本中心
+| 10-C           #FLD      IFEQ 'DTR21E'
+|   C                     CALL 'PYI513'
+|   C           DTR21E    PARM DTR21E    I513I1  5
+|   C                     PARM           @RTNC   2
+| 10-C                     END
+|    C           KEYCC1    CHAINCC0                  40
+| 11-C           *IN40     IFEQ '0'
+|   C                     MOVELCC02      CC022
+| 11*C                     ELSE
+|   C                     MOVEL*BLANK    CC022
+| 11-C                     END
+|    C*工作類別
+| 12-C           #FLD      IFEQ 'DTR222'
+|   C                     CALL 'TRW001'
+|   C                     PARM 'EM111'   TR101I 10
+|   C           DTR222    PARM DTR222    TR102I 10
+|   C                     PARM           TR103I 32
+|   C                     PARM           TR104I  2
+|   C*
+|   C                     MOVEL*BLANK    TR222N 10 P
+| 13-C           TR103I    IFNE *BLANK
+|   C                     CALL 'P65'
+|   C                     PARM TR103I    P6501I 80
+|   C                     PARM 10        P6502I  30
+|   C           TR222N    PARM           P6511O 80        工作說明
+|   C                     PARM           P6512O 80
+| 13-C                     END
+| 12-C                     END
+|    C*--------------------------------------------------------------**
+|    C*
+10===C           E2E00     ENDSR
+     C*==============================================================*
+      *          R2A00.....CHECK 'SC02' SCREEN
+      *==============================================================*
+11===C           R2A00     BEGSR
+|    C*升職時可按Ｆ５自動換算升職等級再加３級
+|    C*
+| 01-C           DTR10     IFEQ *BLANK
+|   C           DTR16     ANDEQ*ZERO
+|   C*
+|   C           KEYPS0    CHAINPS0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C           PS02      ADD  PS03      SAR     70       升職前底薪
+| 02-C                     END
+|   C*
+| 03-C           DTR09     IFEQ '7'
+|   C                     ADD  PS10      SAR
+| 03-C                     END
+|   C*
+|   C                     MOVELDTR09     WTR10   20
+|   C                     ADD  1         WTR10
+|   C                     MOVELWTR10     KTR10   2
+|   C           KTR10     CHAINPS0                  41
+| 04-C           *IN41     IFEQ '0'
+|   C           SAR       SUB  PS02      SAR
+|   C           SAR       DIV  PS09      DTR16
+|   C                     MVR            W1      50
+| 05-C           W1        IFNE 0
+|   C                     ADD  1         DTR16
+| 05-C                     END
+|   C                     ADD  3         DTR16
+|   C                     MOVELWTR10     DTR10
+| 04-C                     END
+|   C*
+| 01-C                     END
+11===C           E2A00     ENDSR
+     C*==============================================================*
+      *          R2B00.....CHECK 'SC02' SCREEN
+      *==============================================================*
+12===C           R2B00     BEGSR
+|    C*
+|    C*----------------------------------------------------------------
+| 01-C           DTR011    IFEQ DTR012
+|   C           DTR05     ANDEQDTR06
+|   C           DTR07     ANDEQDTR08
+|   C           DTR09     ANDEQDTR10
+|   C           DTR19     ANDEQDTR20
+|   C           DTR15     ANDEQDTR16
+|   C           DTR221    ANDEQDTR222
+|   C           DTR231    ANDEQDTR232
+|   C*          DTR13     ANDEQDTR14
+|   C           DTR21S    ANDEQDTR21E
+|   C           DTR131    ANDEQDTR132
+|   C                     MOVEL'UMI0012' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     606162
+|   C                     SETON                     636465
+|   C                     SETON                     666768
+|   C                     SETON                     697071
+|   C                     SETON                     727374
+|   C                     SETON                     757677
+|   C                     SETON                     787999
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C                     MOVE *BLANK    CM022
+|    C                     MOVE *BLANK    DDP022
+|    C                     MOVE *BLANK    DJT022
+|    C                     MOVE *BLANK    DJT024
+|    C                     MOVE *BLANK    CC022
+|    C                     MOVE *BLANK    TR132N
+|    C                     MOVE *BLANK    TR232N
+|    C*----------------------------------------------------------------
+|    C*公司
+| 02-C           DTR012    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 02*C                     ELSE
+|   C           DTR012    CHAINCM0                  40
+|   C  N40                MOVELCM02      CM022
+|   C   40                MOVEL*BLANK    CM022
+| 02-C                     END
+|    C   99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C*部門
+| 03-C           DTR06     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 03*C                     ELSE
+|   C                     MOVELDTR061    EM041
+|   C                     MOVELDTR062    EM042
+|   C                     MOVELDTR063    EM043
+|   C                     MOVELDTR064    EM044
+|   C           KEYDP     CHAINDP0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 04*C                     ELSE
+|   C                     MOVELDP02      DDP022
+| 04-C                     END
+| 03-C                     END
+|    C   99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C*職稱
+| 05-C           DTR08     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 05*C                     ELSE
+|   C           DTR08     CHAINJT0                  40
+| 06-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 06*C                     ELSE
+|   C                     MOVELJT02      DJT022
+| 06-C                     END
+| 05-C                     END
+|    C   99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C*職等
+| 07-C*          DTR10     IFEQ *BLANK
+|   C*                    MOVEL'UPT0010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6799
+| 07-C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+|    C*          KEYPS     CHAINPS0                  40
+| 08-C*          *IN40     IFEQ '1'
+|   C*                    MOVEL'UPT2010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     677199
+| 08-C*                    END
+|    C*  99                GOTO E2B00
+|    C* ---------------------------------------------------------------
+|    C*副職稱
+| 05-C*          DTR20     IFNE *BLANK
+|    C*          DTR20     CHAINJT0                  40
+| 06-C*          *IN40     IFEQ '1'
+|   C*                    MOVEL'UPT2010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6999
+| 06*C*                    ELSE
+|    C*                    MOVELJT02      DJT024
+| 05-C*                    END
+| 05-C*                    END
+|    C*  99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C*工作類別
+| 09-C           DTR222    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7399
+| 09*C                     ELSE
+|   C                     MOVEL*BLANK    W#Y01
+|   C                     MOVEL*BLANK    W#Y02
+|   C                     MOVEL'EM111'   W#Y01
+|   C                     MOVELDTR222    W#Y02
+|   C           KEY#Y     CHAIN#Y0                  40
+| 10-C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #Y03      P6501I 80
+|   C                     PARM 14        P6502I  30
+|   C           TR222N    PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 10-C                     ELSE
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7399
+| 10-C                     END
+| 09-C                     END
+|    C   99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C*生產獎金註記
+|    C*911205    DTR232    IFNQ *BLANK
+|    C*911205              MOVEL'UPT0010' ERRID
+|    C*911205              MOVEL'PTMF'    ERRF
+|    C*911205              SETON                     7599
+|    C*911205              ELSE
+| 11-C                     SELEC
+|   C           DTR232    WHEQ 'A'
+|   C                     MOVELCODE1     TR232N           按工時
+|   C           DTR232    WHEQ 'B'
+|   C                     MOVELCODE2     TR232N           按部門
+|   C           DTR232    WHEQ 'C'
+|   C                     MOVELCODE3     TR232N           領績效獎金＋按工時
+|   C           DTR232    WHEQ ' '
+|   C                     MOVELCODE4     TR232N           績效獎金
+| 11-C                     END
+|    C*911205              END
+|    C*  99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C*成本中心
+| 12-C*          DTR21E    IFEQ *BLANK
+|   C*                    MOVEL'UPT0010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     7999
+| 12*C*                    ELSE
+|   C*          KEYCC1    CHAINCC0                  40
+| 13-C*          *IN40     IFEQ '0'
+|   C*                    MOVELCC02      CC022
+| 13*C*                    ELSE
+|   C*                    MOVEL'UPT2010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     7999
+| 13-C*                    END
+| 12-C*                    END
+|    C*  99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C*工作地點
+| 14-C           DTR132    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8199
+| 14*C                     ELSE
+|   C                     MOVELDTR132    EM04
+|   C           KEYDP     CHAINDP0                  40
+|   C   40                MOVEL*BLANK    TR132N
+|   C  N40                MOVELDP02      TR132N
+| 14-C                     END
+|    C   99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C*
+12===C           E2B00     ENDSR
+      *==============================================================*
+     C*          R2C00 ....PF06---CALL PYA302 員工調薪資料建立
+     C*==============================================================*
+     C*          R2C00     BEGSR
+     C*
+     C*                    MOVEL*BLANK    @RTNC
+     C*                    CALL 'PYA302'
+     C*                    PARM DTR01     I09I0   2        *公司別
+     C*                    PARM DTR02     I09I1   8        *員工代碼
+     C*                    PARM DTR04     I09I2   70       *生效日
+     C*                    PARM           @RTNC   2          FUN KEY
+     C*
+     C* RETURN CODE CHECK
+     C*          @RTNC     IFEQ '03'                       *PF3
+     C*                    SETON                     0399
+     C*                    END
+     C*
+     C*          @RTNC     IFEQ '12'
+     C*                    SETON                     1299
+     C*                    MOVEL'SC02'    SCID
+     C*                    END
+     C*
+     C*          E2C00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+13===C           R2D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ'1'       R2D10
+|   C           DOPT      CASEQ'4'       R2D30
+| 01-C                     END
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+14===C           R2D10     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     WRITETR0                        .PYTRPF
+|    C*
+| 01-C           DTR09     IFNE DTR10
+|   C           DTR15     ORNE DTR16
+|   C           KEYTR1    CHAINSH0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     MOVELDTR01     SH01
+|   C                     MOVELDTR02     SH02
+|   C                     MOVELWTR04     SH03
+|   C                     EXSR R2D13
+|   C                     WRITESH0
+| 02*C                     ELSE
+|   C                     MOVELDTR01     SH01
+|   C                     MOVELDTR02     SH02
+|   C                     MOVELWTR04     SH03
+|   C                     EXSR R2D13
+|   C                     UPDATSH0
+| 02-C                     END
+|   C*
+|   C           KEYEM     CHAINPY0                  40
+| 03-C           *IN40     IFEQ '0'
+|   C                     Z-ADDSH08      PY03
+| 03-C                     END
+| 01-C                     END
+|    C*
+|    C                     EXSR R2D15
+|    C           KEYTR1    CHAINEMH                  40
+|    C   40                WRITEEMH
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+15===C           R2D20     BEGSR
+|    C*
+|    C*
+15===C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+16===C           R2D30     BEGSR
+|    C*
+     C           KEYTR     CHAINTR0                  40
+|    C  N40                DELETTR0
+|    C*
+|    C           KEYTR1    CHAINSH0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     DELETSH0
+| 01-C                     END
+|    C*
+16===C                     ENDSR
+     C*==============================================================*
+      *          R2D11.....MOVE DATA TO FILE
+      *==============================================================*
+17===C           R2D11     BEGSR
+|    C*
+|    C                     MOVELDTR01     TR01             公司編號
+|    C                     MOVELDTR01N    TR01N
+|    C                     MOVELDTR011    TR011            公司（自）
+|    C                     MOVELCM021     TR011N
+|    C                     MOVELDTR012    TR012            公司（至）
+|    C                     MOVELCM022     TR012N
+|    C                     MOVELDTR02     TR02             員工編號
+|    C                     MOVELDTR03     TR03             調動類別
+|    C                     Z-ADDWTR04     TR04             生效日期
+|    C                     MOVELDTR051    TR051            部門（自）１
+|    C                     MOVELDTR052    TR052            部門（自）２
+|    C                     MOVELDTR053    TR053            部門（自）３
+|    C                     MOVELDTR054    TR054            部門（自）４
+|    C                     MOVELDDP021    TR05N
+|    C                     MOVELDTR061    TR061            部門（至）１
+|    C                     MOVELDTR062    TR062            部門（至）２
+|    C                     MOVELDTR063    TR063            部門（至）３
+|    C                     MOVELDTR064    TR064            部門（至）４
+|    C                     MOVELDDP022    TR06N
+|    C                     MOVELDTR07     TR07             職稱（自）
+|    C                     MOVELDJT021    TR07N
+|    C                     MOVELDTR08     TR08             職稱（至）
+|    C                     MOVELDJT022    TR08N
+|    C                     MOVELDTR09     TR09             職等（自）
+|    C                     MOVELDTR10     TR10             職等（至）
+|    C*******              MOVELDTR11     TR11             薪制（自）
+|    C*******              MOVELDTR12     TR12             薪制（至）
+|    C*******              MOVELDTR13     TR13             班別（自）
+|    C*******              MOVELDTR14     TR14             班別（至）
+|    C                     Z-ADDDTR15     TR15             職級（自）
+|    C                     Z-ADDDTR16     TR16             職級（至）
+|    C*******              MOVELDTR17     TR17             工作內容（自
+|    C*******              MOVELDTR18     TR18             工作內容（至
+|    C                     MOVELDTR19     TR19             副職稱（自）
+|    C                     MOVELDJT023    TR19N
+|    C                     MOVELDTR20     TR20             副職稱（至）
+|    C                     MOVELDJT024    TR20N
+|    C                     MOVELDTR211    TR211            成本中心（自）１
+|    C                     MOVELDTR212    TR212            成本中心（自）２
+|    C                     MOVELDTR213    TR213            成本中心（自）３
+|    C                     MOVELCC021     TR21SN
+|    C                     MOVELDTR214    TR214            成本中心（至）１
+|    C                     MOVELDTR215    TR215            成本中心（至）２
+|    C                     MOVELDTR216    TR216            成本中心（至）３
+|    C                     MOVELCC022     TR21EN
+|    C                     MOVELDTR221    TR221            工作類別（自）
+|    C                     MOVELTR221N    TR221N
+|    C                     MOVELDTR222    TR222            工作類別（至）
+|    C                     MOVELTR222N    TR222N
+|    C                     MOVELDTR231    TR231            生產獎金註記（自）
+|    C                     MOVELTR231N    TR231N
+|    C                     MOVELDTR232    TR232            生產獎金註記（至）
+|    C                     MOVELTR232N    TR232N
+|    C                     MOVELPYD011    TR96             主檔更新
+|    C                     MOVELDTR131    TR131            工作地點（自）
+|    C                     MOVELTR131N    TR131N
+|    C                     MOVELDTR132    TR132            工作地點（至）
+|    C                     MOVELTR132N    TR132N
+|    C                     Z-ADD$A8YMD    TR97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     TR98
+|    C                     MOVEL$USER     TR99
+|    C*
+17===C                     ENDSR
+      *==============================================================*
+      *          R2D14.....MOVE DATA TO FILE
+      *==============================================================*
+18===C           R2D14     BEGSR
+|    C*
+|    C                     MOVELDTR01     TR01              公司編號
+|    C                     MOVELDTR011    TR011             公司（自）
+|    C                     MOVELDTR012    TR012             公司（至）
+|    C                     MOVELDTR02     TR02              員工編號
+|    C                     MOVELDTR03     TR03              調動類別
+|    C                     Z-ADDWTR04     TR04              生效日期
+|    C*                    MOVELDTR051    TR051             部門（自）１
+|    C*                    MOVELDTR052    TR052             部門（自）２
+|    C*                    MOVELDTR053    TR053             部門（自）３
+|    C*                    MOVELDTR054    TR054             部門（自）４
+|    C                     MOVELDTR061    TR051             部門（至）１
+|    C                     MOVELDTR062    TR052             部門（至）２
+|    C                     MOVELDTR063    TR053             部門（至）３
+|    C                     MOVELDTR064    TR054             部門（至）４
+|    C                     MOVELDTR07     TR07             職稱（自）
+|    C                     MOVELDTR08     TR08             職稱（至）
+|    C                     MOVELDTR09     TR09             職等（自）
+|    C                     MOVELDTR10     TR10             職等（至）
+|    C**                   MOVELDTR11     TR11             薪制（自）
+|    C**                   MOVELDTR12     TR12             薪制（至）
+|    C**                   MOVELDTR13     TR13             班別（自）
+|    C**                   MOVELDTR14     TR14             班別（至）
+|    C                     Z-ADDDTR15     TR15             職級（自）
+|    C                     Z-ADDDTR16     TR16             職級（至）
+|    C**                   MOVELDTR17     TR17             工作內容（自）
+|    C**                   MOVELDTR18     TR18             工作內容（至）
+|    C                     MOVELDTR19     TR19             副職稱（自）
+|    C                     MOVELDTR20     TR19             副職稱（至）
+|    C                     MOVELDTR211    TR211            成本中心（自）１
+|    C                     MOVELDTR212    TR212            成本中心（自）２
+|    C                     MOVELDTR213    TR213            成本中心（自）３
+|    C                     MOVELDTR214    TR214            成本中心（至）１
+|    C                     MOVELDTR215    TR215            成本中心（至）２
+|    C                     MOVELDTR216    TR216            成本中心（至）３
+|    C                     MOVELDTR221    TR221            工作類別（自）
+|    C                     MOVELDTR222    TR222            工作類別（至）
+|    C                     MOVELDTR231    TR231            生產獎金註記（自）
+|    C                     MOVELDTR232    TR232            生產獎金註記（至）
+|    C                     MOVELPYD011    TR96
+|    C                     MOVELDTR131    TR131            工作地點（自）
+|    C                     MOVELDTR132    TR132            工作地點（至）
+|    C                     Z-ADD$A8YMD    TR97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     TR98
+|    C                     MOVEL$USER     TR99
+|    C*
+18===C                     ENDSR
+      *==============================================================*
+      *          R2D12 ....UPDAT EM0
+      *==============================================================*
+19===C           R2D12     BEGSR
+|    C*
+|    C*調動類別：1.升職2.降職3.轉調4.任用5.其他…
+| 01-C           DTR03     IFEQ '1'
+|   C           DTR03     OREQ '2'
+|   C                     Z-ADDWTR04     EM22             最近調薪日
+|   C                     Z-ADDWTR04     EM21             最近調陞日
+|   C                     MOVELDTR061    EM041            部門編號１
+|   C                     MOVELDTR062    EM042            部門編號２
+|   C                     MOVELDTR063    EM043            部門編號３
+|   C                     MOVELDTR064    EM044            部門編號４
+|   C                     MOVELDTR08     EM05             職稱編號
+|   C                     MOVELDTR10     EM06             職等編號
+|   C                     MOVELDTR16     EM07             職級編號
+|   C                     MOVELDTR222    EM111            工作類別
+|   C                     MOVELDTR232    EM133            生產獎金註記
+|   C                     MOVELDTR20     EM051            副職稱編號
+|   C                     MOVELDTR132    EM130            工作地點
+|   C                     Z-ADD$A8YMD    EM97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     EM98
+|   C                     MOVEL$USER     EM99
+|   C                     UPDATEM0
+| 01-C                     END
+|    C*
+| 02-C           DTR03     IFEQ '4'
+|   C                     Z-ADDWTR04     EM20             試用期滿日
+|   C                     MOVEL'1'       EM09             編制代號
+|   C                     MOVELDTR061    EM041            部門編號１
+|   C                     MOVELDTR062    EM042            部門編號２
+|   C                     MOVELDTR063    EM043            部門編號３
+|   C                     MOVELDTR064    EM044            部門編號４
+|   C                     MOVELDTR08     EM05             職稱編號
+|   C                     MOVELDTR10     EM06             職等編號
+|   C                     MOVELDTR16     EM07             職級編號
+|   C                     MOVELDTR222    EM111            工作類別
+|   C                     MOVELDTR232    EM133            生產獎金註記
+|   C                     MOVELDTR20     EM051            副職稱編號
+|   C                     MOVELDTR132    EM130            工作地點
+|   C                     Z-ADD$A8YMD    EM97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     EM98
+|   C                     MOVEL$USER     EM99
+|   C                     UPDATEM0
+| 02-C                     END
+|    C*
+| 03-C           DTR03     IFEQ '3'
+| 04-C           DTR012    IFEQ DTR011
+|   C                     MOVELDTR061    EM041            部門編號１
+|   C                     MOVELDTR062    EM042            部門編號２
+|   C                     MOVELDTR063    EM043            部門編號３
+|   C                     MOVELDTR064    EM044            部門編號４
+|   C                     MOVELDTR08     EM05             職稱編號
+|   C                     MOVELDTR10     EM06             職等編號
+|   C                     Z-ADDDTR16     EM07             職級編號
+|   C                     MOVELDTR222    EM111            工作類別
+|   C                     MOVELDTR232    EM133            生產獎金註記
+|   C                     MOVELDTR20     EM051            副職稱編號
+|   C                     MOVELDTR132    EM130            工作地點
+|   C                     Z-ADDWTR04     EM21             最近調陞日
+|   C                     Z-ADD$A8YMD    EM97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     EM98
+|   C                     MOVEL$USER     EM99
+|   C                     UPDATEM0
+| 04*C                     ELSE
+|   C                     MOVEL'Y'       EM11
+|   C                     Z-ADDWTR04     EM19
+|   C                     Z-ADD$A8YMD    EM97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     EM98
+|   C                     MOVEL$USER     EM99
+|   C                     UPDATEM0
+|   C                     EXSR R2D16
+| 04-C                     END
+| 03-C                     END
+|    C*
+|    C*          KEYTR1    SETLLTR0
+|    C*          KEYTR2    REDPETR0                      40
+|    C*          *IN40     IFEQ '1'
+|    C*                    Z-ADD*ZERO     EM21
+|    C*                    ELSE
+|    C*                    Z-ADDTR04      EM21
+|    C*          *LOVAL    SETLLTR0
+|    C*                    END
+|    C*
+19===C                     ENDSR
+      *==============================================================*
+      *          R2D13 ....UPDAT SH0
+      *==============================================================*
+20===C           R2D13     BEGSR
+|    C*
+| 01-C           DTR03     IFEQ '1'
+| 02-C           DTR09     IFNE DTR10
+|   C           DTR15     ORNE DTR16
+|   C*
+|   C           KEYPS     CHAINPS0                  40
+|   C           PS02      ADD  PS03      WSH08   70
+|   C*八職等以上不領績效獎金，故本薪先加４５００元
+|   C*
+|   C           KEYEM     CHAINPY0                  41
+| 03-C           *IN41     IFEQ '0'
+|   C                     Z-ADDPY03      SH07
+|   C                     Z-ADDWSH08     SH08
+| 03-C                     END
+|   C*
+|   C                     Z-ADDWTR04     SH03
+|   C                     MOVELDTR03     SH04
+|   C                     MOVELTR03N     SH05
+|   C                     Z-ADD$A8YMD    SH97
+|   C                     TIME           SH98
+|   C                     MOVEL$USER     SH99
+| 02-C                     END
+| 01-C                     END
+|    C*
+20===C                     ENDSR
+      *==============================================================*
+      *          R2D15 ....WRITE PYEMPFH
+      *==============================================================*
+21===C           R2D15     BEGSR
+|    C*
+|    C           KEYEM     CHAINEM0                  40
+|    C*
+|    C                     Z-ADDWTR04     EM00H            異動日期
+|    C                     MOVELDTR012    EM01H            公司編號
+|    C                     MOVELDTR02     EM02H            員工編號
+|    C                     MOVELEM03      EM03H            員工姓名
+|    C                     MOVELEM031     EM031H           英文姓名
+|    C                     MOVELDTR061    EM041H           部門編號１
+|    C                     MOVELDTR062    EM042H           部門編號２
+|    C                     MOVELDTR063    EM043H           部門編號３
+|    C                     MOVELDTR064    EM044H           部門編號４
+|    C                     MOVELDTR08     EM05H            職稱編號
+|    C                     MOVELDTR20     EM051H           副職稱編號
+|    C                     MOVELDTR10     EM06H            職等編號
+|    C                     MOVELDTR16     EM07H            職級編號
+|    C                     MOVELEM08      EM08H            班別代號　
+|    C*
+| 01-C           DTR03     IFEQ '4'
+|   C                     MOVEL'1'       EM09H
+| 01*C                     ELSE
+|   C                     MOVELEM09      EM09H            編制代號
+| 01-C                     END
+|    C*
+|    C                     MOVELEM10      EM10H            計薪代號
+|    C                     MOVELEM11      EM11H            離職碼
+|    C                     MOVELEM12      EM12H            是否有全勤獎金
+|    C                     Z-ADDEM13      EM13H            到職日期
+|    C                     Z-ADDEM14      EM14H            勞保投保日期
+|    C                     Z-ADDEM15      EM15H            勞保調整日期
+|    C                     Z-ADDEM16      EM16H            勞保退保日期
+|    C                     Z-ADDEM17      EM17H            留職停薪日期
+|    C                     Z-ADDEM18      EM18H            復職日期　
+|    C                     Z-ADDEM19      EM19H            離職日期　
+|    C*
+| 02-C           DTR03     IFEQ '4'
+|   C                     Z-ADDWTR04     EM20H            試用期滿日
+| 02*C                     ELSE
+|   C                     Z-ADDEM20      EM20H            試用期滿日
+| 02-C                     END
+|    C*
+| 03-C           DTR03     IFEQ '1'
+|   C           DTR03     OREQ '2'
+|   C                     Z-ADDWTR04     EM22H            最近調薪日
+|   C                     Z-ADDWTR04     EM21H            最近調陞日
+| 03*C                     ELSE
+|   C                     Z-ADDEM21      EM21H            最近調陞日
+|   C                     Z-ADDEM22      EM22H            最近調薪日
+| 03-C                     END
+|    C*
+|    C                     Z-ADDEM23      EM23H            勞保投保金額
+|    C                     MOVELEM24      EM24H            福委會加入
+|    C                     MOVELEM25      EM25H            工會加入　　
+|    C                     Z-ADDEM26      EM26H            留職天數　　
+|    C                     Z-ADDEM261     EM261H           留職天數　　
+|    C                     Z-ADDEM27      EM27H            特加年資
+|    C                     Z-ADDEM28      EM28H            每月代扣所得稅
+|    C                     Z-ADDEM291     EM291H           團保一投保日
+|    C                     Z-ADDEM292     EM292H           團保一員工負擔保費
+|    C                     Z-ADDEM293     EM293H           團保一調整日期
+|    C                     Z-ADDEM294     EM294H           團保一退保日期
+|    C                     Z-ADDEM296     EM296H           團保二投保日
+|    C                     Z-ADDEM297     EM297H           團保二員工負擔保費
+|    C                     Z-ADDEM298     EM298H           團保二調整日期
+|    C                     Z-ADDEM299     EM299H           團保二退保日期
+|    C                     MOVELEM30      EM30H            血型　　
+|    C                     MOVELEM31      EM31H            身份証號　　
+|    C                     MOVELEM311     EM311H           身份證號識別碼
+|    C                     MOVELEM32      EM32H            性別
+|    C                     MOVELEM321     EM321H           國籍
+|    C                     Z-ADDEM33      EM33H            出生日期
+|    C                     MOVELEM34      EM34H            婚姻狀況
+|    C                     Z-ADDEM35      EM35H            撫養人數
+|    C                     MOVELEM36      EM36H            兵役
+|    C                     MOVELEM37      EM37H            籍貫
+|    C                     MOVELEM38      EM38H            通訊地址
+|    C                     MOVELEM39      EM39H            戶籍地址
+|    C                     MOVELEM40      EM40H            通訊電話１
+|    C                     MOVELEM401     EM401H           通訊電話２
+|    C                     MOVELEM41      EM41H            戶籍電話　　
+|    C                     MOVELEM42      EM42H            連絡人
+|    C                     MOVELEM43      EM43H            保証人１
+|    C                     MOVELEM431     EM431H           保証人２
+|    C                     MOVELEM44      EM44H            介紹人　　　　　　
+|    C                     MOVELEM45      EM45H            連絡人電話１
+|    C                     MOVELEM451     EM451H           連絡人電話１
+|    C                     MOVELEM452     EM452H           連絡人電話１
+|    C                     MOVELEM46      EM46H            保証人電話１
+|    C                     MOVELEM461     EM461H           保証人電話２
+|    C                     MOVELEM47      EM47H            介紹人電話
+|    C                     MOVELEM60      EM60H            學校名稱－１
+|    C                     MOVELEM61      EM61H            科系－１
+|    C                     Z-ADDEM62      EM62H            入校年月－１
+|    C                     Z-ADDEM63      EM63H            離校年月－１
+|    C                     MOVELEM64      EM64H            畢／肄－１
+|    C                     MOVELEM65      EM65H            學校名稱－２
+|    C                     MOVELEM66      EM66H            科系－２
+|    C                     Z-ADDEM67      EM67H            入校年月－２
+|    C                     Z-ADDEM68      EM68H            離校年月－２
+|    C                     MOVELEM69      EM69H            畢／肄－２
+|    C                     MOVELEM70      EM70H            學校名稱－３
+|    C                     MOVELEM71      EM71H            科系－３
+|    C                     Z-ADDEM72      EM72H            入校年月－３
+|    C                     Z-ADDEM73      EM73H            離校年月－３
+|    C                     MOVELEM74      EM74H            畢／肄－３
+|    C                     MOVELEM75      EM75H            機關名稱－１
+|    C                     MOVELEM76      EM76H            職務－１
+|    C                     Z-ADDEM77      EM77H            任職年月－１
+|    C                     Z-ADDEM78      EM78H            離職年月－１
+|    C                     MOVELEM79      EM79H            機關名稱－２
+|    C                     MOVELEM80      EM80H            職務－２
+|    C                     Z-ADDEM81      EM81H            任職年月－２
+|    C                     Z-ADDEM82      EM82H            離職年月－２
+|    C                     MOVELEM83      EM83H            機關名稱－３
+|    C                     MOVELEM84      EM84H            職務－３
+|    C                     Z-ADDEM85      EM85H            任職年月－３
+|    C                     Z-ADDEM86      EM86H            離職年月－３
+|    C                     MOVELEM87      EM87H            專長－１
+|    C                     MOVELEM88      EM88H            語文－１
+|    C                     MOVELEM89      EM89H            專長－２
+|    C                     MOVELEM90      EM90H            語文－２
+|    C                     MOVELEM91      EM91H            專長－３
+|    C                     MOVELEM92      EM92H            語文－３
+|    C                     MOVELEM93      EM93H            學歷代碼
+|    C                     MOVELEM94      EM94H            新進碼
+|    C                     Z-ADDEM951     EM951H           長病假
+|    C                     Z-ADDEM952     EM952H           長病假復職
+|    C                     Z-ADDEM953     EM953H           長病假日數
+|    C                     MOVELEM100     EM100H           薪制
+|    C                     MOVELEM101     EM101H           所得扣繳
+|    C                     Z-ADDEM102     EM102H           所得扣繳金額
+|    C                     MOVELEM103     EM103H           是否刷卡
+|    C                     MOVELEM104     EM104H           是否輪班
+|    C                     MOVELEM105     EM105H           輪班班表
+|    C                     MOVELEM106     EM106H           是否下班刷卡
+|    C                     MOVELEM107     EM107H           是否月休
+|    C                     Z-ADDEM108     EM108H           月休單月天數
+|    C                     MOVELEM109     EM109H           人員分類
+|    C                     MOVELEM110     EM110H           同仁分類
+|    C                     MOVELEM111     EM111H           工作類別
+|    C                     MOVELEM112     EM112H           加班計薪
+|    C                     Z-ADDEM113     EM113H           特休基準日
+|    C                     MOVELEM114     EM114H           聯絡電話
+|    C                     Z-ADDEM115     EM115H           薪資－１
+|    C                     Z-ADDEM116     EM116H           薪資－２
+|    C                     Z-ADDEM117     EM117H           薪資－３
+|    C                     MOVELEM118     EM118H           訓練－１
+|    C                     MOVELEM119     EM119H           訓練－２
+|    C                     MOVELEM120     EM120H           訓練－３
+|    C                     MOVELEM121     EM121H           遲到一３
+|    C                     MOVELEM122     EM122H           遲到二３
+|    C                     MOVELEM123     EM123H           遲到三３
+|    C                     MOVELEM124     EM124H           遲到
+|    C                     MOVELEM125     EM125H           事假
+|    C                     MOVELEM126     EM126H           病假
+|    C                     Z-ADDEM127     EM127H           最近申報年月
+|    C                     MOVELEM128     EM128H           會計科目一
+|    C                     MOVELEM129     EM129H           會計科目二
+|    C                     MOVELDTR132    EM130H           上班地點
+|    C                     MOVELEM131     EM131H           欄位擴充
+|    C                     MOVELEM132     EM132H           連絡人關係
+|    C                     MOVELDTR232    EM133H           生產獎金註記
+|    C                     Z-ADD$A8YMD    EM97H            記錄更新日期
+|    C                     TIME           EM98H            記錄更新時間
+|    C                     MOVEL$USER     EM99H            使用者代號　
+|    C*
+21===C                     ENDSR
+      *==============================================================*
+      *          R2D16 ....WRITE PYEMPF
+      *==============================================================*
+22===C           R2D16     BEGSR
+|    C*若員工轉調公司時，則須在原公司標示已離職，且將原有的員工資料寫
+|    C*入新公司
+|    C*
+|    C           KEYEM     CHAINEM0                  41
+|    C*
+|    C                     MOVELDTR012    EM01             公司編號
+|    C                     MOVELEM02      EM02             員工編號
+|    C                     MOVELEM03      EM03             員工姓名
+|    C                     MOVELEM031     EM031            英文姓名
+|    C                     MOVELEM041     EM041            部門編號１
+|    C                     MOVELEM042     EM042            部門編號２
+|    C                     MOVELEM043     EM043            部門編號３
+|    C                     MOVELEM044     EM044            部門編號４
+|    C                     MOVELEM05      EM05             職稱編號
+|    C                     MOVELEM051     EM051            副職稱編號
+|    C                     MOVELEM06      EM06             職等編號
+|    C                     MOVELEM07      EM07             職級編號
+|    C                     MOVELEM08      EM08             班別代號　
+|    C                     MOVELEM09      EM09             編制代號
+|    C                     MOVELEM10      EM10             計薪代號
+|    C                     MOVEL*BLANK    EM11             離職碼
+|    C                     MOVELEM12      EM12             是否有全勤獎金
+|    C                     Z-ADDEM13      EM13             到職日期
+|    C                     Z-ADDEM14      EM14             勞保投保日期
+|    C                     Z-ADDEM15      EM15             勞保調整日期
+|    C                     Z-ADDEM16      EM16             勞保退保日期
+|    C                     Z-ADDEM17      EM17             留職停薪日期
+|    C                     Z-ADDEM18      EM18             復職日期　
+|    C                     Z-ADD0         EM19             離職日期　
+|    C                     Z-ADDEM20      EM20             試用期滿日
+|    C                     Z-ADDEM21      EM21             最近調陞日
+|    C                     Z-ADDEM22      EM22             最近調薪日
+|    C                     Z-ADDEM23      EM23             勞保投保金額
+|    C                     MOVELEM24      EM24             福委會加入
+|    C                     MOVELEM25      EM25             工會加入　　
+|    C                     Z-ADDEM26      EM26             留職天數　　
+|    C                     Z-ADDEM261     EM261            留職天數　　
+|    C                     Z-ADDEM27      EM27             特加年資
+|    C                     Z-ADDEM28      EM28             每月代扣所得稅
+|    C                     Z-ADDEM291     EM291            團保一投保日
+|    C                     Z-ADDEM292     EM292            團保一員工負擔保費
+|    C                     Z-ADDEM293     EM293            團保一調整日期
+|    C                     Z-ADDEM294     EM294            團保一退保日期
+|    C                     Z-ADDEM296     EM296            團保二投保日
+|    C                     Z-ADDEM297     EM297            團保二員工負擔保費
+|    C                     Z-ADDEM298     EM298            團保二調整日期
+|    C                     Z-ADDEM299     EM299            團保二退保日期
+|    C                     MOVELEM30      EM30             血型　　
+|    C                     MOVELEM31      EM31             身份証號　　
+|    C                     MOVELEM311     EM311            身份證號識別碼
+|    C                     MOVELEM32      EM32             性別
+|    C                     MOVELEM321     EM321            國籍
+|    C                     Z-ADDEM33      EM33             出生日期
+|    C                     MOVELEM34      EM34             婚姻狀況
+|    C                     Z-ADDEM35      EM35             撫養人數
+|    C                     MOVELEM36      EM36             兵役
+|    C                     MOVELEM37      EM37             籍貫
+|    C                     MOVELEM38      EM38             通訊地址
+|    C                     MOVELEM39      EM39             戶籍地址
+|    C                     MOVELEM40      EM40             通訊電話１
+|    C                     MOVELEM401     EM401            通訊電話２
+|    C                     MOVELEM41      EM41             戶籍電話　　
+|    C                     MOVELEM42      EM42             連絡人
+|    C                     MOVELEM43      EM43             保証人１
+|    C                     MOVELEM431     EM431            保証人２
+|    C                     MOVELEM44      EM44             介紹人　　　　　　
+|    C                     MOVELEM45      EM45             連絡人電話１
+|    C                     MOVELEM451     EM451            連絡人電話１
+|    C                     MOVELEM452     EM452            連絡人電話１
+|    C                     MOVELEM46      EM46             保証人電話１
+|    C                     MOVELEM461     EM461            保証人電話２
+|    C                     MOVELEM47      EM47             介紹人電話
+|    C                     MOVELEM60      EM60             學校名稱－１
+|    C                     MOVELEM61      EM61             科系－１
+|    C                     Z-ADDEM62      EM62             入校年月－１
+|    C                     Z-ADDEM63      EM63             離校年月－１
+|    C                     MOVELEM64      EM64             畢／肄－１
+|    C                     MOVELEM65      EM65             學校名稱－２
+|    C                     MOVELEM66      EM66             科系－２
+|    C                     Z-ADDEM67      EM67             入校年月－２
+|    C                     Z-ADDEM68      EM68             離校年月－２
+|    C                     MOVELEM69      EM69             畢／肄－２
+|    C                     MOVELEM70      EM70             學校名稱－３
+|    C                     MOVELEM71      EM71             科系－３
+|    C                     Z-ADDEM72      EM72             入校年月－３
+|    C                     Z-ADDEM73      EM73             離校年月－３
+|    C                     MOVELEM74      EM74             畢／肄－３
+|    C                     MOVELEM75      EM75             機關名稱－１
+|    C                     MOVELEM76      EM76             職務－１
+|    C                     Z-ADDEM77      EM77             任職年月－１
+|    C                     Z-ADDEM78      EM78             離職年月－１
+|    C                     MOVELEM79      EM79             機關名稱－２
+|    C                     MOVELEM80      EM80             職務－２
+|    C                     Z-ADDEM81      EM81             任職年月－２
+|    C                     Z-ADDEM82      EM82             離職年月－２
+|    C                     MOVELEM83      EM83             機關名稱－３
+|    C                     MOVELEM84      EM84             職務－３
+|    C                     Z-ADDEM85      EM85             任職年月－３
+|    C                     Z-ADDEM86      EM86             離職年月－３
+|    C                     MOVELEM87      EM87             專長－１
+|    C                     MOVELEM88      EM88             語文－１
+|    C                     MOVELEM89      EM89             專長－２
+|    C                     MOVELEM90      EM90             語文－２
+|    C                     MOVELEM91      EM91             專長－３
+|    C                     MOVELEM92      EM92             語文－３
+|    C                     MOVELEM93      EM93             學歷代碼
+|    C                     MOVELEM94      EM94             新進碼
+|    C                     Z-ADDEM951     EM951            長病假
+|    C                     Z-ADDEM952     EM952            長病假復職
+|    C                     Z-ADDEM953     EM953            長病假日數
+|    C                     MOVELEM100     EM100            薪制
+|    C                     MOVELEM101     EM101            所得扣繳
+|    C                     Z-ADDEM102     EM102            所得扣繳金額
+|    C                     MOVELEM103     EM103            是否刷卡
+|    C                     MOVELEM104     EM104            是否輪班
+|    C                     MOVELEM105     EM105            輪班班表
+|    C                     MOVELEM106     EM106            是否下班刷卡
+|    C                     MOVELEM107     EM107            是否月休
+|    C                     Z-ADDEM108     EM108            月休單月天數
+|    C                     MOVELEM109     EM109            人員分類
+|    C                     MOVELEM110     EM110            同仁分類
+|    C                     MOVELEM111     EM111            工作類別
+|    C                     MOVELEM112     EM112            加班計薪
+|    C                     Z-ADDEM113     EM113            特休基準日
+|    C                     MOVELEM114     EM114            聯絡電話
+|    C                     Z-ADDEM115     EM115            薪資－１
+|    C                     Z-ADDEM116     EM116            薪資－２
+|    C                     Z-ADDEM117     EM117            薪資－３
+|    C                     MOVELEM118     EM118            訓練－１
+|    C                     MOVELEM119     EM119            訓練－２
+|    C                     MOVELEM120     EM120            訓練－３
+|    C                     MOVELEM121     EM121            遲到一３
+|    C                     MOVELEM122     EM122            遲到二３
+|    C                     MOVELEM123     EM123            遲到三３
+|    C                     MOVELEM124     EM124            遲到
+|    C                     MOVELEM125     EM125            事假
+|    C                     MOVELEM126     EM126            病假
+|    C                     Z-ADDEM127     EM127            最近申報年月
+|    C                     MOVELEM128     EM128            會計科目一
+|    C                     MOVELEM129     EM129            會計科目二
+|    C                     MOVELDTR132    EM130            上班地點
+|    C                     MOVELEM131     EM131            欄位擴充
+|    C                     MOVELEM132     EM132            連絡人關係
+|    C                     MOVELEM133     EM133            生產獎金註記
+|    C                     Z-ADD$A8YMD    EM97             記錄更新日期
+|    C                     TIME           EM98             記錄更新時間
+|    C                     MOVEL$USER     EM99             使用者代號　
+|    C                     WRITEEM0
+|    C*
+22===C                     ENDSR
+      *==============================================================*
+**
+新增修改      刪除查詢
+

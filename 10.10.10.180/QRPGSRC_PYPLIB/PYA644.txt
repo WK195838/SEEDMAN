@@ -1,0 +1,158 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA540                                     *
+     H*    PROGRAM NAME :產生年終獎金基本資料                      *
+     H*    AUTHOR       : A1445 HONDA                                *
+     H*    CREATE DATE  : 95/03/20                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FPYA644D CF  E                    WORKSTN      KINFDS DSPFDS
+     FSYCMPF  IF  E           K        DISK
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      187 1920DDATE
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2040AYEAR
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*程式使用
+     I                                      501 502 DPW01
+     I                                      503 5070DPW03
+     I                                      503 5050DPW03Y
+     I                                      506 5070DPW03M
+     I                                      508 508 DPW04
+     I                                      511 5160WPW03
+     C*==============================================================*
+     C*                    PARM
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM *IN03     IN03    1
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100                      *INIT VALUE
+     C*
+  01-C           *IN03     DOUEQ'1'
+    C           *IN13     OREQ *ON
+    C                     EXSR R1000                      *SCRN
+  01-C                     END
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+     C*==============================================================*
+     C*          R0100 ....SCREEN INIT VALUE SET
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C                     IN   LDA
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD*ZERO     DPW03
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C*公司別
+|    C                     MOVEL$COR      DPW01             公司別
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     97
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      .CHECK      ?
+|    C*
+| 02-C           *IN99     IFEQ *OFF
+|   C           *IN13     ANDEQ*ON
+|   C* 轉中國年為西元年並搬 至LDA
+|   C*          DPW03     ADD  191100    WPW03            ADD TO *LDA
+|   C*
+|   C                     CALL 'P38'
+|   C                     PARM DPW03     P3801I  60
+|   C                     PARM '1'       P3802I  1
+|   C                     PARM '1'       P3803I  1
+|   C           WPW03     PARM           P3801O  60
+|   C                     PARM           P3811O  1
+|   C*
+|   C                     SETON                     96    .執行中
+|   C                     WRITEDSPD1
+|   C*
+|   C                     OUT  LDA
+| 02-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00  ...CHECK DATA FROM SCREEN KEY-IN
+     C*===============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C*公司不得為空白
+| 01-C           DPW01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVEL*BLANK    DCM03
+|    C           DPW01     CHAINSYCMPF               40
+|    C*公司
+| 02-C           *IN40     IFEQ *ON
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02*C                     ELSE
+|   C                     MOVELCM03      DCM03
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*年不得為空白
+| 03-C           DPW03M    IFGT 12
+|   C           DPW03M    ORLT 1
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C* 檢查年
+| 04-C           DPW03Y    IFLT 0
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 04-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*
+03===C           E1B00     ENDSR
+

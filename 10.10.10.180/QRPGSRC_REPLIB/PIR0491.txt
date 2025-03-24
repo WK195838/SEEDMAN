@@ -1,0 +1,219 @@
+     A****************************************************************
+     A*   人頭馬匯東洋酒股份有限公司－版權所有     TEL:5042266    *
+     A*                                                              *
+     A* PROGRAM NAME : PIR049                                        *
+     A* AUTHER       : CAROL                                         *
+     A* CREATE DATE  : 06/15/21                                      *
+     A* UPDATE DATE  :                                               *
+     A* SYSTEM       :人頭馬匯東                                   *
+     A* SUBSYSTEM    :盤點系統                                     *
+     A* REMARK       :年終庫存品牌彙總表                           *
+     A*--------------------------------------------------------------*
+     A*MODIFICATION                                                  *
+     A****************************************************************
+     FIMIXLF05IP  E           K        DISK
+     FIMI1LF03IF  E           K        DISK
+     F            IX0                               KRENAMEI10
+     FMTMAPF  IF  E           K        DISK
+     FPIR049PFO   E           K        DISK
+     FPIR049P O   E             39     PRINTER
+     IIX0
+     I                                              IX01B L1
+     I                                              IX01C L2
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      598 5990$PRTID
+     I*
+     I                                      601 6040DIX11
+     I                                      601 6020MM
+     I                                      603 6040YY
+     I                                      615 623 DIX01S
+     I                                      624 632 DIX01E
+     I                                      651 652 IX01MS
+     I                                      655 656 IX01ME
+     I            DS
+     I                                        1   9 IX01
+     I                                        1   1 IX01S
+     I                                        3   4 IX01D
+      *==============================================================*
+      *                    KEY LIST
+      *==============================================================*
+     C           KEYI1     KLIST
+     C                     KFLD           IX01A
+     C                     KFLD           IX01B
+     C                     KFLD           IX01
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+     C  N10                EXSR RTN010                     *HEADING
+     C   39                EXSR RTN900
+     C                     EXSR RTN100                     *READE DETAIL
+     C*
+     CL1 10                EXSR RTNL1
+     CL2 10                EXSR RTNL2
+     CLR                   EXSR RTNLR
+      *==============================================================*
+     C*          RTN010....INIT VALUE
+      *==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     Z-ADD0         STANDC
+|    C                     Z-ADD0         IXTOT
+|    C                     Z-ADD0         T1TOT1
+|    C                     Z-ADD0         T1TOT2
+|    C                     Z-ADD0         T1TOT3
+|    C                     Z-ADD0         T1TOT4
+|    C                     Z-ADD0         T1TOT5
+|    C                     Z-ADD0         T1TOT6
+|    C                     Z-ADD0         T1TOT7
+|    C                     Z-ADD0         T2TOT1
+|    C                     Z-ADD0         T2TOT2
+|    C                     Z-ADD0         T2TOT3
+|    C                     Z-ADD0         T2TOT4
+|    C                     Z-ADD0         T2TOT5
+|    C                     Z-ADD0         T2TOT6
+|    C                     Z-ADD0         T2TOT7
+|    C                     Z-ADD0         T3TOT1
+|    C                     Z-ADD0         T3TOT2
+|    C                     Z-ADD0         T3TOT3
+|    C                     Z-ADD0         T3TOT4
+|    C                     Z-ADD0         T3TOT5
+|    C                     Z-ADD0         T3TOT6
+|    C                     Z-ADD0         T3TOT7
+|    C                     WRITEPH1
+|    C*
+|    C                     SETON                     10                L
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100....READ
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*判斷是否抓取IX或I1
+| 01-C           IX01S     IFNE 'S'
+|   C           KEYI1     CHAINI10                  40
+| 01-C                     ENDIF
+|     *
+|    C*產品簡稱
+|    C           IX01      CHAINMA0                  43
+|    C   43                MOVE *BLANKS   MA03
+|    C  N43                MOVE MA03      MA03
+|    C*總庫存/成本
+|    C           IX06      ADD  IX07      STANDC    H
+|    C           IX08      ADD  IX09      IXTOT     H
+|    C                     ADD  IX10      IXTOT     H
+|    C   39                EXSR RTN900
+|    C                     ADD  IX06      T1TOT1
+|    C                     ADD  IX07      T1TOT2
+|    C                     ADD  STANDC    T1TOT3
+|    C                     ADD  IX08      T1TOT4
+|    C                     ADD  IX09      T1TOT5
+|    C                     ADD  IX10      T1TOT6
+|    C                     ADD  IXTOT     T1TOT7
+| 02-C           STANDC    IFNE 0
+|   C                     WRITEPD1
+|   C*WRITE TO EXCEL
+|   C                     EXSR RTN101
+| 02-C                     END
+|    C                     SETOF                     2122
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN101....WRITE TO EXCEL
+     C*==============================================================*
+03===C           RTN101    BEGSR
+|    C*
+|    C                     MOVELIX01D     F4901     P      品牌
+|    C                     MOVELIX01      F4902     P      產品代號
+|    C                     MOVELMA03      F4903     P      產品簡稱
+|    C                     Z-ADDIX06      F4904            保稅量
+|    C                     Z-ADDIX07      F4905            完稅量
+|    C                     Z-ADDSTANDC    F4906            總標準箱數
+|    C                     Z-ADDIX08      F4907             FOB-TOT
+|    C                     Z-ADDIX09      F4908             FHI-TOT
+|    C                     Z-ADDIX10      F4909             DUTY-TOT
+|    C                     Z-ADDIXTOT     F4910            總成本
+|    C                     WRITEF490
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTNL1 ....PT1
+     C*==============================================================*
+04===C           RTNL1     BEGSR
+|    C*
+|    C   39                EXSR RTN900
+|    C           IX01A     IFEQ 'ESRM'
+|    C           T1TOT3    ANDNE0
+|    C                     WRITEPT1
+|    C                     END
+|    C                     ADD  T1TOT1    T2TOT1
+|    C                     ADD  T1TOT2    T2TOT2
+|    C                     ADD  T1TOT3    T2TOT3
+|    C                     ADD  T1TOT4    T2TOT4
+|    C                     ADD  T1TOT5    T2TOT5
+|    C                     ADD  T1TOT6    T2TOT6
+|    C                     ADD  T1TOT7    T2TOT7
+|    C                     Z-ADD0         T1TOT1
+|    C                     Z-ADD0         T1TOT2
+|    C                     Z-ADD0         T1TOT3
+|    C                     Z-ADD0         T1TOT4
+|    C                     Z-ADD0         T1TOT5
+|    C                     Z-ADD0         T1TOT6
+|    C                     Z-ADD0         T1TOT7
+|    C                     SETON                     21
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTNL2 ....PT2
+     C*==============================================================*
+04===C           RTNL2     BEGSR
+|    C*
+|    C   39                EXSR RTN900
+|    C           T2TOT3    IFNE 0
+|    C                     WRITEPT2
+|    C                     END
+|    C                     ADD  T2TOT1    T3TOT1
+|    C                     ADD  T2TOT2    T3TOT2
+|    C                     ADD  T2TOT3    T3TOT3
+|    C                     ADD  T2TOT4    T3TOT4
+|    C                     ADD  T2TOT5    T3TOT5
+|    C                     ADD  T2TOT6    T3TOT6
+|    C                     ADD  T2TOT7    T3TOT7
+|    C                     Z-ADD0         T2TOT1
+|    C                     Z-ADD0         T2TOT2
+|    C                     Z-ADD0         T2TOT3
+|    C                     Z-ADD0         T2TOT4
+|    C                     Z-ADD0         T2TOT5
+|    C                     Z-ADD0         T2TOT6
+|    C                     Z-ADD0         T2TOT7
+|    C                     SETON                     21
+|    C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN900....OVERFLOW
+      *==============================================================*
+05===C           RTN900    BEGSR
+|    C*
+|    C                     WRITEPE1
+|    C                     WRITEPH1
+|    C                     SETOF                     39
+|    C*
+05===C                     ENDSR
+      *==============================================================*
+      *          RTNLR ....(NO DATA)
+      *==============================================================*
+06===C           RTNLR     BEGSR
+|    C*
+| 01-C           *IN10     IFEQ '0'
+|   C                     EXSR RTN010
+|   C                     WRITEPE9
+|   C                     ELSE
+|   C   39                EXSR RTN900
+|   C                     WRITEPT3
+| 01-C                     END
+|    C                     WRITEPE2
+|    C*
+06===C                     ENDSR
+

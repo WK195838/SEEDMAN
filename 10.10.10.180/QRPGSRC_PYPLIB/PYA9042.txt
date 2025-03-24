@@ -1,0 +1,209 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA9042                                    *
+     H*    PROGRAM NAME :勞健保及勞退保額調整報表                  *
+     H*    AUTHOR       : A1445 HONDA                                *
+     H*    CREATE DATE  : 94/12/15                                   *
+     H*    UPDATE DATE  : 95/03/17                                   *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYLOLF01IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYDELF01IF  E           K        DISK
+     F*PIPAPF  IF  E           K        DISK
+     F*AGRL0151IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYA904WFUF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I*
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I* USER DEFINE
+     I            DS
+     I                                        1   7 LO05
+     I                                        1   1 DP1
+     I                                        2   2 DP2
+     I                                        3   3 DP3
+     I                                        4   7 DP4
+     I            DS
+     I                                        1   60TRNDYM
+     I                                        1   6 ZONEYM
+    C*==============================================================*
+    C*                    DEFN
+    C*==============================================================*
+     C           *LIKE     DEFN PIN001    TRNCMS
+     C           *LIKE     DEFN PIN002    TRNCME
+     C           *LIKE     DEFN PIN003    TRNDPS
+     C           *LIKE     DEFN PIN004    TRNDPE
+     C           *LIKE     DEFN PIN005    TRNEMS
+     C           *LIKE     DEFN PIN006    TRNEME
+     C           *LIKE     DEFN PIN007    TRNDOP
+    C*=============================================================
+    C*                    PARM LIST
+    C*=============================================================
+     C           *ENTRY    PLIST
+     C           TRNCMS    PARM           PIN001  2        部門號起
+     C           TRNCME    PARM           PIN002  2        部門號迄
+     C           TRNDPS    PARM           PIN003  7        部門號起
+     C           TRNDPE    PARM           PIN004  7        部門號迄
+     C           TRNEMS    PARM           PIN005 10        員工號起
+     C           TRNEME    PARM           PIN006 10        員工號迄
+     C           ZONEYM    PARM           PIN007  6        年月
+     C           TRNDOP    PARM           PIN008  1        Y/N/A
+     C*
+    C*==============================================================*
+     C*==============================================================*
+     C*                    KEY  LIST
+     C*==============================================================*
+     C           KSEQ      KLIST                           列印順序檔
+     C                     KFLD           SEQTYP  1
+     C                     KFLD           SEQDAT  70
+     C                     KFLD           LO05
+     C*
+     C           KEYLO     KLIST                           *PYLOPF
+     C                     KFLD           TRNDYM           年月
+     C                     KFLD           TRNCMS           公司
+     C                     KFLD           TRNDPS           部門
+     C           KDP       KLIST                           *PYDPPF
+     C                     KFLD           DP1
+     C                     KFLD           DP2
+     C                     KFLD           DP3
+     C                     KFLD           DP4
+     C*
+     C           KEYEM     KLIST                           *PYEMPF
+     C                     KFLD           LO01             公司
+     C                     KFLD           LO02             員工
+     C*
+     C           KEYDE     KLIST                           *PYEMPF
+     C                     KFLD           LO01             公司
+     C                     KFLD           DE02             員工
+     C                     KFLD           LO05             部門編號
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+|    C*
+     C  N10                EXSR RTN010                     *INITIAL
+     C                     EXSR RTN100                     *WR WORKFILE
+|    C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010... INITIAL
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+     C                     MOVEL'01'      DE02
+     C*
+     C                     MOVEL'1'       SEQTYP
+     C                     Z-ADD880825    SEQDAT
+     C*
+|    C*
+     C                     MOVEL*BLANK    WF05    7
+|    C                     SETON                     10
+|    C           *LOVAL    SETLLWF0
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... 轉檔   FROM PYLOPF
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C           KEYLO     SETLLLO0
+     C           TRNDYM    READELO0                      44
+     C*
+|   C*--------------------------------------------------------------
+|    C           *IN44     DOWEQ*OFF
+|    C*
+|    C*介於起迄才寫工作檔
+| 01-C           LO01      IFGE TRNCMS
+|   C           LO01      ANDLETRNCME
+|   C           LO05      ANDGETRNDPS
+|   C           LO05      ANDLETRNDPE
+|   C           LO02      ANDGETRNEMS
+|   C           LO02      ANDLETRNEME
+|    C*
+|   C*--------------------------------------------------------------
+|    C*
+|    C*員工不同時 SAVE KEY 及 SETON *IN11  外勤
+     C           LO05      IFNE WF05
+     C                     MOVELLO05      WF05
+     C                     SETON                     11
+     C                     END
+|    C*
+|   C*--------------------------------------------------------------
+|    C* *IN11 ON時才會去CHAIN 部門檔 及 順序檔
+|    C*
+| 01-C           *IN11     IFEQ *ON
+|    C* - - - - - - - - - - - - - - - - - - - - - - - - -
+     C                     Z-ADD*ZERO     FPRTSQ
+     C                     MOVEL*BLANK    WPA05
+     C                     MOVEL*BLANK    DP10
+|    C* - - - - - - - - - - - - - - - - - - - - - - - - -
+|    C           LO01      IFEQ '01'                       *IF 內勤
+|    C*
+|   C*讀取列印順序檔
+     C           KEYDE     CHAINPYDELF01             40
+     C  N40                Z-ADDDE03      FPRTSQ
+|    C*
+|    C                     END                             *END內勤
+|    C*
+|    C           LO01      IFEQ '02'                       *IF 外勤
+|    C*
+|    C*讀取部門檔 PYDPPF
+     C           KDP       CHAINPYDPPF               40
+|   C*讀取列印順序檔
+     C*          KSEQ      CHAINAGRL0151             40
+     C*  40                Z-ADD9999      FPRTSQ
+|   C*--------------------------------------------------------------
+|   C*讀取 部門群組 PIPAPF
+     C*          LO05      CHAINPIPAPF               40
+| 01-C*          *IN40     IFEQ *OFF
+     C*                    SELEC
+     C*          PA05      WHEQ '16'
+     C*                    MOVEL'1'       WPA05
+     C*          PA05      WHEQ '04'
+     C*                    MOVEL'2'       WPA05
+     C*          PA05      WHEQ '02'
+     C*                    MOVEL'3'       WPA05
+     C*          PA05      WHEQ '03'
+     C*                    MOVEL'4'       WPA05
+     C*                    ENDSL
+| 01-C*                    ENDIF
+|    C*
+|    C                     END                              *END外勤
+|    C*
+|   C*--------------------------------------------------------------
+|    C* CHAIN完取得部門代碼後  SETOF *IN11
+|    C*
+|    C                     SETOF                     11
+     C                     END
+|   C*--------------------------------------------------------------
+     C*取生日
+|    C* - - - - - - - - - - - - - - - - - - - - - - - - -
+|    C           KEYEM     CHAINPYEMPF               40
+|    C* - - - - - - - - - - - - - - - - - - - - - - - - -
+     C           TRNDOP    IFEQ 'A'
+     C                     WRITEWF0                        WR WORKFILE
+     C*
+     C                     ELSE
+|    C*
+     C           TRNDOP    IFEQ LO13
+     C                     WRITEWF0
+     C                     END
+|    C*
+     C                     END
+|    C*
+     C                     END
+|    C*
+     C           TRNDYM    READELO0                      44
+|    C*
+     C                     ENDDO
+|    C*---------------------------------------------------------------
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+

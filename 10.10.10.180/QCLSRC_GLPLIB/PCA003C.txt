@@ -1,0 +1,74 @@
+     /***************************************************************/
+     /*   人頭馬匯東洋酒股份有限公司－版權所有      TEL:5042266   */
+     /*                                                             */
+     /*    AUTHOR       : AN MING HSIA                              */
+     /*    CREATE DATE  : 10/08/93                                  */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : PCA003C                                   */
+     /*    SYSTEM       :人頭馬匯東                               */
+     /*    SUBSYSTEM    :零用金系統                               */
+     /*    REMARK       :零用金作廢／取消處理                     */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&IN03)   TYPE(*LGL)  LEN(1)
+             DCL        VAR(&IN14)   TYPE(*LGL)  LEN(1)
+             DCL        VAR(&IN97)   TYPE(*LGL)  LEN(1)
+             DCL        VAR(&DCA01)  TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DCA17S)  TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DCA17E)  TYPE(*CHAR) LEN(1)
+             DCL        VAR(&YCA10S)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YCA10E)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DCA02S)  TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DCA02E)  TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DSEL1)  TYPE(*CHAR) LEN(1)
+
+ START:      CALL       PGM(PCA003) PARM(&IN03)
+             IF         COND(&IN03) THEN(DO)
+             CHGVAR     VAR(%SST(*LDA 601 100)) VALUE(' ')
+             RETURN
+             ENDDO
+
+             CHGVAR     VAR(&DCA01) VALUE(%SST(*LDA 601 2))
+             CHGVAR     VAR(&DCA17S) VALUE(%SST(*LDA 603 1))
+             CHGVAR     VAR(&DCA17E) VALUE(%SST(*LDA 604 1))
+             CHGVAR     VAR(&DSEL1)  VALUE(%SST(*LDA 605 1))
+             CHGVAR     VAR(&YCA10S) VALUE(%SST(*LDA 611 8))
+             CHGVAR     VAR(&YCA10E) VALUE(%SST(*LDA 621 8))
+             CHGVAR     VAR(&DCA02S) VALUE(%SST(*LDA 631 9))
+             CHGVAR     VAR(&DCA02E) VALUE(%SST(*LDA 641 9))
+             OVRDBF     FILE(PCCALF01) SHARE(*YES)
+
+     /*作廢*/
+             IF         COND(&DSEL1 = 'A') THEN(DO)
+             OPNQRYF    FILE((PCCALF01)) OPTION(*ALL) QRYSLT(' CA01 +
+                          *EQ ("' *CAT &DCA01 *CAT '") & CA17 *EQ +
+                          %RANGE("' *CAT &DCA17S *CAT '" "' *CAT +
+                          &DCA17E *CAT '") & CA02 *EQ %RANGE("' +
+                          *CAT &DCA02S *CAT '" "' *CAT &DCA02E *CAT +
+                          '") & CA10 *EQ %RANGE(' *CAT &YCA10S *CAT +
+                          ' ' *CAT &YCA10E *CAT ') & CA11 *EQ 0 & +
+                          CA29 *EQ 0 & CA18 *EQ " " & CA20 *NE "V" +
+                          ') KEYFLD(*FILE)
+             ENDDO
+     /*取消*/
+             IF         COND(&DSEL1 = 'B') THEN(DO)
+             OPNQRYF    FILE((PCCALF01)) OPTION(*ALL) QRYSLT(' CA01 +
+                          *EQ ("' *CAT &DCA01 *CAT '") & CA17 *EQ +
+                          %RANGE("' *CAT &DCA17S *CAT '" "' *CAT +
+                          &DCA17E *CAT '") & CA02 *EQ %RANGE("' +
+                          *CAT &DCA02S *CAT '" "' *CAT &DCA02E *CAT +
+                          '") & CA10 *EQ %RANGE(' *CAT &YCA10S *CAT +
+                          ' ' *CAT &YCA10E *CAT ') & CA18 *EQ " " & +
+                          CA20 *EQ "V" ') KEYFLD(*FILE)
+             ENDDO
+
+             CALL       PGM(PCA0031) PARM(&IN03)
+
+             CLOF       OPNID(PCCALF01)
+             DLTOVR     FILE(PCCALF01)
+
+
+             GOTO       START
+             ENDPGM
+

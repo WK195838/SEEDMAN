@@ -1,0 +1,443 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250
+     H*
+     /*    AUTHOR       : IRIS                                      */
+     /*    CREATE DATE  : 2020/12/25                                */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : ARA0173                                   */
+     /*    SYSTEM       :進銷存系統                               */
+     /*    SUBSYSTEM    :                                         */
+     /*    REMARK       :電子發票資料寫入-有效B2B (A0401)       */
+     A*===============================================================
+      *00A 需求單號:1100017
+      *00A IRIS 2021/01/08主檔備註欄位新增:訂單號碼、送貨單號、促銷
+      *活動代碼、業務員、客戶代號。明細檔: 金額改為四捨五入後的金額
+      *明細備註增加搭贈數量。
+      *00B 需求單號:1110192
+      *00B YVONNE 2022/03/31 電子發票抬頭,公司名稱由
+      *茂世企業有限公司 改成 茂世企業股份有限公司
+     A*===============================================================
+     FARAOPF  UF  E                    DISK
+     FSOSILF97UF  E           K        DISK
+     FSOSJLF04IF  E           K        DISK
+     FSOSDPF  IF  E           K        DISK
+ 00A+FSOSCLF07IF  E           K        DISK
+ 00A+FMTMCPF  IF  E           K        DISK
+     FMTMAPF  IF  E           K        DISK
+     FMTMDPF  IF  E           K        DISK
+     FMTMEPF  IF  E           K        DISK
+     FARAPPF  O   E                    DISK
+     FARAQPF  O   E                    DISK
+     E*==============================================================*
+ 00A-E*                   MSG     1   5 60
+ 00A+E                    MSG     1  11 60
+ 00A+E                    P24        17 60               FOR AP24
+     E                    AR207      19  1               19.7(S) -> 20(
+     E                    AR120      12  1               12.0(S) -> 12(
+ 00A+E                    AR040       4  1
+     E                    WR         20  1               FOR OUTPUT
+     E*==============================================================*
+     I           UDS
+     I                                      201 2080DATE
+     I            DS
+     I                                        1  120TIMSTP
+     I                                        1   60SYSTIM
+     I                                        1   2 SYSHH
+     I                                        3   4 SYSMM
+     I                                        5   6 SYSSS
+     I            DS
+     I                                        1  12 AR120
+     I                                        1  12 WAR120
+ 00A+I            DS
+ 00A+I                                        1  40 AQ06
+ 00A+I                                        1   6 AQ061
+ 00A+I                                        7  10 AQ062
+ 00A+I                                       11  16 AQ063
+ 00A+I            DS
+ 00A+I                                        1   4 AR040
+ 00A+I                                        1   4 WAR040
+     I            DS
+     I                                        1  19 AR207
+     I                                        1  197WAR207
+     I                                       13  190WARDEC
+     I            DS
+     I                                        1  64 ADDRES
+     I                                        1  32 ADDRE1
+     I                                       33  64 ADDRE2
+     C*==============================================================*
+     C           KEY2      KLIST
+     C                     KFLD           SJ01             公司別
+     C                     KFLD           SJ02             發票號碼
+     C           KEY4      KLIST
+     C                     KFLD           SI10             訂單編號
+     C                     KFLD           SJ03             產品代號
+     C           KEYME     KLIST
+     C                     KFLD           ME01
+     C                     KFLD           ME02
+     C*==============================================================*
+     C                     EXSR INIT
+     C           *IN01     DOUEQ'1'
+     C                     READ AO0                      01
+     C           *IN01     IFEQ '0'
+     C**         AO04      ANDEQ'POS     '
+     C           AO04      ANDNE'FIN     '
+     C           AO01      CHAINSI0                  02
+     C           *IN02     IFEQ '0'
+     C                     EXSR PC10
+     C                     EXSR PC20
+     C                     MOVEL'FIN'     AO04      P
+     C                     UPDATAO0
+     C*
+     C                     Z-ADDDATE      SI38             發票傳送日
+     C                     UPDATSI0
+     C*
+     C                     ENDIF
+     C                     ENDIF
+     C                     ENDDO
+     C                     SETON                     LR
+     C*===========================================================
+     C           INIT      BEGSR
+     C           *ENTRY    PLIST
+     C                     PARM           P12    12
+     C                     MOVE P12       TIMSTP
+     C                     TIME           TIMSTP 120
+     C           SYSHH     CAT  ':'       MMHRS   8
+     C                     CAT  SYSMM:0   MMHRS   8
+     C                     CAT  ':':0     MMHRS   8
+     C                     CAT  SYSSS:0   MMHRS   8
+      *
+     C                     MOVELMSG,3     AQ00
+     C                     MOVELMSG,1     AQ01
+     C                     MOVELMSG,1     AQ07
+     C                     MOVELMSG,3     AP01
+     C                     MOVELMSG,1     AP05
+     C                     WRITEAP0
+     C                     WRITEAQ0
+     C                     ENDSR
+     C*-----------------------------------------------------------
+     C*              PC10         處理主檔欄位
+     C*-----------------------------------------------------------
+     C           PC10      BEGSR
+     C                     MOVELSI02      AP01      P      發票號碼
+     C                     MOVELSI21      AP02      P      開立日期
+     C                     MOVELMMHRS     AP03      P      開立時間
+      *
+      *------------------------賣方資訊------------------------------
+      *
+     C                     MOVELMSG,3     AP04      P      賣方統編
+     C                     MOVELMSG,1     AP05      P      名稱
+     C                     MOVELMSG,4     AP06      P      地址
+     C                     MOVELMSG,5     AP08      P      電話號碼
+     C                     MOVELMSG,2     AP11      P      客戶編號
+     C*
+     C*------------------------------------------------------------
+     C           SI12      CHAINMD0                  03
+     C           *IN03     IFEQ '0'
+     C           MD17      IFEQ *BLANK                     無統編
+     C                     MOVE *ALL'0'   AP13      P      買方統編
+     C                     ELSE
+     C                     MOVELMD17      AP13      P
+     C                     ENDIF
+     C*
+     C                     MOVE SI12      ME01
+     C                     MOVE *BLANK    ME02
+     C           KEYME     CHAINME0                  05
+     C           *IN05     IFEQ '0'
+     C                     MOVELME03      AP14      P      買方名稱
+     C*
+     C                     MOVELME05      ADDRE1    P
+     C                     MOVELME06      ADDRE2    P
+     C                     MOVELADDRES    AP15      P      買方地址
+     C*
+     C                     MOVELME12      AP17      P      買方電話
+     C                     ELSE
+     C*                    MOVE *BLANK    AP13      P      買方統編
+     C                     MOVE *BLANK    AP14      P      買方名稱
+     C                     MOVE *BLANK    AP15      P      買方地址
+     C                     MOVE *BLANK    AP17      P      買方電話
+     C                     ENDIF
+     C                     MOVELSI12      AP20      P      客戶編號
+     C                     ENDIF
+      *
+      *---------------------------------------------------------
+ 00A+C                     MOVEL*BLANK    AP24             總備註
+ |   C                     MOVEA*BLANK    P24              總備註
+ |    *
+ |   C                     MOVEL'"'       P24,1     P
+ |    *
+ |   C                     MOVELMSG,6     P24,2     P      訂單號碼
+ |   C           SI02      CHAINSC0                  09
+ |   C           *IN09     IFEQ '0'
+ |   C                     MOVELSC02      P24,3     P
+ |   C                     ENDIF
+ |   C                     MOVELMSG,10    P24,4     P      換行
+ |    *
+ |   C                     MOVELMSG,7     P24,5     P      送貨單號
+ |   C                     MOVELSI11      P24,6     P
+ |   C                     MOVELMSG,10    P24,7     P      換行
+ |    *
+ |   C                     MOVELMSG,8     P24,8     P      業務員
+ |   C           SI31      CHAINMC0                  10
+ |   C           *IN10     IFEQ '0'
+ |   C                     MOVELMC02      P24,9     P      業務員姓名
+ |   C                     MOVELMSG,10    P24,10    P      換行
+ |   C                     END
+ |    *
+ |   C                     MOVELMSG,11    P24,11    P      客戶代號
+ |   C                     MOVELSI12      P24,12    P
+ |   C                     MOVELMSG,10    P24,13    P      換行
+ |    *
+ |   C           SC06      IFNE *BLANK
+ |   C                     MOVELMSG,9     P24,14    P      促銷活動代
+ |   C                     MOVELSC06      P24,15    P
+ |   C                     MOVELMSG,10    P24,16    P      換行
+ |   C                     END
+ |    *
+ |   C                     MOVEL'"'       P24,17    P
+ |    *
+ |   C                     Z-ADD1         X       20
+ |   C                     MOVELP24,X     AP24      P      總備註
+ |   C           X         DOUEQ17
+ |   C                     ADD  1         X
+ |   C                     CAT  P24,X:0   AP24
+ 00A+C                     ENDDO
+      *---------------------------------------------------------
+      *
+     C                     MOVEL*BLANK    AP27      P      相關號碼
+     C                     MOVEL'07'      AP28      P      發票類別
+     C                     MOVEL*BLANK    AP29      P      彙開註記
+     C                     MOVEL'0'       AP30      P      捐贈
+      *
+      *--------------------總則---------------------------------
+      *
+     C                     MOVE SI23      WAR120
+     C                     Z-ADDSI23      WKNUM  200
+     C                     EXSR EM10
+     C                     MOVEAWR        AP32      P      銷售額總計
+      *
+     C                     SELEC
+     C           SI22      WHEQ 'D'
+     C                     MOVEL'1'       AP33      P      課稅別
+     C           SI22      WHEQ 'Z'
+     C                     MOVEL'2'       AP33      P      課稅別
+     C           SI22      WHEQ 'B'
+     C                     MOVEL'3'       AP33      P      課稅別
+     C                     ENDSL
+      *
+     C           AP33      IFEQ '1'
+     C                     MOVEL'5'       AP34      P      稅率
+     C                     ELSE
+     C                     MOVEL'0'       AP34      P      稅率
+     C                     ENDIF
+      *
+     C                     MOVE SI24      WAR120
+     C                     Z-ADDSI24      WKNUM  200
+     C                     EXSR EM10
+     C                     MOVEAWR        AP35      P      營業稅額
+      *
+     C                     MOVE SI25      WAR120
+     C                     Z-ADDSI25      WKNUM  200
+     C                     EXSR EM10
+     C                     MOVEAWR        AP36      P      總計
+      *
+     C                     WRITEAP0
+     C                     ENDSR
+      *-------------------------------------------------------------
+      *              PC20         處理明細檔欄位
+      *-------------------------------------------------------------
+     C           PC20      BEGSR
+     C                     MOVELSI01      SJ01
+     C                     MOVELSI02      SJ02
+     C           KEY2      CHAINSJ0                  04
+     C           *IN04     DOWEQ'0'
+     C                     MOVELSJ02      AQ00             發票號碼
+     C*
+     C           SJ03      CHAINMA0                  06
+     C           *IN06     IFEQ '0'
+     C                     MOVELMA03      AQ01      P      產品代號
+     C                     END
+      *
+      *------  INVD02/04/05 數量，金額，單價----------
+      *
+     C           KEY4      CHAINSOSDPF               08
+     C           *IN08     IFEQ '0'
+     C                     Z-ADDSD04      WAR207
+     C                     EXSR EM20
+     C                     MOVEAWR        AQ02             數量
+     C*
+     C                     Z-ADDSD06      WAR207
+     C                     EXSR EM20
+     C                     MOVEAWR        AQ04             單價
+     C*
+ 00A-C*          SD04      MULT SD06      WSD07   92
+ 00A-C*                    Z-ADDWSD07     WAR207
+ 00A+C                     Z-ADDSD07      WAR207
+     C                     EXSR EM20
+     C                     MOVEAWR        AQ05             金額
+     C                     END
+      *
+ 00A+C           SJ13      IFNE 0
+ 00A+C                     MOVEL'搭贈'  AQ061
+ 00A+C                     MOVE SJ13      WAR040
+ 00A+C                     Z-ADDSJ13      WKNUM  200
+ 00A+C                     EXSR EM30
+ 00A+C                     MOVEAWR        AQ062     P      搭贈數量
+     C*
+ 00A+C                     MOVELMA13      AQ063     P      搭贈單位
+     C*
+ 00A+C                     ELSE
+     C                     MOVE *BLANK    AQ06             產品註記
+ 00A+C                     END
+      *--------------------------------------------------------------
+     C                     MOVEL*BLANK    AQ07
+     C                     WRITEAQ0
+     C           KEY2      READESJ0                      04
+     C                     ENDDO
+     C                     ENDSR
+     C*===============================================================
+     C*          EM10      12.0(S) -> 12(A)
+     C*---------------------------------------------------------------
+     C           EM10      BEGSR
+     C                     Z-ADD0         AN      20
+     C                     Z-ADD0         WN      20
+     C                     MOVEA*BLANK    WR               WKFLD
+     C                     SETOF                     21
+      *
+     C           AN        DOUEQ12
+     C                     ADD  1         AN
+     C           AR120,AN  IFNE *BLANK
+     C                     MOVE AR120,AN  MM1A    1 P
+      *
+     C           MM1A      IFEQ '0'
+     C   21                ADD  1         WN
+     C   21                MOVE MM1A      WR,WN
+     C                     ELSE
+     C                     SETON                     21
+     C                     ADD  1         WN
+     C                     MOVE MM1A      WR,WN
+     C                     ENDIF
+      *
+     C                     ENDIF
+     C                     ENDDO
+      *
+     C           WKNUM     IFEQ 0
+     C                     MOVEA*BLANK    WR
+     C                     MOVEL'0'       WR,1
+     C                     ENDIF
+      *
+     C                     ENDSR
+      *---------------------------------------------------------------
+      *          EM20      19.7(S) -> 20(A)
+      *---------------------------------------------------------------
+     C           EM20      BEGSR
+     C                     Z-ADD0         AN      20
+     C                     Z-ADD0         WN      20
+     C                     MOVEA*BLANK    WR               WKFLD
+     C                     SETOF                     2122
+      *判斷是否有小數
+     C           WARDEC    IFGT 0
+     C                     SETON                     22
+     C                     ENDIF
+      *處理整數
+     C           AN        DOUEQ12
+     C                     ADD  1         AN
+     C           AR207,AN  IFNE *BLANK
+     C                     MOVE AR207,AN  MM1A    1 P
+      *
+     C           MM1A      IFEQ '0'
+     C   21                ADD  1         WN
+     C   21                MOVE MM1A      WR,WN
+     C                     ELSE
+     C                     SETON                     21
+     C                     ADD  1         WN
+     C                     MOVE MM1A      WR,WN
+     C                     ENDIF
+      *
+     C                     ENDIF
+     C                     ENDDO
+      *----------------- 處理小數 -----------------------
+     C           *IN22     IFEQ '1'
+      *確認最後一位小數
+     C                     Z-ADD20        AN
+     C           AN        DOUEQ13
+     C                     SUB  1         AN
+     C           AR207,AN  IFNE '0'
+     C                     Z-ADDAN        AN#     20
+     C                     Z-ADD13        AN               跳出迴圈
+     C                     ENDIF
+     C                     ENDDO
+      *沒有任何整數整數位補0
+     C           WN        IFEQ 0
+     C                     ADD  1         WN
+     C                     MOVE '0'       WR,WN
+     C                     ENDIF
+      *搬移小數點
+     C                     ADD  1         WN
+     C                     MOVE '.'       WR,WN
+      * 搬移小數
+     C                     Z-ADD12        AN
+     C           AN        DOUEQAN#
+     C                     ADD  1         AN
+     C                     MOVE AR207,AN  MM1A    1 P
+     C                     ADD  1         WN
+     C                     MOVE MM1A      WR,WN
+     C                     ENDDO
+      *
+     C                     ENDIF
+      *
+     C                     ENDSR
+ 00A+C*---------------------------------------------------------------
+ |   C*          EM30       4.0(S) ->  4(A)
+ |   C*---------------------------------------------------------------
+ |   C           EM30      BEGSR
+ |   C                     Z-ADD0         AN      20
+ |   C                     SELEC
+ |   C           SJ13      WHGT 999
+ |   C                     Z-ADD0         WN      20
+ |   C           SJ13      WHGT 99
+ |   C                     Z-ADD1         WN      20
+ |   C           SJ13      WHGT 9
+ |   C                     Z-ADD2         WN      20
+ |   C                     OTHER
+ |   C                     Z-ADD3         WN      20
+ |   C                     ENDSL
+ |   C                     MOVEA*BLANK    WR               WKFLD
+ |   C                     SETOF                     21
+ |    *
+ |   C           AN        DOUEQ4
+ |   C                     ADD  1         AN
+ |   C           AR040,AN  IFNE *BLANK
+ |   C                     MOVE AR040,AN  MM1A    1 P
+ |    *
+ |   C           MM1A      IFEQ '0'
+ |   C   21                ADD  1         WN
+ |   C   21                MOVE MM1A      WR,WN
+ |   C                     ELSE
+ |   C                     SETON                     21
+ |   C                     ADD  1         WN
+ |   C                     MOVE MM1A      WR,WN
+ |   C                     ENDIF
+ |    *
+ |   C                     ENDIF
+ |   C                     ENDDO
+ |    *
+ |   C           WKNUM     IFEQ 0
+ |   C                     MOVEA*BLANK    WR
+ |   C                     MOVEL'0'       WR,1
+ |   C                     ENDIF
+ |    *
+ |   C                     ENDSR
+ 00A+C*---------------------------------------------------------------
+**
+茂世企業股份有限公司
+
+28477820
+台北市忠孝東路五段510號9樓
+(02)7718-3909
+訂單編號:
+送貨單號:
+業務員:
+促銷活動代碼:
+\r\n
+客戶代號:
+

@@ -1,0 +1,242 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : PYH1022                                    *
+     H*    PROGRAM NAME :退休金提撥金額檢核報表                    *
+     H*    AUTHOR       : A1415                                      *
+     H*    CREATE DATE  : 94/02/24                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FPYH4JF01IP  E           K        DISK
+     FPYH6PF  IF  E           K        DISK
+     FPYH8PF  IF  E           K        DISK
+     FPYHDPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYH7LF02IF  E           K        DISK
+     FPYH102P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     IJJREC
+     I                                              EM041 L1
+     I                                              EM042 L1
+     I                                              EM043 L1
+     I                                              EM044 L1
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      187 1920DDATE
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DH601
+     I                                      540 546 DEM04F
+     I                                      547 553 DEM04T
+     I                                      513 520 DEM02F
+     I                                      521 528 DEM02T
+     I                                      529 5340DYM
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I            DS
+     I                                        1   80H422
+     I                                        1   60DH422F
+     I            DS
+     I                                        1   80H423
+     I                                        1   60DH423T
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*                                                                USE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYH6     KLIST
+     C                     KFLD           H601
+     C                     KFLD           H602
+     C                     KFLD           H603
+     C           KEYH8     KLIST
+     C                     KFLD           H801             公司編號
+     C                     KFLD           H802             薪資項目
+     C           KEYH8E    KLIST
+     C                     KFLD           H801             公司編號
+     C           KEYH7     KLIST
+     C                     KFLD           H702             下限
+     C*
+     C           KEYHD     KLIST
+     C                     KFLD           HD01
+     C                     KFLD           HD02
+     C                     KFLD           HD03
+     C                     KFLD           HD04
+     C                     KFLD           HD05
+     C           KEYDP     KLIST
+     C                     KFLD           DP011
+     C                     KFLD           DP012
+     C                     KFLD           DP013
+     C                     KFLD           DP014
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100
+     C*
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     CL1 10                EXSR R8100
+     CLR 10                EXSR R8900
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R0100 ... INITIAL PROCESS
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C*
+     C                     SETON                     1039
+     C*GET表頭公司別
+     C           DH601     CHAINCM0                  40
+     C   40                MOVEL*BLANK    CM03
+     C*
+     C           DYM       SUB  191100    DYMX
+     C*
+     C                     Z-ADD*ZERO     PD01
+     C                     Z-ADD*ZERO     PD02
+     C                     Z-ADD*ZERO     PD03
+     C                     Z-ADD*ZERO     PD04
+     C                     Z-ADD*ZERO     PD05
+     C                     Z-ADD*ZERO     PD06
+     C*
+     C                     Z-ADD*ZERO     PT11
+     C                     Z-ADD*ZERO     PT12
+     C                     Z-ADD*ZERO     PT13
+     C*
+     C                     Z-ADD*ZERO     PT21
+     C                     Z-ADD*ZERO     PT22
+     C                     Z-ADD*ZERO     PT23
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+     C           R2000     BEGSR
+     C*
+     C*計算月提繳工資
+     C                     Z-ADD0         TPAMT   60
+     C                     MOVE EM01      H801
+     C                     MOVE *BLANKS   H802
+     C           KEYH8     SETLLPYH8PF
+     C           LOOP      TAG
+     C           KEYH8E    READEPYH8PF                   33
+     C   33                GOTO NEXT
+     C                     MOVE H801      HD01
+     C                     MOVE EM02      HD02
+     C                     Z-ADDDYM       HD03
+     C                     MOVE '1'       HD04
+     C                     MOVE H802      HD05
+     C           KEYHD     CHAINPYHDPF               32
+     C  N32                ADD  HD06      TPAMT
+     C                     GOTO LOOP
+     C           NEXT      TAG
+     C                     Z-ADDTPAMT     H702
+     C           KEYH7     SETGTPYH7LF02
+     C                     READPPYH7LF02                 31
+     C                     Z-ADDH704      PD01
+     C                     Z-ADDH408      PD02
+     C*呼叫副程式計算勞退金額
+|    C                     Z-ADD*ZERO     DH605   60
+|    C                     Z-ADD*ZERO     DH606   60
+|    C                     CALL 'PYH120'
+|    C                     PARM H401      P1011I  2         公司編號
+|    C                     PARM H402      P1012I  8         員工編號
+|    C                     PARM DYM       P1013I  60        薪資月份
+|    C           DH605     PARM           P1014I  60        自提金額
+|    C           DH606     PARM           P1015I  60        企提金額
+|    C                     PARM           @RTNC   2
+     C*
+     C                     Z-ADDDH606     PD03      H
+     C                     Z-ADDTPAMT     PD04
+     C                     Z-ADDH407      PD05
+     C*月薪為零時自提為零
+     C           TPAMT     IFNE 0
+     C                     Z-ADDDH605     PD06      H
+     C                     ELSE
+     C                     Z-ADD0         PD06
+     C                     END
+     C*讀取提撥明細
+     C                     CLEARH60
+     C                     MOVE H401      H601
+     C                     MOVE H402      H602
+     C                     Z-ADDDYM       H603
+     C           KEYH6     CHAINPYH6PF               40
+     C*
+     C           PD03      IFNE H606
+     C           PD06      ORNE H605
+     C*
+     C           *IN39     IFEQ '1'
+     C                     WRITEPH1
+     C                     SETOF                     39
+     C                     ENDIF
+     C*
+| 01-C                     MOVE EM041     DP011
+| 01-C                     MOVE EM042     DP012
+| 01-C                     MOVE EM043     DP013
+| 01-C                     MOVE EM044     DP014
+| 01-C           KEYDP     CHAINPYDPPF               40
+     C                     WRITEPD1
+     C                     ADD  1         PT11
+     C           PD03      SUB  H606      TPAMT   60
+     C                     ADD  TPAMT     PT12
+     C           PD06      SUB  H605      TPAMT
+     C                     ADD  TPAMT     PT13
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+03===C           R8100     BEGSR
+|    C*
+|    C                     SETON                     39
+|    C*
+     C           PT11      IFNE *ZERO
+|    C                     WRITEPT1
+     C                     END
+|    C*
+|    C                     ADD  PT11      PT21
+|    C                     ADD  PT12      PT22
+|    C                     ADD  PT13      PT23
+|    C*
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+04===C           R8900     BEGSR
+|    C*
+|    C                     WRITEPT2
+     C           PT21      IFNE *ZERO
+|    C                     WRITEPE2
+|    C                     ELSE
+|    C                     WRITEPE9
+|    C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+05===C           R8999     BEGSR
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+05===C                     ENDSR
+

@@ -1,0 +1,1148 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : PYA2111                                    *
+     H*    PROGRAM NAME :刷卡異常處理                              *
+     H*    AUTHOR       : A1226 PETER                                *
+     H*    CREATE DATE  : 85/06/25                                   *
+     H*    UPDATE DATE  : 88/12/17 A1274 EVA                         *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYLVPF  IF  E           K        DISK
+     FPYOVPF  IF  E           K        DISK
+     FPYT1PF  IF  E           K        DISK
+     FPYT2PF  IF  E           K        DISK
+     FPYT5LF02IF  E           K        DISK
+     FPYT6PF  UF  E           K        DISK                      A
+     FPYT7PF  IF  E           K        DISK
+     F*PYTRPF  IF  E           K        DISK
+     E*----------------------------------------------------------------
+     E                    @T25       31  2               刷卡別
+     E                    @TM         2  4 0             刷卡時間
+     E*----------------------------------------------------------------
+     IEM0
+     I                                              EM01  L1
+     IPYDA01      DS                            256
+     I                                       50  50 PYD01B
+     I                                       52  52 PYD01C
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I*                                     187 1920DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DT602
+     I                                      503 5090DT601F
+     I                                      510 5160DT601T
+     I                                      517 5230T601D
+     I                                      524 5310WT601F
+     I                                      524 5290KYYMM
+     I                                      530 5310KDD
+     I                                      532 5390WT601T
+     I                                      540 5470WT601D
+     I*******
+     I            DS
+     I                                        1  62 @T25
+     I                                        1  62 T205
+     I*上班應刷卡時間
+     I            DS
+     I                                        1   40FLD01
+     I                                        1   20DT102
+     I                                        3   40DT103
+     I*下班應刷卡時間
+     I            DS
+     I                                        1   40FLD02
+     I                                        1   20DT112
+     I                                        3   40DT113
+     I*上班應刷卡緩衝時間
+     I            DS
+     I                                        1   40FLD03
+     I                                        1   20FLD031
+     I*下班應刷卡緩衝時間
+     I            DS
+     I                                        1   40FLD04
+     I                                        1   20FLD041
+     I*上午實際上班時間
+     I            DS
+     I                                        1   40FLD21
+     I                                        1   20DT118
+     I                                        3   40DT119
+     I*上午實際下班時間
+     I            DS
+     I                                        1   40FLD22
+     I                                        1   20DT120
+     I                                        3   40DT121
+     I*下午實際上班時間
+     I            DS
+     I                                        1   40FLD23
+     I                                        1   20DT122
+     I                                        3   40DT123
+     I*下午實際下班時間
+     I            DS
+     I                                        1   40FLD24
+     I                                        1   20DT124
+     I                                        3   40DT125
+     I*實際上班刷卡時間
+     I            DS
+     I                                        1   40DT612
+     I                                        1   20T503A
+     I                                        3   40T504A
+     I*實際下班刷卡時間
+     I            DS
+     I                                        1   40DT613
+     I                                        1   20T503B
+     I                                        3   40T504B
+     I            DS
+     I                                        1   40WT534
+     I                                        1   20T503
+     I                                        3   40T504
+     I            DS
+     I                                        1   40KT534
+     I                                        1   20KT503
+     I                                        3   40KT504
+     I            DS
+     I                                        1   40WT656
+     I                                        1   20WT605
+     I                                        3   40WT606
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PYDA01
+     C*
+     C           *LIKE     DEFN LV06      DLV06
+     C           *LIKE     DEFN LV07      DLV07
+     C           *LIKE     DEFN T502      KT502
+     C           *LIKE     DEFN T507      KT507
+     C           *LIKE     DEFN T604      WT604
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYT2     KLIST                           排班檔
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           KYYMM
+     C           KEYT5     KLIST                           刷卡檔
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           KT502
+     C                     KFLD           KT503
+     C                     KFLD           KT504
+     C           KEYT51    KLIST                           刷卡檔
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           KT502
+     C           KEYT52    KLIST                           刷卡檔
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           EM01
+     C           KEYT1     KLIST                           刷卡代碼檔
+     C                     KFLD           KT101   2
+     C           KEYOV     KLIST                           加班檔
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           KOV03   80
+     C           KEYLV     KLIST                           請假檔
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WT601
+     C           KEYLV1    KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C           KEYT6     KLIST                           異常檔
+     C                     KFLD           WT601
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WT604
+     C           KEYTR     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WT601
+     C                     KFLD           KTR03   1
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     Z-ADDWT601F    WT601   80       *刷卡日期
+     C                     Z-ADD1         WNUM2   50       *刷卡次數
+  01-C           WT601     DOWLEWT601T
+    C           WT601     SUB  19110000  DT601   60
+    C*非刷卡人員不處理
+  02-C           EM103     IFEQ 'N'
+    C                     GOTO TAG1
+  02-C                     END
+    C*刷卡日期轉換星期
+    C                     CALL 'P40'
+    C                     PARM DT601     P4001I  60
+    C                     PARM           P4011O  10
+    C*取得上／下班資料
+    C                     EXSR R2000
+    C*無班表處理
+  03-C           T2N       IFEQ 'N'
+    C                     MOVEL'N'       WT604
+    C                     Z-ADDPM101     WT605
+    C                     Z-ADD*ZERO     WT606
+    C                     MOVEL'D'       T607
+    C                     MOVEL'D'       T608
+    C                     EXSR R7000
+    C                     GOTO TAG1
+  03-C                     END
+    C*休假不作異常處理
+  04-C           EM104     IFEQ 'Y'
+    C*排班排定休假
+  05-C           FLD01     IFEQ *ZERO
+    C           FLD02     ANDEQ*ZERO
+    C                     GOTO TAG1
+  05-C                     END
+    C*
+  04*C                     ELSE
+    C*平日班應休假時段判別
+    C*
+    C*特定假日不作處理
+    C           WT601     CHAINT70                  40
+  06-C           *IN40     IFEQ '0'
+    C                     GOTO TAG1
+  06-C                     END
+    C*週日不作處理
+  07-C           P4011O    IFEQ 7
+    C                     GOTO TAG1
+  07-C                     END
+    C*
+  04-C                     END
+    C*取得請假資料
+    C                     EXSR R3000
+    C*請假請全天不處理
+  08-C           LVN       IFEQ 'Y'
+    C                     GOTO TAG1
+  08-C                     END
+    C*無上班資料
+  09-C           *IN81     IFEQ '0'
+    C*
+    C                     MOVEL'*'       WT604            無上班資料
+    C                     MOVEL'F'       T607             忘刷卡
+    C                     MOVELPM104     T608
+    C*非輪班人員
+  10-C           EM104     IFEQ 'N'
+    C*
+  11-C           P4011O    IFEQ 6
+    C                     Z-ADD4         WT605
+  11*C                     ELSE
+    C                     Z-ADDPM101     WT605
+  11-C                     END                                        R
+    C                     Z-ADD*ZERO     WT606
+    C*
+  10*C                     ELSE
+    C*
+    C                     Z-ADDDT114     WT605
+    C                     Z-ADDDT115     WT606
+    C*
+  10-C                     END
+    C*
+    C                     EXSR R7000
+  09-C                     END
+    C*上班異常狀況判別
+  12-C           *IN81     IFEQ '1'
+    C                     EXSR R4000
+  12-C                     END
+    C*無下班資料
+  13-C           *IN82     IFEQ '0'
+    C                     MOVEL'#'       WT604            無下班資料
+    C                     MOVEL'F'       T607             忘刷卡
+    C                     MOVELPM104     T608
+    C*非輪班人員
+  14-C           EM104     IFEQ 'N'
+    C*
+  15-C           P4011O    IFEQ 6
+    C                     Z-ADD4         WT605
+  15*C                     ELSE
+    C                     Z-ADDPM101     WT605
+  15-C                     END
+    C                     Z-ADD*ZERO     WT606
+    C*
+  14*C                     ELSE
+    C*
+    C                     Z-ADDDT114     WT605
+    C                     Z-ADDDT115     WT606
+    C*
+  14-C                     END
+    C*
+    C                     EXSR R7000
+  13-C                     END
+    C*下班異常狀況判別
+  16-C           *IN82     IFEQ '1'
+    C                     EXSR R5000
+  16-C                     END
+    C*多筆刷卡資料判別
+    C   81 82             EXSR R6000
+    C*
+    C           TAG1      TAG
+    C*
+  01-C                     ADD  1         WT601
+  01-C                     END
+     C*
+     C*==============================================================*
+     C*          R1000     DELETE  刷卡異常檔
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C                     IN   PYDA01
+|    C*
+|    C           WT601     SETLLT60
+|    C           WT601     READET60                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C                     DELETT60
+|   C           WT601     READET60                      46
+| 01-C                     END
+|    C*刷卡日前一天
+|    C                     CALL 'P37'
+|    C                     PARM WT601     P3701I  80
+|    C                     PARM '2'       P3702I  1
+|    C                     PARM '2'       P3703I  1
+|    C                     PARM -1        P3704I  40
+|    C                     PARM           P3711O  80
+|    C                     Z-ADDP3711O    DT601P  80
+|    C*刷卡日隔天
+|    C                     CALL 'P37'
+|    C                     PARM WT601     P3701I  80
+|    C                     PARM '2'       P3702I  1
+|    C                     PARM '2'       P3703I  1
+|    C                     PARM 1         P3704I  40
+|    C                     PARM           P3711O  80
+|    C                     Z-ADDP3711O    DT601N  80
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... 取得上／下班資料
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C                     MOVEL'Y'       T2N     1
+|    C*
+|    C*----------------------------------------------------------------
+|    C*應刷上／下班時間
+|    C*----------------------------------------------------------------
+|    C                     Z-ADD*ZERO     FLD01
+|    C                     Z-ADD*ZERO     FLD02
+|    C                     Z-ADD*ZERO     FLD03
+|    C                     Z-ADD*ZERO     FLD04
+|    C                     Z-ADD*ZERO     FLD21
+|    C                     Z-ADD*ZERO     FLD22
+|    C                     Z-ADD*ZERO     FLD23
+|    C                     Z-ADD*ZERO     FLD24
+|    C                     Z-ADD*ZERO     FLD31   40
+|    C                     Z-ADD*ZERO     FLD32   40
+|    C*需輪班
+| 01-C           EM104     IFEQ 'Y'
+|   C*判斷是否有班別存在
+|   C           KEYT2     CHAINT20                  40
+| 02-C           *IN40     IFEQ '0'
+|   C*取得當日刷卡班別
+|   C           @T25,KDD  CHAINT10                  41
+| 03-C           *IN41     IFEQ '0'
+|   C                     Z-ADDT102      DT102
+|   C                     Z-ADDT103      DT103
+|   C                     Z-ADDT112      DT112
+|   C                     Z-ADDT113      DT113
+|   C                     Z-ADDT114      DT114   20
+|   C                     Z-ADDT115      DT115   20
+|   C                     Z-ADDT118      DT118
+|   C                     Z-ADDT119      DT119
+|   C                     Z-ADDT120      DT120
+|   C                     Z-ADDT121      DT121
+|   C                     Z-ADDT122      DT122
+|   C                     Z-ADDT123      DT123
+|   C                     Z-ADDT124      DT124
+|   C                     Z-ADDT125      DT125
+|   C*
+|   C                     Z-ADDWT601     FLD01D  80
+|   C                     Z-ADDWT601     FLD21D  80
+|   C*
+| 04-C           FLD01     IFLT FLD02
+|   C                     Z-ADDWT601     FLD02D  80
+| 04*C                     ELSE
+|   C                     Z-ADDDT601N    FLD02D  80
+| 04-C                     END
+|   C*
+| 05-C           FLD21     IFLT FLD22
+|   C                     Z-ADDWT601     FLD22D  80
+| 05*C                     ELSE
+|   C                     Z-ADDDT601N    FLD22D  80
+| 05-C                     END
+|   C*
+| 06-C           FLD21     IFLT FLD23
+|   C                     Z-ADDWT601     FLD23D  80
+| 06*C                     ELSE
+|   C                     Z-ADDDT601N    FLD23D  80
+| 06-C                     END
+|   C*
+| 07-C           FLD21     IFLT FLD24
+|   C                     Z-ADDWT601     FLD24D  80
+| 07*C                     ELSE
+|   C                     Z-ADDDT601N    FLD24D  80
+| 07-C                     END
+|   C*
+| 03*C                     ELSE
+|   C                     MOVEL'N'       T2N
+| 03-C                     END
+|   C*
+| 02-C                     END
+|   C*
+| 01*C                     ELSE
+|   C*平日正常班
+| 08-C           P4011O    IFGE 1
+|   C           P4011O    ANDLE5
+|   C                     Z-ADDPM181     FLD01
+|   C                     Z-ADDPM182     FLD02
+|   C                     Z-ADDPM183     FLD21
+|   C                     Z-ADDPM184     FLD22
+|   C                     Z-ADDPM185     FLD23
+|   C                     Z-ADDPM186     FLD24
+|   C*
+|   C                     Z-ADDWT601     FLD01D
+|   C                     Z-ADDWT601     FLD02D
+|   C                     Z-ADDWT601     FLD21D
+|   C                     Z-ADDWT601     FLD22D
+|   C                     Z-ADDWT601     FLD23D
+|   C                     Z-ADDWT601     FLD24D
+| 08-C                     END
+|   C*平日週末班
+| 09-C           P4011O    IFEQ 6
+|   C                     Z-ADDPM183     FLD01
+|   C                     Z-ADDPM184     FLD02
+|   C                     Z-ADDPM183     FLD21
+|   C                     Z-ADD1000      FLD22
+|   C                     Z-ADD1000      FLD23
+|   C                     Z-ADDPM184     FLD24
+|   C*
+|   C                     Z-ADDWT601     FLD01D
+|   C                     Z-ADDWT601     FLD02D
+|   C                     Z-ADDWT601     FLD21D
+|   C                     Z-ADDWT601     FLD22D
+|   C                     Z-ADDWT601     FLD23D
+|   C                     Z-ADDWT601     FLD24D
+| 09-C                     END
+|   C*
+| 01-C                     END
+|    C*中間休息時間
+|    C                     CALL 'P68'
+|    C                     PARM FLD22     P6801I  40
+|    C                     PARM FLD23     P6802I  40
+|    C                     PARM           P6811O  90
+|    C*
+|    C                     Z-ADDP6811O    CTIME   90
+|    C*----------------------------------------------------------------
+|    C*實際刷卡時間
+|    C*----------------------------------------------------------------
+|    C                     SETOF                     8182
+|    C*
+|    C                     Z-ADDFLD01D    KT502P  80       上班刷卡日期
+|    C                     Z-ADDFLD02D    KT502L  80       下班刷卡日期
+|    C*
+|    C*以正常刷卡時間前後各５小時為加班請假緩衝判定時間*OF USE ONLY
+|    C                     Z-ADDFLD01     FLD03
+|    C                     SUB  5         FLD031
+| 10-C           FLD031    IFLT *ZERO
+|   C                     ADD  24        FLD031
+|   C                     Z-ADDDT601P    KT502P
+| 10-C                     END
+|    C*
+|    C                     Z-ADDFLD02     FLD04
+|    C                     ADD  5         FLD041
+| 11-C           FLD041    IFGT 23
+|   C                     SUB  24        FLD041
+|   C                     Z-ADDDT601N    KT502L
+| 11-C                     END
+|    C*
+|    C                     Z-ADD*ZERO     DT612
+|    C                     Z-ADD*ZERO     DT613
+|    C* GET上班刷卡資料
+|    C                     Z-ADDKT502P    KT502
+|    C                     Z-ADDFLD03     KT534
+|    C*第一筆刷卡資料
+|    C           KEYT5     SETLLT50
+|    C*班別無跨日，實際刷卡可能跨日
+| 12-C           FLD01     IFLT FLD02
+|   C           FLD03     ANDGTFLD04
+|   C           KEYT52    READET50                      46
+| 12*C                     ELSE
+|   C           KEYT51    READET50                      46
+| 12-C                     END
+|    C*
+| 13-C           *IN46     IFEQ '0'
+|   C                     Z-ADDT502      T502PT  80
+|   C                     Z-ADDWT534     DT612
+|   C                     SETON                     81
+|   C*第二筆刷卡資料
+|   C           KEYT52    READET50                      46
+|   C  N46                Z-ADDT502      T502P   80
+|   C  N46                Z-ADDWT534     FLD31
+|   C*
+| 13-C                     END
+|    C*前次抓取的兩筆刷卡日，皆非刷卡判別日，故無刷卡資料存在
+| 14-C           FLD01D    IFEQ FLD02D
+|   C           T502PT    ANDNEFLD01D
+|   C           T502P     ANDNEFLD02D
+|   C*判別無上班刷卡，有下班刷卡
+| 15-C           T502PT    IFEQ KT502L
+|   C           DT612     ANDLT1200
+|   C                     Z-ADDDT612     DT613
+|   C                     Z-ADD*ZERO     DT612
+|   C                     SETOF                     81
+|   C                     SETON                     82
+| 15*C                     ELSE
+|   C                     Z-ADD*ZERO     DT612
+|   C                     Z-ADD*ZERO     DT613
+|   C                     SETOF                     81
+| 15-C                     END
+|   C*
+|   C                     Z-ADD*ZERO     FLD31
+|   C                     Z-ADD*ZERO     FLD32
+|   C                     GOTO E2000
+|   C*
+| 14*C                     ELSE
+|   C* GET下班刷卡資料
+|   C                     Z-ADDKT502L    KT502
+|   C                     Z-ADDFLD04     KT534
+|   C*最後一筆刷卡資料
+|   C           KEYT5     SETGTT50
+|   C*班別無跨日，實際刷卡可能跨日
+| 16-C           FLD01     IFLT FLD02
+|   C           FLD03     ANDGTFLD04
+|   C           KEYT52    REDPET50                      46
+| 16*C                     ELSE
+|   C           KEYT51    REDPET50                      46
+| 16-C                     END
+|   C*
+| 17-C           *IN46     IFEQ '0'
+|   C                     Z-ADDT502      T502LT  80
+|   C                     Z-ADDWT534     DT613
+|   C                     SETON                     82
+|   C*前一筆刷卡資料
+|   C           KEYT52    REDPET50                      46
+|   C  N46                Z-ADDT502      T502L   80
+|   C  N46                Z-ADDWT534     FLD32
+|   C*有上下班刷卡，上下班刷卡時間相反
+| 18-C           T502PT    IFEQ T502LT
+|   C           KT502P    ANDEQKT502L
+|   C           DT612     ANDGTDT613
+|   C                     Z-ADDDT612     FLD33   40
+|   C                     Z-ADDDT613     DT612
+|   C                     Z-ADDFLD33     DT613
+|   C*
+|   C                     Z-ADD*ZERO     T502P
+|   C                     Z-ADD*ZERO     FLD31
+|   C                     Z-ADD*ZERO     T502L
+|   C                     Z-ADD*ZERO     FLD32
+|   C                     GOTO E2000
+| 18-C                     END
+|   C*
+| 19-C           T502L     IFEQ FLD01D
+|   C           DT612     ANDNEFLD32
+|   C*上班前加班
+|   C                     Z-ADDFLD01D    KOV03
+|   C           KEYOV     CHAINOV0                  40
+| 20-C           *IN40     IFEQ '0'
+|   C           OV07      ANDGT3
+|   C*
+| 21-C           DT612     IFNE DT613
+|   C                     Z-ADDT502PT    T502P
+|   C                     Z-ADDDT612     FLD31
+| 21*C                     ELSE
+|   C                     Z-ADD*ZERO     T502P
+|   C                     Z-ADD*ZERO     FLD31
+| 21-C                     END
+|   C*
+|   C                     Z-ADD*ZERO     T502L
+|   C                     Z-ADD*ZERO     FLD32
+|   C                     Z-ADDFLD01D    T502PT
+|   C                     Z-ADDFLD01     DT612
+|   C                     SETON                     81
+|   C*
+| 20-C                     END
+|   C*
+| 19-C                     END
+|   C*
+| 22-C           T502P     IFGE FLD02D
+|   C           DT613     ANDNEFLD31
+|   C*下班後加班
+|   C                     Z-ADDFLD02D    KOV03
+|   C           KEYOV     CHAINOV0                  40
+| 23-C           *IN40     IFEQ '0'
+|   C           OV07      ANDGT3
+|   C*
+| 24-C           DT612     IFNE DT613
+|   C                     Z-ADDT502LT    T502L
+|   C                     Z-ADDDT613     FLD32
+| 24*C                     ELSE
+|   C                     Z-ADD*ZERO     T502L
+|   C                     Z-ADD*ZERO     FLD32
+| 24-C                     END
+|   C*
+|   C                     Z-ADD*ZERO     T502P
+|   C                     Z-ADD*ZERO     FLD31
+|   C                     Z-ADDFLD02D    T502LT
+|   C                     Z-ADDFLD02     DT613
+|   C                     SETON                     82
+| 23-C                     END
+|   C*
+| 22-C                     END
+|   C*
+| 17-C                     END
+|   C*區間內上下班刷卡相同，但刷卡日內還有一筆刷卡，在下班後
+| 25-C           DT612     IFEQ DT613
+|   C           T502P     ANDLEDT601N
+|   C*
+| 26-C           FLD31     IFLT 500
+|   C                     Z-ADDT502P     T502LT
+|   C                     Z-ADDFLD31     DT613
+| 26*C                     ELSE
+|   C                     Z-ADD*ZERO     T502LT
+|   C                     Z-ADD*ZERO     DT613
+|   C                     SETOF                     82
+| 26-C                     END
+|   C*
+|   C                     Z-ADD*ZERO     T502P
+|   C                     Z-ADD*ZERO     FLD31
+|   C                     Z-ADD*ZERO     T502L
+|   C                     Z-ADD*ZERO     FLD32
+|   C                     GOTO E2000
+| 25-C                     END
+|   C*區間內上下班刷卡相同，但刷卡日內還有一筆刷卡，在上班前
+| 27-C           DT612     IFEQ DT613
+|   C           T502L     ANDEQFLD01D
+|   C                     Z-ADDT502L     T502PT
+|   C                     Z-ADDFLD32     DT612
+|   C*
+|   C                     Z-ADD*ZERO     T502P
+|   C                     Z-ADD*ZERO     FLD31
+|   C                     Z-ADD*ZERO     T502L
+|   C                     Z-ADD*ZERO     FLD32
+|   C                     GOTO E2000
+| 27-C                     END
+|   C*判別無上班刷卡，有下班刷卡
+| 28-C           T502P     IFNE T502PT
+|   C           T502PT    ANDEQFLD23D
+|   C           DT612     ANDGTFLD23
+|   C*
+| 29-C           T502P     IFEQ DT601N
+|   C           FLD31     ANDLT200
+|   C                     Z-ADDT502P     T502LT
+|   C                     Z-ADDFLD31     DT613
+| 29*C                     ELSE
+|   C                     Z-ADDT502PT    T502LT
+|   C                     Z-ADDDT612     DT613
+|   C                     Z-ADD*ZERO     T502PT
+|   C                     Z-ADD*ZERO     DT612
+|   C                     SETOF                     81
+|   C                     SETON                     82
+| 29-C                     END
+|   C*
+|   C                     Z-ADD*ZERO     FLD31
+|   C                     Z-ADD*ZERO     FLD32
+|   C                     GOTO E2000
+| 28-C                     END
+|   C*
+| 14-C                     END
+|    C*有下班刷卡，無上班刷卡（跨日班上下班同天）
+| 30-C  N81 82   DT612     IFEQ *ZERO
+|   C           FLD32     ANDNE*ZERO
+|   C           T502L     ANDEQKT502
+|   C                     Z-ADDFLD32     DT612
+|   C                     Z-ADD*ZERO     FLD32
+|   C                     SETON                     81
+|   C                     GOTO E2000
+| 30-C                     END
+|    C*有上班刷卡，無下班刷卡（跨日班上下班同天）
+| 31-C   81N82   DT613     IFEQ *ZERO
+|   C           FLD31     ANDNE*ZERO
+|   C           T502P     ANDEQWT601
+|   C                     Z-ADDFLD31     DT613
+|   C                     Z-ADD*ZERO     FLD31
+|   C                     SETON                     82
+|   C                     GOTO E2000
+| 31-C                     END
+|    C*有上下班刷卡同一筆（忘刷卡）
+|    C*  81 82   DT612     IFEQ DT613
+|    C*
+|    C*          FLD01D    IFEQ FLD02D
+|    C*          T502P     ANDEQKT502L
+|    C*                    Z-ADDFLD31     DT613
+|    C*                    END
+|    C*
+|    C*                    Z-ADD*ZERO     FLD31
+|    C*                    Z-ADD*ZERO     FLD32
+|    C*                    GOTO E2000
+|    C*                    END
+|    C*有上下班刷卡，中途無再刷卡
+| 32-C   81 82   DT612     IFEQ FLD32
+|   C           DT613     ANDEQFLD31
+|   C                     Z-ADD*ZERO     FLD31
+|   C                     Z-ADD*ZERO     FLD32
+|   C                     GOTO E2000
+| 32-C                     END
+|    C*
+02===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R3000 ... 取得請假資料
+     C*==============================================================*
+03===C           R3000     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     DLV06
+|    C                     Z-ADD*ZERO     DLV07
+|    C                     Z-ADD*ZERO     DLV06D  80
+|    C                     Z-ADD*ZERO     DLV07D  80
+|    C                     Z-ADD*ZERO     LVHOUR  90
+|    C                     MOVEL*BLANK    LV04N   1
+|    C                     MOVEL'N'       LVN     1
+|    C*
+|    C*取得最近一次，請假資料
+|    C           KEYLV     SETGTLV0
+|    C           KEYLV1    REDPELV0                      46
+|    C*          *IN46     IFEQ '1'
+|    C*          KEYLV     SETLLLV0
+|    C*          KEYLV1    REDPELV0                      46
+|    C   46                GOTO E3000
+|    C*                    END
+|    C*刷卡日期不在請假內不處理
+| 01-C           WT601     IFLT LV03
+|   C           WT601     ORGT LV05
+|   C                     GOTO E3000
+| 01-C                     END
+|    C*刷卡日期在請假內
+| 02-C           WT601     IFGT LV03
+|   C           WT601     ANDLTLV05
+|   C                     Z-ADDFLD21     DLV06
+|   C                     Z-ADDFLD24     DLV07
+|   C                     MOVEL'Y'       LVN
+|   C                     GOTO E3000
+| 02-C                     END
+|    C*
+|    C*請假日即刷卡日
+| 03-C           WT601     IFEQ LV03
+|   C           WT601     ANDEQLV05
+|   C*
+| 04-C           LV09      IFEQ 1
+|   C                     Z-ADDFLD21     DLV06
+|   C                     Z-ADDFLD24     DLV07
+|   C                     MOVEL'Y'       LVN
+|   C                     GOTO E3000
+| 04*C                     ELSE
+|   C*
+|   C                     Z-ADD*ZERO     AA      10
+|   C                     Z-ADD*ZERO     LVHRS   42
+|   C*若當天有兩種假別以上時                    EVA
+|   C           KEYLV     SETLLLV0
+|   C           KEYLV     READELV0                      42
+| 05-C           *IN42     DOWEQ'0'
+|   C                     ADD  1         AA      10       請假次數
+|   C                     ADD  LV08      LVHRS   42       累積時數
+|   C           KEYLV     READELV0                      42
+| 05-C                     END
+|   C*
+|   C*累計次數為１次時．
+| 06-C           AA        IFEQ 1
+| 07-C           P4011O    IFGE 1
+|   C           P4011O    ANDLE5
+| 08-C           LVHRS     IFGE 8
+|   C                     MOVEL'Y'       LVN
+|   C                     GOTO E3000
+| 08*C                     ELSE
+|   C                     Z-ADDLV06      DLV06
+|   C                     Z-ADDLV07      DLV07
+| 08-C                     END
+| 07-C                     END
+|   C*
+| 09-C           P4011O    IFEQ 6
+| 10-C           LVHRS     IFGE 4
+|   C                     MOVEL'Y'       LVN
+|   C                     GOTO E3000
+| 10*C                     ELSE
+|   C                     Z-ADDLV06      DLV06
+|   C                     Z-ADDLV07      DLV07
+| 10-C                     END
+| 09-C                     END
+| 06-C                     END
+|   C*
+| 11-C           AA        IFGT 1
+| 12-C           P4011O    IFGE 1
+|   C           P4011O    ANDLE5
+| 13-C           LVHRS     IFGE 8
+|   C                     MOVEL'Y'       LVN
+|   C                     GOTO E3000
+| 13*C                     ELSE
+|   C                     Z-ADDLV06      DLV06
+|   C                     Z-ADDLV07      DLV07
+| 13-C                     END
+| 12-C                     END
+|   C*
+| 14-C           P4011O    IFEQ 6
+| 15-C           LVHRS     IFGE 4
+|   C                     MOVEL'Y'       LVN
+|   C                     GOTO E3000
+| 15*C                     ELSE
+|   C                     Z-ADDLV06      DLV06
+|   C                     Z-ADDLV07      DLV07
+| 15-C                     END
+| 14-C                     END
+| 11-C                     END
+|   C*
+|   C                     Z-ADDWT601     DLV06D
+|   C                     Z-ADDWT601     DLV07D
+|   C*
+|   C                     MOVELLV04      LV04N
+|   C                     GOTO TAG2
+| 04-C                     END
+|   C*
+| 03-C                     END
+|    C*刷卡日即請假起始日
+| 16-C           WT601     IFEQ LV03
+|   C           WT601     ANDLTLV05
+|   C*
+| 17-C           LV06      IFEQ 1
+|   C           LV07      ANDEQ2359
+|   C                     Z-ADDFLD21     DLV06
+|   C                     Z-ADDFLD24     DLV07
+|   C                     MOVEL'Y'       LVN
+|   C                     GOTO E3000
+| 17*C                     ELSE
+|   C                     Z-ADDLV06      DLV06
+|   C                     Z-ADDFLD02     DLV07            應刷下班
+|   C                     Z-ADDWT601     DLV06D
+|   C                     Z-ADDFLD02D    DLV07D
+|   C                     MOVELLV04      LV04N
+|   C                     GOTO TAG2
+| 17-C                     END
+|   C*
+| 16-C                     END
+|    C*刷卡日即請假截止日
+| 18-C           WT601     IFGT LV03
+|   C           WT601     ANDEQLV05
+|   C*
+| 19-C           LV06      IFEQ 1
+|   C           LV07      ANDEQ2359
+|   C                     Z-ADDFLD21     DLV06
+|   C                     Z-ADDFLD24     DLV07
+|   C                     MOVEL'Y'       LVN
+|   C                     GOTO E3000
+| 19*C                     ELSE
+|   C                     Z-ADDFLD01     DLV06
+|   C                     Z-ADDLV07      DLV07
+|   C                     Z-ADDFLD01D    DLV06D
+|   C                     Z-ADDWT601     DLV07D
+|   C                     MOVELLV04      LV04N
+|   C                     GOTO TAG2
+| 19-C                     END
+|   C*
+| 18-C                     END
+|    C*
+|    C           TAG2      TAG
+|    C*取得刷卡當日已請假的時數
+|    C                     CALL 'P68'
+|    C                     PARM DLV06     P6801I  40
+|    C                     PARM DLV07     P6802I  40
+|    C                     PARM           P6811O  90
+|    C                     Z-ADDP6811O    LVHOUR
+|    C*
+03===C           E3000     ENDSR
+     C*==============================================================*
+     C*          R4000 ... 上班異常
+     C*==============================================================*
+04===C           R4000     BEGSR
+|    C*上班－正常
+| 01-C           T502PT    IFEQ FLD01D
+|   C*
+| 02-C           DT612     IFLE FLD01
+|   C                     GOTO E4000
+| 02-C                     END
+|   C*
+| 01*C                     ELSE
+|   C*
+| 03-C           DT612     IFGE FLD01
+|   C                     GOTO E4000
+| 03-C                     END
+|   C*
+| 01-C                     END
+|    C*上班－異常
+|    C                     Z-ADD*ZERO     TTIME   90       異常時間
+|    C*
+|    C                     CALL 'P68'
+|    C                     PARM FLD01     P6801I  40
+|    C                     PARM DT612     P6802I  40
+|    C                     PARM           P6811O  90
+|    C                     ADD  P6811O    TTIME
+|    C*
+| 04-C           T502PT    IFEQ FLD22D
+|   C           DT612     ANDGTFLD22
+|   C           DT612     ANDLTFLD23
+|   C*
+|   C                     CALL 'P68'
+|   C                     PARM FLD22     P6801I  40
+|   C                     PARM DT612     P6802I  40
+|   C                     PARM           P6811O  90
+|   C                     SUB  P6811O    TTIME
+|   C*
+| 04-C                     END
+|    C*
+| 05-C           FLD01     IFLT FLD02
+|   C           DT612     ANDGEFLD23
+|   C                     SUB  CTIME     TTIME
+| 05-C                     END
+|    C*有請假
+| 06-C           DLV07D    IFNE *ZERO
+|   C*若上班時間同請假截止時間一樣不處理
+| 07-C           TTIME     IFLE LVHOUR
+|   C                     GOTO E4000
+| 07*C                     ELSE
+|   C                     MOVEL'L'       WT604
+|   C                     MOVELLV04N     T607
+|   C                     MOVELLV04N     T608
+| 07-C                     END
+|   C*
+| 06*C                     ELSE
+|   C*未請假遲到
+|   C                     MOVEL'L'       WT604
+|   C                     MOVEL'L'       T607
+|   C                     MOVEL'L'       T608
+|   C*
+| 06-C                     END
+|    C*異常時數換算
+|    C           TTIME     DIV  60        WT605
+|    C                     MVR            WT606
+|    C*未請假作遲到判定
+|    C*
+|    C*遲到０小時３０分鐘內,包括３０分,算遲到
+|    C*遲到０小時又３１～５９分,算事假１小時
+|    C*遲到１小時又０１～３０分,算事假１小時又３０分
+|    C*以３０分鐘為事假分割單位
+| 08-C           T607      IFEQ 'L'
+|   C*
+| 09-C           WT605     IFEQ 0
+|   C*
+| 10-C           WT606     IFLT 31
+|   C                     MOVEL'L'       T607
+|   C                     MOVEL'L'       T608
+| 10*C                     ELSE
+|   C                     Z-ADD1         WT605
+|   C                     Z-ADD0         WT606
+|   C                     MOVELPM104     T607
+|   C                     MOVELPM104     T608
+| 10-C                     END
+|   C*
+| 09*C                     ELSE
+|   C*
+| 11-C           WT606     IFLT 31
+|   C                     Z-ADD30        WT606
+|   C                     MOVELPM104     T607
+|   C                     MOVELPM104     T608
+| 11*C                     ELSE
+|   C                     ADD  1         WT605
+|   C                     Z-ADD0         WT606
+|   C                     MOVELPM104     T607
+|   C                     MOVELPM104     T608
+| 11-C                     END
+|   C*
+| 09-C                     END
+|   C*
+| 08-C                     END
+|    C*
+|    C                     EXSR R7000
+|    C*
+04===C           E4000     ENDSR
+     C*==============================================================*
+     C*          R5000 ... 下班異常
+     C*==============================================================*
+05===C           R5000     BEGSR
+|    C*下班－正常
+| 01-C           T502LT    IFEQ FLD02D
+|   C*
+| 02-C*          DT613     IFGE FLD02
+|   C*                    GOTO E5000
+| 02-C*                    END
+    C*加班不處理
+  02-C           DT613     IFGT FLD02
+    C                     GOTO TAG1
+  02-C                     END
+|   C*
+| 01*C                     ELSE
+|   C*
+| 03-C           DT613     IFLE FLD02
+|   C                     GOTO E5000
+| 03-C                     END
+|   C*
+| 01-C                     END
+|    C*下班－異常
+|    C                     Z-ADD*ZERO     TTIME
+|    C*
+| 04-C           DT613     IFLT FLD02
+|   C                     CALL 'P68'
+|   C                     PARM DT613     P6801I  40
+|   C                     PARM FLD02     P6802I  40
+|   C                     PARM           P6811O  90
+|   C                     ADD  P6811O    TTIME
+|   C*
+| 05-C           DT613     IFGT FLD22
+|   C           DT613     ANDLTFLD23
+|   C                     CALL 'P68'
+|   C                     PARM DT613     P6801I  40
+|   C                     PARM FLD23     P6802I  40
+|   C                     PARM           P6811O  90
+|   C                     SUB  P6811O    TTIME
+| 05-C                     END
+|   C*
+| 06-C           DT613     IFLE FLD22
+|   C                     SUB  CTIME     TTIME
+| 06-C                     END
+|   C*
+| 04-C                     END
+|    C*有請假
+| 07-C           DLV06D    IFNE *ZERO
+|   C*刷卡時間同請假起始日一樣不處理
+| 08-C           TTIME     IFLE LVHOUR
+|   C                     GOTO E5000
+| 08*C                     ELSE
+|   C                     MOVEL'E'       WT604            早退
+|   C                     MOVELLV04N     T607
+|   C                     MOVELLV04N     T608
+| 08-C                     END
+|   C*
+| 07*C                     ELSE
+|   C*未請假早退
+|   C                     MOVEL'E'       WT604            早退
+|   C                     MOVEL'E'       T607
+|   C                     MOVEL'E'       T608
+|   C*
+| 07-C                     END
+|    C*
+| 09-C           DT612     IFEQ DT613
+|   C                     GOTO E5000
+| 09-C                     END
+|    C*
+|    C           TTIME     DIV  60        WT605
+|    C                     MVR            WT606
+|    C*未請假早退判定
+|    C*
+|    C*早退０小時３０分鐘內,包括３０分,算早退
+|    C*早退０小時又３１～５９分,算事假１小時
+|    C*早退１小時又０１～３０分,算事假１小時又３０分
+|    C*以３０分鐘為事假分割單位
+|    C*
+| 10-C           T607      IFEQ 'E'
+|   C*
+| 11-C           WT605     IFEQ 0
+|   C*
+| 12-C           WT606     IFLT 31
+|   C                     MOVEL'E'       T607
+|   C                     MOVEL'E'       T608
+| 12*C                     ELSE
+|   C                     Z-ADD1         WT605
+|   C                     Z-ADD0         WT606
+|   C                     MOVELPM104     T607
+|   C                     MOVELPM104     T608
+| 12-C                     END
+|   C*
+| 11*C                     ELSE
+|   C*
+| 13-C           WT606     IFLT 31
+|   C                     Z-ADD30        WT606
+|   C                     MOVELPM104     T607
+|   C                     MOVELPM104     T608
+| 13*C                     ELSE
+|   C                     ADD  1         WT605
+|   C                     Z-ADD0         WT606
+|   C                     MOVELPM104     T607
+|   C                     MOVELPM104     T608
+| 13-C                     END
+|   C*
+| 11-C                     END
+|   C*
+| 10-C                     END
+|    C*
+|    C                     EXSR R7000
+|    C*
+05===C           E5000     ENDSR
+     C*==============================================================*
+     C*          R6000 ... 多筆刷卡異常
+     C*==============================================================*
+06===C           R6000     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     TTIME
+|    C*
+|    C                     CALL 'P68'
+|    C                     PARM FLD31     P6801I  40
+|    C                     PARM FLD32     P6802I  40
+|    C           TTIME     PARM           P6811O  90
+|    C*有請假，請假時段相符不處理
+| 01-C           TTIME     IFLE LVHOUR
+|   C                     GOTO E6000
+| 01-C                     END
+|    C*
+| 02-C           DLV06D    IFNE *ZERO
+|   C                     MOVEL'!'       WT604            刷卡異常
+|   C                     MOVELLV04N     T607             事假碼
+|   C                     MOVELLV04N     T608
+| 02*C                     ELSE
+|   C                     MOVEL'!'       WT604            刷卡異常
+|   C                     MOVELPM104     T607             事假碼
+|   C                     MOVELPM104     T608
+| 02-C                     END
+|    C*
+|    C           TTIME     DIV  60        WT605
+|    C                     MVR            WT606
+|    C*
+|    C                     EXSR R7000
+|    C*
+06===C           E6000     ENDSR
+     C*==============================================================*
+     C*          R7000 ... WRITE異常檔
+     C*==============================================================*
+07===C           R7000     BEGSR
+|    C*
+|    C                     Z-ADDWT601     T601
+|    C                     MOVELEM01      T602
+|    C                     MOVELEM02      T603
+|    C                     MOVELWT604     T604
+|    C                     Z-ADDWT605     T605
+|    C                     Z-ADDWT606     T606
+|    C*
+| 01-C           WT604     IFNE '!'
+|   C                     Z-ADDDT612     T612
+|   C                     Z-ADDDT613     T613
+| 01*C                     ELSE
+|   C                     Z-ADDFLD31     T612
+|   C                     Z-ADDFLD32     T613
+| 01-C                     END
+|    C*
+|    C                     Z-ADDFLD01     T614
+|    C                     Z-ADDFLD02     T615
+|    C                     Z-ADD0         T696
+|    C                     Z-ADD$A8YMD    T697
+|    C                     TIME           T698
+|    C                     MOVEL$USER     T699
+|    C*
+|    C           KEYT6     CHAINT60                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     UPDATT60
+| 02*C                     ELSE
+|   C                     WRITET60
+| 02-C                     END
+|    C*
+07===C           E7000     ENDSR
+     C*==============================================================*
+

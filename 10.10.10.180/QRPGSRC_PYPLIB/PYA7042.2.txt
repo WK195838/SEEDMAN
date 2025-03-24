@@ -1,0 +1,128 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR7042                                     *
+     H*   AUTHER       : A1084 CHARLES                               *
+     H*   CREATE DATE  : 79/07/17                                    *
+     H*   UPDATE DATE  : 96/01/23 A1413 CLOUD                        *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR7041C                                    *
+     H*   PURPOSE      :                                             *
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYTDPF  IP  E           K        DISK
+     FPYTTPF  O   E           K        DISK                      A
+     FSYFAPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     I/COPY QDDSSRC,PYTTDS01
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      203 2080DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      507 516 $TDEV
+     I                                      517 5230DFA04F
+     I                                      524 5300DFA04T
+     I                                      531 5370DFA04N
+     I*
+     I                                      541 544 DTD02
+     I                                      545 5480WTD01
+     I                                      549 5540WTD16
+     I                                      555 555 DSEL
+     I                                      556 556 DOPT
+     I*
+     IPYDA03      DS                            512
+     I                                      300 301 PYD033
+     I*
+     I            DS
+     I                                        1  12 WTT14
+     I                                        1   1 TD091
+     I                                        2   3 TD092
+     I                                        4   5 TD093
+     I                                        6  12 TD094
+     C*
+     I            DS
+     I                                        1   3 CM12
+     I                                        1   1 CM121
+     I                                        2   3 CM122
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100
+     C*==============================================================*
+     C*   RTN010... INIT PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           DTD02     CHAINFA0                  40
+|    C*
+|    C           *NAMVAR   DEFN           PYDA03
+|    C                     IN   PYDA03
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... ＭＡＩＮ
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C           TD11      CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM12
+|    C*
+|    C                     MOVELCM121     TT01              縣市別
+|    C                     MOVELCM122     TT02              機關別
+| 01-C           CM12      IFEQ *BLANK
+|   C                     MOVELFA02      TT01
+|   C                     MOVE FA03      TT01
+| 01-C                     END
+|    C*** 96/01/19 CLOUD
+|    C                     MOVEL'0'       TT031             流水號文
+|    C                     Z-ADDTD03      TT032             流水號數
+|    C*
+|    C                     MOVELTD17      TT04              統一編號
+|    C                     MOVEL*BLANK    TT05              註記
+|    C                     MOVELTD04      TT06              格式代號
+|    C                     MOVELTD05      TT07              身份證號
+|    C                     MOVELTD06      TT08              證號別
+|    C                     Z-ADDTD07      TT09              給付總額
+|    C                     Z-ADDTD08      TT10              扣繳稅額
+|    C           TD07      SUB  TD08      TT11              給付淨額
+| 02-C           TD04      IFEQ PYD033                      租賃所得
+|   C           TD04      OREQ '9A'                        執行業務
+|   C           TD04      OREQ '92'                        其它所得
+|   C           TD04      OREQ '9B'                        稿費　　
+|   C                     MOVELTD09      TT12
+| 02*C                     ELSE
+|   C                     MOVELTD12      TT12              房屋稅籍
+| 02-C                     END
+|    C*                    MOVELTD09      TT12              房屋稅籍
+|    C                     MOVEL'B'       TT13              軟體註記
+|    C                     MOVELTD10      TT14              錯誤註記
+|    C           WTD01     SUB  1911      TT15              所得給付
+|    C*
+|    C                     MOVELTD13      TTDS1             所得者姓
+|    C*
+|    C                     MOVEL*BLANK    TTDS2             所得人地
+|    C*
+|    C                     CALL 'P65'
+|    C                     PARM TD14      P6501I 80
+|    C                     PARM 60        P6502I  30
+|    C           TTDS2     PARM           P6511O 80
+|    C                     PARM           P6512O 80
+|    C*
+|    C                     MOVEL*BLANK    TTDS3
+|    C                     Z-ADDTD20      T301              勞退自提
+|    C*
+|    C                     MOVEL*BLANK    TTDS4
+|    C*
+|    C           TD96      SUB  19110000  TTDS3W  60
+|    C                     MOVE TTDS3W    TTDS4
+|    C*
+|    C                     WRITETT0
+|    C*** 96/01/19 CLOUD
+02===C                     ENDSR
+

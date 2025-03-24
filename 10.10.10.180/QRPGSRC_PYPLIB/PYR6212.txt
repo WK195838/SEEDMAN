@@ -1,0 +1,266 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR6212                                    *
+     H*    PROGRAM NAME :全民健保投保資料列印                      *
+     H*    AUTHOR       : A1233 SAM                                  *
+     H*    CREATE DATE  : 1997/08/07                                 *
+     H*    UPDATE DATE  : 2000/08/25 A1274 EVA                       *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYE1JF01IP  E           K        DISK
+     FPYE2PF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FPYR621P O   E             39     PRINTER
+     E*---------------------------------------------------------------*
+     IE1JF01
+     I                                              E102  L1
+     I**
+     ILDA        UDS
+     I                                      187 1920DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I                                      601 607 DEM041
+     I                                      608 614 DEM042
+     I                                      523 5280DE1031
+     I                                      529 5340DE1032
+     I                                      541 548 DEM021
+     I                                      549 556 DEM022
+     I                                      557 5640WE1031
+     I                                      565 5720WE1032
+     I                                      535 535 DE1041
+     I                                      536 536 DE1042
+     C*==============================================================*
+     C*                    LIKE DEF
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYE2     KLIST                           *SYAAPF
+     C                     KFLD           DEM01
+     C                     KFLD           E102
+     C                     KFLD           E103
+     C           KEY#Y     KLIST                           *SYAAPF
+     C                     KFLD           #Y01
+     C                     KFLD           #Y02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100
+     C*
+     C*
+     CL1                   EXSR R2000
+     C*
+     CLR 10                EXSR R8900
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R0100  .. INITIAL GET HEADING
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   *NAMVAR
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C*
+|    C                     SETON                     1039
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DEM01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C*異動類別
+| 01-C           E104      IFEQ '1'
+|   C                     MOVEL'投保'  E104N
+| 01*C                     ELSE
+| 02-C           E104      IFEQ '2'
+|   C                     MOVEL'調整'  E104N
+| 02*C                     ELSE
+| 03-C           E104      IFEQ '3'
+|   C                     MOVEL'停保'  E104N
+| 03*C                     ELSE
+| 04-C           E104      IFEQ '4'
+|   C                     MOVEL'復保'  E104N
+| 04*C                     ELSE
+| 05-C           E104      IFEQ '5'
+|   C                     MOVEL'轉出'  E104N
+| 05*C                     ELSE
+| 06-C           E104      IFEQ '9'
+|   C                     MOVEL'退保'  E104N
+| 06-C                     END
+| 05-C                     END
+| 04-C                     END
+| 03-C                     END
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C                     SETON                     31
+|    C*
+|    C                     MOVEL*BLANK    PE205
+|    C                     MOVEL*BLANK    PE211
+|    C                     MOVEL*BLANK    PE206
+|    C                     MOVEL*BLANK    PE207
+|    C                     Z-ADD*ZERO     PE208
+|    C                     MOVEL*BLANK    PE209N
+|    C*
+|    C           KEYE2     SETLLE20
+|    C           KEYE2     READEE20                      42
+| 07-C           *IN42     IFEQ '1'
+|   C**                   MOVEL*BLANK    PE205
+|   C**                   MOVEL*BLANK    PE211
+|   C**                   MOVEL*BLANK    PE206
+|   C**                   MOVEL*BLANK    PE207
+|   C**                   Z-ADD*ZERO     PE208
+|   C**                   MOVEL*BLANK    PE209N
+|   C*
+| 08-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETON                     31
+| 08-C                     END
+|   C*
+|   C                     MOVEL'2'       P3102I  1
+|   C                     MOVEL'1'       P3103I  1
+|   C                     MOVELDFMT      P3104I  1
+|   C                     MOVELDTYPE     P3105I  1
+|   C*
+| 09-C           EM33      IFEQ *ZERO
+|   C                     Z-ADD*ZERO     DEM33
+| 09*C                     ELSE
+|   C                     CALL 'P31'
+|   C                     PARM EM33      P3101I  80
+|   C                     PARM           P3102I  1
+|   C                     PARM           P3103I  1
+|   C                     PARM           P3104I  1
+|   C                     PARM           P3105I  1
+|   C                     PARM           P3111O  80
+|   C                     Z-ADDP3111O    DEM33   60
+| 09-C                     END
+|   C*
+| 10-C           E103      IFEQ *ZERO
+|   C                     Z-ADD*ZERO     DE103
+| 10*C                     ELSE
+|   C                     CALL 'P31'
+|   C                     PARM E103      P3101I  80
+|   C                     PARM           P3102I  1
+|   C                     PARM           P3103I  1
+|   C                     PARM           P3104I  1
+|   C                     PARM           P3105I  1
+|   C                     PARM           P3111O  80
+|   C                     Z-ADDP3111O    DE103   60
+| 10-C                     END
+|   C*
+| 11-C           E208      IFEQ *ZERO
+|   C                     Z-ADD*ZERO     PE208
+| 11*C                     ELSE
+|   C                     CALL 'P31'
+|   C                     PARM E208      P3101I  80
+|   C                     PARM           P3102I  1
+|   C                     PARM           P3103I  1
+|   C                     PARM           P3104I  1
+|   C                     PARM           P3105I  1
+|   C                     PARM           P3111O  80
+|   C                     Z-ADDP3111O    PE208   60
+| 11-C                     END
+|   C*
+|   C                     WRITEPD1
+|   C                     SETOF                     31
+|   C                     SETON                     95
+|   C                     GOTO E2000
+|   C*
+| 07*C                     ELSE
+|   C*
+| 12-C           *IN42     DOWEQ'0'
+| 13-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETON                     31
+| 13-C                     END
+|   C* MOVE DATA
+|   C                     MOVELE205      PE205
+|   C                     MOVELE211      PE211
+|   C                     MOVELE206      PE206
+|   C                     MOVELE207      PE207
+|   C                     Z-ADD*ZERO     PE208
+|   C*
+| 14-C           E208      IFEQ *ZERO
+|   C                     Z-ADD*ZERO     PE208
+| 14*C                     ELSE
+|   C                     CALL 'P31'
+|   C                     PARM E208      P3101I  80
+|   C                     PARM           P3102I  1
+|   C                     PARM           P3103I  1
+|   C                     PARM           P3104I  1
+|   C                     PARM           P3105I  1
+|   C                     PARM           P3111O  80
+|   C                     Z-ADDP3111O    PE208   60
+| 14-C                     END
+|   C*
+|   C*眷屬稱謂
+|   C                     MOVEL*BLANK    #Y03
+|   C                     MOVEL'RELATION'#Y01      P
+|   C                     MOVELE209      #Y02      P
+|   C           KEY#Y     CHAIN#Y0                  40
+|   C                     MOVEL#Y03      PE209N
+|   C*
+|   C                     WRITEPD1
+|   C                     SETOF                     31
+|   C                     SETON                     95
+|   C*
+|   C                     MOVEL*BLANK    PE205
+|   C                     MOVEL*BLANK    PE211
+|   C                     MOVEL*BLANK    PE206
+|   C                     MOVEL*BLANK    PE207
+|   C                     Z-ADD*ZERO     PE208
+|   C                     MOVEL*BLANK    PE209N
+|   C*
+|   C           KEYE2     READEE20                      42
+| 12-C                     END
+| 07-C                     END
+|    C*
+02===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR --- HAS DATA
+     C*==============================================================*
+03===C           R8900     BEGSR
+|    C*
+|    C  N95                EXSR R8999
+|    C  N95                GOTO E8900
+|    C*
+|    C                     WRITEPT5
+|    C*
+03===C           E8900     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+04===C           R8999     BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR R0100
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+

@@ -1,0 +1,193 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA3321                                    *
+     H*    PROGRAM NAME :薪資項目轉檔功能  AS/400--> PC            *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 90/06/04                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYPHPF  IP  E           K        DISK
+     FPYHDPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYPBLF01IF  E           K        DISK
+     FPYE1PF  IF  E           K        DISK
+     FPYE4PF  IF  E           K        DISK
+     FPYTAPF  IF  E           K        DISK
+     FPYA332WFO   E           K        DISK
+     E*---------------------------------------------------------------
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DPH01
+     I                                      503 5060DPH03
+     I                                      503 5040DPH03Y
+     I                                      505 5060DPH03M
+     I                                      511 5160WPH03
+     I                                      511 5140WPH03Y
+     I                                      515 5160WPH03M
+     I                                      507 507 DPH04
+     I            DS
+     I                                        1   80WYMD
+     I                                        1   40WNY
+     I                                        5   60WNM
+     I                                        1   60WNYM
+     I                                        7   80WND
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYEM     KLIST
+     C                     KFLD           PH01
+     C                     KFLD           PH02
+     C           KEYHD     KLIST
+     C                     KFLD           PH01
+     C                     KFLD           PH02
+     C                     KFLD           WPH03
+     C                     KFLD           DPH04
+     C           KEYE1     KLIST
+     C                     KFLD           PH01
+     C                     KFLD           PH02
+     C                     KFLD           WYMD
+     C           KEYE1R    KLIST
+     C                     KFLD           PH01
+     C                     KFLD           PH02
+     C           KEYPB     KLIST
+     C                     KFLD           PH01
+     C                     KFLD           PH02
+     C                     KFLD           WPH03
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      .MAIN
+     C*==============================================================*
+     C*                    R0100 ... INIT PROCESS
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+     C                     Z-ADD*ZERO     W33206
+     C                     Z-ADD*ZERO     W33207
+     C                     Z-ADD*ZERO     W33208
+     C                     Z-ADD*ZERO     W33209
+     C                     Z-ADD*ZERO     W33210
+     C                     Z-ADD*ZERO     W33211
+     C                     Z-ADD*ZERO     W33212
+     C                     Z-ADD*ZERO     W33213
+     C                     Z-ADD*ZERO     W33214
+     C                     Z-ADD*ZERO     WMNY    70
+|    C*-------------------------------------------------------------***
+     C                     MOVELPH01      W33201    P      公司
+     C                     MOVELPH02      W33202    P      員工編號
+|    C*
+     C           KEYEM     CHAINEM0                  40
+     C           *IN40     IFEQ '0'
+     C                     MOVELEM03      W33203    P      員工姓名
+     C                     MOVELEM041     W33241    P      部門一
+     C                     MOVELEM042     W33242    P      部門二
+     C                     MOVELEM043     W33243    P      部門三
+     C                     MOVELEM044     W33244    P      部門四
+     C                     ELSE
+     C                     MOVEL*BLANK    W33203
+     C                     MOVEL*BLANK    W33241
+     C                     MOVEL*BLANK    W33242
+     C                     MOVEL*BLANK    W33243
+     C                     MOVEL*BLANK    W33244
+     C                     END
+|    C*
+     C                     Z-ADDWPH03     W33205           計薪年月
+|    C*
+     C           PH17      ADD  PH27      W33206
+     C           W33206    SUB  PH28      W33206
+     C           W33206    SUB  PH29      W33206           應稅所得
+     C*------------------------------------------------------------***
+     C           KEYHD     SETLLHD0
+     C           KEYHD     READEHD0                      46
+     C           *IN46     DOWEQ'0'
+     C*
+     C*退休退職基準薪
+     C           HD05      IFEQ '01'                       本俸
+     C           HD05      OREQ '02'                       主管加給
+     C           HD05      OREQ '03'                       職務加給
+     C           HD05      OREQ '12'                       交通津貼一
+     C           HD05      OREQ '13'                       交通津貼二
+     C                     ADD  HD06      WMNY
+     C                     END
+     C*
+     C           HD05      IFEQ '11'
+     C                     Z-ADDHD06      W33207           午餐津貼
+     C                     END
+     C*
+     C           HD05      IFEQ '22'
+     C                     Z-ADDHD06      W33208           加班費
+     C                     END
+     C*
+     C           HD05      IFEQ '24'
+     C                     Z-ADDHD06      W33209           誤餐費
+     C                     END
+     C*
+     C           HD05      IFEQ '56'
+     C                     Z-ADDHD06      W33212           福利金
+     C                     END
+|    C*
+     C           KEYHD     READEHD0                      46
+     C                     END
+     C*------------------------------------------------------------***
+|    C           WMNY      MULT 0.0915    W33210    H      退休金
+|    C           WMNY      MULT 0.0049    W33211    H      退職金
+     C*------------------------------------------------------------***
+|    C           '0'       CHAINE40                  41
+|    C           '0'       CHAINTA0                  41
+|    C*
+|    C                     Z-ADD01        WND
+|    C                     Z-ADDWPH03     WNYM
+| 01-C           WNM       IFEQ 12
+|   C                     ADD  1         WNY
+|   C                     Z-ADD01        WNM
+| 01*C                     ELSE
+|   C                     ADD  1         WNM
+| 01-C                     END
+     C*------------------------------------------------------------***
+     C*勞保費
+|   C           PH19      MULT TA12      W33213    H      公司負擔－勞保費
+     C*
+|    C*健保費
+|    C*到本月底投保狀況
+|    C           KEYE1     SETGTE10
+|    C           KEYE1R    REDPEE10                      47
+| 04-C           *IN47     IFEQ '0'
+|   C*
+|   C           1         ADD  E404      E105A   93
+|   C                     MULT E105      E105A
+|   C                     MULT E401      E105A     H
+|   C*
+| 05-C           E108      IFEQ 'B'                        員工全額自付
+|   C                     Z-ADD*ZERO     W33214
+| 05*C                     ELSE
+|   C           E105A     MULT E403      W33214    H      公司負擔
+| 05-C                     END
+| 04-C                     END
+|    C*
+|    C*
+|    C                     Z-ADD*ZERO     AA      70
+|    C           KEYPB     SETLLPB0
+|    C           KEYPB     READEPB0                      42
+| 06-C           *IN42     DOWEQ'0'
+|   C*
+| 07-C           PB09      IFNE 0
+|   C           EM23      MULT TA09      AA        H
+| 07-C                     END
+|   C*
+|   C           KEYPB     READEPB0                      42
+| 06-C                     END
+|    C*
+|    C                     ADD  AA        W33214
+|    C*
+     C*------------------------------------------------------------***
+|    C*
+|    C                     WRITEW332
+|    C*
+02===C           E0100     ENDSR
+     C*==============================================================*
+

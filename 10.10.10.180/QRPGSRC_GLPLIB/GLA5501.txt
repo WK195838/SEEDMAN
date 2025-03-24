@@ -1,0 +1,797 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : GLA550                                     *
+     H*    PROGRAM NAME : 年結傳票調整－過帳作業                   *
+     H*    AUTHOR       : A1087  JOYCE                               *
+     H*    CREATE DATE  : 1992.12.05                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     F****************************************************************
+     FGLAHLF09UF  E           K        DISK
+     FGLAILF01UF  E           K        DISK                      A
+     FGLALPF  UF  E           K        DISK                      A
+     FGLALLF01UF  E           K        DISK
+     F            AL0                               KRENAMEAL1
+     FGLAMPF  UF  E           K        DISK                      A
+     FGLAKPF  IF  E           K        DISK
+     FGLAEPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLA550P O   E             39     PRINTER
+     E*---------------------------------------------------------------*
+     E*科目餘額
+     E                    WAI1       13 13 2
+     E*借方交易金額
+     E                    WAI2       13 13 2
+     E*貸方交易金額
+     E                    WAI3       13 13 2
+     E* 傳票NO
+     E                    WP1         4  5 0
+     E* 傳票號碼
+     E                    WP2         4  9
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I*                                     211 2160DYMD
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAH01
+     I*---------------------------------------------------------------*
+     I*會計期間(YYYYMM)-> GET FROM  CALL'GLS005'
+     I            DS
+     I                                        1   60WAL11
+     I                                        1   40WY
+     I                                        5   60WM
+     I            DS
+     I                                        1 169 WAI1
+     I                                        1  132AI11
+     I                                       14  262AI12
+     I                                       27  392AI13
+     I                                       40  522AI14
+     I                                       53  652AI15
+     I                                       66  782AI16
+     I                                       79  912AI17
+     I                                       92 1042AI18
+     I                                      105 1172AI19
+     I                                      118 1302AI20
+     I                                      131 1432AI21
+     I                                      144 1562AI22
+     I                                      157 1692AI23
+     I            DS
+     I                                        1 169 WAI2
+     I                                        1  132AI11A
+     I                                       14  262AI12A
+     I                                       27  392AI13A
+     I                                       40  522AI14A
+     I                                       53  652AI15A
+     I                                       66  782AI16A
+     I                                       79  912AI17A
+     I                                       92 1042AI18A
+     I                                      105 1172AI19A
+     I                                      118 1302AI20A
+     I                                      131 1432AI21A
+     I                                      144 1562AI22A
+     I                                      157 1692AI23A
+     I            DS
+     I                                        1 169 WAI3
+     I                                        1  132AI11B
+     I                                       14  262AI12B
+     I                                       27  392AI13B
+     I                                       40  522AI14B
+     I                                       53  652AI15B
+     I                                       66  782AI16B
+     I                                       79  912AI17B
+     I                                       92 1042AI18B
+     I                                      105 1172AI19B
+     I                                      118 1302AI20B
+     I                                      131 1432AI21B
+     I                                      144 1562AI22B
+     I                                      157 1692AI23B
+     I            DS
+     I                                        1   50WAE04
+     I                                        1   10W1
+     I                                        2   20W2
+     I                                        3   30W3
+     I                                        4   40W4
+     I                                        5   50W5
+     I            DS
+     I                                        1  20 WP1
+     I                                        1   50NO01
+     I                                        6  100NO02
+     I                                       11  150NO03
+     I                                       16  200NO04
+     I            DS
+     I                                        1  36 WP2
+     I                                        1   9 PAH021
+     I                                       10  18 PAH022
+     I                                       19  27 PAH023
+     I                                       28  36 PAH024
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*
+     C           *LIKE     DEFN AH02      OAH02
+     C           *LIKE     DEFN AH01      KAH01
+     C           *LIKE     DEFN AH02      KAH02
+     C           *LIKE     DEFN AH03      KAH03
+     C           *LIKE     DEFN AI02      WAI02
+     C           *LIKE     DEFN AI11      WAI11
+     C           *LIKE     DEFN AL09      WAL09
+     C           *LIKE     DEFN AL10      WAL10
+     C           *LIKE     DEFN AL10      WKAL10
+     C           *LIKE     DEFN AL10      WK01
+     C           *LIKE     DEFN AI01      WAI01
+     C           *LIKE     DEFN AI03      WAI03
+     C           *LIKE     DEFN AI04A     WAI4A
+     C           *LIKE     DEFN AI05A     WAI5A
+     C           *LIKE     DEFN AI06A     WAI6A
+     C           *LIKE     DEFN AI07A     WAI7A
+     C           *LIKE     DEFN AI08A     WAI8A
+     C           *LIKE     DEFN AI04      WAI04
+     C           *LIKE     DEFN AI05      WAI05
+     C           *LIKE     DEFN AI06      WAI06
+     C           *LIKE     DEFN AI07      WAI07
+     C           *LIKE     DEFN AI08      WAI08
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAH     KLIST                           *MAIN FILE
+     C                     KFLD           KAH01
+     C                     KFLD           KAH02
+     C                     KFLD           KAH03
+     C           KEYAF     KLIST                           *GLAFPF
+     C                     KFLD           AH01
+     C                     KFLD           AH04
+     C           KEYAI     KLIST                           *GLAILF01
+     C                     KFLD           AH01
+     C                     KFLD           WAI02
+     C                     KFLD           AH04
+     C                     KFLD           AH05A
+     C                     KFLD           AH06A
+     C                     KFLD           AH07A
+     C                     KFLD           AH08A
+     C                     KFLD           AH09A
+     C                     KFLD           AH05
+     C                     KFLD           AH06
+     C                     KFLD           AH07
+     C                     KFLD           AH08
+     C                     KFLD           AH09
+     C           KEYAE     KLIST                           *GLAEPF
+     C                     KFLD           AH01
+     C                     KFLD           AF10
+     C           KEYAL1    KLIST                           *GLALLF01
+     C                     KFLD           AL01
+     C                     KFLD           AL02
+     C                     KFLD           AL04
+     C                     KFLD           AL05
+     C                     KFLD           AL06
+     C                     KFLD           AL07
+     C                     KFLD           AL08
+     C**   AL09(LT 0) AL11(EQ 0)-->GLALLF01
+     C**
+     C           KEYAM     KLIST                           *GLAMPF
+     C                     KFLD           AL01
+     C                     KFLD           AL02
+     C                     KFLD           AL04
+     C                     KFLD           AL05
+     C                     KFLD           AL06
+     C                     KFLD           AL07
+     C                     KFLD           AL08
+     C                     KFLD           AL03
+     C                     KFLD           AH02
+     C           KEYAL2    KLIST                           *GLALPF
+     C                     KFLD           AL01
+     C                     KFLD           AL02
+     C                     KFLD           AL04
+     C                     KFLD           AL05
+     C                     KFLD           AL06
+     C                     KFLD           AL07
+     C                     KFLD           AL08
+     C                     KFLD           AL03
+     C           KEYAI1    KLIST                           *GLAILF01
+     C                     KFLD           WAI01
+     C                     KFLD           WAI02
+     C                     KFLD           WAI03
+     C                     KFLD           WAI4A
+     C                     KFLD           WAI5A
+     C                     KFLD           WAI6A
+     C                     KFLD           WAI7A
+     C                     KFLD           WAI8A
+     C                     KFLD           WAI04
+     C                     KFLD           WAI05
+     C                     KFLD           WAI06
+     C                     KFLD           WAI07
+     C                     KFLD           WAI08
+     C           KEYAK     KLIST                           *GLAKPF
+     C                     KFLD           DAH01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+     C                     READ AH0                      46
+     C                     MOVE AH02      OAH02
+     C*
+  01-C           *IN46     DOWEQ'0'
+    C*
+    C                     EXSR R1000                      *累計年度餘額
+    C                     EXSR R2000                      *記錄沖帳
+  02-C           AH02      IFNE OAH02
+    C                     EXSR R4000                      *計算資金
+    C                     EXSR R6000                      *列印報表
+  02-C                     END
+    C                     EXSR R7000                      *更新作帳註記
+    C*
+    C                     READ AH0                      46
+  01-C                     END
+     C   10                EXSR R8000                      *結算本期損益
+     C  N10                EXSR R9900                      *無列印資料
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUES
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETOF                     102031
+|    C                     Z-ADD0         WNO     50       *PRINT NO
+|    C                     Z-ADD0         WKTOT  162
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C*
+|    C                     Z-ADD0         WAI1
+|    C                     Z-ADD0         WAI2
+|    C                     Z-ADD0         WAI3
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....累計年度餘額
+     C*==============================================================*
+03===C           R1000     BEGSR
+|    C*
+|    C                     EXSR R1A00                      *會計期間
+|    C* GET 科目屬性
+|    C           KEYAF     CHAINAF0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+|   C                     Z-ADDWY        WAI02
+|   C           KEYAI     CHAINAI0                  40
+|   C                     EXSR R1100
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....會計期間計算
+     C*==============================================================*
+04===C           R1A00     BEGSR
+|    C*
+|    C                     CALL 'GLS005'
+|    C                     PARM AH01      P005I1  2        公司別
+|    C                     PARM AH10      P005I2  80       傳票日期
+|    C                     PARM 'F'       P005I3  1        日期型態
+|    C                     PARM           P005O1  40       會計年度
+|    C                     PARM           P005O2  20       會計期間
+|    C                     PARM           P005O3  1        本期結帳
+|    C                     PARM           P005O4  1        至本期結帳
+|    C*
+|    C                     Z-ADDP005O1    WY
+|    C                     Z-ADDP005O2    WM
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1100 .... UPDATE/WRITE 年度餘額檔(GLAILF01)
+     C*==============================================================*
+05===C           R1100     BEGSR
+|    C*
+| 01-C           *IN40     IFEQ '1'
+|   C                     MOVELAH01      AI01
+|   C                     Z-ADDWY        AI02
+|   C                     MOVELAH04      AI03
+|   C                     MOVELAH05A     AI04A
+|   C                     MOVELAH06A     AI05A
+|   C                     MOVELAH07A     AI06A
+|   C                     MOVELAH08A     AI07A
+|   C                     MOVELAH09A     AI08A
+|   C                     MOVELAH05      AI04
+|   C                     MOVELAH06      AI05
+|   C                     MOVELAH07      AI06
+|   C                     MOVELAH08      AI07
+|   C                     Z-ADDAH09      AI08
+|   C                     Z-ADD0         AI10
+|   C                     Z-ADD0         AI10A
+|   C                     Z-ADD0         AI10B
+|   C                     MOVE *BLANK    WAI1
+|   C                     MOVE *BLANK    WAI2
+|   C                     MOVE *BLANK    WAI3
+| 01-C                     END
+|    C* GET餘額
+| 02-C           AF06      IFEQ '1'
+|   C           AH12      SUB  AH13      WAI11
+| 02*C                     ELSE
+|   C           AH13      SUB  AH12      WAI11
+| 02-C                     END
+|    C* 累計金額
+|    C                     Z-ADDWM        I       30
+|    C                     ADD  WAI11     WAI1,I
+|    C                     ADD  AH12      WAI2,I
+|    C                     ADD  AH13      WAI3,I
+|    C*
+|    C                     TIME           AI97
+|    C                     Z-ADD$A8YMD    AI98
+|    C                     MOVE $USER     AI99
+|    C*
+|    C  N40                UPDATAI0
+|    C   40                WRITEAI0
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 記錄沖帳資料
+     C*==============================================================*
+06===C           R2000     BEGSR
+|    C*
+|    C           KEYAF     CHAINAF0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C           AF10      ANDNE*BLANK                     *沖帳代號
+|   C*
+| 02-C           AF06      IFEQ '1'
+|   C           AH12      ANDNE0
+|   C           AF06      OREQ '2'
+|   C           AH13      ANDNE0
+|   C                     EXSR R2100                      *立帳
+| 02*C                     ELSE
+|   C                     EXSR R2500                      *沖帳
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R2100 .... 立帳
+     C*==============================================================*
+07===C           R2100     BEGSR
+|    C*
+|    C* GET排序控制碼
+|    C                     EXSR R21A0
+|    C*
+|    C           AH12      ADD  AH13      WAL09
+|    C***
+|    C* 逐筆讀取　沖帳餘額主檔(GLALLF01)
+|    C***
+|    C           KEYAL1    SETLLAL1
+|    C           KEYAL1    READEAL1                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C           WAL09     ANDGT0
+|   C*
+|   C* （立／沖帳不相等）表未沖畢
+|   C*
+| 02-C           AL09      IFNE AL10
+|   C*
+|   C           AL09      SUB  AL10      WAL10            *WAL10<0
+|   C           WAL10     MULT -1        WKAL10           *WKAL10>0
+|   C*
+|   C* 可立沖金額＞＝未沖立金額
+| 03-C           WAL09     IFGE WKAL10
+|   C                     Z-ADDWAL10     WK01             *實沖金額
+|   C                     Z-ADDWAL11     AL11             *沖畢月份
+|   C                     SUB  WKAL10    AL10             *沖帳金額
+|   C                     SUB  WKAL10    WAL09            *立帳金額
+| 03*C                     ELSE
+|   C                     Z-SUBWAL09     WK01             *實沖金額
+|   C                     SUB  WAL09     AL10             *沖帳金額
+|   C                     SUB  WAL09     WAL09            *立帳金額
+| 03-C                     END
+|   C*
+|   C                     TIME           AL97
+|   C                     Z-ADD$A8YMD    AL98
+|   C                     MOVE $USER     AL99
+|   C* UPDATE
+|   C                     UPDATAL1
+|   C***
+|   C* UPD/WRT沖帳餘額明細檔(GLAMPF)
+|   C                     EXSR R21B0
+|   C***
+| 02-C                     END
+|   C*
+|   C           KEYAL1    READEAL1                      44
+| 01-C                     END
+|    C*
+|    C* WRITE->沖帳餘額主檔(GLALPF)
+| 04-C           WAL09     IFGT 0
+|   C                     EXSR R2200
+| 04-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R21A0 .... GET排序控制碼
+     C*==============================================================*
+08===C           R21A0     BEGSR
+|    C*
+|    C           KEYAE     CHAINAE0                  40
+|    C*
+|    C  N40                Z-ADDAE04      WAE04
+|    C   40                Z-ADD0         WAE04
+|    C*
+|    C                     MOVELAH01      AL01
+|    C                     MOVELAH04      AL02
+|    C*
+|    C                     MOVE *BLANK    AL04
+|    C                     MOVE *BLANK    AL05
+|    C                     MOVE *BLANK    AL06
+|    C                     MOVE *BLANK    AL07
+|    C                     Z-ADD0         AL08
+| 01-C           W1        IFNE 0
+|   C                     MOVELAH05      AL04
+| 01-C                     END
+| 02-C           W2        IFNE 0
+|   C                     MOVELAH06      AL05
+| 02-C                     END
+| 03-C           W3        IFNE 0
+|   C                     MOVELAH07      AL06
+| 03-C                     END
+| 04-C           W4        IFNE 0
+|   C                     MOVELAH08      AL07
+| 04-C                     END
+| 05-C           W5        IFNE 0
+|   C                     Z-ADDAH09      AL08
+| 05-C                     END
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R21B0 .... UPDATE/WRITE沖帳餘額明細檔(GLAMPF)
+     C*==============================================================*
+09===C           R21B0     BEGSR
+|    C*
+|    C           KEYAM     CHAINAM0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     MOVELAL01      AM01
+|   C                     MOVELAL02      AM02
+|   C                     MOVELAL03      AM03
+|   C                     MOVELAL04      AM04
+|   C                     MOVELAL05      AM05
+|   C                     MOVELAL06      AM06
+|   C                     MOVELAL07      AM07
+|   C                     Z-ADDAL08      AM08
+|   C                     MOVELAH02      AM09
+|   C                     Z-ADD0         AM11
+| 01-C                     END
+|    C                     Z-ADDAH10      AM10
+|    C                     ADD  WK01      AM11
+|    C*
+|    C                     TIME           AM97
+|    C                     Z-ADD$A8YMD    AM98
+|    C                     MOVE $USER     AM99
+|    C*
+|    C  N40                UPDATAM0
+|    C   40                WRITEAM0
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R2200 .... WRITE 沖帳餘額主檔 (GLALPF)
+     C*==============================================================*
+10===C           R2200     BEGSR
+|    C*
+|    C                     MOVELAH02      AL03
+|    C                     Z-ADDWAL09     AL09
+|    C                     Z-ADD0         AL10
+|    C                     Z-ADD0         AL11
+|    C                     Z-ADDAH10      AL12
+|    C*
+|    C                     TIME           AL97
+|    C                     Z-ADD$A8YMD    AL98
+|    C                     MOVE $USER     AL99
+|    C                     WRITEAL0
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R2500 .... 沖帳
+     C*==============================================================*
+11===C           R2500     BEGSR
+|    C*
+|    C* GET排序控制碼
+|    C                     EXSR R21A0
+|    C*
+|    C           AH12      ADD  AH13      WAL09
+|    C*
+| 01-C           AH24      IFNE *BLANK
+|   C                     EXSR R2510
+| 01*C                     ELSE
+|   C                     EXSR R2520
+| 01-C                     END
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R2510 .... 沖帳傳票( AH24  NE  *BLANK )
+     C*==============================================================*
+12===C           R2510     BEGSR
+|    C*
+|    C                     MOVELAH24      AL03
+|    C           KEYAL2    CHAINAL0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+|   C* （立／沖帳不相等）表未沖畢
+|   C*
+| 02-C           AL09      IFNE AL10
+|   C                     EXSR R25C0
+|   C*
+|   C                     TIME           AL97
+|   C                     Z-ADD$A8YMD    AL98
+|   C                     MOVE $USER     AL99
+|   C* UPDATE
+|   C                     UPDATAL0
+|   C***
+|   C* UPD/WRT沖帳餘額明細檔(GLAMPF)
+|   C                     EXSR R21B0
+|   C***
+| 02-C                     END
+| 01-C                     END
+|    C***
+|    C* CHAIN (GLALPF) NOT FOUNT  OR 沖帳超額
+|    C***
+| 03-C           *IN40     IFEQ '1'
+|   C           WAL09     ORGT 0
+|   C                     EXSR R2520
+| 03-C                     END
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R2520 .... 沖帳傳票( AH24  EQ  *BLANK )
+     C*==============================================================*
+13===C           R2520     BEGSR
+|    C*
+|    C***
+|    C* 逐筆讀取　沖帳餘額主檔(GLALPF)
+|    C***
+|    C           KEYAL1    SETLLAL0
+|    C           KEYAL1    READEAL0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C           WAL09     ANDGT0
+|   C*
+|   C* （立　沖帳不相等）表未沖畢
+|   C*
+| 02-C           AL09      IFGT 0
+|   C           AL09      ANDNEAL10
+|   C*
+|   C                     EXSR R25C0
+|   C*
+|   C                     TIME           AL97
+|   C                     Z-ADD$A8YMD    AL98
+|   C                     MOVE $USER     AL99
+|   C* UPDATE
+|   C                     UPDATAL0
+|   C***
+|   C* UPD/WRT沖帳餘額明細檔(GLAMPF)
+|   C                     EXSR R21B0
+|   C***
+| 02-C                     END
+|   C*
+|   C           KEYAL1    READEAL0                      44
+| 01-C                     END
+|    C***
+|    C* 無立帳傳票可沖銷 WRITE/UPDATE沖帳餘額主檔(GLALPF)
+|    C***
+| 03-C           WAL09     IFGT 0
+|   C                     EXSR R25D0
+| 03-C                     END
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R25C0 .... PROCESS 沖帳
+     C*==============================================================*
+14===C           R25C0     BEGSR
+|    C*
+|    C           AL09      SUB  AL10      WAL10            *WAL10>0
+|    C*
+|    C* 可立沖金額＞＝未沖立金額
+| 01-C           WAL09     IFGE WAL10
+|   C                     Z-ADDWAL10     WK01             *實沖金額
+|   C                     Z-ADDWAL11     AL11             *沖畢月份
+|   C                     ADD  WAL10     AL10             *沖帳金額
+|   C                     SUB  WAL10     WAL09            *立帳金額
+| 01*C                     ELSE
+|   C                     Z-ADDWAL09     WK01             *實沖金額
+|   C                     ADD  WAL09     AL10             *沖帳金額
+|   C                     SUB  WAL09     WAL09            *立帳金額
+| 01-C                     END
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R25D0 .... UPDATE/WRITE 沖帳餘額主檔 (GLALPF)
+     C*==============================================================*
+15===C           R25D0     BEGSR
+|    C*
+|    C                     MOVELAH02      AL03
+|    C           KEYAL2    CHAINAL0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     Z-ADD0         AL09
+|   C                     Z-ADD0         AL10
+|   C                     Z-ADD0         AL11
+|   C                     Z-ADDAH10      AL12
+| 01-C                     END
+|    C                     SUB  WAL09     AL09
+|    C*
+|    C                     TIME           AL97
+|    C                     Z-ADD$A8YMD    AL98
+|    C                     MOVE $USER     AL99
+|    C  N40                UPDATAL0
+|    C   40                WRITEAL0
+|    C*
+15===C                     ENDSR
+     C*==============================================================*
+     C*          R4000 .... 計算資金金額
+     C*==============================================================*
+21===C           R4000     BEGSR
+|    C*
+|    C                     MOVE AH01      KAH01
+|    C                     MOVE AH02      KAH02
+|    C                     Z-ADDAH03      KAH03
+|    C           KEYAH     SETLLAH0
+|    C*
+|    C                     CALL 'GLS003'
+|    C                     PARM AH01      P003I1  2
+|    C                     PARM OAH02     P003I2  9
+|    C*
+|    C           KEYAH     CHAINAH0                  40
+|    C*
+21===C                     ENDSR
+     C*==============================================================*
+     C*          R6000 .... 列印報表
+     C*==============================================================*
+23===C           R6000     BEGSR
+|    C*
+|    C  N20                EXSR R6100
+|    C                     ADD  1         WNO
+|    C                     ADD  1         WK
+|    C*
+|    C                     Z-ADDWNO       WP1,WK
+|    C                     MOVELOAH02     WP2,WK
+|    C*
+| 01-C           WK        IFEQ 4
+|   C           *IN31     OREQ '1'
+|   C*
+| 02-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 02-C                     END
+|   C*
+|   C                     WRITEPD1
+|   C                     EXSR R6A00
+| 01-C                     END
+|    C*
+23===C                     ENDSR
+     C*==============================================================*
+     C*          R6100 .... PRINT PH1
+     C*==============================================================*
+24===C           R6100     BEGSR
+|    C*
+|    C           DAH01     CHAIN#B0                  40
+|    C   40                MOVE *BLANK    #B03
+|    C                     WRITEPH1
+|    C                     SETON                     20
+|    C*
+|    C                     EXSR R6A00                      *CLEAR FIELD
+|    C*
+24===C                     ENDSR
+     C*==============================================================*
+     C*          R6A00 .... INITIAL PD1
+     C*==============================================================*
+25===C           R6A00     BEGSR
+|    C*
+|    C                     MOVE *BLANK    WP1              *CLEAR NO
+|    C                     MOVE *BLANK    WP2              *CLEAR NUM
+|    C                     Z-ADD0         WK      20       *PRINT COUNT
+|    C*
+25===C                     ENDSR
+     C*==============================================================*
+     C*          R7000 .... 更新過帳註記
+     C*==============================================================*
+26===C           R7000     BEGSR
+|    C*
+|    C* KEEP -- AH02 & AH21
+|    C                     MOVE AH02      OAH02
+|    C                     SETON                     10    *HAS DATA
+|    C***
+|    C* 累計(AH13-AH12)
+|    C***
+| 03-C           AF05      IFEQ '2'                        *虛帳戶
+|   C           AH13      SUB  AH12      WK02   132
+|   C                     ADD  WK02      WKTOT
+| 03-C                     END
+|    C***
+|    C* UPDATE-->會計傳票檔
+|    C***
+|    C                     MOVE 'V'       AH18
+|    C                     TIME           AH97
+|    C                     Z-ADD$A8YMD    AH98
+|    C                     MOVE $USER     AH99
+|    C                     UPDATAH0
+|    C*
+26===C                     ENDSR
+     C*==============================================================*
+     C*          R8000 .... 本期損益
+     C*==============================================================*
+28===C           R8000     BEGSR
+|    C*
+|    C                     SETON                     31    *PRINT
+|    C                     EXSR R4000                      *計算資金
+|    C                     EXSR R6000                      *列印報表
+|    C                     WRITEPE1
+|    C*
+|    C* ＋本期損益
+|    C*
+|    C           KEYAK     CHAINAK0                  40
+|    C                     MOVE DAH01     WAI01
+|    C                     Z-ADDP005O1    WAI02
+|    C                     MOVE AK05      WAI03
+|    C                     MOVE *BLANK    WAI4A
+|    C                     MOVE *BLANK    WAI5A
+|    C                     MOVE *BLANK    WAI6A
+|    C                     MOVE *BLANK    WAI7A
+|    C                     MOVE *BLANK    WAI8A
+|    C                     MOVE *BLANK    WAI04
+|    C                     MOVE *BLANK    WAI05
+|    C                     MOVE *BLANK    WAI06
+|    C                     MOVE *BLANK    WAI07
+|    C                     Z-ADD*ZEROS    WAI08
+|    C           KEYAI1    CHAINAI0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     MOVE DAH01     AI01
+|   C                     Z-ADDP005O1    AI02
+|   C                     MOVE AK05      AI03
+|   C                     MOVE *BLANK    AI04
+|   C                     MOVE *BLANK    AI05
+|   C                     MOVE *BLANK    AI06
+|   C                     MOVE *BLANK    AI07
+|   C                     Z-ADD*ZEROS    AI08
+|   C                     MOVE *BLANK    AI04A
+|   C                     MOVE *BLANK    AI05A
+|   C                     MOVE *BLANK    AI06A
+|   C                     MOVE *BLANK    AI07A
+|   C                     MOVE *BLANK    AI08A
+|   C                     MOVE *BLANK    WAI1
+|   C                     MOVE *BLANK    WAI2
+|   C                     MOVE *BLANK    WAI3
+| 01-C                     END
+|    C                     Z-ADDP005O2    I       30
+|    C                     ADD  WKTOT     WAI1,I
+|    C                     ADD  WKTOT     WAI3,I
+|    C*
+|    C                     TIME           AI97
+|    C                     Z-ADD$A8YMD    AI98
+|    C                     MOVE $USER     AI99
+|    C*
+|    C   40                WRITEAI0
+|    C  N40                UPDATAI0
+|    C*
+28===C                     ENDSR
+     C*==============================================================*
+     C*          R9900 .... 無列印資料 PRINT HEADING
+     C*==============================================================*
+30===C           R9900     BEGSR
+|    C*
+|    C                     EXSR R6100
+|    C                     WRITEPE9
+|    C*
+30===C                     ENDSR
+

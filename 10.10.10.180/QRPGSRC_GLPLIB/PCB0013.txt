@@ -1,0 +1,195 @@
+     A*===============================================================
+     A* MODI CODE |   DATE   | DESCRIPTION
+     A*---------------------------------------------------------------
+     A* M001      | 99.08.03 | MANUAL MODIFY BY MICHELLE FOR Y2K
+     A*---------------------------------------------------------------
+     FWFPC01PFIP  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FPCB0013PO   E             39     PRINTER
+     IWFPC01R
+     I                                              PC0102L4
+     I                                              PC0103L4
+     I                                              PC0101L3
+     I                                              PC0105L2
+     I                                              PC0109L1
+     I                                              PC0110L1
+     I                                              PC0111L1
+     I                                              PC0112L1
+     I                                              PC0113L1
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      598 5990$LPRT
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+      *登帳年月
+     I                                      601 6040D05
+     I                                      601 6020D05M
+     I                                      603 6040D05Y
+      *公司別
+     I                                      613 614 D01
+     I                                      615 616 D02
+      *辦事處
+     I                                      627 627 D03
+      *登帳日期
+     I                                      631 6380F01
+     I                                      631 6360F01YM
+     I                                      633 6360YM
+     I                                      639 6460F02
+     I                                      639 6440F02YM
+     I                                      645 6460F02D
+     I                                      648 6490DD
+      *試算
+     I                                      650 650 DSEL
+      *==============================================================*
+      *                    KEY LIST
+      *==============================================================*
+     C           KEYAF     KLIST
+     C                     KFLD           PC0102
+     C                     KFLD           PC0105
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+  01-C           *IN10     IFEQ '0'
+    C                     EXSR RTN010                     *HEADING
+    C                     SETON                     10
+  01*C                     ELSE
+  02-C           *INL4     IFEQ '1'
+    C                     WRITEPE1
+    C                     EXSR RTN010                     *HEADING
+  02-C                     END
+  01-C                     END
+     C*
+     C   39                EXSR RTN900
+     C                     EXSR RTN100                     *READE DETAIL
+     C*
+     CL1 10                EXSR RTN150
+     CL2 10                EXSR RTN200
+     CL3 10                EXSR RTN300
+     CL4 10                EXSR RTN400
+     CLR                   EXSR RTN999
+      *==============================================================*
+      *          RTN010....CHECK HEADING
+      *==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+| 03-C           DSEL      IFEQ 'A'
+|   C                     MOVEL'試算'  PSEL
+| 03*C                     ELSE
+| 04-C           DSEL      IFEQ 'B'
+|   C                     MOVEL'正式'  PSEL
+| 04-C                     END
+| 03-C                     END
+|    C*公司
+|    C                     MOVEL*BLANKS   #B02
+|    C           PC0102    CHAIN#B0                  40
+|    C*
+| 05-C           PC0103    IFEQ '1'
+|   C                     MOVEL'台北'  D0103
+| 05*C                     ELSE
+| 06-C           PC0103    IFEQ '2'
+|   C                     MOVEL'台中'  D0103
+| 06*C                     ELSE
+| 07-C           PC0103    IFEQ '3'
+|   C                     MOVEL'高雄'  D0103
+| 07-C                     END
+| 06-C                     END
+| 05-C                     END
+|    C*
+|    C                     WRITEPH1
+|    C*
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN100....READE DETAIL
+      *==============================================================*
+02===C           RTN100    BEGSR
+|    C*客戶
+|    C                     MOVEL*BLANKS   DAF03
+|    C           KEYAF     CHAINAF0                  40
+|    C  N40                MOVELAF03      DAF03
+|    C*
+|    C                     CALL 'RES001'
+|    C                     PARM 'YMD'     S001I1  3
+|    C                     PARM PC0101    S001I2  60
+|    C           PDATE     PARM           S001O1  60
+|    C*
+|    C                     Z-ADDPC0113    D0113
+      *
+|    C   39                EXSR RTN900
+|    C                     WRITEPD1
+|    C                     SETOF                     20
+|    C                     SETON                     3031
+|    C                     ADD  PC0107    T10107
+|    C*
+02===C                     ENDSR
+      *==============================================================*
+      *          RTN150....WRITE PT1   SUBTOTAL
+      *==============================================================*
+03===C           RTN150    BEGSR
+|    C*
+|    C   39                EXSR RTN900
+|    C                     WRITEPT1
+|    C                     SETON                     20
+|    C                     ADD  T10107    T20107
+|    C                     Z-ADD0         T10107
+03===C                     ENDSR
+      *==============================================================*
+      *          RTN200....WRITE PT2   SUBTOTAL
+      *==============================================================*
+04===C           RTN200    BEGSR
+|    C*
+|    C   39                EXSR RTN900
+|    C                     WRITEPT2
+|    C                     SETOF                     30
+|    C                     ADD  T20107    T30107
+|    C                     Z-ADD0         T20107
+|    C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN300....WRITE PT3   SUBTOTAL
+      *==============================================================*
+05===C           RTN300    BEGSR
+|    C*
+|    C   39                EXSR RTN900
+|    C                     WRITEPT3
+|    C                     SETOF                     31
+|    C                     ADD  T30107    T40107
+|    C                     Z-ADD0         T30107
+|    C*
+05===C                     ENDSR
+      *==============================================================*
+      *          RTN400....WRITE PT4   SUBTOTAL
+      *==============================================================*
+06===C           RTN400    BEGSR
+|    C*
+|    C   39                EXSR RTN900
+|    C                     WRITEPT4
+|    C                     Z-ADD0         T40107
+|    C*
+06===C                     ENDSR
+      *==============================================================*
+      *          RTN900....OVERFLOW
+      *==============================================================*
+08===C           RTN900    BEGSR
+      *
+|    C                     WRITEPE1
+|    C                     WRITEPH1
+|    C                     SETOF                     39
+|    C                     SETOF                     203031
+      *
+08===C                     ENDSR
+      *==============================================================*
+      *          RTN999....END
+      *==============================================================*
+09===C           RTN999    BEGSR
+      *
+| 01-C           *IN10     IFEQ '0'
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C                     WRITEPE2
+      *
+09===C                     ENDSR
+

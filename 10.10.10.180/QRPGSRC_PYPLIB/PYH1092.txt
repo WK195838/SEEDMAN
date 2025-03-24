@@ -1,0 +1,132 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYH1092                                    *
+     H*    PROGRAM NAME :員工自提異動名冊　　                      *
+     H*    AUTHOR       : A1415 REENE                                *
+     H*    CREATE DATE  : 2005/03/02                                 *
+     H*    UPDATE DATE  : 2005/04/18   JIMMY WANG                    *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYH5PF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYH109P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      187 1920DDATE
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DH501
+     I                                      540 546 DEM04F
+     I                                      547 553 DEM04T
+     I                                      513 513 DOPT
+     I                                      514 5210DH502F
+     I                                      522 5290DH502T
+     I                                      529 5340DYM
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN $A8YMD    FDATE            .TRANS DATE USE
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           KEY       KLIST
+     C                     KFLD           H501
+     C                     KFLD           H502
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C                     MOVELDDATE     @DATE
+     C                     MOVELDYM       @@DYM   60
+     C                     Z-ADD0         @@SUM1  90
+     C                     Z-ADD0         @@SUM2  90
+     C                     Z-ADD0         @@PNUM  40
+     C*
+     C                     MOVEL'N'       @FLAG   1
+     C                     EXSR M01
+     C                     READ H50                      41
+     C           *IN41     DOWEQ*OFF
+     C                     MOVEL'Y'       @FLAG
+     C                     EXSR M02
+     C*
+     C                     EXSR M03
+     C           EM04      IFLT DEM04F
+     C           EM04      ORGT DEM04T
+     C                     GOTO NEXT
+     C                     END
+     C*
+     C                     EXSR M04
+     C                     EXSR M05
+     C*
+     C           NEXT      TAG
+     C                     READ H50                      41
+     C                     END
+     C***
+     C           @FLAG     IFEQ 'Y'
+     C                     WRITEPT2
+     C                     ELSE
+     C                     WRITEPE9
+     C                     ENDIF
+     C***
+     C                     SETON                     LR
+     C*==============================================================*
+     C           M01       BEGSR
+|    C*GET表頭公司別
+|    C           DH501     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+     C*
+     C           @@DYM     SUB  191100    @@DYMX
+     C                     WRITEPH1
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C           M02       BEGSR
+     C*
+     C           *IN39     IFEQ *ON
+     C                     EXSR M01
+     C                     MOVE *OFF      *IN39
+     C                     ENDIF
+     C*
+     C                     ENDSR
+     C*==============================================================*
+01===C           M03       BEGSR
+|    C*
+|    C           KEY       CHAINEM0                  20
+|    C           *IN20     IFEQ *ON
+|    C                     MOVEL*BLANK    EM02
+|    C                     ENDIF
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+01===C           M04       BEGSR
+|    C*
+|    C           KEY       CHAINEM0                  20
+|    C           *IN20     IFEQ *ON
+|    C                     MOVEL*BLANK    EM02
+|    C                     ENDIF
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+01===C           M05       BEGSR
+|    C*
+|    C           H506      MULT H505      @@SUM1  90H
+|    C                     DIV  100       @@SUM1    H
+     C                     WRITEPD1
+|    C                     ADD  @@SUM1    @@SUM2
+|    C                     ADD  1         @@PNUM
+|    C*
+01===C                     ENDSR
+

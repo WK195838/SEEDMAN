@@ -1,0 +1,359 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLA150                                     *
+     H*    PROGRAM NAME :取消核准　　　　                          *
+     H*    AUTHOR       : A1152                                      *
+     H*    CREATE DATE  : 81/11/09                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FPT#BPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FGLA150D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      152 161 $USERN
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 5080WAH25F
+     I                                      509 5160WAH25T
+     I                                      517 5240WAH10F
+     I                                      525 5320WAH10T
+     I                                      533 541 WAH02F
+     I                                      542 550 WAH02T
+     I                                      551 560 WAH26F
+     I                                      561 570 WAH26T
+     I                                      571 572 WAH17F
+     I                                      573 574 WAH17T
+     I                                      575 576 WAH01
+     I                                      601 6070DAH25F
+     I                                      609 6150DAH25T
+     I                                      617 6230DAH10F
+     I                                      625 6310DAH10T
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT VALUE
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....SCREEN INIT VALUE SET
+     C*==============================================================*
+01===CSR         R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C*
+|    C                     SETON                     27
+     C*
+     C                     IN   PTDA01
+     C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*
+|    C                     MOVEL001       $CPY
+|    C                     MOVEL'00'      $PRTCD
+|    C                     MOVEL'2'       $PENV
+|    C                     MOVEL*BLANK    DAH01
+|    C                     Z-ADD0         DAH25F
+|    C                     Z-ADD0         DAH25T
+|    C                     Z-ADD0         DAH10F
+|    C                     Z-ADD0         DAH10T
+|    C                     MOVEL*BLANK    DAH02F
+|    C                     MOVEL*BLANK    DAH02T
+|    C                     MOVEL*BLANK    DAH26
+|    C                     MOVEL*BLANK    DAH17
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+|   C                     EXSR R1E00                      .PROMPT
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 02-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     CALL 'GLI1B0'
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C*
+|    C                     EXSR R1B00                      .CHECK      ?
+|    C                     OUT  LDA
+|    C*
+| 03-C           *IN99     IFEQ *ZERO
+| 04-C           *IN14     IFEQ '1'                        POST-PF14
+|   C                     SETOF                     27
+|   C                     SETON                     28    .執行中
+|   C                     WRITEDSPD1
+|   C                     SETOF                     28
+|    C                     SETON                     27
+|   C                     CALL 'GLA1501C'
+|   C           *IN03     PARM *IN03     IN03    1
+|   C                     PARM *IN14     IN14    1
+|   C                     GOTO E1000
+| 04-C                     END
+|   C*
+|   C                     CALL 'GLA1501C'                  POST-ENTER
+|   C           *IN03     PARM *IN03     IN03    1
+|   C                     PARM *IN14     IN14    1
+| 03-C                     END
+|    C*
+|    C*
+02===C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00  ...CHECK DATA FROM SCREEN KEY-IN
+     C*===============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*<公司別>
+| 01-C           DAH01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVELDAH01     WAH01
+|    C           DAH01     CHAIN#B0                  40
+| 02-C           *IN40     IFNE '0'
+|   C           #B12      ORNE '1'
+|   C                     MOVEL'UGL0004' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6199
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*+<製票日期－起>
+|    C           DAH01     CHAINAK0                  40
+     C*
+| 03-C           DAH25F    IFEQ *ZERO
+|   C                     Z-ADD0         WAH25F
+| 03*C                     ELSE
+|   C                     CALL 'P30'
+|   C                     PARM DAH25F    P3001I  80
+|   C                     PARM AK11      P3002I  1
+|   C                     PARM AK09      P3003I  1
+|   C                     PARM           P3011O  1
+| 04-C           P3011O    IFNE 'Y'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|   C                     CALL 'P31'
+|   C                     PARM DAH25F    P3101I  80
+|   C                     PARM AK11      P3102I  1
+|   C                     PARM AK09      P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           WAH25F    PARM           P3101O  80
+| 03-C                     END
+     C*
+|    C*+<製票日期－迄>
+| 05-C           DAH25T    IFEQ *ZERO
+|   C                     Z-ADD*HIVAL    WAH25T
+|   C                     CALL 'P31'
+|   C                     PARM WAH25T    P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM AK11      P3104I  1
+|   C                     PARM AK09      P3105I  1
+|   C           DAH25T    PARM           P3101O  80
+| 05*C                     ELSE
+|   C                     CALL 'P30'
+|   C                     PARM DAH25T    P3001I  80
+|   C                     PARM AK11      P3002I  1
+|   C                     PARM AK09      P3003I  1
+|   C                     PARM           P3011O  1
+| 06-C           P3011O    IFNE 'Y'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|   C                     CALL 'P31'
+|   C                     PARM DAH25T    P3101I  80
+|   C                     PARM AK11      P3102I  1
+|   C                     PARM AK09      P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           WAH25T    PARM           P3101O  80
+| 05-C                     END
+|    C*<RANGE CHECK>
+| 07-C           WAH25F    IFGT WAH25T
+|   C                     MOVEL'UPT0042' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     626399
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*+<傳票日期－起>
+| 03-C           DAH10F    IFEQ *ZERO
+|   C                     Z-ADD0         WAH10F
+| 03*C                     ELSE
+|   C                     CALL 'P30'
+|   C                     PARM DAH10F    P3001I  80
+|   C                     PARM AK11      P3002I  1
+|   C                     PARM AK09      P3003I  1
+|   C                     PARM           P3011O  1
+| 04-C           P3011O    IFNE 'Y'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|   C                     CALL 'P31'
+|   C                     PARM DAH10F    P3101I  80
+|   C                     PARM AK11      P3102I  1
+|   C                     PARM AK09      P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           WAH10F    PARM           P3101O  80
+| 03-C                     END
+     C*
+|    C*+<傳票日期－迄>
+| 05-C           DAH10T    IFEQ *ZERO
+|   C                     Z-ADD*HIVAL    WAH10T
+|   C                     CALL 'P31'
+|   C                     PARM WAH10T    P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM AK11      P3104I  1
+|   C                     PARM AK09      P3105I  1
+|   C           DAH10T    PARM           P3101O  80
+| 05*C                     ELSE
+|   C                     CALL 'P30'
+|   C                     PARM DAH10T    P3001I  80
+|   C                     PARM AK11      P3002I  1
+|   C                     PARM AK09      P3003I  1
+|   C                     PARM           P3011O  1
+| 06-C           P3011O    IFNE 'Y'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|   C                     CALL 'P31'
+|   C                     PARM DAH10T    P3101I  80
+|   C                     PARM AK11      P3102I  1
+|   C                     PARM AK09      P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           WAH10T    PARM           P3101O  80
+| 05-C                     END
+|    C*<RANGE CHECK>
+| 12-C           WAH10F    IFGT WAH10T
+|   C                     MOVEL'UPT0042' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     646599
+| 12-C                     END
+|    C   99                GOTO E1B00
+|    C*<傳票號碼>
+| 13-C           DAH02F    IFEQ *BLANK
+|   C                     MOVEL*LOVAL    WAH02F
+| 13*C                     ELSE
+|   C                     MOVELDAH02F    WAH02F
+| 13-C                     END
+|    C*
+| 14-C           DAH02T    IFEQ *BLANK
+|   C                     MOVE *ALL'9'   WAH02T
+|   C                     MOVE *ALL'9'   DAH02T
+| 14*C                     ELSE
+|   C                     MOVELDAH02T    WAH02T
+| 14-C                     END
+|    C*
+| 15-C           WAH02F    IFGT WAH02T
+|   C                     MOVEL'UPT0042' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 15-C                     END
+|    C   99                GOTO E1B00
+|    C*<製票者>
+| 16-C           DAH26     IFEQ *BLANK
+|   C                     MOVEL*LOVAL    WAH26F
+|   C                     MOVEL*HIVAL    WAH26T
+| 16*C                     ELSE
+|   C                     MOVELDAH26     WAH26F
+|   C                     MOVELDAH26     WAH26T
+| 16-C                     END
+|    C*<傳票來源>
+| 17-C           DAH17     IFEQ *BLANK
+|   C                     MOVEL*LOVAL    WAH17F
+|   C                     MOVEL*HIVAL    WAH17T
+| 17*C                     ELSE
+|   C                     MOVELDAH17     WAH17F
+|   C                     MOVELDAH17     WAH17T
+| 17-C                     END
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C*
+03===CSR         E1B00     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+05===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*印表機
+| 02-C           #LIN      IFEQ 17
+|   C           #COL      ANDGE39
+|   C           #COL      ANDLE40
+|   C                     CALL 'P64I'
+|   C           $PRTCD    PARM $PRTCD    P64II1  2
+| 02-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+

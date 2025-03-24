@@ -1,0 +1,550 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : CKR430                                     *
+     H*    PROGRAM NAME :財務動態日報表                            *
+     H*    AUTHOR       : A1149    MAY                               *
+     H*    CREATE DATE  : 1992.10.08                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :票據系統                                  *
+     H****************************************************************
+     FCKHAJF01IF  E           K        DISK         KINFDS RECID
+     FCKHALF07IF  E           K        DISK
+     F            HA0                               KRENAMEHALF07
+     FCKHDLF02IF  E           K        DISK
+     FPT#XPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FCKHBLF01IF  E           K        DISK
+     FCKR430P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E*<<日期>>
+     E                    DAY         4  8 0
+     E*<<金額>>
+     E                    $01         4 14 2
+     E*---------------------------------------------------------------
+     IRECID       DS
+     I                                     *RECORD  RECNAM
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      111 1160$C6YMD
+     I                                      201 2080$A8YMD
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      209 2160$C8YMD
+     I                                      219 219 $PENV
+     I                                      220 229 $PRTNM
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DHA02
+     I                                      505 5120WDATE
+     I*<< CHECK帳號是否＝現金帳號>>
+     I            DS
+     I                                        1  14 HD02
+     I                                        9  14 WHD02
+     I/COPY QRPGSRC,PT#XDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C* DEFINE KEY BREAK SAVE KEY ++++++++++++++++++++++++++++++++++++
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN HD05      SHD05            .L1 KEY
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *LIKE     DEFN HA15      @DATEF
+     C           *LIKE     DEFN HA15      @DATET
+     C           *LIKE     DEFN HA02      @COMP
+     C           *LIKE     DEFN HA16      @BANK
+     C           *LIKE     DEFN HD07      @SUM
+     C           *LIKE     DEFN HD07      @BAL
+     C*
+     C           *LIKE     DEFN HA02      #B001I
+     C           *LIKE     DEFN HA02      #C001I
+     C           *LIKE     DEFN HA04      #C002I
+     C           *LIKE     DEFN HA02      #D001I
+     C           *LIKE     DEFN HA04      #D002I
+     C           *LIKE     DEFN HA02      #E001I
+     C           *LIKE     DEFN HA13      #E002I
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*<< CKHAJF01 銀行綜合資料檔，公司，帳號，日期，性質，票號>>
+     C           KEYHAJ    KLIST
+     C                     KFLD           DHA02
+     C                     KFLD           HD02
+     C                     KFLD           $DATE   80
+     C*<< CKHALF07 票據明細檔－公司，帳號，預兌日，票號>>
+     C           KEYHA1    KLIST
+     C                     KFLD           DHA02
+     C                     KFLD           HD02
+     C                     KFLD           $DATEL  80
+     C           KEYHA2    KLIST
+     C                     KFLD           DHA02
+     C                     KFLD           HD02
+     C*<< PT#XPF 參數基本資料檔 #X01(2),#X02(4) >>
+     C           KEY#X     KLIST                           *GET #X04
+     C                     KFLD           D#X03   2
+     C                     KFLD           DHA02
+     C*<< CKHDLF01銀行帳戶資料檔 HD01(4),HD05(1),HD04(6) >>
+     C           KEYHD     KLIST
+     C                     KFLD           DHA02
+     C                     KFLD           WHD05   1
+     C                     KFLD           #X104
+     C*<< PA#APF 代碼資料檔 #A01(8),#A02(10) >>
+     C           KEY#A     KLIST
+     C                     KFLD           #A01
+     C                     KFLD           #A02
+     C*<< CKHALF01 票據明細檔，性質，公司，票號>>
+     C*          KEYHAE    KLIST
+     C*                    KFLD           HE01
+     C*                    KFLD           HE02
+     C*                    KFLD           HE03
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      .INIT
+     C*
+     C                     EXSR R0200                      .MAIN
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ... INITIAL PROCESS
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C                     IN   *NAMVAR
+     C*
+     C                     SETON                     3931
+     C                     IN   PTDA01
+     C*
+     C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           PDATEC    PARM           P3101O  80
+     C*
+     C*GET表頭公司別++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL*BLANK    PCONAM
+     C*公司檔
+     C                     CALL 'CKS#B0'
+     C                     PARM DHA02     #B001I
+     C                     PARM           #B002O 16
+     C           PCONAM    PARM           #B003O 34
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C*
+     C*GET基本參數值>>
+     C                     MOVEL'CK'      D#X03
+     C           KEY#X     CHAIN#X0                  40
+     C*CLEAR TOTAL FIELD
+     C                     Z-ADD*ZERO     PT11
+     C                     Z-ADD*ZERO     PT21
+     C                     Z-ADD*ZERO     PT22
+     C                     Z-ADD*ZERO     PT23
+     C                     Z-ADD*ZERO     PT24
+     C                     Z-ADD*ZERO     PT25
+     C*
+     C                     CALL 'P31'
+     C                     PARM WDATE     P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           PDATE     PARM           P3101O  80
+     C*
+     C                     Z-ADDWDATE     $DATE
+     C                     Z-ADDWDATE     WDATEC  80
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*<<預測日期一>>
+     C                     CALL 'P37'
+     C                     PARM WDATEC    P3701I  80
+     C                     PARM '2'       P3702I  1
+     C                     PARM '1'       P3703I  1
+     C                     PARM 1         P3704I  40
+     C           WDATEC    PARM           P3711O  80
+     C*
+     C                     Z-ADDWDATEC    DDATE1
+     C                     Z-ADDWDATEC    DAY,1
+     C*
+     C*<<預測日期二>>
+     C                     CALL 'P37'
+     C                     PARM WDATEC    P3701I  80
+     C                     PARM '2'       P3702I  1
+     C                     PARM '1'       P3703I  1
+     C                     PARM 1         P3704I  40
+     C           WDATEC    PARM           P3711O  80
+     C*
+     C                     Z-ADDWDATEC    DDATE2
+     C                     Z-ADDWDATEC    DAY,2
+     C*
+     C*<<預測日期三>>
+     C                     CALL 'P37'
+     C                     PARM WDATEC    P3701I  80
+     C                     PARM '2'       P3702I  1
+     C                     PARM '1'       P3703I  1
+     C                     PARM 1         P3704I  40
+     C           WDATEC    PARM           P3711O  80
+     C*
+     C                     Z-ADDWDATEC    DDATE3
+     C                     Z-ADDWDATEC    DAY,3
+     C*
+     C*<<預測日期四>>
+     C                     CALL 'P37'
+     C                     PARM WDATEC    P3701I  80
+     C                     PARM '2'       P3702I  1
+     C                     PARM '1'       P3703I  1
+     C                     PARM 1         P3704I  40
+     C           WDATEC    PARM           P3711O  80
+     C*
+     C                     Z-ADDWDATEC    DDATE4
+     C                     Z-ADDWDATEC    DAY,4
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ... MAIN PROCESS  (GET DATA)
+     C*==============================================================*
+     C           R0200     BEGSR
+     C*
+     C*<<�炰{金�牉禤々峇p計>>
+     C                     MOVEL'6'       WHD05
+     C           KEYHD     CHAINHD0                  40
+     C                     EXSR R2000                      .DETAIL
+     C*
+     C*<<�洃鉿s�洁倞洉㊣x�牉禤々峇p計>>
+     C                     MOVEL*BLANKS   PD02
+     C                     MOVEL*BLANKS   PD03
+     C*
+     C           DHA02     SETLLHD0
+     C           DHA02     READEHD0                      42
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           *IN42     DOWEQ'0'                        .EOF
+     C           HD05      ANDLT'9'
+     C*
+     C           WHD02     IFNE #X104                      非現金戶
+     C           HD05      IFEQ '6'                        為其他或
+     C           HD09      OREQ 'Y'                        保留帳戶
+     C                     ADD  HD07      PT21
+     C                     ADD  HD07      PT22
+     C                     ELSE
+     C                     EXSR R2000
+     C                     END
+     C                     END
+     C*
+     C           DHA02     READEHD0                      42
+     C*
+     C                     END
+     C*
+     C           *IN10     IFEQ '1'                        .HAS DATA
+     C* LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++++
+     C                     EXSR R8100                       .L1 TOTAL
+     C                     WRITEPT2                         .LR TOTAL
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     ELSE                            .NO DATA
+     C                     EXSR R8999                       .LR NO DATA
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+     C           R2000     BEGSR
+     C* FIRST FECORD
+     C           *IN10     IFEQ '0'
+     C* LEVEL BREAK INIT PROCESS ++++++++++++++++++++++++++++++++++++++
+     C                     EXSR R7100                      .L1 INIT
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     SETON                     10
+     C                     END
+     C*
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* LEVEL BREAK COMP & PROCESS
+     C           HD05      IFNE SHD05
+     C                     EXSR R8100                       .L1 TOTAL
+     C                     EXSR R7100                       .L1 INIT
+     C                     END
+     C*
+     C*<<銀行簡稱 PD02 >>
+     C*
+     C                     MOVEL*BLANKS   PD02
+     C           HD03      CHAINHB0                  40
+     C  N40                MOVELHB02      PD02
+     C*
+     C*<<帳號 PD03 >>
+     C                     MOVELHD04      PD03
+     C*+<<DETAIL DATA SET>>+++++++++++++++++++++++++++++++++++++++++++
+     C*<<前日日期 WDAY >>
+     C*                    Z-ADD*ZERO     WDAY    80
+     C*                    CALL 'P37'
+     C*                    PARM $DATE     P3701I  80
+     C*                    PARM #X101     P3702I  1
+     C*                    PARM #X102     P3703I  1
+     C*                    PARM -1        P3704I  40
+     C*          WDAY      PARM           P3711O  80
+     C*
+     C*<<前日餘額 @BAL >>
+     C                     Z-ADD*ZERO     @BAL
+     C                     MOVELDHA02     @COMP
+     C                     MOVELHD02      @BANK
+     C                     Z-ADDWDATE     @DATEF
+     C                     Z-ADD99999999  @DATET
+     C                     Z-ADDHD07      @SUM
+     C*
+     C                     EXSR @@CMPT
+     C                     Z-ADD@BAL      PD04
+     C*
+     C*<<本日存入 PD05本日提出 PD06 >>
+     C                     Z-ADD*ZERO     PD05
+     C                     Z-ADD*ZERO     PD06
+     C*
+     C           KEYHAJ    SETLLCKHAJF01
+     C           KEYHAJ    READECKHAJF01                 42
+     C*
+     C           *IN42     DOWEQ'0'
+     C*
+     C           HD05      IFEQ '9'
+     C*
+     C           HA01      IFEQ '3'
+     C           HA01      OREQ '5'
+     C                     ADD  HA10      PD06
+     C                     END
+     C*
+     C           HA01      IFEQ '4'
+     C           HA01      OREQ '6'
+     C                     ADD  HA10      PD05
+     C                     END
+     C*
+     C                     ELSE
+     C*
+     C           HA01      IFEQ '1'
+     C           HA01      OREQ '3'
+     C           HA01      OREQ '5'
+     C                     ADD  HA10      PD05
+     C                     END
+     C*
+     C           HA01      IFEQ '2'
+     C           HA01      OREQ '4'
+     C           HA01      OREQ '6'
+     C                     ADD  HA10      PD06
+     C                     END
+     C                     END
+     C           KEYHAJ    READECKHAJF01                 42
+     C*
+     C                     END
+     C*
+     C*<<本日餘額 PD07 >>
+     C                     Z-ADD*ZERO     PD07
+     C           PD04      SUB  PD06      PD07
+     C                     ADD  PD05      PD07
+     C*
+     C*<<預測IF HD05 =1 支存>>---------------------------------
+     C                     Z-ADD*ZERO     PD08
+     C                     Z-ADD*ZERO     PD09
+     C                     Z-ADD*ZERO     PD10
+     C                     Z-ADD*ZERO     PD11
+     C           HD05      IFEQ '1'
+     C                     Z-ADD*ZERO     $01
+     C*<<預測>>
+     C                     Z-ADDDAY,1     $DATEL
+     C           KEYHA1    SETLLCKHALF07
+     C           KEYHA2    READECKHALF07                 46
+     C*
+     C           *IN46     DOWEQ'0'
+     C           HA11      ANDLEDAY,4
+     C*
+     C                     Z-ADD1         I       10
+     C           HA11      LOKUPDAY,I                    50
+     C           *IN50     IFEQ '1'
+     C*          HA01      IFEQ '1'
+     C*                    ADD  HA10      $01,I
+     C*                    END
+     C*
+     C           HA01      IFEQ '2'
+     C                     SUB  HA10      $01,I
+     C                     END
+     C                     END
+     C*
+     C           KEYHA2    READECKHALF07                 46
+     C                     END
+     C*
+     C                     DO   4         J       10
+     C           $01,J     DIV  10000     $01,J
+     C                     MVR            WMVR   104
+     C*
+     C           $01,J     IFLT 0
+     C                     SUB  1         $01,J
+     C                     END
+     C*
+     C           $01,J     IFGT 0
+     C                     ADD  1         $01,J
+     C                     END
+     C                     END
+     C*
+     C                     Z-ADD$01,1     PD08
+     C                     Z-ADD$01,2     PD09
+     C                     Z-ADD$01,3     PD10
+     C                     Z-ADD$01,4     PD11
+     C                     END
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C           *IN39     IFEQ '1'
+     C                     WRITEPH1
+     C                     SETOF                     39
+     C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+     C                     SETON                     31
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     END
+     C*
+     C                     WRITEPD1
+     C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+     C                     SETOF                     31
+     C* ACCUMULATE TOTAL
+     C           *INLR     IFEQ '0'
+     C                     ADD  PD07      PT11
+     C                     ADD  PD04      PT23
+     C                     ADD  PD05      PT24
+     C                     ADD  PD06      PT25
+     C                     ADD  PD07      PT22
+     C                     END
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C           E2000     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+     C           R7100     BEGSR
+     C*
+     C* LEVEL BREAK KEY SAVE & FIELD PRINTED CONTROL
+     C                     MOVELHD05      SHD05
+     C                     SETON                     31
+     C*
+     C                     MOVEL*BLANKS   PD01
+     C                     MOVEL*BLANKS   #A02
+     C                     MOVEL'ACCTYPE' #A01
+     C                     MOVELHD05      #A02
+     C           HD05      IFNE '6'
+     C*
+     C           KEY#A     CHAIN#A0                  40
+     C           *IN40     IFEQ '0'
+     C                     MOVEL#A03      WPD01  62
+     C                     CALL 'P65'
+     C                     PARM WPD01     P6501I 80
+     C                     PARM 10        P6502I  30
+     C           PD01      PARM           P6511O 80
+     C                     PARM           P6512O 80
+     C*
+     C                     ELSE
+     C                     MOVEL*BLANKS   PD01
+     C                     END
+     C*
+     C                     ELSE
+     C                     MOVEL'現金'  PD01
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+     C           R8100     BEGSR
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* << TOTAL LINE DATA PREPARE >>
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     WRITEPT1
+     C*
+     C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+     C                     Z-ADD*ZERO     PT11
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+     C           R8999     BEGSR
+     C*
+     C                     WRITEPH1
+     C*
+     C                     WRITEPE9
+     C*
+     C                     ENDSR
+     C*==============================================================*
+      ****************************************************************
+      *                                                              *
+      *    FUNCTION :銀行帳號前日餘額推算                          *
+      *    COPY SRC : CKC010                                         *
+      *                                                              *
+      *     !!執行前，需確定已CHAIN出銀行帳戶基本資料            *
+      *       ===========================================            *
+      *                                                              *
+      *       INPUT  : @COMP    公司別                             *
+      *       INPUT  : @BANK    銀行帳號                           *
+      *       INPUT  : @DATEF   往來起日(計算前日餘額之日期)     *
+      *       INPUT  : @DATET   往來迄日VALUE=99991231             *
+      *       INPUT  : @SUM     目前餘額(系統日期之帳戶餘額)     *
+      *       OUTPUT : @BAL     推算後餘額                         *
+      *                                                              *
+      *       EXSR   : @@CMPT                                        *
+      *                                                              *
+      ****************************************************************
+      *==============================================================*
+      *                    KEY LIST
+      *==============================================================*
+     C           @KEY#1    KLIST
+     C                     KFLD           @COMP
+     C                     KFLD           @BANK
+     C                     KFLD           @DATET
+     C           @KEY#2    KLIST
+     C                     KFLD           @COMP
+     C                     KFLD           @BANK
+      *==============================================================*
+      *          @@CMPT :  COMPUTE
+      *==============================================================*
+01===C           @@CMPT    BEGSR
+|    C*
+|    C           @KEY#1    SETGTCKHAJF01             43
+|    C           @KEY#2    REDPECKHAJF01                 45
+|    C*
+| 01-C           *IN45     DOWEQ'0'
+|   C           HA15      ANDGE@DATEF
+|   C*<<作廢票據不含>>
+| 02-C           HA17      IFGT '0'
+| 02-C           RECNAM    OREQ 'HA1'
+|   C*<<透支帳戶>>
+| 03-C           HD05      IFEQ '9'
+|   C*<<存入>>
+| 04-C           HA01      IFEQ '3'
+|   C           HA01      OREQ '5'
+|   C                     ADD  HA10      @SUM
+| 04-C                     END
+|   C*<<提出>>
+| 05-C           HA01      IFEQ '4'
+|   C           HA01      OREQ '6'
+|   C                     SUB  HA10      @SUM
+| 05-C                     END
+|   C*<<其他非透支帳戶>>
+| 03*C                     ELSE
+|   C*
+| 06-C           HA01      IFEQ '1'
+|   C           HA01      OREQ '3'
+|   C           HA01      OREQ '5'
+|   C                     SUB  HA10      @SUM
+| 06*C                     ELSE
+|   C                     ADD  HA10      @SUM
+| 06-C                     END
+|   C*
+| 03-C                     END
+| 02-C                     END
+|   C           @KEY#2    REDPECKHAJF01                 45
+| 01-C                     END
+|    C*
+|    C                     Z-ADD@SUM      @BAL
+01===C                     ENDSR
+     C*
+

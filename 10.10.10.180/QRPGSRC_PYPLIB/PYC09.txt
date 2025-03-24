@@ -1,0 +1,127 @@
+     H****************************************************************
+     H*   SOURCE NAME  : PYC04                                       *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PURPOSE      :年資計算                                   *
+     H*--------------------------------------------------------------*
+     H*  年資= (到職日-基準日) + 特加年資 -留職停薪累計    *
+     H*        - (目前留職者到基準日)                              *
+     H*  註:到職日不滿一個月不計                                 *
+     H*       扣除留職後不滿一個月者該月不計算                     *
+     H*--------------------------------------------------------------*
+     H*  I: 基準日=#C04I1                                          *
+     H*  O: 年資= #C04Y (年, 9(2) )                              *
+     H*           = #C04M (月, 9(2) )                              *
+     H*--------------------------------------------------------------*
+     H*   EXSR #C0400                                                *
+     H****************************************************************
+     C           KEYTX     KLIST                           *PYTXPF
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           KTX031  1
+     C*--------------------------------------------------------------*
+01===C           #C0400    BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     #C04Y   20
+|    C                     Z-ADD*ZERO     #C04M   20
+|    C*
+| 01-C           EM13      IFGT #C04I1
+|   C                     GOTO #C0499
+| 01-C                     END
+|    C*
+|    C                     EXSR #C0401
+|    C                     EXSR #C0402
+|    C*
+|    C           #WC04Y    MULT 12        #WC04Y
+|    C                     ADD  #WC04Y    #WC04M
+|    C*
+|    C           #WC04D    DIV  30        #WC04Y
+|    C                     MVR            #WC04D
+|    C                     SUB  #WC04Y    #WC04M
+| 02-C           #WC04D    IFGT *ZERO
+|   C                     SUB  1         #WC04M
+| 02-C                     END
+|    C*
+| 03-C           #WC04M    IFLE *ZERO
+|   C                     GOTO #C0499
+| 03-C                     END
+|    C*
+|    C           #WC04M    DIV  12        #C04Y
+|    C                     MVR            #C04M
+|    C*
+01===C           #C0499    ENDSR
+     C*===============================================================
+     C* #C0401 :計算到職日－基準日間月數（未滿一個月不計算）
+     C*         累加特加年資
+     C*===============================================================
+02===C           #C0401    BEGSR
+|    C*
+|    C                     Z-ADDEM113     #EM13
+|    C                     Z-ADD#C04I1    #WC4D
+|    C*
+|    C           #WC4DY    SUB  #EM13Y    #WC04Y  50
+|    C           #WC4DM    SUB  #EM13M    #WC04M  50
+|    C*                    ADD  1         #WC04M
+|    C*
+|    C                     ADD  EM27      #WC04M           .特加年資
+|    C*
+02===C                     ENDSR
+     C*===============================================================
+     C* #C0402 :留職停薪年資扣除
+     C*===============================================================
+03===C           #C0402    BEGSR
+|    C*
+|    C*NEXT DATE OF #C04I1
+|    C                     Z-ADD#C04I1    P6201I  60
+|    C                     Z-ADD1         P6202I  40
+|    C                     CALL 'P62'
+|    C                     PARM           P6201I
+|    C                     PARM           P6202I
+|    C                     PARM           P6211O  60
+|    C*
+|    C                     Z-ADD*ZERO     #WC04D  50       .日數
+|    C*已復職之留職停薪
+|    C                     MOVEL'D'       KTX031
+|    C           KEYTX     SETLLTX0
+|    C           KEYTX     READETX0                      40
+|    C*
+| 01-C           *IN40     DOWEQ'0'
+| 02-C           TX032     IFEQ '2'                        .留職復職
+|   C           TX06      ANDLTP6211O                     .留職日<=基準日
+|   C*
+|   C                     Z-ADDTX06      P2101I           .留職日
+|   C                     Z-ADDTX04      P2102I           .復職日
+| 03-C           TX04      IFGT P6211O
+|   C                     Z-ADDP6211O    P2102I
+| 03-C                     END
+|   C*
+|   C                     CALL 'P21'
+|   C                     PARM           P2101I  60
+|   C                     PARM           P2102I  60
+|   C                     PARM           P2111O  70       .月數
+|   C                     PARM           P2112O  20       .日數
+|   C*
+|   C                     SUB  P2111O    #WC04M
+|   C                     ADD  P2112O    #WC04D
+| 02-C                     END
+|   C*
+|   C           KEYTX     READETX0                      40
+| 01-C                     END
+|    C*----------------------------------------------------------
+|    C*目前留職停薪
+| 04-C           EM11      IFEQ 'R'
+|   C           EM17      ANDLTP6211O
+|   C                     Z-ADDEM17      P2101I
+|   C                     Z-ADDP6211O    P2102I
+|   C                     CALL 'P21'
+|   C                     PARM           P2101I
+|   C                     PARM           P2102I
+|   C                     PARM           P2111O
+|   C                     PARM           P2112O
+|   C*
+|   C                     SUB  P2111O    #WC04M
+|   C                     ADD  P2112O    #WC04D
+| 04-C                     END
+|    C*
+03===C                     ENDSR
+

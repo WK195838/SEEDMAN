@@ -1,0 +1,468 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA535                                     *
+     H*    PROGRAM NAME :員工考績等級設定－個人                    *
+     H*    AUTHOR       : A1336 KLAUS                                *
+     H*    CREATE DATE  : 2002/09/10                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYRVPF  UF  E           K        DISK                      A
+     FSYCMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYA535D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E                    WFUN    5   5  6
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 174 $COR
+     I                                      201 2080$A8YMD
+     I            DS
+     I                                        1   7 DRV08
+     I                                        1   1 RV081
+     I                                        2   2 RV082
+     I                                        3   3 RV083
+     I                                        4   7 RV084
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYRV     KLIST                           *PYRVPF
+     C                     KFLD           DRV01            公司編號
+     C                     KFLD           DRV02            員工編號
+     C                     KFLD           WRV03   40       考績年度
+     C                     KFLD           DRV04            考績種類
+     C           KEYEM     KLIST                           *PYEMPF
+     C                     KFLD           DRV01
+     C                     KFLD           DRV02
+     C           KEYDP     KLIST                           *PYEMPF
+     C                     KFLD           RV081
+     C                     KFLD           RV082
+     C                     KFLD           RV083
+     C                     KFLD           RV084
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N99                EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C*
+|    C                     MOVE *BLANK    DRV02            員工編號
+|    C                     Z-ADD0         DRV03            考績年度
+|    C                     MOVE *BLANK    DRV04            考績種類
+|    C*
+|    C                     MOVEL$COR      DRV01
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'                        *END
+|   C                     EXSR R1E00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 03-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00
+|   C                     GOTO E1000
+| 03-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 04-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+|   C                     MOVEL'SC02'    SCID
+| 04-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'PYI532'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C* CALL SUB-PROGRAM
+|    C                     CALL 'PYI532'
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C           DRV01     PARM DRV01     I532I1  2         公司編號
+|    C           DRV02     PARM DRV02     I532I2  8         員工編號
+|    C           DRV03     PARM DRV03     I532I3  30        考績年度
+|    C           DRV04     PARM DRV04     I532I4  1         考績種類
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     PARM           @RTNC   2
+|    C* RETURN CODE CHECK
+| 02-C           @RTNC     IFEQ '03'                       *PF3
+|   C                     SETON                     03
+| 02-C                     END
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C* << CHACK 公司別NOT *BLANK >>
+| 02-C           DRV01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DRV01     CM001I  2         公司代號
+|    C           CM02      PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 03-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 04-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C           DRV01     CHAINCM0                  40    *NF
+|    C*
+| 05-C           DRV02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           KEYEM     CHAINEM0                  40
+|    C   40                MOVE *BLANK    EM03
+|    C*---------------------------------------------------------------
+|    C*部門別
+|    C                     CALL 'PYSCM1'
+|    C                     PARM DRV01     CM101I  2         公司代號
+|    C                     PARM           CM102I  5         部門代號
+|    C                     PARM           CM103O 14         部門名稱
+|    C                     PARM           CM199O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 06-C           CM199O    IFEQ 'N'
+|   C                     SETON                     6199
+|   C                     MOVEL'US#0098' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*          CM199O    IFEQ *BLANK
+|    C*                    SETON                     606199
+|    C*                    MOVEL'US#1111' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    END
+|    C*  99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*考績年度
+| 07-C           DRV03     IFEQ 0
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+|    C                     ELSE
+|    C                     CALL 'P82'
+|    C                     PARM DRV03     P3101I  40
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WRV03     PARM           P3101O  40
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           KEYRV     CHAINRV0                  40    *NF
+| 10-C           DOPT      IFEQ 1                          *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+|   C                     SETON                     616263
+|   C                     UNLCKPYRVPF
+| 10-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 11-C           DOPT      IFNE 1                          *UPD,DEL,INQ
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+|   C                     SETON                     616263
+| 11-C                     END
+|    C   99                GOTO E1B00
+|    C*
+04===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*作業 DFUN
+|    C                     MOVELWFUN,DOPT DFUN
+|    C*
+| 01-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     SETON                     31    *CAN INPUT
+| 01*C                     ELSE                            *DEL, INQ
+|   C                     SETOF                     31    *INP PROTECT
+| 01-C                     END
+|    C*
+| 02-C           DOPT      IFEQ 1                          *ADD
+|   C                     EXSR R1C10
+| 02*C                     ELSE
+|   C                     EXSR R1C20                      *U/D/I
+| 02-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)----------------------------------*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C           *LOVAL    SETLLRV0
+| 03-C                     END
+|    C*---------------------------------------------------------------*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....'SC02' FIELD INIT : ADD (NO COPY)
+     C*==============================================================*
+06===C           R1C10     BEGSR
+|    C*
+|    C                     MOVEL'C'       DRV05            主管考績
+|    C                     MOVEL*BLANK    DRV06            人評會考績
+|    C                     Z-ADD0         DRV07            考績率
+|    C                     MOVEL*BLANK    DRV08            部門編號
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....'SC02' FIELD INIT : UPD, DEL, INQ, (ADD & COPY)
+     C*==============================================================*
+07===C           R1C20     BEGSR
+|    C*
+|    C                     MOVELRV05      DRV05            主管考績
+|    C                     MOVELRV06      DRV06            人評會考績
+|    C                     Z-ADDRV07      DRV07            考績率
+|    C                     MOVELRV08      DRV08            部門編號
+|    C*
+|    C           KEYDP     CHAINDP0                  40
+|    C  N40                MOVELDP02      RV08N
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+08===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*公司編號DRV01
+| 01-C           #LIN      IFEQ 4
+|   C           #COL      ANDGE13
+|   C           #COL      ANDLE14
+|   C                     CALL 'PYI517'
+|   C           DRV01     PARM DRV01     I517I1  2
+|   C                     PARM           @RTNC   2
+| 01-C                     END
+|    C*員工編號DRV02
+| 02-C           #LIN      IFEQ 5
+|   C           #COL      ANDGE13
+|   C           #COL      ANDLE20
+|   C                     CALL 'PYI101'
+|   C                     PARM DRV01     P101I1  2         公司別
+|   C           DRV02     PARM DRV02     P101I2  8         員工　
+|   C                     PARM           @RTNC   2          *FUN KEY
+| 02-C                     END
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+09===C           R2000     BEGSR
+|    C*
+|    C                     EXFMTDSPC2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C* RELEAS FILE --------------------------------------------------*
+|   C           *LOVAL    SETLLRV0
+|   C*---------------------------------------------------------------*
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R2B00                      *SC02 CHK
+| 03-C                     END
+|    C*
+| 04-C           *IN99     IFEQ '0'                        *CHK OK
+|   C                     EXSR R2D00                      *FILE UPD
+|   C                     MOVE 'SC01'    SCID
+| 04-C                     END
+|    C*
+09===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'SC02' CHECK
+     C*==============================================================*
+10===C           R2B00     BEGSR
+|    C*: CHECK BLANK :
+| 01-C           DRV05     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*
+|    C           KEYDP     CHAINDP0                  40
+|    C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*
+10===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+11===C           R2D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R2D10
+|   C           DOPT      CASEQ2         R2D20
+|   C           DOPT      CASEQ4         R2D30
+| 01-C                     END
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+12===C           R2D10     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     WRITERV0
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R2D11 ....SCREEN FIELD TO FILE
+     C*==============================================================*
+13===C           R2D11     BEGSR
+|    C*
+|    C                     MOVELDRV01     RV01             公司編號
+|    C                     MOVELDRV02     RV02             員工編號
+|    C                     Z-ADDWRV03     RV03             考績年度
+|    C                     MOVELDRV04     RV04             考績種類
+|    C                     MOVELDRV05     RV05             主管考績
+|    C                     MOVELDRV06     RV06             人評會考績
+|    C                     Z-ADDDRV07     RV07             考績率
+|    C                     MOVELDRV08     RV08             部門編號
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+14===C           R2D20     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     UPDATRV0
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+15===C           R2D30     BEGSR
+|    C*
+|    C                     DELETRV0
+|    C*
+15===C                     ENDSR
+     C*==============================================================*
+**
+新增修改      刪除查詢
+

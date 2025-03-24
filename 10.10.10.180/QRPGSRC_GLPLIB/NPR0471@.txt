@@ -1,0 +1,168 @@
+     FNPNDPF  IP  E           K        DISK
+     F*PNAPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FNPR047P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    ARR1    1   1 30
+     E                    ARR2   12  12  3
+      *πÍ¡Z
+     E*                   @W01       13 13 2
+      *πw∫‚
+     E                    @W02       13 13 2
+     E*---------------------------------------------------------------*
+     IND0
+     I                                              ND04  L1
+     I*
+     I*DATA AREA
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* SCREEN INPUT FIELD  ++++++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DND01
+     I                                      509 5110DYEAR
+     I                                      512 5130DMM
+     I                                      535 5380$YEAR
+     I                                      541 542 DND03S
+     I                                      543 544 DND03E
+     I                                      545 546 DND04S
+     I                                      547 548 DND04E
+     I                                      551 5520M
+     I            DS
+     I                                        1 169 @W02
+     I                                        1  132ND06A
+     I                                       14  262ND07A
+     I                                       27  392ND08A
+     I                                       40  522ND09A
+     I                                       53  652ND10A
+     I                                       66  782ND11A
+     I                                       79  912ND12A
+     I                                       92 1042ND13A
+     I                                      105 1172ND14A
+     I                                      118 1302ND15A
+     I                                      131 1432ND16A
+     I                                      144 1562ND17A
+     I                                      157 1692ND18A
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY#A     KLIST
+     C                     KFLD           #A01
+     C                     KFLD           #A02
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+  01-C           *IN10     IFEQ '0'
+    C                     EXSR RTN010
+  01-C                     END
+     C*
+     C                     EXSR RTN100
+     C*
+     CL1 10                EXSR RTNL1
+     CLR                   EXSR RTNLR
+     C*==============================================================*
+     C*          RTN010....GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           DYEAR     ADD  1         DYEAR1
+|    C                     Z-ADDDMM       I       20
+|    C                     MOVELARR2,M    MONTH
+|    C*
+|    C*                    MOVEL*BLANK    #A03
+| 02-C           ND04      IFEQ '99'
+|   C                     MOVELARR1,1    #A03
+      *
+| 03-C           ND03      IFEQ '10'
+|   C                     MOVE 'BRANDY'  P#A03
+| 03*C                     ELSE
+| 04-C           ND03      IFEQ '20'
+|   C                     MOVE 'WISKY'   P#A03
+| 04*C                     ELSE
+| 05-C           ND03      IFEQ '30'
+|   C                     MOVE 'WINE'    P#A03
+| 05-C                     END
+| 04-C                     END
+| 03-C                     END
+      *
+| 02*C                     ELSE
+|   C                     MOVEL'BRAND'   #A01
+|   C                     MOVELND04      #A02
+|   C           KEY#A     CHAIN#A0                  41
+| 02-C                     END
+|    C                     WRITEPH1
+|    C                     SETOF                     39
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN100....PD1
+      *==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     Z-ADD1         X       20
+| 01-C           X         DOUGTDMM
+|   C*
+| 02-C           X         IFEQ DMM
+|   C                     ADD  @W02,X    COUNT1 132
+| 02-C                     END
+|   C*
+| 03-C           X         IFLE DMM
+|   C                     ADD  @W02,X    COUNT2 132
+|   C                     ADD  1         X
+| 03-C                     END
+|   C*
+|   C                     ENDDO
+      *
+|   C   39                EXSR RTN900
+|   C*
+02===C                     ENDSR
+      *==============================================================*
+      *          RTNL1 ....PD1
+      *==============================================================*
+03===C           RTNL1     BEGSR
+|   C*
+|   C                     MOVEL'BRAND'   #A01
+|   C                     MOVELND04      #A02
+|   C           KEY#A     CHAIN#A0                  41
+|   C*
+|   C                     WRITEPD1
+|   C                     ADD  COUNT1    TOTAL1 132
+|   C                     ADD  COUNT2    TOTAL2 132
+|   C                     Z-ADD0         COUNT1
+|   C                     Z-ADD0         COUNT2
+|   C*
+03===C                     ENDSR
+      *==============================================================*
+      *          RTN900....OVERFLOW
+      *==============================================================*
+04===C           RTN900    BEGSR
+|   C*
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTNLR ....(NO DATA)
+      *==============================================================*
+05===C           RTNLR     BEGSR
+| 01-C           *IN10     IFEQ '0'
+|   C                     EXSR RTN010
+|   C                     WRITEPE9
+| 01*C                     ELSE
+|   C                     WRITEPT1
+| 01-C                     END
+05===C                     ENDSR
+**
+MISCELLANEOUS
+**
+JANFEBMARAPRMAYJUNJULAUGSEPOCTNOVDEC
+

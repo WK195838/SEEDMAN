@@ -1,0 +1,192 @@
+     H****************************************************************
+     H*   PROGRAM-ID   : PYR3432                                     *
+     H*   PROGRAM NAME :薪資調整表　　                             *
+     H*   AUTHER       : A1397 BARRY                                 *
+     H*   CREATE DATE  : 93/04/21                                    *
+     H*   UPDATE DATE  :                                             *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR3421C                                    *
+     H*   PURPOSE      :                                             *
+     H*   INDICATORS   :                                             *
+     H*                                                              *
+     H*     *IN30 --- SPLIT LINE NOT WRITE AT FIRST TIME             *
+     H*     *IN31 --- CONTROL 調薪前 APPEAR                        *
+     H*     *IN32 --- CONTROL 調薪後 APPEAR                        *
+     H*                                                              *
+     H****************************************************************
+     FPYSHJF02IP  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FPYR343P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     ISHJF01
+     I                                              SH01  L2
+     I                                              SH02  L1
+     ILDA        UDS
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DSH01
+     I                                      503 507 DDPCB
+     I                                      508 512 DDPCE
+     I                                      513 520 DSH02B
+     I                                      521 528 DSH02E
+     I                                      541 5480WSH03B
+     I                                      549 5560WSH03E
+     I                                      600 6060DSH03B
+     I                                      607 6130DSH03E
+     I*
+     I            DS
+     I                                        1   7 PDP01
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*==============================================================*
+     C           KEYDP     KLIST                           *PYDPPF
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C           KEY#Y     KLIST                           *PT#YPF
+     C                     KFLD           W#Y01  10
+     C                     KFLD           W#Y02  10
+     C*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100                      *INITIAL
+     C*
+     C                     EXSR R1000                      *DETAIL
+     C*
+     CL2 10                EXSR R8200                      *END OF REPORT
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R0100.... INITIAL ROUTINE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C*
+|    C           DSH01     CHAINCM0                  40    *公司名稱
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELCM14      DFMT
+|   C                     MOVELCM15      DTYPE
+| 01*C                     ELSE
+|   C                     MOVEL*BLANK    CM03
+|   C                     MOVEL*BLANK    DFMT
+|   C                     MOVEL*BLANK    DTYPE
+| 01-C                     END
+|    C*
+|    C                     SETON                     10
+|    C                     MOVEL'Y'       $DATA
+|    C*---------------------------------------------------------------
+|    C*WRITE HEADING
+|    C                     WRITEPH1
+|    C                     Z-ADD0         COUNT   60       資料筆數
+|    C                     Z-ADD0         TSH07
+|    C                     Z-ADD0         TSH08
+|    C                     Z-ADD0         TDIF
+|    C                     Z-ADD0         TRATE   92
+|    C                     MOVEL*BLANK    WDP01   5
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000.... GET DETAIL
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C                     ADD  1         COUNT
+|+---C           PDP01     IFEQ WDP01
+||   C                     SETOF                     31
+|+---C                     ELSE
+||   C                     SETON                     31
+||+--C           WDP01     IFNE *BLANK
+|||  C                     WRITEPLINE
+||+--C                     END
+||   C                     MOVELPDP01     WDP01
+|+---C                     END
+|    C*
+|    C           KEYDP     CHAINDP0                  41
+|    C   41                MOVEL*BLANK    PDP02
+|    C  N41                MOVELDP02      PDP02
+|    C*
+|    C                     MOVELSH02      PSH02            員工編號
+|    C                     MOVELEM03      PEM03            員工姓名
+|    C                     MOVELEM05      PEM05            職稱代碼
+|    C                     MOVELEM32      PEM32            性別代碼
+|    C                     Z-ADDEM13      PEM13            到職日期
+|    C                     MOVELEM93      PEM93   1        學歷代碼
+|   C                     MOVEL'EM93'    W#Y01
+|   C                     MOVELPEM93     W#Y02
+|   C           KEY#Y     CHAIN#Y0                  40
+|   C   40                MOVE *BLANKS   EM93N
+|   C  N40                MOVEL#Y03      EM93N            學歷
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM SH03      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM DFMT      P3104I  1
+|    C                     PARM DTYPE     P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    PSH03            調薪日期
+|    C*
+|    C                     MOVELSH05      PSH05            調薪原因
+|    C                     Z-ADDSH07      PSH07            調薪前底薪
+|    C                     ADD  SH07      TSH07
+|    C                     Z-ADDSH08      PSH08            調薪後底薪
+|    C                     ADD  SH08      TSH08
+|    C           SH08      SUB  SH07      PDIF             調升金額
+|    C                     ADD  PDIF      TDIF
+|    C           SH07      IFNE 0
+|    C           SH08      DIV  SH07      #RATE   75       調升比率
+|    C           #RATE     MULT 100       PRATE
+|    C                     ADD  PRATE     TRATE
+|    C                     END
+|    C*
+|    C   39                WRITEPH1
+|    C   39                SETOF                     39
+|    C                     WRITEPD1
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R8200.... END OF REPORT
+     C*==============================================================*
+06===C           R8200     BEGSR
+|    C           TRATE     DIV  COUNT     ARATE            平均調升比
+|    C                     WRITEPT1
+|    C                     WRITEPE2
+|    C                     Z-ADD0         COUNT
+|    C                     Z-ADD0         TSH07
+|    C                     Z-ADD0         TDIF
+|    C                     Z-ADD0         TSH08
+|    C                     Z-ADD0         TRATE
+|    C                     SETOF                     39
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8999.... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+07===C           R8999     BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR R0100
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+

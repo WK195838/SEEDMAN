@@ -1,0 +1,706 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME :應付票據票號確認                          *
+     H*    AUTHOR       : A1062                                      *
+     H*    CREATE DATE  : 93/04/11                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     F****************************************************************
+     FCKHFLF02UF  E           K        DISK
+     FCKHALF01UF  E           K        DISK                      A
+     FAPUCLF01UF  E           K        DISK
+     FAPUDLF01UF  E           K        DISK
+     FAPUALF07UF  E           K        DISK
+     FRVRGLF01UF  E           K        DISK
+     FCKHBLF01IF  E           K        DISK
+     FCKHDLF01IF  E           K        DISK
+     FPT#XPF  IF  E           K        DISK
+     FCKA1F0D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E                    A03      1024 10               所有票號
+     E                    W03        10  1               單張票號
+     E                    W3A        10  1               票號英文部份
+     E                    W3N        10  1               票號數字部份
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      219 219 $ENV
+     I            DS
+     I                                        1  14 HF16
+     I                                        9  14 HF16A
+     I            DS
+     I                                        1   70DHF03B
+     I                                        1   7 HF03BC
+     I/COPY QRPGSRC,PT#XDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN #X01      W#X01            KEY
+     C           *LIKE     DEFN HF72      WHF72            KEY
+     C           *LIKE     DEFN HF73      WHF73            KEY
+     C           *LIKE     DEFN HA01      WHA01            KEY
+     C           *LIKE     DEFN RRN       WRRN
+     C           *LIKE     DEFN RRN       WI
+     C           *LIKE     DEFN HF03      WHF03            KEY
+     C           *LIKE     DEFN DHF03A    WHF03A           序編票號英
+     C           *LIKE     DEFN DHF03B    WHF03B           序編票號數
+     C*
+     C           *LIKE     DEFN HF72      WHF72F           FILE TYPE FROM
+     C           *LIKE     DEFN HF72      WHF72T           FILE TYPE TO
+     C*
+     C           *LIKE     DEFN HF02      #B001I
+     C           *LIKE     DEFN HF02      #D001I
+     C           *LIKE     DEFN HF04      #D002I
+     C           *LIKE     DEFN HF02      #G001I
+     C           *LIKE     DEFN HF04      #G002I
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY#X     KLIST
+     C                     KFLD           W#X01
+     C                     KFLD           DHF02
+     C           KEYHA     KLIST
+     C                     KFLD           WHA01
+     C                     KFLD           DHF02
+     C                     KFLD           WHF03
+     C           KEYHD     KLIST
+     C                     KFLD           DHF02
+     C                     KFLD           DHF16A
+     C           KEYHF     KLIST
+     C                     KFLD           DHF02
+     C                     KFLD           WHF72
+     C                     KFLD           WHF73
+     C           KEYAP     KLIST
+     C                     KFLD           DHF02
+     C                     KFLD           HF06
+     C                     KFLD           HF71
+     C           KEYUD     KLIST
+     C                     KFLD           DHF02
+     C                     KFLD           UD16
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C                     MOVEL'SC01'    SCID    4
+|    C* FUN AUT
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C*公司檔
+|    C                     MOVEL$COR      DHF02
+|    C                     CALL 'CKS#B0'
+|    C                     PARM DHF02     #B001I
+|    C           DHF02N    PARM           #B002O 16
+|    C                     PARM           #B003O 34
+|    C                     PARM           #B098O 50
+|    C                     PARM           #B099O  1
+|    C*
+|    C                     MOVEL*BLANK    DHF16A
+|    C                     MOVEL*BLANK    DHF16
+|    C                     Z-ADD0         DHF72F
+|    C                     Z-ADD0         DHF72T
+|    C                     Z-ADD0         DHF73F
+|    C                     Z-ADD0         DHF73T
+|    C*
+|    C                     MOVEL'2'       WHA01
+|    C*--------------------------------------------------------------*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C* N99                SETON                     88
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+|   C                     EXSR R1E00                      .PROMPT
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     MOVEL'SC02'    SCID
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*---公司別
+|    C                     MOVEL*BLANK    DHF02N
+| 01-C           DHF02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*公司檔
+|    C                     CALL 'CKS#B0'
+|    C                     PARM DHF02     #B001I
+|    C           DHF02N    PARM           #B002O 16
+|    C                     PARM           #B003O 34
+|    C                     PARM           #B098O 50
+|    C                     PARM           #B099O  1
+| 02-C           #B099O    IFNE 'Y'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                       6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*---銀行帳號
+|    C                     MOVEL*BLANK    DHF16
+| 03-C           DHF16A    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                       6199
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           KEYHD     CHAINHD0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                       6199
+| 04*C                     ELSE
+|   C                     MOVELHD02      DHF16
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*---列印日期－起
+|    C                     MOVEL'CK'      W#X01
+|    C           KEY#X     CHAIN#X0                  40
+|    C*
+| 05-C           DHF72F    IFNE 0
+|   C                     CALL 'P30'
+|   C                     PARM DHF72F    P3001I  80
+|   C                     PARM #X101     P3002I  1
+|   C                     PARM #X102     P3003I  1
+|   C                     PARM           P3011O  1
+| 06-C           P3011O    IFNE 'Y'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 06-C                     END
+|   C*
+|   C                     CALL 'P31'
+|   C                     PARM DHF72F    P3101I  80
+|   C                     PARM #X101     P3102I  1
+|   C                     PARM #X102     P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           WHF72F    PARM           P3101O  80
+|   C*
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*---列印日期－迄
+| 07-C           DHF72T    IFEQ 0
+|   C                     Z-ADD99991231  WHF72T
+| 07*C                     ELSE
+|   C*
+|   C                     CALL 'P30'
+|   C                     PARM DHF72T    P3001I  80
+|   C                     PARM #X101     P3002I  1
+|   C                     PARM #X102     P3003I  1
+|   C                     PARM           P3011O  1
+| 08-C           P3011O    IFNE 'Y'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 08-C                     END
+|   C*
+|   C                     CALL 'P31'
+|   C                     PARM DHF72T    P3101I  80
+|   C                     PARM #X101     P3102I  1
+|   C                     PARM #X102     P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           WHF72T    PARM           P3101O  80
+|   C*
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 09-C           WHF72F    IFGT WHF72T
+|   C                     MOVEL'UPT0041' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     626399
+| 09-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*---列印序號
+| 10-C           DHF73T    IFEQ 0
+|   C                     Z-ADD9999      DHF73T
+| 10-C                     END
+|    C*
+| 11-C           DHF73F    IFGT DHF73T
+|   C                     MOVEL'UPT0042' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 11-C                     END
+|    C   99                GOTO E1B00
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+04===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*付款帳號
+| 01-C           #LIN      IFEQ 8
+|   C           #COL      ANDGE36
+|   C           #COL      ANDLE41
+|   C                     CALL 'CKI1D0'
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C                     PARM DHF02     P130I1  2
+|   C           DHF16A    PARM DHF16A    P130I2  6
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C                     PARM           @RTNC   2
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+05===C           R2000     BEGSR
+|    C*
+|    C                     EXSR R2A00                      *INIT SCR2
+|    C*
+| 01-C           *IN03     DOWEQ'0'
+|   C           SCID      ANDEQ'SC02'
+|   C*
+|   C                     WRITEDSPC1
+|   C                     EXFMTSFLCR
+|   C                     MOVEA*ALL'0'   *IN,60
+|   C*
+| 02-C           *IN03     IFEQ '0'
+|   C           *IN12     ANDEQ'0'
+|   C*
+| 03-C           RRN       IFGT 0
+|   C*
+| 04-C           *IN10     IFEQ '1'
+|   C                     EXSR R2D00                      *票號續編 VE
+| 04-C                     END
+|   C*
+|   C  N99                EXSR R2B00                      *CHECK
+|   C*
+| 05-C           *IN14     IFEQ '1'
+|   C           *IN99     ANDEQ'0'
+|   C                     EXSR R2C00                      *SAVE
+|   C                     MOVE 'SC01'    SCID
+| 05-C                     END
+|   C*
+| 03-C                     END
+|   C* *IN03 OR *IN12 ON
+| 02*C                     ELSE
+|   C* RELEAS FILE --------------------------------------------------*
+|   C                     MOVE 'SC01'    SCID
+| 02-C                     END                             *IN12 ENDIF
+|   C*
+| 01-C                     END                             *ENDDO
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R2A00 ....INIT 'SC02'
+     C*==============================================================*
+06===C           R2A00     BEGSR
+|    C*
+|    C* HEAD-銀行名稱-----------------------------------------------*
+|    C                     MOVEL*BLANK    HB03
+|    C           HD03      CHAINHB0                  40
+|    C*---------------------------------------------------------------*
+|    C                     EXSR R2A10                      *SFL INIT
+|    C                     EXSR R2A20                      *MOVE SFL
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R2A10 ....SFL INIT
+     C*==============================================================*
+07===C           R2A10     BEGSR
+|    C*
+|    C                     Z-ADD1         DRRN
+|    C                     Z-ADD0         RRN
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     525053
+|    C                     SETON                     51    *SFLDSPCTL
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R2A20 ....MOVE DATA TO SFLSR
+     C*==============================================================*
+08===C           R2A20     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    HF03C
+|    C                     MOVEL*BLANK    DHF03A
+|    C                     Z-ADD*ZERO     DHF03B
+|    C           DHF03A    CAT  HF03BC:0  DHF03C
+|    C*
+|    C                     Z-ADDWHF72F    WHF72
+|    C                     Z-ADDDHF73F    WHF73
+|    C           KEYHF     SETLLHF0
+|    C                     EXSR R2A21
+|    C*
+|    C                     SETON                     53
+|    C*
+| 01-C           RRN       IFGT 0
+|   C                     SETON                     50
+| 01*C                     ELSE
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R2A21 ....SETLL & READE CKHFLF02
+     C*==============================================================*
+09===C           R2A21     BEGSR
+|    C*
+|    C           DHF02     READEHF0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C           HF72      ANDLEWHF72T
+|   C*
+| 02-C           HF16A     IFEQ DHF16A
+|   C           HF73      ANDGEDHF73F
+|   C           HF73      ANDLEDHF73T
+|   C*列印日期
+|   C                     CALL 'P31'
+|   C                     PARM HF72      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM #X101     P3104I  1
+|   C                     PARM #X102     P3105I  1
+|   C           DHF72     PARM           P3101O  80
+|   C*開票日期
+|   C                     CALL 'P31'
+|   C                     PARM HF06      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM #X101     P3104I  1
+|   C                     PARM #X102     P3105I  1
+|   C           DHF06     PARM           P3101O  80
+|   C*廠商名稱
+|   C*                    CALL 'CKS#D0'
+|   C*                    PARM HF02      #D001I
+|   C*                    PARM HF04      #D002I
+|   C*                    PARM           #D003O 18
+|   C*                    PARM           #D004O 42
+|   C*                    PARM           #D005O 62
+|   C*                    PARM           #D098O 50
+|   C*                    PARM           #D099O  1
+     C*
+     C                     CALL 'P65'
+     C                     PARM HF77      P6501I 80
+     C                     PARM 10        P6502I  30
+     C           DHF04     PARM           P6511O 80
+     C                     PARM           P6512O 80
+     C*
+|   C*到期日期
+|   C                     CALL 'P31'
+|   C                     PARM HF07      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM #X101     P3104I  1
+|   C                     PARM #X102     P3105I  1
+|   C           DHF07     PARM           P3101O  80
+|   C*
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+| 02-C                     END
+|   C*
+|   C           DHF02     READEHF0                      44
+| 01-C                     END
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R2B00 ... CHECK
+     C*==============================================================*
+10===C           R2B00     BEGSR
+|    C*
+|    C                     EXSR R2B10                      GET SFL-KEY
+|    C*
+|    C                     Z-ADD1         WRRN
+|    C           WRRN      CHAINSFLSR                44
+| 01-C           *IN44     DOWEQ'0'
+|   C           *IN99     ANDEQ'0'
+|   C*票號須輸入
+| 02-C           DHF03A    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 02-C                     END
+|   C   99                GOTO SFLUPD
+|   C*
+| 03-C           DHF03B    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 03-C                     END
+|   C   99                GOTO SFLUPD
+|   C*票號須不存在
+|   C                     MOVELDHF03C    WHF03
+|   C           KEYHA     CHAINHA0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 04-C                     END
+|   C   99                GOTO SFLUPD
+|   C*檢核票號重覆？
+|   C                     Z-ADD1         WI
+|   C           DHF03C    LOKUPA03,WI                   31
+| 05-C           *IN31     IFEQ '1'
+|   C           RRN       ANDEQWI
+|   C           RRN       ADD  1         WI
+|   C           DHF03C    LOKUPA03,WI                   31
+| 05-C                     END
+|   C*
+| 06-C           *IN31     IFEQ '1'
+|   C           RRN       ANDNEWI
+|   C                     MOVEL'UPT0140' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     656699
+| 06-C                     END
+|   C   99                GOTO SFLUPD
+|   C*UPDATE SFLSR
+|   C           SFLUPD    TAG
+|   C                     UPDATSFLSR
+|   C*
+| 07-C           *IN99     IFEQ '0'
+|   C                     ADD  1         WRRN
+|   C           WRRN      CHAINSFLSR                44
+| 07-C                     END
+| 01-C                     END
+|    C*
+|    C   99                Z-ADDWRRN      DRRN
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R2B10 ... PREPARE SFL-KEY ARRAY
+     C*==============================================================*
+11===C           R2B10     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    A03
+|    C                     Z-ADD1         WRRN
+|    C           WRRN      CHAINSFLSR                44
+| 01-C           *IN44     DOWEQ'0'
+|   C*
+|   C                     Z-ADDWRRN      WI
+|   C           DHF03A    CAT  HF03BC:0  A03,WI
+|   C                     MOVELA03,WI    DHF03C
+|   C                     UPDATSFLSR
+|   C*
+|   C                     ADD  1         WRRN
+|   C           WRRN      CHAINSFLSR                44
+| 01-C                     END
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R2C00 .... SAVE FILE
+     C*==============================================================*
+12===C           R2C00     BEGSR
+|    C*
+|    C                     Z-ADD1         WRRN
+|    C           WRRN      CHAINSFLSR                44
+| 01-C           *IN44     DOWEQ'0'
+|   C*更新CKHFLF02
+|   C                     Z-ADDHF72      WHF72
+|   C                     Z-ADDHF73      WHF73
+|   C           KEYHF     CHAINHF0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELDHF03C    HF03
+|   C                     UPDATHF0
+| 02-C                     END
+|   C*寫入CKHALF01
+|   C                     MOVEL'2'       HA01
+|   C                     MOVELHF02      HA02
+|   C                     MOVELDHF03C    HA03
+|   C                     MOVELHF04      HA04
+|   C                     MOVELHF05      HA05
+|   C                     Z-ADDHF06      HA06
+|   C                     Z-ADDHF07      HA07
+|   C                     MOVELHF08      HA08
+|   C                     MOVELHF09      HA09
+|   C                     Z-ADDHF10      HA10
+|   C                     Z-ADDHF11      HA11
+|   C                     MOVE *BLANK    HA12
+|   C                     MOVE *BLANK    HA13
+|   C                     MOVE *BLANK    HA14
+|   C                     Z-ADDHF15      HA15
+|   C                     MOVE HF16      HA16
+|   C                     MOVELHF17      HA17
+|   C                     MOVE *BLANK    HA18
+|   C                     Z-ADD1         HA19
+|   C                     Z-ADD1         HA20
+|   C                     MOVELHF23      HA23
+|   C                     MOVEL'1'       HA24
+|   C                     MOVEL*BLANK    HA25
+|   C                     MOVEL'N'       HA26
+|   C                     MOVELHF27      HA27
+|   C                     MOVELHF28      HA28
+|   C                     MOVELHF32      HA32
+|   C                     MOVELHF33      HA51
+|   C                     MOVEL*BLANKS   HA52
+|   C                     Z-ADDHF06      HA53               *開票日
+|   C                     Z-ADDHF07      HA54               *到期日
+|   C                     Z-ADD*ZERO     HA55
+|   C                     Z-ADD*ZERO     HA56
+|   C                     MOVEL*BLANKS   HA57
+|   C                     MOVEL*BLANKS   HA58
+|   C                     MOVEL'1'       HA59
+|   C                     MOVEL*BLANKS   HA60
+|   C                     MOVEL'Y'       HA61
+|   C                     TIME           HA97
+|   C                     Z-ADD$A8YMD    HA98
+|   C                     MOVEL$USER     HA99
+|   C                     WRITEHA0
+|   C************************************
+|   C* 將票據號碼寫回應付主檔         *
+|   C************************************
+| 03-C           HF75      IFEQ 'Y'
+|   C                     EXSR R2C10
+| 03-C                     END
+|   C*
+|   C                     ADD  1         WRRN
+|   C           WRRN      CHAINSFLSR                44
+| 01-C                     END
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R2C10 ....UPDATE應付帳款系統之檔案
+     C*==============================================================*
+13===C           R2C10     BEGSR
+|    C*
+|    C*
+|    C*UPDATE APUCLF01付款明細－主檔
+|    C           KEYAP     CHAINUC0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELDHF03C    UC09
+|   C                     TIME           UC97
+|   C                     Z-ADD$A8YMD    UC98
+|   C                     MOVEL$USER     UC99
+|   C                     UPDATUC0
+|   C*UPDATE APUDLF01付款明細－明細檔
+|   C           KEYAP     SETLLUD0
+|   C           KEYAP     READEUD0                      46
+| 02-C           *IN46     DOWEQ'0'
+|   C                     MOVELDHF03C    UD05
+|   C                     TIME           UD97
+|   C                     Z-ADD$A8YMD    UD98
+|   C                     MOVEL$USER     UD99
+|   C                     UPDATUD0
+|   C*UPDATE APUALF07請款單資料主檔
+|   C           KEYUD     CHAINUA0                  40
+| 03-C           *IN40     IFEQ '0'
+|   C                     MOVELDHF03C    UA16
+|   C                     TIME           UA97
+|   C                     Z-ADD$A8YMD    UA98
+|   C                     MOVEL$USER     UA99
+|   C                     UPDATUA0
+| 03-C                     END
+|   C           KEYAP     READEUD0                      46
+| 02-C                     END
+| 01-C                     END
+|    C*UPDATE RVRGLF01發票資料明細檔
+|    C           KEYAP     SETLLRG0
+|    C           KEYAP     READERG0                      46
+| 04-C           *IN46     DOWEQ'0'
+|   C                     MOVELDHF03C    RG09
+|   C                     TIME           RG97
+|   C                     Z-ADD$A8YMD    RG98
+|   C                     MOVEL$USER     RG99
+|   C                     UPDATRG0
+|   C           KEYAP     READERG0                      46
+| 04-C                     END
+|    C*
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R2D00 ... *IN10票號續編: PROCESS
+     C*==============================================================*
+14===C           R2D00     BEGSR
+|    C*
+|    C                     SETOF                     32    無須序編
+|    C                     Z-ADD1         WRRN
+|    C           WRRN      CHAINSFLSR                44
+| 01-C           *IN44     DOWEQ'0'
+|   C           DHF03A    CAT  HF03BC:0  DHF03C
+|   C*票號續編
+| 02-C           *IN32     IFEQ '1'
+|   C                     MOVELWHF03A    DHF03A
+|   C                     ADD  1         WHF03B
+|   C                     Z-ADDWHF03B    DHF03B
+|   C           DHF03A    CAT  HF03BC:0  DHF03C
+|   C                     MOVELDHF03C    HF03C
+| 02-C                     END
+|   C*第一張被更改之票號
+| 03-C           DHF03C    IFNE HF03C
+|   C*          DHF03A    ANDEQ*BLANKS
+|   C           *IN32     ANDEQ'0'
+|   C                     SETON                     32    開始序編
+|   C                     MOVELDHF03A    WHF03A
+|   C                     Z-ADDDHF03B    WHF03B
+|   C                     MOVELDHF03C    HF03C
+| 03-C                     END
+|   C*
+|   C                     UPDATSFLSR
+|   C                     ADD  1         WRRN
+|   C           WRRN      CHAINSFLSR                44
+| 01-C                     END
+|    C                     SETOF                     32
+|    C*
+14===C           E2D00     ENDSR
+

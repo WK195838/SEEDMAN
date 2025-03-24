@@ -1,0 +1,57 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250  */
+     /*                                                             */
+     /*    AUTHOR       : TERESA                                    */
+     /*    CREATE DATE  : 2016/01/06                                */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : SOR095C1                                  */
+     /*    SYSTEM       :茂世企業                                 */
+     /*    SUBSYSTEM    :銷售訂單系統                             */
+     /*    REMARK       :產品牌價價目表                           */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&DATES) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DATEE) TYPE(*CHAR) LEN(8)
+
+             CHGVAR     VAR(&DATES) VALUE(%SST(*LDA 601 8))
+             CHGVAR     VAR(&DATEE) VALUE(%SST(*LDA 609 8))
+
+             CHKOBJ     OBJ(QTEMP/SOR095WF) OBJTYPE(*FILE)
+             MONMSG     MSGID(CPF9801) EXEC(DO)
+             CRTDUPOBJ  OBJ(SOR095WF) FROMLIB(REFLIB) OBJTYPE(*FILE) +
+                          TOLIB(QTEMP) NEWOBJ(SOR095WF)
+                          ENDDO
+             CLRPFM     FILE(QTEMP/SOR095WF)
+             OVRDBF     FILE(SOR095WF) TOFILE(QTEMP/SOR095WF) +
+                          SHARE(*YES)
+
+             OVRDBF     FILE(W1AAPF) SHARE(*YES)
+             OPNQRYF    FILE((W1AAPF)) OPTION(*ALL) QRYSLT(' +
+                        AA03 *EQ %RANGE(' *CAT &DATES *CAT ' +
+                                        ' *CAT &DATEE *CAT ') ') +
+                        KEYFLD((AA02) (AA03))
+             CALL       SOR0951
+             CLOF       OPNID(W1AAPF)
+
+             OVRDBF     FILE(MTMAPF) SHARE(*YES)
+             OPNQRYF    FILE((MTMAPF)) OPTION(*ALL) QRYSLT(' +
+                        MA39 *EQ %RANGE(' *CAT &DATES *CAT ' +
+                                        ' *CAT &DATEE *CAT ') ')
+             CALL       SOR0952
+             CLOF       OPNID(MTMAPF)
+
+             OVRDBF     FILE(MTMHPF) SHARE(*YES)
+             OPNQRYF    FILE((MTMHPF)) OPTION(*ALL) QRYSLT(' +
+                        MA39 *EQ %RANGE(' *CAT &DATES *CAT ' +
+                                        ' *CAT &DATEE *CAT ') ')
+             CALL       SOR0953
+             CLOF       OPNID(MTMHPF)
+
+             DLTOVR     FILE(*ALL)
+
+             /*將SOR095WF轉換成CSV FILE AND FTP TO PC */
+             CALL       PGM(ECL100C) PARM('QTEMP' 'SOR095WF')
+
+             ENDPGM
+

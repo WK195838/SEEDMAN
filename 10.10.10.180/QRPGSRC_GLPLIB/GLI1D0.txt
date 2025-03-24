@@ -1,0 +1,280 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLI1D0                                     *
+     H*    PROGRAM NAME :內設資料值查詢                            *
+     H*    AUTHOR       : A1150                                      *
+     H*    CREATE DATE  : 81/11/17                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     F****************************************************************
+     FGLAKPF  IF  E           K        DISK
+     FGLADPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLI1D0D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAK     KLIST                           *MAIN FILE
+     C                     KFLD           DAK01
+     C           KEYAF1    KLIST                           *GET AF03.
+     C                     KFLD           DAK01
+     C                     KFLD           DAK04
+     C           KEYAF2    KLIST                           *GET AF03.
+     C                     KFLD           DAK01
+     C                     KFLD           DAK05
+     C           KEYAD1    KLIST                           *GET AD03.
+     C                     KFLD           DAK01
+     C                     KFLD           DAK07
+     C           KEYAD2    KLIST                           *GET AD03.
+     C                     KFLD           DAK01
+     C                     KFLD           DAK08
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C*
+     C                     IN   PTDA01
+     C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*
+|    C* FUN AUT
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     MOVEL*BLANK    DAK01
+|    C*--------------------------------------------------------------*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+|   C                     MOVEL'SC02'    SCID
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+| 01-C           $INQ      IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*
+     C           DAK01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+     C*
+|    C                     MOVEL*BLANK    D#B02
+|    C           DAK01     CHAIN#B0                  40
+| 03-C           *IN40     IFEQ '1'
+|   C           #B12      OREQ '2'
+|   C                     MOVEL'UGL0004' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6099
+| 03-C                     END
+|    C   99                GOTO E1B00
+     C*
+     C  N40                MOVEL#B02      D#B02
+|    C           KEYAK     CHAINAK0                  40
+|    C*
+04===C           E1B00     ENDSR
+     C*
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+| 02-C*          DOPT      IFEQ 1                          *ADD
+|   C*                    EXSR R1C10
+| 02*C*                    ELSE                            *U/D/I
+|   C                     EXSR R1C20
+| 02-C*                    END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)----------------------------------*
+| 03-C*          DOPT      IFEQ 1                          *ADD
+|   C*          DOPT      OREQ 5                          *INQ
+|   C           *LOVAL    SETLLAK0
+| 03-C*                    END
+|    C*---------------------------------------------------------------*
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....'SC02' FIELD INIT : ADD
+     C*==============================================================*
+     C*==============================================================*
+     C*  R1C20 ....'SC02' FIELD INIT : UPD, DEL, INQ
+     C*==============================================================*
+07===C           R1C20     BEGSR
+|    C*
+     C           AK02      IFEQ 'V'
+|    C                     MOVEL'N'       DAK02
+     C                     END
+     C           AK02      IFEQ ' '
+|    C                     MOVEL'Y'       DAK02
+     C                     END
+|    C                     MOVELAK04      DAK04
+     C                     MOVEL*BLANK    DAF031
+     C           KEYAF1    CHAINAF0                  40
+     C  N40                MOVELAF03      DAF031
+     C*
+     C                     MOVELAK05      DAK05
+     C                     MOVEL*BLANK    DAF032
+     C           KEYAF2    CHAINAF0                  40
+     C  N40                MOVELAF03      DAF032
+     C*
+     C                     MOVELAK07      DAK07
+     C                     MOVEL*BLANK    DAD031
+     C           KEYAD1    CHAINAD0                  40
+     C  N40                MOVELAD03      DAD031
+     C*
+     C                     MOVELAK08      DAK08
+     C                     MOVEL*BLANK    DAD032
+     C           KEYAD2    CHAINAD0                  40
+     C  N40                MOVELAD03      DAD032
+     C*
+     C                     MOVELAK09      DAK09
+     C                     MOVELAK10      DAK10
+     C           AK09      IFEQ '1'
+     C           AK11      ANDEQ'1'
+     C                     MOVE '1'       DAK11
+     C                     END
+     C           AK09      IFEQ '1'
+     C           AK11      ANDEQ'3'
+     C                     MOVE '2'       DAK11
+     C                     END
+     C           AK09      IFEQ '1'
+     C           AK11      ANDEQ'5'                        *4->5
+     C                     MOVE '3'       DAK11
+     C                     END
+     C           AK09      IFEQ '2'
+     C           AK11      ANDEQ'2'
+     C                     MOVE '1'       DAK11
+     C                     END
+     C*<日期格式轉換>
+|    C*
+     C           AK12      IFEQ 0
+     C                     Z-ADD0         DAK12
+     C                     ELSE
+     C                     CALL 'P31'
+     C                     PARM AK12      P3101I  80
+     C                     PARM '2'       P3102I
+     C                     PARM '1'       P3103I
+     C                     PARM AK11      P3104I
+     C                     PARM AK09      P3105I
+     C           DAK12     PARM           P3111O  80
+     C                     END
+|    C*
+     C           AK14      IFEQ 0
+     C                     Z-ADD0         DAK14
+     C                     ELSE
+     C           AK14      MULT 100       P3101I
+     C                     CALL 'P31'
+     C                     PARM           P3101I  80
+     C                     PARM '2'       P3102I
+     C                     PARM '1'       P3103I
+     C                     PARM '2'       P3104I
+     C                     PARM AK09      P3105I
+     C                     PARM           P3111O  80
+     C           P3111O    DIV  100       DAK14
+     C                     END
+|    C*
+     C           AK13      IFEQ 0
+     C                     Z-ADD0         DAK13
+     C                     ELSE
+     C           AK13      MULT 10000     P3101I
+     C                     CALL 'P31'
+     C                     PARM           P3101I  80
+     C                     PARM '2'       P3102I
+     C                     PARM '1'       P3103I
+     C                     PARM '2'       P3104I
+     C                     PARM AK09      P3105I
+     C                     PARM           P3111O  80
+     C           P3111O    DIV  10000     DAK13
+     C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+08===C           R2000     BEGSR
+|    C*
+|    C                     EXFMTDSPD2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C* RELEAS FILE --------------------------------------------------*
+|   C           *LOVAL    SETLLAK0
+|   C*---------------------------------------------------------------*
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+08===C           E2000     ENDSR
+

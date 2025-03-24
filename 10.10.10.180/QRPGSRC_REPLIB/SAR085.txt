@@ -1,0 +1,354 @@
+      ****************************************************************
+      *   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+      *                                                              *
+      * PROGRAM NAME : SAR085                                        *
+      * AUTHER       : JONATHAN YEH                                  *
+      * CREATE DATE  : 103/03/11                                     *
+      * SYSTEM       :                                             *
+      * SUBSYSTEM    :銷售分析系統                                 *
+      * REMARK       :業務同仁銷售毛利報表(總表)                 *
+      * UPDATE DATE  :                                               *
+      *服務單號: NOTE:1030308    WEB:1030319                       *
+      ****************************************************************
+     FSAR085D CF  E                    WORKSTN
+     F                                              KINFDS DSPFDS
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      598 5990$PRTID
+      *業務員代碼
+     I                                      601 606 DSD03S
+     I                                      607 612 DSD03E
+      *SELECT起迄日期
+      *YY/MM/DD
+     I                                      613 6180YMDS
+     I                                      619 6240YMDE
+     I                                      625 6300DSC39S
+     I                                      631 6360DSC39E
+     I                                      637 641 DSC04S
+     I                                      642 646 DSC04E
+     I                                      647 650 DSC05S
+     I                                      651 654 DSC05E
+     I                                      655 6600DSC08S
+     I                                      661 6660DSC08E
+     I                                      667 6670PRTOPT
+      *
+     I*(YYYY/MM/DD)
+     I                                      850 857 YMD8S
+     I                                      858 865 YMD8E
+     I                                      866 873 YMD8S1
+     I                                      874 881 YMD8E1
+     I* FOR F4 HELP -- GET CURSOR POSITION
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I            DS
+     I                                        1   9 XSC04S
+     I                                        1   5 SC04SA
+     I                                        6   9 SC04SB
+     I            DS
+     I                                        1   9 XSC04E
+     I                                        1   5 SC04EA
+     I                                        6   9 SC04EB
+      *==============================================================*
+      *          IDENTIFY A PARAMETER LIST
+      *==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN98     PARM *IN98     IN98    1
+     C           *IN97     PARM *IN97     IN97    1
+      *==============================================================*
+      *                    KLIST
+      *==============================================================*
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+     C  N97N98             EXSR RTN010                     .INIT SCREEN
+     C           *IN03     DOUEQ'1'
+     C           *IN99     OREQ '0'
+     C                     MOVEL*BLANK    YMD8S
+     C                     MOVEL*BLANK    YMD8E
+     C                     MOVEL*BLANK    YMD8S1
+     C                     MOVEL*BLANK    YMD8E1
+     C                     EXFMTDSPD1
+     C                     MOVEA*ALL'0'   *IN,60
+     C           *IN03     IFEQ '0'
+     C           *IN04     IFEQ '1'
+     C**********************
+     C*  F4 PROMPT PROCESS *
+     C**********************
+     C                     EXSR RTNF4
+     C                     ELSE
+     C                     EXSR RTN100                     .CHECK      ?
+     C                     END
+     C                     END
+     C                     END
+     C*
+     C                     EXSR OUTLDA
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+      *===============================================================*
+      *          RTN010....INIT SCREEN
+      *===============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   LDA
+|    C                     Z-ADD2         $EVR
+|    C                     MOVEL$USER     AUT     3
+| 01-C           AUT       IFNE 'D91'
+|   C           AUT       ANDNE'REP'
+|   C           AUT       ANDNE'CWD'
+|   C                     SETON                     31
+| 01-C                     END
+|    C                     MOVE *BLANK    DSD03S
+|    C                     MOVE *BLANK    DSD03E
+|    C                     MOVE *BLANK    DSC04S
+|    C                     MOVE *BLANK    DSC04E
+|    C                     MOVE *BLANK    DSC05S
+|    C                     MOVE *BLANK    DSC05E
+|    C                     Z-ADD0         DSC39S
+|    C                     Z-ADD0         DSC39E
+|    C                     Z-ADD0         DSC08S
+|    C                     Z-ADD0         DSC08E
+|    C                     Z-ADD0         YMDS
+|    C                     Z-ADD0         YMDE
+|    C                     Z-ADD1         PRTOPT
+|    C                     MOVEL'SCR001'  APPSCR  6
+|    C*
+01===C                     ENDSR
+      *===============================================================*
+      *          RTN100....CHECK SCREEN
+      *===============================================================*
+02===C           RTN100    BEGSR
+|    C*業務員
+| 01-C           DSD03S    IFEQ *BLANK
+|   C                     MOVE *LOVAL    DSD03S
+| 01-C                     END
+|    C*
+| 02-C           DSD03E    IFEQ *BLANK
+|   C                     MOVE *HIVAL    DSD03E
+| 02-C                     END
+|    C*
+| 03-C           DSD03S    IFGT DSD03E
+|   C                     SETON                     6061
+|   C                     SETON                     9299
+| 03-C                     END
+|    C   99                GOTO END100
+|    C*
+|    C*客戶
+| 04-C           DSC04S    IFEQ *BLANK
+|   C                     MOVE *LOVAL    DSC04S
+| 04-C                     END
+|    C*
+| 05-C           DSC04E    IFEQ *BLANK
+|   C                     MOVE *HIVAL    DSC04E
+| 05-C                     END
+|    C*
+| 06-C           DSC04S    IFGT DSC04E
+|   C                     SETON                     6566
+|   C                     SETON                     9299
+| 06-C                     END
+|    C   99                GOTO END100
+|    C*客戶
+| 04-C           DSC05S    IFEQ *BLANK
+|   C                     MOVE *LOVAL    DSC05S
+| 04-C                     END
+|    C*
+| 05-C           DSC05E    IFEQ *BLANK
+|   C                     MOVE *HIVAL    DSC05E
+| 05-C                     END
+|    C*
+|    C*(CHECK DATE)-日期
+|    C           DSC39S    IFNE *ZERO
+|    C           DSC08S    ANDNE*ZERO
+|    C                     SETON                     7172
+|    C                     SETON                     6263
+|    C                     SETON                     8699
+|    C                     ENDIF
+|    C   99                GOTO END100
+| 13-C           DSC39S    IFEQ 0
+|    C           DSC08S    ANDEQ0
+|   C*                    Z-ADD010101    DSC39S
+|   C                     Z-ADD010192    DSC39S
+|   C                     CALL 'P09'
+|   C                     PARM DSC39S    P0901I  60
+|   C                     PARM           P0901O  1
+| 14-C           P0901O    IFEQ 'N'
+|   C                     SETON                     629399
+| 14-C                     END
+| 13-C                     END
+|    C*
+| 15-C           DSC39E    IFEQ 0
+|    C           DSC08E    ANDEQ0
+|   C*                    Z-ADD123199    DSC39E
+|   C                     Z-ADD123129    DSC39E
+|   C                     CALL 'P09'
+|   C                     PARM DSC39E    P0901I  60
+|   C                     PARM           P0901O  1
+| 16-C           P0901O    IFEQ 'N'
+|   C                     SETON                     639399
+| 16-C                     END
+| 15-C                     END
+|    C   99                GOTO END100
+|     *
+|    C           DSC39S    IFEQ 0
+|   C           DSC08S    ANDNE0
+|   C                     CALL 'P09'
+|   C                     PARM DSC08S    P0901I  60
+|   C                     PARM           P0901O  1
+|   C           P0901O    IFEQ 'N'
+|   C                     SETON                     719399
+|   C                     END
+|   C                     END
+|   C   99                GOTO END100
+|   C*
+|   C           DSC39E    IFEQ 0
+|   C           DSC08E    ANDNE0
+|   C                     CALL 'P09'
+|   C                     PARM DSC08E    P0901I  60
+|   C                     PARM           P0901O  1
+|   C           P0901O    IFEQ 'N'
+|   C                     SETON                     729399
+|   C                     END
+|   C                     END
+|    C   99                GOTO END100
+|    C*日期轉換
+|    C           DSC39S    IFNE 0
+|    C                     CALL 'RES001'
+|    C                     PARM 'MDY'     S001I1  3
+|    C                     PARM DSC39S    S001I2  60
+|    C           YMDS      PARM           S001O1  60
+|    C                     ENDIF
+|    C*
+|    C           DSC39E    IFNE 0
+|    C                     CALL 'RES001'
+|    C                     PARM 'MDY'     S001I1  3
+|    C                     PARM DSC39E    S001I2  60
+|    C           YMDE      PARM           S001O1  60
+|    C                     ENDIF
+|    C*
+|    C           DSC39S    IFEQ 0
+|   |C           DSC08S    ANDNE0
+|   |C                     CALL 'RES001'
+|   |C                     PARM 'MDY'     S001I1  3
+|   |C                     PARM DSC08S    S001I2  60
+|   |C           YMDS      PARM           S001O1  60
+|   |C                     ENDIF
+|     *
+|   |C           DSC39E    IFEQ 0
+|   |C           DSC08E    ANDNE0
+|   |C                     CALL 'RES001'
+|   |C                     PARM 'MDY'     S001I1  3
+|   |C                     PARM DSC08E    S001I2  60
+|   |C           YMDE      PARM           S001O1  60
+|    C                     ENDIF
+|    C**
+|    C                     MOVE YMDS      HB2@F6  6
+|    C                     EXSR HB@68L
+|    C           DSC39S    IFNE 0
+|    C                     MOVE HB2@T8    YMD8S
+|    C                     ELSE
+|    C           DSC08S    IFNE 0
+|    C                     MOVE HB2@T8    YMD8S1
+|    C                     ENDIF
+|    C                     ENDIF
+|    C                     MOVE YMDE      HB2@F6  6
+|    C                     EXSR HB@68L
+|    C           DSC39E    IFNE 0
+|    C                     MOVE HB2@T8    YMD8E
+|    C                     ELSE
+|    C           DSC08E    IFNE 0
+|    C                     MOVE HB2@T8    YMD8E1
+|    C                     ENDIF
+|    C                     ENDIF
+|    C*          YMDS      IFGT YMDE
+| 17-C           YMD8S     IFGT YMD8E
+|   C                     SETON                     6263
+|   C                     SETON                     9299
+| 17-C                     END
+|    C           YMD8S1    IFGT YMD8E1
+|    C                     SETON                     7172
+|    C                     SETON                     9299
+|    C                     ENDIF
+|    C   99                GOTO END100
+|     *
+02===C           END100    ENDSR
+      *===============================================================*
+      *          RTNF4 ....F4 HELP
+      *===============================================================*
+03===C           RTNF4     BEGSR
+|    C*
+|    C                     SETON                     99
+|    C********************
+|    C*  GET ROW,COL     *
+|    C********************
+|    C           #CSR      DIV  256       D#ROW            *ROW
+|    C                     MVR            D#COL            *COL
+|    C** 游標位置即為(D#ROW,D#COL)
+| 01-C           APPSCR    IFEQ 'SCR001'
+|   C* 印表機
+| 02-C           D#ROW     IFEQ 18
+|   C           D#COL     ANDGE39
+|   C           D#COL     ANDLE40
+|   C                     CALL 'WDS011'
+|   C           $PRTID    PARM $PRTID    S011O1  20
+|   C                     GOTO ENDF4
+| 02-C                     END
+|   C* 業務員代號
+| 03-C           D#ROW     IFEQ 6
+|   C           D#COL     ANDGE38
+|   C           D#COL     ANDLE43
+|   C                     CALL 'WDS005'
+|   C                     PARM           DSD03S
+|   C                     GOTO ENDF4
+| 03-C                     END
+|   C*
+| 04-C           D#ROW     IFEQ 6
+|   C           D#COL     ANDGE47
+|   C           D#COL     ANDLE52
+|   C                     CALL 'WDS005'
+|   C                     PARM           DSD03E
+|   C                     GOTO ENDF4
+| 04-C                     END
+|   C*
+| 05-C           D#ROW     IFEQ 8
+|   C           D#COL     ANDGE38
+|   C           D#COL     ANDLE42
+     C                     MOVEL*BLANK    XSC04S  9
+     C                     MOVELDSC04S    SC04SA
+     C                     MOVELDSC05S    SC04SB
+|   C                     CALL 'WDS003'
+|   C                     PARM           XSC04S
+     C                     MOVELSC04SA    DSC04S
+     C                     MOVELSC04SB    DSC05S
+|   C                     GOTO ENDF4
+| 05-C                     END
+|   C*
+| 06-C           D#ROW     IFEQ 8
+|   C           D#COL     ANDGE51
+|   C           D#COL     ANDLE55
+     C                     MOVEL*BLANK    XSC04E  9
+     C                     MOVELDSC04E    SC04EA
+     C                     MOVELDSC05E    SC04EB
+|   C                     CALL 'WDS003'
+|   C                     PARM           XSC04E
+     C                     MOVELSC04EA    DSC04E
+     C                     MOVELSC04EB    DSC05E
+|   C                     GOTO ENDF4
+| 06-C                     END
+|    C                     END
+|    C*
+03===C           ENDF4     ENDSR
+      *===============================================================*
+      *          OUTLDA....OUT LDA
+      *===============================================================*
+04===C           OUTLDA    BEGSR
+|    C*
+|    C                     OUT  LDA
+|    C*
+04===C           ENDLDA    ENDSR
+     C/COPY HBP2CVTR
+

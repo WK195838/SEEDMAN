@@ -1,0 +1,55 @@
+             PGM
+             DCL        VAR(&WDATE) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&$USER)  TYPE(*CHAR) LEN(10)
+             DCL        VAR(&$USERN) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&S0101I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&S0102I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&S0101O) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&P3101I) TYPE(*DEC)  LEN(8 0)
+             DCL        VAR(&P3102I) TYPE(*CHAR) LEN(1) VALUE('2')
+             DCL        VAR(&P3103I) TYPE(*CHAR) LEN(1) VALUE('1')
+             DCL        VAR(&P3104I) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&P3105I) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&P3101O) TYPE(*DEC)  LEN(8 0)
+             DCLF       FILE(*LIBL/CKA002D)
+             RTVDTAARA  DTAARA(*LDA (101 10)) RTNVAR(&$USER)
+             RTVDTAARA  DTAARA(*LDA (152 10)) RTNVAR(&$USERN)
+             RTVDTAARA  DTAARA(*LDA (201 8)) RTNVAR(&WDATE)
+             RTVDTAARA  DTAARA(PTDA01 (1 1)) RTNVAR(&P3104I)
+             RTVDTAARA  DTAARA(PTDA01 (2 1)) RTNVAR(&P3105I)
+             RTVDTAARA  DTAARA(*LDA (119 6)) RTNVAR(&WDATE)
+             CHGVAR     VAR(&P3101I) VALUE(&WDATE)
+             CHGVAR     VAR(&S0101I) VALUE(&$USER)
+             CALL       PGM(P31) PARM(&P3101I &P3102I &P3103I +
+                          &P3104I &P3105I &P3101O)
+        /*   CHGVAR     VAR(&DDATE) VALUE(&P3101O)  */
+             CHGVAR     VAR(&S0101I) VALUE(&$USER)
+ START:      CHGVAR     VAR(&DOP) VALUE(' ')
+             SNDRCVF    RCDFMT(DSPD1)
+             IF         COND(&DOP *EQ '90') THEN(GOTO CMDLBL(ENDLBL))
+             IF         COND(&DOP *EQ '01') THEN(DO)
+                          CHGVAR VAR(&S0102I) VALUE('CKA1G0')
+             ENDDO
+             IF         COND(&DOP *EQ '02') THEN(DO)
+                          CHGVAR VAR(&S0102I) VALUE('CKB310C')
+             ENDDO
+             IF         COND(&DOP *EQ '03') THEN(DO)
+                          CHGVAR VAR(&S0102I) VALUE('GLA770')
+             ENDDO
+             IF         COND(&DOP *EQ '04') THEN(DO)
+                          CHGVAR VAR(&S0102I) VALUE('GLA790')
+             ENDDO
+             IF         COND(&DOP *EQ '05') THEN(DO)
+                          CHGVAR VAR(&S0102I) VALUE('GLA760')
+             ENDDO
+             IF         COND(&DOP *EQ '06') THEN(DO)
+                          CHGVAR VAR(&S0102I) VALUE('GLA750')
+             ENDDO
+  CHKAUT:    CALL       PGM(S#S01) PARM(&S0101I &S0102I &S0101O)
+             IF         COND(&S0101O = 'Y') THEN(CALL PGM(&S0102I))
+             ELSE       CMD(CHGVAR VAR(&IN98) VALUE('1'))
+             GOTO       START
+
+             GOTO CMDLBL(START)
+ ENDLBL:     ENDPGM
+

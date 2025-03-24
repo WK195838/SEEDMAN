@@ -1,0 +1,200 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA3351                                    *
+     H*    PROGRAM NAME :住宿費試算作業－員工                      *
+     H*    AUTHOR       : A1336 KLAUS                                *
+     H*    CREATE DATE  : 91/07/22                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYLIPF  IP  E           K        DISK
+     FPYSSPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYOSPFX UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I/COPY PYDDSSRC,PYPMDS01
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DLI01
+     I                                      503 5070DYM
+     I                                      503 5050DYY
+     I                                      506 5070DMM
+     I                                      508 5130WYM
+     I                                      514 514 DOPT
+     I*
+     I            DS
+     I                                        1   80EM13
+     I                                        1   60EM13YM
+     I                                        7   80EM13D
+     I*
+     I            DS
+     I                                        1   80EM19
+     I                                        1   60EM19YM
+     I                                        7   80EM19D
+8503AI            DS
+ .   I                                        1   3 K#Y03
+ .   I                                        1   10K#Y031
+8503AI                                        3   30K#Y032
+     I*
+     I            DS
+     I                                        1   80KYMD
+     I                                        1   60KYM
+     I                                        7   80KDD
+     I            DS
+     I                                        1   80LI05
+     I                                        1   40LI05Y
+     I                                        1   60LI05YM
+     I                                        5   60LI05M
+     I                                        7   80LI05D
+     I            DS
+     I                                        1   80LI06
+     I                                        1   40LI06Y
+     I                                        1   60LI06YM
+     I                                        5   60LI06M
+     I                                        7   80LI06D
+     I*
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPM     KLIST                           *PYPMPF
+     C                     KFLD           PM01             *類別
+     C                     KFLD           DLI01            *公司編號
+     I*
+     C           KEYSS2    KLIST                           *PYSSPF
+     C                     KFLD           SS18             *薪資組別
+     C                     KFLD           SS01             *薪資代碼
+     I*
+     C           KEYOS     KLIST                           *PYOSPFX
+     C                     KFLD           OS01             *公司編號
+     C                     KFLD           OS02             *員工編號
+     C                     KFLD           OS03             *年月　　
+     C                     KFLD           OS04             *期別
+     C                     KFLD           OS05             *薪資項目
+     I*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     .INIT
+     C*
+     C                     EXSR RTN030                     .EM DATA
+     C*
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C                     CLEAROS0
+|    C*
+|    C*GET PAYROLL PARAMETER
+|    C                     MOVEL'69'      SS01             *薪資代碼
+|    C                     MOVEL'01'      SS18             *薪資組別
+|    C                     MOVEL'01'      PM01             *類別
+|    C           KEYPM     CHAINPM0                  40
+|    C*
+|    C                     Z-ADDWYM       KYM              *處理年月
+|    C                     MOVE '01'      KDD              *處理日
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN030... GET EMPLOYEE DATA
+     C*==============================================================*
+02===C           RTN030    BEGSR
+|    C*
+|    C                     Z-ADD0         X       21       *住宿費率
+|    C                     Z-ADD0         SDD     20       *相差日數
+|    C*
+|    C*計算住宿日數
+|    C*LI03=申請類別 LI05=住宿日期 LI06=退宿日期
+|    C*------------------------------------------------------------
+|    C*處理日期內沒有退宿
+| 01-C           LI06      IFEQ 0
+|   C*
+|   C*處理年月=住宿年月
+| 02-C           WYM       IFEQ LI05YM                     *住宿年月
+|   C*
+|   C           LI05      SUB  KYMD      SDD
+|   C*
+| 03-C           SDD       IFGE 15
+|   C                     Z-ADD1         X
+| 03*C                     ELSE
+|   C                     Z-ADD0.5       X
+| 03-C                     END
+|   C*
+| 02*C                     ELSE
+|   C*
+|   C*處理年月不=住宿年月
+|   C                     Z-ADD1         X
+|   C*
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*------------------------------------------------------------
+|    C*處理日期內有退宿
+| 04-C           LI06      IFNE 0
+|   C*處理日期大於退宿日期
+| 05-C           WYM       IFGT LI06YM
+|   C                     GOTO END030
+| 05-C                     END
+|   C*
+|   C*處理年月=住宿年月
+| 06-C           WYM       IFEQ LI05YM
+|   C           LI06      SUB  LI05      SDD
+|   C*
+| 07-C           SDD       IFGE 15
+|   C                     Z-ADD1         X
+| 07*C                     ELSE
+|   C                     Z-ADD0.5       X
+| 07-C                     END
+|   C*
+| 06*C                     ELSE
+|   C*處理年月不=住宿年月
+|   C           LI06      SUB  KYMD      SDD
+|   C*
+| 08-C           SDD       IFGE 15
+|   C                     Z-ADD1         X
+| 08*C                     ELSE
+|   C                     Z-ADD0.5       X
+| 08-C                     END
+|   C*
+| 06-C                     END
+|   C*
+| 04-C                     END
+|    C*
+|    C*****
+|    C                     Z-ADD*ZERO     OS06
+|    C                     Z-ADD*ZERO     OS08
+|    C           KEYSS2    CHAINSS0                  40
+|    C  N40      SS07      MULT X         OS06             *金額
+|    C  N40      SS07      MULT X         OS08             *每次金額
+|    C*
+|    C                     MOVELLI01      OS01             *薪資代碼
+|    C                     MOVELLI02      OS02             *員工編號
+|    C                     Z-ADDWYM       OS03             *年月
+|    C                     MOVEL'1'       OS04             *期別
+|    C                     MOVEL'69'      OS05             *薪資項目
+|    C                     Z-ADD1         OS07             *次數
+|    C                     Z-ADD$A8YMD    OS97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     OS98
+|    C                     MOVEL$USER     OS99
+|    C*
+|    C           KEYOS     CHAINOS0                  40
+| 09-C           *IN40     IFEQ '1'
+|   C                     WRITEOS0
+| 09*C                     ELSE
+|   C                     UPDATOS0
+| 09-C                     END
+|    C*
+02===C           END030    ENDSR
+     C*==============================================================*
+

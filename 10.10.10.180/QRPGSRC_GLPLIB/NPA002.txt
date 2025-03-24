@@ -1,0 +1,419 @@
+      *================================================================
+      * MODI CODE | AUTHOR |  DATE  | DESCRIPTION
+      *----------------------------------------------------------------
+      *  M001     |MICHELLE|02.03.08|重新整合代碼FROM 2002/7/1
+      *================================================================
+     FNPNAPF  UF  E           K        DISK                      A
+     FGLAKPF  IF  E           K        DISK
+     FNPA002D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      125 1270$CPY
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*
+     C           *LIKE     DEFN NA01      WNA01
+     C           *LIKE     DEFN NA01      WNA01C
+     C*
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYNA     KLIST                           *HEAD FILE
+     C                     KFLD           WNA01
+     C                     KFLD           DNA02
+     C           KEYNAC    KLIST                           *COPY REC.
+     C                     KFLD           WNA01C
+     C                     KFLD           DNA02C
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C                     Z-ADD*ZERO     DNA01
+|    C                     MOVEL*BLANK    DNA02
+|    C                     Z-ADD*ZERO     DNA01C
+|    C                     MOVEL*BLANK    DNA02C
+|    C*--------------------------------------------------------------*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C*          *IN04     IFEQ '1'                        *PROMPT
+|   C*                    EXSR R1E00
+|   C*                    GOTO E1000
+| 02-C*                    END
+|    C*
+| 03-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00
+|   C                     GOTO E1000
+| 03-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 04-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+|   C                     MOVEL'SC02'    SCID
+| 04-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'NPI002'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C* CALL SUB-PROGRAM
+|    C                     CALL 'NPI002'
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C           DNA01     PARM DNA01     P002I1  30       年度
+|    C           DNA02     PARM DNA02     P002I2  3         A&P CODE
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     PARM           @RTNC   2
+|    C* RETURN CODE CHECK
+| 02-C           @RTNC     IFEQ '03'                       *PF3
+|   C                     SETON                     03
+| 02-C                     END
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* NDDA CHECK *--------------------------------------------------*
+|    C*
+|    C* CHK年度
+|    C**
+| 02-C*          DNA01     IFEQ 0
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6199
+| 02-C*                    END
+|    C*  99                GOTO E1B00
+|    C*
+|    C           'RM'      CHAINAK0                  40
+|    C*
+|    C*年制為１－西元年，日期格式＝１　ＹＹＭＭＤＤ
+|    C*年制為２－中國年，日期格式＝２　ＹＹＹＹＭＭＤＤ
+|    C           DNA01     MULT 10000     P3101I
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM AK09      P3102I  1
+|    C                     PARM AK09      P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C                     PARM           P3101O  80
+| 03-C           P3101O    IFNE 0
+|   C           P3101O    DIV  10000     WNA01
+| 03*C                     ELSE
+|   C                     Z-ADD0         WNA01
+| 03-C                     END
+|    C*
+|    C           DNA01C    MULT 10000     P3101I
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM AK09      P3102I  1
+|    C                     PARM AK09      P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C                     PARM           P3101O  80
+| 04-C           P3101O    IFNE 0
+|   C           P3101O    DIV  10000     WNA01C
+| 04*C                     ELSE
+|   C                     Z-ADD0         WNA01C
+| 04-C                     END
+|    C**
+|    C* CHK A&P CODE
+|    C**
+| 05-C           DNA02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           KEYNA     CHAINNA0                  40
+|    C*
+| 06-C           DOPT      IFEQ 1                          *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     616299
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 07-C           DOPT      IFNE 1                          *UPD,DEL,INQ
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     616299
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 08-C           DOPT      IFEQ 1                          *ADD
+| 09-C           DNA01C    IFNE *ZEROS
+|   C           DNA02C    ORNE *BLANK
+|   C*
+|   C           KEYNAC    CHAINNA0                  40
+| 10-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT0060' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 10-C                     END
+|   C*
+| 09-C                     END
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*
+04===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+| 01-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     SETON                     31    *CAN INPUT
+| 01*C                     ELSE                            *DEL, INQ
+|   C                     SETOF                     31    *INP PROTECT
+| 01-C                     END
+|    C*
+| 02-C           DOPT      IFEQ 1                          *ADD
+|   C           DNA01C    ANDEQ0                          *NO COPY
+|   C           DNA02C    ANDEQ*BLANK                     *NO COPY
+|   C                     EXSR R1C10
+| 02*C                     ELSE                            *U/D/I
+|   C                     EXSR R1C20
+| 02-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)----------------------------------*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C           *LOVAL    SETLLNA0
+| 03-C                     END
+|    C*---------------------------------------------------------------*
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....'SC02' FIELD INIT : ADD (NO COPY)
+     C*==============================================================*
+06===C           R1C10     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    DNA03
+|    C                     MOVEL'D'       DNA04
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....'SC02' FIELD INIT : UPD, DEL, INQ, (ADD & COPY)
+     C*==============================================================*
+07===C           R1C20     BEGSR
+|    C*
+|    C                     MOVELNA03      DNA03
+|    C                     MOVELNA04      DNA04
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+08===C*          R1E00     BEGSR
+|    C*
+|    C*          #CSR      DIV  256       #LIN             *LINE
+|    C*                    MVR            #COL             *COLUMN
+|    C*會計科目
+| 01-C*          #LIN      IFEQ 6
+|   C*          #COL      ANDGE18
+|   C*          #COL      ANDLE25
+|   C*                    CALL 'GLI410'
+|   C*                    PARM DND01     P410I1  2
+|   C*          DND04     PARM DND04     P410I2  8
+|   C*                    PARM           @RTNC   2
+| 01-C*                    END
+|    C*
+08===C*                    ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+09===C           R2000     BEGSR
+|    C*
+|    C                     MOVE 'SC02'    SCID
+|    C*
+| 01-C           *IN03     DOWEQ'0'
+|   C           SCID      ANDEQ'SC02'
+|   C*
+|   C                     EXFMTDSPD2
+|   C                     MOVEA*ALL'0'   *IN,60
+|   C*
+| 02-C           *IN03     IFEQ '0'
+|   C           *IN12     ANDEQ'0'
+|   C*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R2B00                      *SC02 CHK
+| 03-C                     END
+|   C*
+| 04-C           *IN99     IFEQ '0'                        *CHK OK
+|   C           *IN05     ANDEQ'0'
+|   C                     EXSR R2D00                      *FILE UPD
+|   C                     MOVE 'SC01'    SCID
+| 04-C                     END
+|   C*
+| 02*C                     ELSE
+|   C                     MOVE 'SC01'    SCID
+| 02-C                     END
+| 01-C                     END
+|    C*
+09===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 .... 'SC02' CHECK
+     C*==============================================================*
+10===C           R2B00     BEGSR
+|    C*
+| 01-C           DNA03     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7199
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*
+10===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+11===C           R2D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R2D10
+|   C           DOPT      CASEQ2         R2D20
+|   C           DOPT      CASEQ4         R2D30
+| 01-C                     END
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+12===C           R2D10     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     WRITENA0
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R2D11 ....SCREEN FIELD TO FILE
+     C*==============================================================*
+13===C           R2D11     BEGSR
+|    C*
+|    C                     Z-ADDWNA01     NA01
+|    C                     MOVELDNA02     NA02
+|    C                     MOVELDNA03     NA03
+|    C                     MOVELDNA04     NA04
+|    C                     TIME           NA97
+|    C                     Z-ADD$A8YMD    NA98
+|    C                     MOVEL$USER     NA99
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+14===C           R2D20     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     UPDATNA0
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+15===C           R2D30     BEGSR
+|    C*
+|    C                     DELETNA0
+|    C*
+15===C                     ENDSR
+

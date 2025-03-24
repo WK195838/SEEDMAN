@@ -1,0 +1,228 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA407                                     *
+     H*    PROGRAM NAME :員工年假批次處理                          *
+     H*    AUTHOR       : TOM T.                                     *
+     H*    CREATE DATE  : 89/11/29                                   *
+     H*    UPDATE DATE  : 90/04/06 A1274 EVA                         *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYPMPF  IF  E           K        DISK
+     FPY2HLF01UF  E           K        DISK
+     FPYA407D CF  E                    WORKSTN
+     I*------------------------------------------------------------***
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      203 2060$A8YM
+     I                                      211 2160DDATE
+     I*
+     I                                      501 502 DER01
+     I                                      503 5070DER03
+     I                                      503 5050DER03Y
+     I                                      506 5070DER03M
+     I                                      511 5160WER03
+     I                                      520 5230DYMS
+     I                                      520 5210DMS
+     I                                      522 5230DDS
+     I                                      524 5270DYME
+     I                                      524 5250DME
+     I                                      526 5270DDE
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C                     MOVEL'01'      KPM01   2
+     C           KEYPM     KLIST
+     C                     KFLD           KPM01
+     C                     KFLD           DER01
+     C           KEY2H     KLIST
+     C                     KFLD           DER01
+     C                     KFLD           WER03
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INI. RTN.
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C                     EXSR RTN100                     *MAIN
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL ROUTINE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   *NAMVAR
+|    C*------------------------------------------------------------***
+|    C                     Z-ADD*ZERO     DER03
+|    C*------------------------------------------------------------***
+|    C*
+|    C                     MOVEL$COR      DER01
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+|    C           KEYPM     CHAINPM0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     Z-ADDPM202     DER03
+| 02*C                     ELSE
+|   C                     Z-ADD*ZERO     DER03
+| 02-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100.... MAIN ROUTINE
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     SETON                     97
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO END100
+| 01-C                     END
+|    C*
+|    C                     EXSR RTN110                     *CHK SCREEN1
+|    C                     OUT  *NAMVAR
+|    C*
+| 02-C           *IN13     IFEQ '1'
+|   C                     EXSR RTN130                     *PROCESS
+| 02-C                     END
+|    C*
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          RTN110....CHECK SCREEN1
+     C*==============================================================*
+03===C           RTN110    BEGSR
+|    C* << CHACK 公司別NOT *BLANK >>
+| 01-C           DER01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DER01     CM001I  2         公司代號
+|    C           CM02      PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 02-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 02-C                     END
+|    C   99                GOTO END110
+|    C*
+| 03-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+| 04-C           DER03     IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 04*C                     ELSE
+| 05-C           DER03M    IFLT 1
+|   C           DER03M    ORGT 12
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 05-C                     END
+| 04-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DER03     P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           WER03     PARM           P3911O  60
+|    C*
+|    C*員工年假計算基準：本月16~下月15日
+|    C                     Z-ADDDER03M    DMS
+|    C                     Z-ADD16        DDS
+|    C                     Z-ADD15        DDE
+|    C*
+| 06-C           DER03M    IFEQ 12
+|   C                     Z-ADD1         DME
+| 06*C                     ELSE
+|   C           1         ADD  DER03M    DME
+| 06-C                     END
+|    C*
+|    C*處理年月：為薪資確認年月
+|    C           KEYPM     CHAINPM0                  40
+| 07-C           *IN40     IFEQ '0'
+|   C                     Z-ADDPM202     DER03
+| 07*C                     ELSE
+|   C                     Z-ADD*ZERO     DER03
+| 07-C                     END
+|    C*
+|    C*
+03===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN130.... PROCESS
+     C*==============================================================*
+04===C           RTN130    BEGSR
+|    C*
+|    C                     SETON                     96
+|    C                     WRITEDSPC1
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DER03     P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           WER03     PARM           P3911O  60
+|    C*
+|    C                     OUT  *NAMVAR
+|    C*-------------------------------------------------------------***
+|    C*可允許多次執行本作業
+     C           KEY2H     SETLLH20
+     C           KEY2H     READEH20                      46
+     C           *IN46     DOWEQ'0'
+     C                     DELETH20
+     C           KEY2H     READEH20                      46
+     C                     END
+|    C*-------------------------------------------------------------***
+|    C*910118S KLAUS
+     C                     CLOSEPY2HLF01
+|    C*910118E KLAUS
+|   C                     CALL 'PYA407C'
+|    C*
+|    C                     SETON                     93
+|    C                     SETOF                     96
+|    C*
+04===C                     ENDSR
+

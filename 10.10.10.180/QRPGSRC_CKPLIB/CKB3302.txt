@@ -1,0 +1,642 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : CKB3302                                    *
+     H*    PROGRAM NAME :票據資料批次列印傳票作業                  *
+     H*    AUTHOR       : A1162  IVORY                               *
+     H*    CREATE DATE  : 1994/01/27                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :票據系統                                  *
+     H****************************************************************
+     FCKHAPF  UP  E           K        DISK
+     FCKB330F UF  E           K        DISK                      A
+     F            CKB330R                           KRENAMEWF0
+     FAPPHLF04IF  E           K        DISK
+     FCKHFLF04IF  E           K        DISK
+     FAPC2PF  UF  E           K        DISK                      A
+     FGLWFPF  UF  E           K        DISK                      A
+     FAPC3PF  IF  E           K        DISK
+     E*---------------------------------------------------------------*
+     E*月份 GET 月份代碼 USE
+     E                    @W01   12  12  1
+     E                    @W02   10  10  1
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     IAPDA02      DS
+     I                                        1   2 $GL
+     I                                        3   4 $CK
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      50105080W01S
+     I                                      50905160W01E
+     I                                      517 517 D02
+     I                                      518 526 D03S
+     I                                      527 535 D03E
+     I                                      536 536 D04
+     I                                      53705430D01S
+     I                                      54405500D01E
+     I                                      551 551 @PAST
+     I*
+     I            DS
+     I                                        1   80WFLD1
+     I                                        5   60WFLDM
+     I                                        7   80WFLDD
+     I                                       11  24 WHA16
+     I                                       19  24 WWF07
+     I*
+     I            DS
+     I                                        1  10 HA03
+     I                                        3   3 HA033
+     I                                        4   4 HA034
+     I                                        3  10 WHA032
+     I                                        4  10 WHA033
+     I                                        5  10 WHA034
+     I*
+     I            DS
+     I                                        1   9 WNBR
+     I                                        1   9 WNBRN
+     I            DS
+     I                                        1   9 WNBRO
+     I            DS
+     I                                        1  10 PA05
+     I                                       11  11 PA06
+     I                                       12  15 PA07
+     I                                       16  24 PA09
+     I                                       25  32 PA11
+     I                                       33  40 PA12
+     I                                       41  70 PA13
+     I                                       71  780PA15
+     I                                       79  800PRTD
+     I                                       81  820PRTM
+     I                                       83  840PRTY
+     I                                       85  930WCASH1
+     I                                       94 1020WCASH2
+     I                                      103 1100WDATE
+MAY  I                                      111 111 PA08
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           APDA02
+     C           *LIKE     DEFN WF02      WWF02
+     C           *LIKE     DEFN WF10      WWF10
+     C           *LIKE     DEFN HA07      WHA07
+     C           *LIKE     DEFN HA01      WHA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPH     KLIST                           .APPHLF02 KEY
+     C                     KFLD           HA04
+     C                     KFLD           HA03
+     C           KEYWF     KLIST                           .CKB330F  KEY
+     C                     KFLD           WF01
+     C                     KFLD           WF02
+     C           KEYC2     KLIST                           .APC2PF   KEY
+     C                     KFLD           C201
+     C                     KFLD           C202
+     C                     KFLD           C203
+     C                     KFLD           C204
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C  N10                EXSR R0100                      *INIT VALUE
+     C*
+  01-C           D04       CASEQ'1'       R2000
+    C           D04       CASEQ'2'       R1000
+  01-C                     END
+     C*
+     CLR 87                EXSR R4100
+     C*
+     C*==============================================================*
+     C*          R0100 ... SCREEN INIT VALUE SET
+     C*==============================================================*
+01===CSR         R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C                     IN   APDA02
+|    C                     MOVEL$CK       C201
+|    C                     Z-ADD*ZERO     WWF02            .序號
+|    C                     Z-ADD*ZERO     WFLD1   80       .傳票日期
+|    C                     Z-ADD*ZERO     WWF12   90
+|    C                     MOVEL*BLANK    WFLD2   9        .傳票號碼
+|    C                     MOVEL*BLANK    HA04N  10
+|    C                     MOVELHA16      WHA16
+|    C                     MOVELHA07      WHA07
+|    C                     MOVELHA01      WHA01
+|    C                     SETON                     10
+|    C* GET傳票號碼
+| 02-C*          D04       IFEQ '2'
+|   C*                    MOVELHA54      WFLD1
+| 03-C*          D02       IFEQ '1'
+| 04-C*          HA01      IFEQ '1'
+|   C*                    EXSR R3000
+| 04-C*                    END
+| 03*C*                    ELSE
+|   C*                    MOVELHA52      WNBR
+| 03-C*                    END
+| 02*C*                    ELSE
+|   C*                    MOVELHA53      WFLD1
+| 05-C*          D02       IFEQ '1'
+|   C*                    EXSR R3000
+| 05*C*                    ELSE
+|   C*                    MOVELHA51      WNBR
+| 05-C*                    END
+| 02-C*                    END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... D04 = '2'
+     C*===============================================================*
+02===C           R1000     BEGSR
+|    C*
+| 01-C           HA01      IFNE WHA01
+|   C                     EXSR R4100
+| 01-C                     END
+|    C*
+| 02-C           HA01      CASEQ'1'       R1100
+|   C           HA01      CASEQ'2'       R1200
+| 02-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R1100 ... D04 = '2' & HA01 = '1'  DETAIL
+     C*===============================================================*
+03===C           R1100     BEGSR
+|    C* LEVEL BREAK
+| 01-C           HA16      IFNE WHA16
+|   C           HA07      ORNE WHA07
+|   C* WRITE借方資料
+|   C                     MOVELWNBR      WF01
+|   C                     Z-ADD*ZERO     WF02
+|   C           KEYWF     CHAINWF0                  40
+|   C                     Z-ADDWFLD1     WF03
+|   C                     MOVEL'110300'  WF04
+|   C                     MOVEL'ATT0'    WF05
+|   C                     MOVEL'B'       WF06
+|   C                     MOVELWWF07     WF07
+|   C                     MOVEL*BLANK    WF08
+|   C                     MOVEL*BLANK    WF09
+|   C                     MOVELWWF10     WF10
+|   C                     MOVEL'D'       WF11
+|   C                     Z-ADDWWF12     WF12
+|   C                     Z-ADD*ZERO     WF13
+|   C*
+|   C                     WRITEWF0
+|   C* CLEAR TOTAL FIELD
+|   C                     Z-ADD*ZERO     WWF12
+|   C                     Z-ADD*ZERO     WWF02
+|   C**************
+|   C* GET傳票號碼
+|   C                     MOVELHA54      WFLD1
+| 02-C           D02       IFEQ '1'
+|   C                     EXSR R3000
+|   C                     MOVEL'N'       @PAST
+| 02*C                     ELSE
+|   C                     MOVELHA52      WNBR
+| 03-C           D04       IFEQ '2'
+| 04-C           WNBRN     IFNE WNBRO
+|   C                     MOVELWNBR      GLKEY1
+|   C                     MOVE WNBR      GLKEY2
+| 04-C                     END
+| 03-C                     END
+| 05-C           D04       IFEQ '1'
+| 06-C           WNBRN     IFNE WNBRO
+|   C                     MOVELWNBR      GLKEY1
+|   C                     MOVE WNBR      GLKEY2
+| 06-C                     END
+| 05-C                     END
+|   C                     EXSR @DEL
+| 02-C                     END
+|   C*
+|   C                     MOVELWNBR      WNBRO
+|   C                     MOVELHA16      WHA16
+|   C                     MOVELHA07      WHA07
+|   C*
+| 01-C                     END
+|    C* WRITE貸方資料
+|    C                     MOVELWNBR      WF01
+|    C                     ADD  1         WWF02
+|    C                     Z-ADDWWF02     WF02
+|    C           KEYWF     CHAINWF0                  40
+|    C                     Z-ADDWFLD1     WF03
+|    C                     MOVEL'111300'  WF04
+|    C                     MOVEL'ATT0'    WF05
+|    C                     MOVEL*BLANK    WF06
+|    C                     MOVEL*BLANK    WF07
+|    C*                    MOVE HA03      WF09
+|    C*CHECK WF09只要票據號碼之後的號碼
+|    C           HA033     LOKUP@W02                     49
+|    C           HA034     LOKUP@W02                     50
+|    C                     MOVEL*BLANK    WF09
+|    C   50                MOVELWHA033    WF09
+|    C   49                MOVELWHA032    WF09
+|    C  N49N50             MOVELWHA034    WF09
+|    C* GET WF10(摘要)
+|    C                     CALL 'P31'
+|    C                     PARM HA07      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    HA07N   60
+|    C                     MOVE *BLANK    @WF102 12
+|    C                     MOVELHA03      @WF102
+|    C                     MOVEL*BLANK    @WF101 17
+|    C                     MOVE HA07N     @WF101
+|    C                     MOVELHA07N     WF08
+|    C                     CALL 'CKS#C0'
+|    C                     PARM 'R1'      #C001I  2
+|    C                     PARM HA04      #C002I 10
+|    C           HA04N     PARM           #C003O 10
+|    C                     PARM           #C004O 42
+|    C                     PARM           #C005O 10
+|    C                     PARM           #C098O 50
+|    C                     PARM           #C099O  1
+|    C                     MOVELHA04N     @WF101
+|    C                     MOVEL*BLANK    WF10
+|    C                     MOVEL@WF101    WF10
+|    C                     MOVE @WF102    WF10
+|    C                     MOVELWF10      WWF10
+|    C*
+|    C                     MOVEL'C'       WF11
+|    C                     Z-ADD*ZERO     WF12
+|    C                     Z-ADDHA10      WF13
+|    C                     ADD  HA10      WWF12
+|    C*
+|    C                     WRITEWF0
+|    C* 首印UPDATE CKHAPF ( UPDATE 傳票號碼)
+| 07-C           D02       IFEQ '1'
+|   C                     MOVELWNBR      HA52
+|   C                     UPDATHA0
+| 07-C                     END
+|    C*
+|    C                     SETON                     87
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R1200 ... D04 = '2' & HA01 = '2'
+     C*===============================================================*
+04===C           R1200     BEGSR
+|    C*
+|    C* GET傳票號碼
+|    C                     MOVELHA54      WFLD1
+| 01-C           D02       IFEQ '1'
+|   C                     EXSR R3000
+|   C                     MOVEL'N'       @PAST
+| 01*C                     ELSE
+|   C                     MOVELHA52      WNBR
+| 02-C           D04       IFEQ '2'
+| 03-C           WNBRN     IFNE WNBRO
+|   C                     MOVELWNBR      GLKEY1
+|   C                     MOVE WNBR      GLKEY2
+| 03-C                     END
+| 02-C                     END
+| 04-C           D04       IFEQ '1'
+| 05-C           WNBRN     IFNE WNBRO
+|   C                     MOVELWNBR      GLKEY1
+|   C                     MOVE WNBR      GLKEY2
+| 05-C                     END
+| 04-C                     END
+|   C                     EXSR @DEL
+| 01-C                     END
+     C*
+|   C                     MOVELWNBR      WNBRO
+|    C*
+|    C* WRITE借方資料
+|    C                     MOVELWNBR      WF01
+|    C                     Z-ADD1         WF02
+|    C           KEYWF     CHAINWF0                  40
+|    C                     Z-ADDWFLD1     WF03
+|    C                     MOVEL'211000'  WF04
+|    C                     MOVEL'ATT0'    WF05
+|    C                     MOVEL'D'       WF06
+|    C                     MOVELWWF07     WF07
+|    C*                    MOVE HA03      WF09
+|    C*CHECK WF09只要票據號碼之後的號碼
+|    C           HA033     LOKUP@W02                     49
+|    C           HA034     LOKUP@W02                     50
+|    C                     MOVEL*BLANK    WF09
+|    C  N49N50             MOVELWHA034    WF09
+|    C   50                MOVELWHA033    WF09
+|    C   49                MOVELWHA032    WF09
+|    C* GET WF10(摘要)
+|    C                     CALL 'P31'
+|    C                     PARM HA07      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    HA07N   60
+|    C                     MOVEL*BLANK    @WF102 12
+|    C                     MOVELHA03      @WF102
+|    C                     MOVEL*BLANK    @WF101 17
+|    C                     MOVE HA07N     @WF101
+|    C                     MOVELHA07N     WF08
+|    C                     CALL 'CKS#D0'
+|    C                     PARM 'R1'      #D001I  2
+|    C                     PARM HA04      #D002I 10
+|    C           HA04N     PARM           #D003O 10
+|    C                     PARM           #D004O 42
+|    C                     PARM           #D005O 62
+|    C                     PARM           #D006O 50
+|    C                     PARM           #D099O  1
+|    C                     MOVELHA04N     @WF101
+|    C                     MOVEL*BLANK    WF10
+|    C                     MOVEL@WF101    WF10
+|    C                     MOVE @WF102    WF10
+|    C                     MOVELWF10      WWF10
+|    C*
+|    C                     MOVEL'D'       WF11
+|    C                     Z-ADDHA10      WF12
+|    C                     Z-ADD*ZERO     WF13
+|    C*
+|    C                     WRITEWF0
+|    C**************
+|    C* WRITE貸方資料
+|    C                     MOVELWNBR      WF01
+|    C                     Z-ADD2         WF02
+|    C           KEYWF     CHAINWF0                  40
+|    C                     Z-ADDWFLD1     WF03
+|    C                     MOVEL'110300'  WF04
+|    C                     MOVEL'ATT0'    WF05
+|    C                     MOVEL'B'       WF06
+|    C                     MOVELWWF07     WF07
+|    C                     MOVEL*BLANK    WF08
+|    C                     MOVEL*BLANK    WF09
+|    C                     MOVELWWF10     WF10
+|    C*
+|    C                     MOVEL'C'       WF11
+|    C                     Z-ADD*ZERO     WF12
+|    C                     Z-ADDHA10      WF13
+|    C*
+|    C                     WRITEWF0
+|    C* 首印UPDATE CKHAPF ( UPDATE 傳票號碼)
+| 06-C           D02       IFEQ '1'
+|   C                     MOVELWNBR      HA52
+|   C                     UPDATHA0
+| 06-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... D04 = '1'  MAIN ROUTINE
+     C*===============================================================*
+05===C           R2000     BEGSR
+|    C*
+|    C* GET傳票號碼
+|    C                     MOVELHA53      WFLD1
+| 01-C           D02       IFEQ '1'
+|   C                     EXSR R3000
+|   C                     MOVEL'N'       @PAST
+| 01*C                     ELSE
+|   C                     MOVELHA51      WNBR
+| 02-C           D04       IFEQ '2'
+| 03-C           WNBRN     IFNE WNBRO
+|   C                     MOVELWNBR      GLKEY1
+|   C                     MOVE WNBR      GLKEY2
+| 03-C                     END
+| 02-C                     END
+| 04-C           D04       IFEQ '1'
+| 05-C           WNBRN     IFNE WNBRO
+|   C                     MOVELWNBR      GLKEY1
+|   C                     MOVE WNBR      GLKEY2
+| 05-C                     END
+| 04-C                     END
+|   C                     EXSR @DEL
+| 01-C                     END
+|    C*
+|    C                     MOVELWNBR      WNBRO
+|    C* CLEAR FIELD
+|    C                     Z-ADD*ZERO     WWF02
+|    C* GET WF07 USE
+|    C                     MOVELHA16      WHA16
+|    C*
+|    C           KEYPH     SETLLPH0
+|    C           KEYPH     READEPH0                      45
+|    C                     SETOF                     88
+| 06-C           *IN45     DOWEQ'0'
+|   C                     EXSR R2100
+|   C                     SETON                     88
+|   C           KEYPH     READEPH0                      45
+| 06-C                     END
+|    C   88                EXSR R2200
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R2100 ... D04 = '1'   DETAIL --> WRITE借方資料
+     C*===============================================================*
+06===C           R2100     BEGSR
+|    C*
+|    C* WRITE借方資料
+|    C                     MOVELWNBR      WF01
+|    C           WWF02     ADD  1         WF02
+|    C                     ADD  1         WWF02
+|    C           KEYWF     CHAINWF0                  40
+|    C                     Z-ADDHA53      WF03
+|    C                     MOVEL'212000'  WF04
+|    C                     MOVEL'ATT0'    WF05
+|    C                     MOVEL*BLANK    WF06
+|    C                     MOVEL*BLANK    WF07
+|    C                     CALL 'P31'
+|    C                     PARM PH20      P3101I  80        *MAY
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    PH20N   60        *MAY
+|    C                     MOVEL*BLANK    WF08
+|    C                     MOVELPH20N     WF08              *MAY
+|    C                     MOVELPH02      WF09
+|    C                     MOVE PH03      WF09
+|    C*                    MOVELPH26      WF10
+|    C                     CALL 'P65'
+|    C                     PARM PH26      P6501I 80
+|    C                     PARM 29        P6502I  30
+|    C                     PARM           P6511O 80
+|    C                     PARM           P6512O 80
+|    C                     MOVELP6511O    WF10
+|    C                     MOVEL'D'       WF11
+|    C                     Z-ADDPH16      WF12
+|    C                     Z-ADD*ZERO     WF13
+|    C*
+|    C                     WRITEWF0
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R2200 ... D04 = '1'   DETAIL --> WRITE貸方資料
+     C*===============================================================*
+07===C           R2200     BEGSR
+|    C*
+|    C* WRITE貸方資料
+|    C                     MOVELWNBR      WF01
+|    C           WWF02     ADD  1         WF02
+|    C           KEYWF     CHAINWF0                  40
+|    C                     Z-ADDHA53      WF03
+|    C                     MOVEL'211000'  WF04
+|    C                     MOVEL'ATT0'    WF05
+|    C                     MOVEL'D'       WF06
+|    C                     MOVELWWF07     WF07
+|    C*                    MOVE HA03      WF09
+|    C*CHECK WF09只要票據號碼之後的號碼
+|    C           HA033     LOKUP@W02                     49
+|    C           HA034     LOKUP@W02                     50
+|    C                     MOVEL*BLANK    WF09
+|    C  N49N50             MOVELWHA034    WF09
+|    C   50                MOVELWHA033    WF09
+|    C   49                MOVELWHA032    WF09
+|    C* GET WF10(摘要)
+|    C                     CALL 'P31'
+|    C                     PARM HA07      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    HA07N   60
+|    C                     MOVEL*BLANK    @WF102 12
+|    C                     MOVELHA03      @WF102
+|    C                     MOVEL*BLANK    @WF101 17
+|    C                     MOVE HA07N     @WF101
+|    C                     MOVEL*BLANK    WF08
+|    C                     MOVELHA07N     WF08
+|    C                     MOVEL*BLANKS   HA04N              *MAY
+|    C                     CALL 'CKS#D0'
+|    C                     PARM 'R1'      #D001I  2
+|    C                     PARM HA04      #D002I 10
+|    C           HA04N     PARM           #D003O 10
+|    C                     PARM           #D004O 42
+|    C                     PARM           #D005O 62
+|    C                     PARM           #D006O 50
+|    C                     PARM           #D099O  1
+|    C                     MOVELHA04N     @WF101
+|    C                     MOVEL*BLANK    WF10
+|    C                     MOVEL@WF101    WF10
+|    C                     MOVE @WF102    WF10
+|    C                     MOVELWF10      WWF10
+|    C*
+|    C                     MOVEL'C'       WF11
+|    C                     Z-ADD*ZERO     WF12
+|    C                     Z-ADDHA10      WF13
+|    C                     WRITEWF0
+|    C*
+|    C           HA03      CHAINHF0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C           HF77      ANDNE0
+|   C                     ADD  1         WF02
+|   C                     MOVEL'521601'  WF04
+|   C                     MOVEL'2100'    WF05
+|   C                     MOVEL*BLANK    WF06
+|   C                     MOVEL*BLANK    WF07
+|   C                     MOVEL*BLANK    WF08
+|   C                     MOVEL*BLANK    WF09
+|   C                     MOVEL*BLANKS   WF10              *MAY
+|   C                     MOVELHA04N     WF10              *MAY
+|   C                     Z-ADDHF77      WF13
+|   C                     WRITEWF0
+| 01-C                     END
+|    C*
+|    C* 首印時UPDATE CKHAPF ( UPDATE 傳票號碼)
+| 02-C           D02       IFEQ '1'
+|   C                     MOVELWNBR      HA51
+|   C                     UPDATHA0
+| 02-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R3000 ... GET傳票號碼
+     C*===============================================================*
+08===C           R3000     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    WNBR    9
+|    C                     MOVEL*BLANK    WNBR1   3
+|    C                     MOVEL*BLANK    WNBR2   6
+|    C*
+|    C                     Z-ADD0         X       20
+|    C*
+|    C*                    MOVEL'PZ'      C201
+|    C                     MOVELC201      WNBR1
+|    C                     Z-ADDWFLDM     X
+|    C                     MOVEL@W01,X    C202
+|    C                     MOVE @W01,X    WNBR1
+|    C*
+|    C                     MOVELWNBR1     WNBR2
+|    C                     MOVEL*BLANK    WNBR1
+|    C*
+|    C                     Z-ADDWFLDD     C203
+|    C                     MOVELWFLDD     WNBR1
+|    C                     MOVEL*BLANK    C302
+|    C                     MOVEL*BLANK    C204
+|    C           $USER     CHAINC3R0                 40
+|    C                     MOVE C302      WNBR1
+|    C                     MOVE C302      C204
+|    C*
+|    C                     MOVE WNBR1     WNBR2
+|    C                     MOVELWNBR2     WNBR
+|    C*
+|    C           KEYC2     CHAINC2R0                 40
+|    C   40                Z-ADD1         C205
+|    C  N40                ADD  1         C205
+|    C*
+|    C   40                WRITEC2R0
+|    C  N40                UPDATC2R0
+|    C*
+|    C                     MOVE C205      WNBR
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R4100 ... LR - WRITE借方資料
+     C*===============================================================*
+09===C           R4100     BEGSR
+|    C*
+| 01-C           D04       IFNE '2'
+|   C*          HA01      ANDNE'1'
+|   C           *IN87     OREQ '0'
+|   C                     GOTO E4100
+| 01-C                     END
+|    C*
+|    C                     SETOF                     87
+|    C* WRITE借方資料
+|    C                     MOVELWNBR      WF01
+|    C                     Z-ADD*ZERO     WF02
+|    C           KEYWF     CHAINWF0                  40
+|    C                     Z-ADDWFLD1     WF03
+|    C                     MOVEL'110300'  WF04
+|    C                     MOVEL'ATT0'    WF05
+|    C                     MOVEL'B'       WF06
+|    C                     MOVELWWF07     WF07
+|    C                     MOVEL*BLANK    WF08
+|    C                     MOVEL*BLANK    WF09
+|    C                     MOVELWWF10     WF10
+|    C                     MOVEL'D'       WF11
+|    C                     Z-ADDWWF12     WF12
+|    C                     Z-ADD*ZERO     WF13
+|    C*
+|    C                     WRITEWF0
+|    C*
+09===C           E4100     ENDSR
+     C*==============================================================*
+     C/COPY QRPGSRC,APS010
+**
+123456789ABC
+**
+0123456789
+

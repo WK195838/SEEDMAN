@@ -1,0 +1,98 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM-ID   : GLR2K0                                    */
+     /*    PROGRAM NAME : 比較資產負債表－月份                    */
+     /*    AUTHOR       : A1087  JOYCE                              */
+     /*    CREATE DATE  : 1992.12.17                                */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       : 泛太總帳                                */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&DAI01S)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DAI01E)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DAR05)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DAI02S)   TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DAI02E)   TYPE(*CHAR) LEN(4)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DAI01S)   VALUE(%SST(*LDA 521 2))
+             CHGVAR     VAR(&DAI01E)   VALUE(%SST(*LDA 523 2))
+             CHGVAR     VAR(&DAR05)    VALUE(%SST(*LDA 525 1))
+             CHGVAR     VAR(&DAI02S)   VALUE(%SST(*LDA 531 4))
+             CHGVAR     VAR(&DAI02E)   VALUE(%SST(*LDA 535 4))
+
+      /*資產工作檔GLWF11 */
+             CPYF       FROMFILE(GLWF11) TOFILE(QTEMP/GLWF11) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/GLWF11))
+             OVRDBF     FILE(GLWF11) TOFILE(QTEMP/GLWF11)
+
+      /*負債工作檔GLWF12 */
+             CPYF       FROMFILE(GLWF12) TOFILE(QTEMP/GLWF12) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/GLWF12))
+             OVRDBF     FILE(GLWF12) TOFILE(QTEMP/GLWF12)
+
+      /*科目明細表（資產）工作檔GLWF04 */
+             CPYF       FROMFILE(GLWF04) TOFILE(QTEMP/GLWF04) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/GLWF04))
+             OVRDBF     FILE(GLWF04) TOFILE(QTEMP/GLWF04)
+
+      /*科目明細表（負債）工作檔GLWF13 */
+             CPYF       FROMFILE(GLWF13) TOFILE(QTEMP/GLWF13) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/GLWF13))
+             OVRDBF     FILE(GLWF13) TOFILE(QTEMP/GLWF13)
+      /******/
+
+             OVRDBF     FILE(GLAILF02) SHARE(*YES)
+             OPNQRYF    FILE((GLAILF02)) QRYSLT(' AI01 *EQ %RANGE("' +
+                          *CAT &DAI01S *CAT '" "' *CAT &DAI01E *CAT +
+                          '") & AI02 *EQ %RANGE(' *CAT &DAI02S *CAT +
+                          ' ' *CAT &DAI02E *CAT ')') KEYFLD(*FILE)
+
+    /*中英格式判斷*/
+             IF         COND(&DAR05 *EQ '1') THEN(DO)
+             OVRPRTF    FILE(GLR2K0P1) PAGESIZE(*N 198) CPI(15)
+             OVRPRTF    FILE(GLR2K1P1)
+                        ENDDO
+
+             ELSE       CMD(DO)
+             OVRPRTF    FILE(GLR2K0P1) TOFILE(GLR2K0P2) PAGESIZE(*N +
+                          198) CPI(15)
+             OVRPRTF    FILE(GLR2K1P1) TOFILE(GLR2K1P2)
+                        ENDDO
+
+                        CALL GLR2K01
+
+             CLOF       OPNID(GLAILF02)
+             DLTOVR     FILE(*ALL)
+           /********/
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+
+             IF         COND(&DAR05 *EQ '1') THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2K0P1')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2K1P1')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+                        ENDDO
+
+             IF         COND(&DAR05 *EQ '2') THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2K0P2')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2K1P2')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+                        ENDDO
+
+             ENDPGM
+

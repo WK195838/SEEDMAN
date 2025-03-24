@@ -1,0 +1,516 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : PYA2112                                    *
+     H*    PROGRAM NAME :刷卡異常處理(FOR YAMAHA 刷卡不跨日)     *
+     H*    AUTHOR       : A1266 HANK                                 *
+     H*    CREATE DATE  : 89/11/14                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYT6PF  UF  E           K        DISK                      A
+     FPYPMPF  IF  E           K        DISK
+     FPYLVPF  IF  E           K        DISK
+     FPYT1PF  IF  E           K        DISK
+     FPYT2PF  IF  E           K        DISK
+     FPYT5LF02IF  E           K        DISK
+     FPYT7PF  IF  E           K        DISK
+     E*----------------------------------------------------------------
+     E                    @T25       31  2               刷卡別
+     E                    WA01      999  1 0             星期幾
+     E*----------------------------------------------------------------
+     IEM0
+     I                                              EM01  L1
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I*                                     187 1920DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DT602
+     I                                      503 5100WT601F
+     I                                      503 5080KYM
+     I                                      509 5100KDD
+     I                                      511 5180WT601T
+     I*----------------------------------------------------------------
+     I            DS
+     I                                        1  62 @T25
+     I                                        1  62 T205
+     I*上午實際上班時間FROM (PYT1PF)
+     I            DS
+     I                                        1   40T1F1
+     I                                        1   20T118
+     I                                        3   40T119
+     I*下午實際下班時間TO 1 (PYT1PF)
+     I            DS
+     I                                        1   40T1T1
+     I                                        1   20T124
+     I                                        3   40T125
+     I*下午實際下班時間TO 2 (PYT1PF)
+     I            DS
+     I                                        1   40T1T2
+     I                                        1   20T120
+     I                                        3   40T121
+     I*第一筆刷卡資料PYT5PF(WT612)實際上班刷卡時間
+     I            DS
+     I                                        1   40WT612
+     I                                        1   20DT5031
+     I                                        3   40DT5041
+     I*最後一筆刷卡資料PYT5PF(WT613)實際下班刷卡時間
+     I            DS
+     I                                        1   40WT613
+     I                                        1   20DT5032
+     I                                        3   40DT5042
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*          *NAMVAR   DEFN           PYDA01
+     C*          *LIKE     DEFN LV06      DLV06
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     I*
+     C           KEYPM     KLIST                           人事主檔
+     C                     KFLD           PM01             *類別
+     C                     KFLD           EM01             *公司編號
+     I*
+     C           KEYT2     KLIST                           排班檔
+     C                     KFLD           EM01             *公司編號
+     C                     KFLD           EM02             *員工編號
+     C                     KFLD           KYM              *刷卡年月
+     I*
+     C           KEYT5     KLIST                           刷卡資料檔
+     C                     KFLD           EM01             *公司編號
+     C                     KFLD           EM02             *員工編號
+     C                     KFLD           WT601            *刷卡日期
+     I*
+     C           KEYLV     KLIST                           請假主檔
+     C                     KFLD           EM01             *公司編號
+     C                     KFLD           EM02             *員工編號
+     C                     KFLD           WT601            *刷卡日期
+     I*
+     C           KEYLV1    KLIST                           請假主檔
+     C                     KFLD           EM01             *公司編號
+     C                     KFLD           EM02             *員工編號
+     I*
+     C           KEYT6     KLIST
+     C                     KFLD           WT601            *刷卡日期
+     C                     KFLD           EM01             *公司編號
+     C                     KFLD           EM02             *員工編號
+     C                     KFLD           WT604   1        *實際狀態碼
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100
+     C*
+     C                     Z-ADDWT601F    WT601            *刷卡日期
+     C                     Z-ADD1         WNUM2   50       *刷卡次數
+     C*
+  01-C           WT601     DOWLEWT601T
+    C*    (非刷卡人員不處理)
+  02-C           EM103     IFEQ 'N'
+    C                     GOTO TAG2
+  02-C                     END
+    C*    (特定假日不作處理)
+    C           WT601     CHAINT70                  40
+  03-C           *IN40     IFEQ '0'
+    C                     GOTO TAG1
+  03-C                     END
+    C*0.1讀取上班時間資料-------------------------------------------
+  04-C           EM104     IFEQ 'Y'
+    C                     EXSR R1000                      *排班
+  04*C                     ELSE
+    C                     EXSR R1100                      *正常班
+  04-C                     END
+    C*1.0讀取實際刷卡資料-------------------------------------------
+    C                     EXSR R2000                      *
+    C*2.0比較資料 --------------------------------------------------
+    C*    (AT604=N表示無排班表>>>ERR)
+  05-C           AT604     IFNE 'N'
+    C                     EXSR R2500                      *
+  05-C                     END
+    C*    (無異常)
+  06-C           AT604     IFEQ *BLANK                     *上班
+    C           BT604     ANDEQ*BLANK                     *下班
+    C                     GOTO TAG1
+  06-C                     END
+    C*3.0取得請假資料-----------------------------------------------
+    C*    (AT604=N表示無排班表>>>ERR)
+  07-C           AT604     IFNE 'N'
+    C                     EXSR R3000                      *請假資料
+  07-C                     END
+    C*4.0 WRITE 異常資料--------------------------------------------
+    C                     EXSR R9000                      *WRITE異常檔
+    C*
+    C           TAG1      TAG
+    C*
+    C                     CALL 'P37'
+    C                     PARM WT601     P3701I  80       *日期
+    C                     PARM '2'       P3702I  1        *日期格式
+    C                     PARM '1'       P3703I  1        *歷別
+    C                     PARM 1         P3704I  40       *相距天數...
+    C           WT601     PARM           P3711O  80       *轉後日期...
+    C*
+    C                     ADD  1         WNUM2
+    C*
+  01-C                     END
+     C*
+     C           TAG2      TAG
+     C*
+     C*==============================================================*
+     C*          R0100     DELETE  刷卡異常檔
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*                    IN   PYDA01
+|    C*
+|    C                     Z-ADD*ZERO     WA01
+|    C                     Z-ADD1         I       50
+|    C*
+|    C                     Z-ADDWT601F    WT601   80       *刷卡日期
+|    C*
+| 01-C           WT601     DOWLEWT601T
+|   C*
+|   C           WT601     SETLLT60
+|   C           WT601     READET60                      46
+| 02-C           *IN46     DOWEQ'0'
+|   C                     DELETT60
+|   C           WT601     READET60                      46
+| 02-C                     END
+|   C*
+|   C                     MOVEL'01'      PM01
+|   C           KEYPM     CHAINPM0                  40
+|   C*刷卡日期轉換星期(YYMMDD中國年)
+|   C*                    CALL 'P40'
+|   C*                    PARM WT601     P4001I  60       *
+|   C*                    PARM           P4011O  10       *星期幾
+|   C*                    Z-ADDP4011O    WDAT    10       *星期幾
+|   C*
+|   C                     CALL 'P35'
+|   C                     PARM WT601     P3501I  80       *日期
+|   C                     PARM '2'       P3502I  1        *日期格式
+|   C                     PARM '1'       P3503I  1        *歷別
+|   C                     PARM           P3511O  10       *週內幾天
+|   C                     Z-ADDP3511O    WDAT    10       *星期幾
+|   C                     Z-ADDWDAT      WA01,I  10       *星期幾
+|   C*
+|   C                     ADD  1         I       50       *處理次數
+|   C*
+|   C                     CALL 'P37'
+|   C                     PARM WT601     P3701I  80       *日期
+|   C                     PARM '2'       P3702I  1        *日期格式
+|   C                     PARM '1'       P3703I  1        *歷別
+|   C                     PARM 1         P3704I  40       *相距天數...
+|   C           WT601     PARM           P3711O  80       *轉後日期...
+|   C*
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ...排班(*EM104='Y'需輪班)
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    AT604             *上班
+|    C                     MOVEL*BLANK    BT604             *下班
+|    C*1.0上班時間--------------------------------------------------
+|    C*   (判斷是否有班別存在(PYT2PF員工排班資料檔)
+|    C           KEYT2     CHAINT20                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*   (取得當日刷卡班別(PYT1PF刷卡時間資料檔)
+|   C           @T25,KDD  CHAINT10                  41
+| 02-C           *IN41     IFEQ '0'
+|   C                     MOVELT101      WT611   2         *班別代號
+|   C*   (T1F1=T118+T119)(T1T1=T124+T125)(T1T2=T120+T121)
+|   C                     Z-ADDT1F1      WT614   40        *應上班刷卡時間
+|   C*
+|   C*    (星期一至五上班全天 ,星期六上班半天)
+| 03-C           WA01,WNUM2IFLE 5
+|   C                     Z-ADDT1T1      WT615   40        *應下班刷卡時間
+| 03*C                     ELSE
+|   C                     Z-ADDT1T2      WT615   40        *應下班刷卡時間
+| 03-C                     END
+| 02-C                     END
+| 01-C                     END
+|    C*   (無排班表T604='D'>>不做資料比較)
+| 04-C           *IN40     IFEQ '1'
+|   C           *IN41     OREQ '1'
+|   C                     MOVEL'N'       AT604             *上班
+|   C                     MOVEL'N'       BT604             *下班
+|   C                     Z-ADD0         ATIME
+|   C                     Z-ADD0         ATIMEA
+|   C                     Z-ADD0         ATIMEB
+|   C                     Z-ADD0         BTIME
+|   C                     Z-ADD0         BTIMEA
+|   C                     Z-ADD0         BTIMEB
+| 04-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R1100 ...正常班(*EM104<>'Y'不需輪班)
+     C*==============================================================*
+03===C           R1100     BEGSR
+|    C*
+|    C*****************************************************************
+|    C*---免輪班員工刷卡參數
+|    C* . PM101 =一天工作時數
+|    C* . PM104 =事假代碼
+|    C* . PM181 =免輪班人員上班刷卡時間
+|    C* . PM182 =免輪班人員下班刷卡時間
+|    C* . PM183 =免輪班人員上午上班開始時間設定
+|    C* . PM184 =免輪班人員上午上班終止時間設定
+|    C* . PM185 =免輪班人員下午上班開始時間設定
+|    C* . PM186 =免輪班人員下午上班終止時間設定
+|    C*****************************************************************
+|    C                     MOVEL*BLANK    AT604             *上班
+|    C                     MOVEL*BLANK    BT604             *下班
+|    C                     MOVEL*BLANK    WT611   2         *班別代號
+|    C                     Z-ADDPM183     WT614   40        *應上班刷卡時間
+|    C*    (星期一至五上班全天 ,星期六上班半天)
+| 01-C           WA01,WNUM2IFLE 5
+|   C                     Z-ADDPM186     WT615   40        *應下班刷卡時間
+| 01*C                     ELSE
+|   C                     Z-ADDPM184     WT615   40        *應下班刷卡時間
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ...讀取實際刷卡資料
+     C*==============================================================*
+04===C           R2000     BEGSR
+|    C*
+|    C*1.0讀取實際刷卡資料----------------------------------------*
+|    C                     Z-ADD0         DT5031  20       *刷卡－時
+|    C                     Z-ADD0         DT5041  20       *刷卡－分
+|    C                     Z-ADD0         DT5032  20       *刷卡－時
+|    C                     Z-ADD0         DT5042  20       *刷卡－分
+|    C*    (第一筆刷卡資料=WT612=DT5031+DT5041)實際上班刷卡時間
+|    C           KEYT5     SETLLT50
+|    C           KEYT5     READET50                      46
+| 01-C           *IN46     IFEQ '0'
+|   C                     Z-ADDT503      DT5031           *刷卡－時
+|   C                     Z-ADDT504      DT5041           *刷卡－分
+| 01-C                     END
+|    C*    (最後一筆刷卡資料=WT613=DT5032+DT5042)實際下班刷卡時間
+|    C           KEYT5     READET50                      46
+| 02-C           *IN46     DOWEQ'0'
+|   C                     Z-ADDT503      DT5032           *刷卡－時
+|   C                     Z-ADDT504      DT5042           *刷卡－分
+|   C           KEYT5     READET50                      46
+| 02-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R2500 ...比較資料
+     C*==============================================================*
+05===C           R2500     BEGSR
+|    C*
+|    C*1.0比較資料---------------------------------------------------
+|    C                     Z-ADD0         ATIME   90
+|    C                     Z-ADD0         ATIMEA  20
+|    C                     Z-ADD0         ATIMEB  20
+|    C                     Z-ADD0         BTIME   90
+|    C                     Z-ADD0         BTIMEA  20
+|    C                     Z-ADD0         BTIMEB  20
+|    C                     MOVEL*BLANK    AT604   1        *實際狀態碼
+|    C                     MOVEL*BLANK    BT604   1        *實際狀態碼
+|    C*1.1第一筆刷卡資料=WT612*實際上班刷卡時間--------------------
+| 01-C           WT612     IFEQ 0
+|   C                     MOVEL'*'       AT604            *無上班資料
+| 01-C                     END
+|    C*    (WT614上班時間,3分鐘內緩衝時間,4~15分內遲到)
+|    C           WT614     ADD  4         AWT614  40       *
+|    C           WT614     ADD  15        BWT614  40       *
+| 02-C           WT612     IFGE AWT614
+|   C           WT612     ANDLEBWT614
+|   C                     MOVEL'L'       AT604            *遲到
+| 02-C                     END
+|    C*    (超過15分鐘算 =上班異常@ )
+| 03-C           WT612     IFGT BWT614
+|   C                     MOVEL'@'       AT604            *上班異常
+|   C*
+|   C                     CALL 'P68'
+|   C                     PARM WT614     P6801I  40       *起時
+|   C                     PARM WT612     P6802I  40       *迄時
+|   C                     PARM           P6811O  90       *相距時數...
+|   C                     Z-ADDP6811O    ATIME   90
+|   C*
+|   C           ATIME     DIV  60        ATIMEA  20       *時
+|   C                     MVR            ATIMEB  20       *分
+| 03-C                     END
+|    C*
+|    C*1.2最後一筆刷卡資料=WT613*實際下班刷卡時間------------------
+| 04-C           WT613     IFEQ 0
+|   C                     MOVEL'#'       BT604            *無下班資料
+| 04-C                     END
+|    C*    (WT615下班時間,下班前離開算=下班異常E)
+| 05-C           WT613     IFLT WT615
+|   C           WT613     ANDGT0
+|   C                     MOVEL'E'       BT604            *下班異常
+|   C*
+|   C                     CALL 'P68'
+|   C                     PARM WT613     P6801I  40       *起時
+|   C                     PARM WT615     P6802I  40       *迄時
+|   C                     PARM           P6811O  90       *相距時數...
+|   C                     Z-ADDP6811O    BTIME   90
+|   C           BTIME     DIV  60        BTIMEA  20       *時
+|   C                     MVR            BTIMEB  20       *分
+| 05-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R3000 ...取得請假資料
+     C*==============================================================*
+06===C           R3000     BEGSR
+|    C*
+|    C*0.1取得最近一次，請假資料
+|    C           KEYLV     SETGTLV0
+|    C           KEYLV1    REDPELV0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C                     EXSR R3100
+|   C*
+| 02-C           AT604     IFEQ *BLANK
+|   C           BT604     ANDEQ*BLANK
+|   C                     GOTO E3000
+| 02-C                     END
+|   C*0.2讀取前一筆(同刷卡日)
+|   C           KEYLV     REDPELV0                      46
+| 01-C                     END
+|    C*
+06===C           E3000     ENDSR
+     C*==============================================================*
+     C*          R3100 ...處理上下班異常
+     C*==============================================================*
+07===C           R3100     BEGSR
+|    C*
+|    C*0.1刷卡日期不在請假內不處理
+| 01-C           WT601     IFLT LV03                       *起始日期
+|   C           WT601     ORGT LV05                       *終止日期
+|   C                     GOTO E3100
+| 01-C                     END
+|    C*----------------------------------------------------------------
+|    C*1.0刷卡日期在請假內
+| 02-C           WT601     IFGT LV03                       *起始日期
+|   C           WT601     ANDLTLV05                       *終止日期
+|   C                     MOVEL*BLANK    AT604            *上班
+|   C                     MOVEL*BLANK    BT604            *下班
+|   C                     GOTO E3100
+| 02-C                     END
+|    C*----------------------------------------------------------------
+|    C*2.0請假日即刷卡日
+| 03-C           WT601     IFEQ LV03                       *起始日期
+|   C           WT601     ANDEQLV05                       *終止日期
+|   C*
+| 04-C           LV09      IFEQ 1                          *天數
+|   C                     MOVEL*BLANK    AT604            *上班
+|   C                     MOVEL*BLANK    BT604            *下班
+|   C                     GOTO E3100
+|   C*          *-----------------------------------------------------
+| 04*C                     ELSE
+|   C*2.1上班異常
+| 05-C           AT604     IFNE *BLANK                     *上班
+|   C           WT612     ANDGELV06                       *起始時間
+|   C           WT612     ANDLELV07                       *終止時間
+|   C                     MOVEL*BLANK    AT604            *上班
+| 05-C                     END
+|   C*2.2下班異常
+| 06-C           BT604     IFNE *BLANK                     *下班
+|   C           WT613     ANDGELV06                       *起始時間
+|   C           WT613     ANDLELV07                       *終止時間
+|   C                     MOVEL*BLANK    BT604            *上班
+| 06-C                     END
+| 04-C                     END
+| 03-C                     END
+|    C*----------------------------------------------------------------
+|    C*3.0刷卡日即請假起始日
+| 07-C           WT601     IFEQ LV03                       *起始日期
+|   C           WT601     ANDLTLV05                       *終止日期
+|   C*3.1上班異常
+| 08-C           AT604     IFNE *BLANK                     *上班
+|   C           WT612     ANDGELV06                       *起始時間
+|   C                     MOVEL*BLANK    AT604            *上班
+| 08-C                     END
+|   C*3.2下班異常
+| 09-C           BT604     IFNE *BLANK                     *下班
+|   C           WT613     ANDGELV06                       *起始時間
+|   C                     MOVEL*BLANK    BT604            *下班
+| 09-C                     END
+|   C*
+| 07-C                     END
+|    C*----------------------------------------------------------------
+|    C*4.0刷卡日即請假截止日
+| 10-C           WT601     IFGT LV03                       *起始日期
+|   C           WT601     ANDEQLV05                       *終止日期
+|   C*
+|   C*4.1上班異常
+| 11-C           AT604     IFNE *BLANK                     *上班
+|   C           WT612     ANDLELV07                       *終始時間
+|   C                     MOVEL*BLANK    AT604            *上班
+| 11-C                     END
+|   C*4.2下班異常
+| 12-C           BT604     IFNE *BLANK                     *下班
+|   C           WT613     ANDLELV07                       *終始時間
+|   C                     MOVEL*BLANK    BT604            *下班
+| 12-C                     END
+|   C*
+| 10-C                     END
+|    C*
+07===C           E3100     ENDSR
+     C*==============================================================*
+     C*          R9000 ... WRITE異常檔
+     C*==============================================================*
+08===C           R9000     BEGSR
+|    C*1.0上班異常
+| 01-C           AT604     IFNE *BLANK                     *下班
+|   C                     MOVELAT604     WT604   1        *實際狀態碼
+|   C                     Z-ADDATIMEA    WT605   20       *異常時間－時
+|   C                     Z-ADDATIMEB    WT606   20       *異常時間－分
+|   C                     EXSR R9100
+| 01-C                     END
+|    C*2.0下班異常
+| 02-C           BT604     IFNE *BLANK                     *下班
+|   C                     MOVELBT604     WT604            *實際狀態碼
+|   C                     Z-ADDBTIMEA    WT605            *異常時間－時
+|   C                     Z-ADDBTIMEB    WT606            *異常時間－分
+|   C                     EXSR R9100
+| 02-C                     END
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R9100 ... WRITE異常檔
+     C*==============================================================*
+09===C           R9100     BEGSR
+|    C*
+|    C                     Z-ADDWT601     T601             *刷卡日期
+|    C                     MOVELEM01      T602             *公司編號
+|    C                     MOVELEM02      T603             *員工編號
+|    C                     MOVELWT604     T604             *實際狀態碼
+|    C                     Z-ADDWT605     T605             *異常時間－時
+|    C                     Z-ADDWT606     T606             *異常時間－分
+|    C                     MOVEL*BLANK    T607             *更正狀態碼　
+|    C                     MOVEL*BLANK    T608             *系統處理狀態
+|    C                     MOVELWT611     T611             *班別代號
+|    C                     Z-ADDWT612     T612             *實際上班刷卡時
+|    C                     Z-ADDWT613     T613             *實際下班刷卡時
+|    C                     Z-ADDWT614     T614             *應上班刷卡時間
+|    C                     Z-ADDWT615     T615             *應下班刷卡時間
+|    C                     Z-ADD0         T696             *
+|    C                     Z-ADD$A8YMD    T697             *
+|    C                     TIME           T698             *
+|    C                     MOVEL$USER     T699             *
+|    C*
+|    C                     WRITET60
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+

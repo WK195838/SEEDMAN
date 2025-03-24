@@ -1,0 +1,717 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : CKA220                                     *
+     H*    PROGRAM NAME : 票據格式設定維護                         *
+     H*    AUTHOR       : A1162  IVORY                               *
+     H*    CREATE DATE  : 84/02/27                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     F****************************************************************
+     FCKHIPF  UF  E           K        DISK                      A
+     FCKA220D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+ @   ILDA        UDS
+     I                                      101 110 $USER
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+ @   I                                      135 135 $ADD
+ @   I                                      136 136 $UPD
+ @   I                                      137 137 $DLT
+ @   I                                      138 138 $INQ
+     I                                      139 139 $RMK01
+     I                                      141 141 $RMK03
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I*
+     I                                      501 502 DHI01
+     I                                      535 535 DHI02
+     I                                      537 537 DTEST
+     I                                      538 538 WHI15
+     I                                      539 539 WHI13
+     I                                      540 542 DHI03
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHI     KLIST
+     C                     KFLD           DHI01
+     C                     KFLD           DHI02
+     C                     KFLD           DHI03
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+     C                     MOVEL$COR      DHI01
+     C           $RMK03    IFNE 'Y'                        *LILY
+     C                     SETOF                     32    *LILY-PR
+     C                     ELSE
+     C                     SETON                     32    *LILY-UL
+     C                     END                             *LILY
+     C*公司檔
+     C                     CALL 'CKS#B0'
+     C                     PARM DHI01     #B001I  2
+     C           DHI01N    PARM           #B002O 22
+     C                     PARM           #B003O 32
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C*
+     C                     MOVEL*BLANK    DHI02
+     C                     MOVEL*BLANK    DHI03
+     C                     MOVEL*BLANK    DTEST
+|    C*--------------------------------------------------------------*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 01-C           *IN18     IFEQ '1'                        *END
+     C                     EXSR R1A00
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+     C           DOPT      IFNE 7
+|   C                     MOVEL'SC02'    SCID
+| 03-C                     END
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'CKI22S'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C* CALL SUB-PROGRAM
+|    C                     CALL 'CKI22S'
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     PARM DHI01     P220I1  2
+|    C                     PARM DHI02     P220I2  1
+|    C           DHI03     PARM DHI03     P220I3  3
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     PARM           @RTNC   2
+|    C* RETURN CODE CHECK
+| 02-C           @RTNC     IFEQ '03'                       *PF3
+|   C                     SETON                     03
+| 02-C                     END
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 ....SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+     C           DOPT      IFNE 7
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+| 01-C                     END
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+| 02-C           DHI01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+     C                     CALL 'CKS#B0'
+     C                     PARM DHI01     #B001I  2
+     C           DHI01N    PARM           #B002O 22
+     C                     PARM           #B003O 32
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+|    C*
+| 02-C           DHI02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 02-C           DHI03     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+     C                     MOVEL*BLANK    WHI13
+     C                     MOVEL*BLANK    WHI15
+|    C           KEYHI     CHAINHI0                  40
+|    C*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606162
+|   C                     SETON                     99
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 04-C           DOPT      IFNE 1                          *UPD,DEL,INQ
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606162
+|   C                     SETON                     99
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+     C                     MOVELHI13      WHI13
+     C                     MOVELHI15      WHI15
+|    C*
+04===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+| 01-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     SETON                     31    *CAN INPUT
+| 01*C                     ELSE                            *DEL, INQ
+|   C                     SETOF                     31    *INP PROTECT
+| 01-C                     END
+|    C*
+| 02-C           DOPT      IFEQ 1                          *ADD
+|   C                     EXSR R1C10
+| 02*C                     ELSE                            *U/D/I
+     C           DOPT      IFNE 7
+|   C                     EXSR R1C20
+     C                     ELSE
+|   C                     EXSR R1C30
+     C                     END
+| 02-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)----------------------------------*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C           DOPT      OREQ 7                          *PRE PRINT
+|   C           *LOVAL    SETLLHI0
+| 03-C                     END
+|    C*---------------------------------------------------------------*
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....'SC02' FIELD INIT : ADD (NO COPY)
+     C*==============================================================*
+06===C           R1C10     BEGSR
+|    C*
+|    C                     MOVEL'2'       DHI04
+|    C                     Z-ADD0         DHI051
+|    C                     Z-ADD0         DHI052
+|    C                     Z-ADD0         DHI061
+|    C                     Z-ADD0         DHI062
+|    C                     Z-ADD0         DHI071
+|    C                     Z-ADD0         DHI072
+|    C                     Z-ADD0         DHI081
+|    C                     Z-ADD0         DHI082
+|    C                     Z-ADD0         DHI091
+|    C                     Z-ADD0         DHI092
+|    C                     Z-ADD0         DHI101
+|    C                     Z-ADD0         DHI102
+|    C                     Z-ADD0         DHI111
+|    C                     Z-ADD0         DHI112
+|    C                     Z-ADD0         DHI121
+|    C                     Z-ADD0         DHI122
+     C                     MOVEL'1'       DHI13
+|    C                     Z-ADD0         DHI141
+|    C                     Z-ADD0         DHI142
+     C                     MOVEL'A'       DHI15
+     C                     MOVEL*BLANK    DHI16
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....'SC02' FIELD INIT : UPD, DEL, INQ, (ADD & COPY)
+     C*==============================================================*
+07===C           R1C20     BEGSR
+|    C*
+|    C                     MOVELHI04      DHI04
+|    C                     Z-ADDHI051     DHI051
+|    C                     Z-ADDHI052     DHI052
+|    C                     Z-ADDHI061     DHI061
+|    C                     Z-ADDHI062     DHI062
+|    C                     Z-ADDHI071     DHI071
+|    C                     Z-ADDHI072     DHI072
+|    C                     Z-ADDHI081     DHI081
+|    C                     Z-ADDHI082     DHI082
+|    C                     Z-ADDHI091     DHI091
+|    C                     Z-ADDHI092     DHI092
+|    C                     Z-ADDHI101     DHI101
+|    C                     Z-ADDHI102     DHI102
+|    C                     Z-ADDHI111     DHI111
+|    C                     Z-ADDHI112     DHI112
+|    C                     Z-ADDHI121     DHI121
+|    C                     Z-ADDHI122     DHI122
+|    C                     MOVELHI13      DHI13
+|    C                     Z-ADDHI141     DHI141
+|    C                     Z-ADDHI142     DHI142
+|    C                     MOVELHI15      DHI15
+|    C                     MOVELHI16      DHI16
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*  R1C30 .... DOPT = 7  => 試印
+     C*==============================================================*
+07===C           R1C30     BEGSR
+|    C*
+     C           *LOVAL    SETLLHI0
+     C                     OUT  LDA
+     C                     CALL 'CKR4I02C'
+     C                     MOVEL'UPT2140' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     99
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ....ADD DATA
+     C*==============================================================*
+08===C           R2000     BEGSR
+|    C*
+|    C                     EXFMTDSPD2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'
+|   C* RELEAS FILE --------------------------------------------------*
+|   C           *LOVAL    SETLLHI0
+|   C*---------------------------------------------------------------*
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R2B00                      *SC02 CHK
+| 03-C                     END
+|    C*
+| 04-C           *IN99     IFEQ '0'                        *CHK OK
+|   C                     EXSR R2D00                      *FILE UPD
+|   C                     MOVE 'SC01'    SCID
+| 04-C                     END
+|    C*
+08===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'SC02' CHECK
+     C*==============================================================*
+09===C           R2B00     BEGSR
+|    C*
+|    C*開票日期－年－Ｒ
+| 01-C*          DHI051    IFEQ *ZERO
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6199
+| 01-C*                    END
+|    C*  99                GOTO E2B00
+|    C*開票日期－年－Ｃ
+| 01-C*          DHI052    IFEQ *ZERO
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6299
+| 01-C*                    END
+|    C*  99                GOTO E2B00
+     C*行，列　須同時為零
+     C           DHI051    IFEQ *ZERO
+     C           DHI052    ANDNE*ZERO
+     C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C*
+     C           DHI052    IFEQ *ZERO
+     C           DHI051    ANDNE*ZERO
+     C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C* CPI = 10時，Ｃ不可大於１３２
+     C           DHI15     IFEQ 'A'
+     C           DHI052    ANDGT132
+     C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*開票日期－月－Ｒ
+| 01-C*          DHI061    IFEQ *ZERO
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6399
+| 01-C*                    END
+|    C*  99                GOTO E2B00
+|    C*開票日期－月－Ｃ
+| 01-C*          DHI062    IFEQ *ZERO
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6499
+| 01-C*                    END
+|    C*  99                GOTO E2B00
+     C*
+     C           DHI051    IFEQ *ZERO
+     C           DHI061    ANDNE*ZERO
+|   C                     MOVEL'UPT0011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C*行，列　須同時為零
+     C           DHI061    IFEQ *ZERO
+     C           DHI062    ANDNE*ZERO
+     C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C*
+     C           DHI062    IFEQ *ZERO
+     C           DHI061    ANDNE*ZERO
+     C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C* CPI = 10時，Ｃ不可大於１３２
+     C           DHI15     IFEQ 'A'
+     C           DHI062    ANDGT132
+     C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 01-C                     END
+|    C   99                GOTO E2B00
+| 01-C*開票日期－日－Ｒ
+| 01-C*          DHI071    IFEQ *ZERO
+| 1-C*                    MOVEL'UPT0012' ERRID
+| 1-C*                    MOVEL'PTMF'    ERRF
+| 1-C*                    SETON                     6599
+| 01-C*                    END
+| 01-C*  99                GOTO E2B00
+| 01-C*開票日期－日－Ｃ
+| 01-C*          DHI072    IFEQ *ZERO
+| 1-C*                    MOVEL'UPT0012' ERRID
+| 1-C*                    MOVEL'PTMF'    ERRF
+| 1-C*                    SETON                     6699
+| 01-C*                    END
+| 01-C*  99                GOTO E2B00
+     C*
+     C           DHI051    IFEQ *ZERO
+     C           DHI071    ANDNE*ZERO
+|   C                     MOVEL'UPT0011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C*行，列　須同時為零
+     C           DHI071    IFEQ *ZERO
+     C           DHI072    ANDNE*ZERO
+     C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C*
+     C           DHI072    IFEQ *ZERO
+     C           DHI071    ANDNE*ZERO
+     C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C* CPI = 10時，Ｃ不可大於１３２
+     C           DHI15     IFEQ 'A'
+     C           DHI072    ANDGT132
+     C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*到期日期－年－Ｒ
+| 01-C           DHI081    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6799
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*到期日期－年－Ｃ
+| 01-C           DHI082    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6899
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C* CPI = 10時，Ｃ不可大於１３２
+     C           DHI15     IFEQ 'A'
+     C           DHI082    ANDGT132
+     C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6899
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*到期日期－月－Ｒ
+| 01-C           DHI091    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6999
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*到期日期－月－Ｃ
+| 01-C           DHI092    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7099
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C* CPI = 10時，Ｃ不可大於１３２
+     C           DHI15     IFEQ 'A'
+     C           DHI092    ANDGT132
+     C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7099
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*到期日期－日－Ｒ
+| 01-C           DHI101    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7199
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*到期日期－日－Ｃ
+| 01-C           DHI102    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7299
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C* CPI = 10時，Ｃ不可大於１３２
+     C           DHI15     IFEQ 'A'
+     C           DHI102    ANDGT132
+     C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7299
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*阿拉伯金額－Ｒ
+| 01-C           DHI111    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7399
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*阿拉伯金額－Ｃ
+| 01-C           DHI112    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7499
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C* CPI = 10時，Ｃ不可大於１３２
+     C           DHI15     IFEQ 'A'
+     C           DHI112    ANDGT132
+     C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7499
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*大寫金額－Ｒ
+| 01-C           DHI121    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7599
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*大寫金額－Ｃ
+| 01-C           DHI122    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7699
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C* CPI = 10時，Ｃ不可大於１３２
+     C           DHI15     IFEQ 'A'
+     C           DHI122    ANDGT132
+     C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7699
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*付款對象－Ｒ
+| 01-C           DHI141    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7899
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*付款對象－Ｃ
+| 01-C           DHI142    IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7999
+| 01-C                     END
+|    C   99                GOTO E2B00
+     C* CPI = 10時，Ｃ不可大於１３２
+     C           DHI15     IFEQ 'A'
+     C           DHI142    ANDGT132
+     C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7999
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*
+09===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+10===C           R2D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R2D10
+|   C           DOPT      CASEQ2         R2D20
+|   C           DOPT      CASEQ4         R2D30
+| 01-C                     END
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+11===C           R2D10     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     WRITEHI0
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R2D11 ....SCREEN FIELD TO FILE
+     C*==============================================================*
+12===C           R2D11     BEGSR
+|    C*
+|    C                     MOVELDHI01     HI01
+|    C                     MOVELDHI02     HI02
+|    C                     MOVELDHI03     HI03
+|    C                     MOVELDHI04     HI04
+|    C                     Z-ADDDHI051    HI051
+|    C                     Z-ADDDHI052    HI052
+|    C                     Z-ADDDHI061    HI061
+|    C                     Z-ADDDHI062    HI062
+|    C                     Z-ADDDHI071    HI071
+|    C                     Z-ADDDHI072    HI072
+|    C                     Z-ADDDHI081    HI081
+|    C                     Z-ADDDHI082    HI082
+|    C                     Z-ADDDHI091    HI091
+|    C                     Z-ADDDHI092    HI092
+|    C                     Z-ADDDHI101    HI101
+|    C                     Z-ADDDHI102    HI102
+|    C                     Z-ADDDHI111    HI111
+|    C                     Z-ADDDHI112    HI112
+|    C                     Z-ADDDHI121    HI121
+|    C                     Z-ADDDHI122    HI122
+|    C                     MOVELDHI13     HI13
+|    C                     Z-ADDDHI141    HI141
+|    C                     Z-ADDDHI142    HI142
+|    C                     MOVELDHI15     HI15
+|    C                     MOVELDHI16     HI16
+|    C                     TIME           HI97
+|    C                     Z-ADD$A8YMD    HI98
+|    C                     MOVE $USER     HI99
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+13===C           R2D20     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     UPDATHI0
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+14===C           R2D30     BEGSR
+|    C*
+|    C                     DELETHI0
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+

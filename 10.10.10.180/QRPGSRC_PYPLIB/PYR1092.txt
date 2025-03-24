@@ -1,0 +1,194 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR1092                                     *
+     H*   AUTHER       : A1070 CHOIE                                 *
+     H*   CREATE DATE  : 79/07/11                                    *
+     H*   UPDATE DATE  :                                             *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR1091C                                    *
+     H*   PURPOSE      :
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR109P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    WA      2   2 10
+     E*---------------------------------------------------------------
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I                                      503 509 DEM041
+     I                                      510 516 DEM042
+     I*                                     513 5160DYM
+     I                                      517 5220WDYM
+     I                                      601 6040DYM
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KLIST LIST
+     C*==============================================================*
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100                     *WRITE PD1
+     C*
+     CLR 10                WRITEPE2
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVE *BLANK    CM03
+|    C*
+|    C                     SETON                     1039
+|    C                     MOVEL'Y'       $DATA
+| 01-C           WDYM      IFEQ 0
+|   C                     Z-ADD999999    WDYM
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C*目前留職資料列印
+| 01-C           EM11      IFEQ 'R'
+|   C*
+|   C********             Z-ADDEM17      P3701I
+|   C********             Z-ADDEM26      P3704I
+|   C*                    CALL 'P37'
+|   C*                    PARM EM17      P3701I  80
+|   C*                    PARM '2'       P3702I  1
+|   C*                    PARM '1'       P3703I  1
+|   C*                    PARM EM26      P3704I  40
+|   C*                    PARM           P3711O  80
+|   C                     MOVELEM17      WYM     60
+|   C                     Z-ADDEM17      TX06    80
+     C                     Z-ADDEM17      P3711O
+|   C*
+| 02-C           WYM       IFLE WDYM
+|   C                     MOVEL'2'       TX032   1
+|   C                     Z-ADDEM26      TX11
+|   C                     Z-ADDEM17      TX04
+|   C                     EXSR RTN150
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+|    C*目前長病資料列印
+| 03-C           EM11      IFEQ 'S'
+|   C*
+|   C                     Z-ADDEM951     P3701I
+|   C                     Z-ADDEM953     P3704I
+|   C                     CALL 'P37'
+|   C                     PARM           P3701I  80
+|   C                     PARM DFMT      P3702I  1
+|   C                     PARM DTYPE     P3703I  1
+|   C                     PARM           P3704I  40
+|   C                     PARM           P3711O  80
+|   C                     MOVELP3711O    WYM     60
+|   C                     Z-ADDEM951     TX06
+|   C*
+| 04-C           WYM       IFLE WDYM
+|   C                     MOVEL'6'       TX032
+|   C                     Z-ADDEM953     TX11
+|   C                     Z-ADDP3711O    TX04    80
+|   C                     EXSR RTN150
+| 04-C                     END
+|   C*
+| 03-C                     END
+|    C*
+| 05-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 05-C                     END
+|    C*
+|    C*                    WRITEPD1
+|    C*                    SETON                     11
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN150... PRINT DETAIL
+     C*==============================================================*
+03===C           RTN150    BEGSR
+|    C*
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+| 01-C           TX032     IFEQ '2'
+|   C                     MOVELWA,1      PD11
+| 01*C                     ELSE
+|   C                     MOVELWA,2      PD11
+| 01-C                     END
+|    C*
+|    C*                    Z-ADD*ZERO     PTX04
+|    C                     CALL 'P31'
+|    C                     PARM P3711O    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM DFMT      P3104I  1
+|    C                     PARM DTYPE     P3105I  1
+|    C           PTX04     PARM           P3111O  80
+|    C*                    Z-ADDP3111O    PTX04
+|    C*
+|    C*                    Z-ADD*ZERO     PTX06
+|    C*                    CALL 'P31'
+|    C*                    PARM EM17      P3101I  80
+|    C*                    PARM '2'       P3102I  1
+|    C*                    PARM '1'       P3103I  1
+|    C*                    PARM DFMT      P3104I  1
+|    C*                    PARM DTYPE     P3105I  1
+|    C*          PTX06     PARM           P3111O  80
+|    C                     Z-ADDEM17      PTX06
+|    C*
+| 02-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 02-C                     END
+|    C*
+|    C                     WRITEPD1
+|    C                     SETON                     11
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+04===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+**
+留職停薪長期病假
+

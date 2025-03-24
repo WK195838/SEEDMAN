@@ -1,0 +1,85 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250  */
+     /*                                                             */
+     /*    PROGRAM NAME : SOR201C1                                  */
+     /*    AUTHOR       : DEREK                                     */
+     /*    CREATE DATE  : 113/04/12                                 */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       :茂世進銷存系統                           */
+     /*    SUBSYSTEM    :應收系統                                 */
+     /*    REMARK       :送貨未確認彙總表                         */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&DSE07S) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DSE07E) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DSE06S) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&DSE06E) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&WSE06S) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WSE06E) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             CHGVAR     VAR(&DSE07S) VALUE(%SST(*LDA 601 5))
+             CHGVAR     VAR(&DSE07E) VALUE(%SST(*LDA 606 5))
+             CHGVAR     VAR(&DSE06S) VALUE(%SST(*LDA 611 6))
+             CHGVAR     VAR(&DSE06E) VALUE(%SST(*LDA 617 6))
+             CHGVAR     VAR(&WSE06S) VALUE(%SST(*LDA 623 8))
+             CHGVAR     VAR(&WSE06E) VALUE(%SST(*LDA 631 8))
+             CHGVAR     VAR(&LIB)   VALUE('QTEMP')
+
+      /*送貨未確認彙總表-工作檔*/
+             DLTF       FILE(QTEMP/SOR201WF)
+             MONMSG     MSGID(CPF2105)
+
+             CPYF       FROMFILE(SOR201WF) TOFILE(QTEMP/SOR201WF) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM +
+                          FILE(QTEMP/SOR201WF))
+             CLRPFM     FILE(QTEMP/SOR201WF)
+
+             OVRDBF     FILE(SOR201WF) TOFILE(QTEMP/SOR201WF) +
+                          SHARE(*YES)
+
+      /*送貨未確認彙總表*/
+             DLTF       FILE(QTEMP/SOR201F)
+             MONMSG     MSGID(CPF2105)
+
+             CPYF       FROMFILE(SOR201F) TOFILE(QTEMP/SOR201F) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM +
+                          FILE(QTEMP/SOR201F))
+             CLRPFM     FILE(QTEMP/SOR201F)
+
+             OVRDBF     FILE(SOR201F) TOFILE(QTEMP/SOR201F) +
+                          SHARE(*YES)
+
+             CHGVAR     VAR(&FILE)  VALUE('SOR201F')
+
+      /*讀取送貨單主檔*/
+             OVRDBF     FILE(SOSEPF) SHARE(*YES)
+             OPNQRYF    FILE((SOSEPF)) QRYSLT('SE07 *EQ %RANGE("' +
+                          *CAT &DSE07S *CAT '" "' *CAT &DSE07E *CAT +
+                          '") & CSE06 *EQ %RANGE("' *CAT &WSE06S +
+                          *CAT '" "' *CAT &WSE06E *CAT '") & +
+                          %SST(CSE06 1 6) *NE %SST(CSE24 1 6)') +
+                          KEYFLD((SE01) (SE02)) MAPFLD((CSE06 SE06 +
+                          *CHAR 8) (CSE24 SE24 *CHAR 8))
+
+             CALL       PGM(SOR2011)
+
+             CLOF       OPNID(SOSEPF)
+
+      /*讀取工作檔產生報表*/
+             OPNQRYF    FILE((SOR201WF)) QRYSLT(*ALL) KEYFLD((WK06))
+
+             CALL       PGM(SOR2012)
+
+             CLOF       OPNID(SOR201WF)
+             DLTOVR     FILE(*ALL)
+
+             /*將FILE轉換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

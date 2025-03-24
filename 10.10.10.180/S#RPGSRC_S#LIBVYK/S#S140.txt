@@ -1,0 +1,224 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : S#S140                                     *
+     H*    PROGRAM NAME :程式基本資料全頁查詢                      *
+     H*    AUTHOR       : A1165 SERMON                               *
+     H*    CREATE DATE  : 85/08/08                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :程式安全管制系統                          *
+     H****************************************************************
+     FS#SPPF  IF  E           K        DISK
+     FS#SUPF  IF  E           K        DISK
+     FS#S140D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E                    @A01    3   3  8               *程式類別
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      201 2080$A8YMD
+     I*DEFIND STRAT KEY
+     I            DS
+     I                                        1  10 @KSPO
+     I            DS
+     I                                        1  10 @KSPN
+     I                                        1  10 DSP01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           DSP01     PARM           S1401I 10        *程式
+     C                     PARM           @RTNC   2          FUN KEY
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+     C           @RTNC     DOWEQ*BLANK
+     C                     EXSR R1000                      *SCR PROCESS
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C*執行者名稱
+     C   40                MOVEL*BLANK    SU02
+     C           $USER     CHAINSU0                  40
+     C                     MOVELSU02      $USERN
+     C* INIT VALUE SET *---------------------------------------------*
+     C                     MOVEL*BLANK    @RTNC
+     C                     Z-ADD14        @PRCD            .PAGE SIZE
+     C*--------------------------------------------------------------*
+     C                     EXSR R1A00                      .SFL INIT
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+     C           R1000     BEGSR
+     C*
+     C                     WRITEDSPC1
+     C                     EXFMTSFLCR
+     C                     MOVEA*ALL'0'   *IN,60
+     C                     Z-ADD*ZERO     #LIN
+     C                     Z-ADD*ZERO     #COL
+     C*
+     C           *IN03     IFEQ '1'                        *END
+     C                     MOVEL'03'      @RTNC
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN12     IFEQ '1'                        *PREVIOUS
+     C                     MOVEL'12'      @RTNC
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN25     IFEQ '1'                        *NEXT PAGE
+     C                     EXSR R1N00
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           @KSPO     IFNE @KSPN                      *START KEY
+     C                     EXSR R1A00                      *SFL INIT
+     C                     GOTO E1000
+     C                     END
+     C*
+     C                     EXSR R1C00                      *OPTION
+     C*
+     C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+     C           R1A00     BEGSR
+     C*
+     C                     Z-ADD0         DRRN
+     C                     Z-ADD0         RRN
+     C                     Z-ADD0         @DRCD            *DSP RCD
+     C                     MOVEL'N'       @BOTOM  1        *BOTTOM
+     C*
+     C                     SETOF                     51    *SFLDSPCTL
+     C                     SETON                     52    *SFLCLR
+     C                     WRITESFLCR
+     C                     SETOF                     52
+     C*
+     C                     SETON                     51    *SFLDSPCTL
+     C                     SETOF                     5053  *SFLDSP,END
+     C*
+     C                     EXSR R1A20                      *SFL HEAD
+     C* <<SFL INITIAITAL DATA ADD>>
+     C                     MOVEL@KSPN     @KSPO            *KEY SAVE
+     C*
+     C           DSP01     SETLLSP0
+     C                     EXSR R1A10                      *ADD SFL DTA
+     C*
+     C*
+     C           RRN       IFGT 0
+     C                     SETON                     50    *SFLDSP
+     C                     ELSE
+     C                     SETON                     99    *NO DTA
+     C                     MOVEL'UPT2050' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+     C           R1A10     BEGSR
+     C*
+     C                     ADD  @PRCD     @DRCD
+     C           RRN       DOWLT@DRCD
+     C*
+     C                     READ SP0                      46
+     C*
+     C           *IN46     IFEQ '0'
+     C                     EXSR R1A11                      *WRITE SFL
+     C                     ELSE                            *EOF
+     C                     Z-ADDRRN       @DRCD
+     C                     MOVE 'Y'       @BOTOM
+     C                     SETON                     9653  *SFLEND
+     C                     END
+     C*
+     C                     END
+     C*
+     C                     Z-ADDRRN       DRRN
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1A11 .... WRITE SUBFILE DATA
+     C*=============================================================*
+     C           R1A11     BEGSR
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* << SUBFILE DATA VALUE SET >>
+     C*程式類別
+     C                     SELEC
+     C           SP03      WHEQ 'M'
+     C                     MOVEL@A01,1    SP03N
+     C           SP03      WHEQ 'P'
+     C                     MOVEL@A01,2    SP03N
+     C           SP03      WHEQ 'S'
+     C                     MOVEL@A01,3    SP03N
+     C                     END
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     ADD  1         RRN
+     C                     WRITESFLSR
+     C*
+     C           E1A11     ENDSR
+     C*=============================================================*
+     C*          R1A20 .... SFL HEADING (SFL CONTROL DATA PREPARE)
+     C*=============================================================*
+     C           R1A20     BEGSR
+     C*
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1C00 ....挑選資料
+     C*=============================================================*
+     C           R1C00     BEGSR
+     C*
+     C                     READCSFLSR                  4242
+     C           *IN42     DOWEQ'0'
+     C*
+     C           DOPT      IFNE *BLANK
+     C* <<SET OUTPUT PARM>>++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVELSP01      S1401I           *程式
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL'00'      @RTNC
+     C                     SETON                     42
+     C                     END
+     C*
+     C  N42                READCSFLSR                    42
+     C                     END
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1N00 ....ROLLUP MAIN ROUTINE
+     C*=============================================================*
+     C           R1N00     BEGSR
+     C*
+     C           @BOTOM    IFEQ 'Y'                        *EOF
+     C                     SETON                         96*LST PAG
+     C                     Z-ADDRRN       DRRN
+     C                     ELSE
+     C                     EXSR R1A10                      *ADD SFL DTA
+     C                     END
+     C*
+     C                     ENDSR
+**
+主畫面主程式副程式
+

@@ -1,0 +1,203 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H* PROGRAM NAME : KIS0241                                       *
+     H* AUTHER       : A1650  DEREK                                  *
+     H* CREATE DATE  : 101/06/22                                     *
+     H* UPDATE DATE  :                                               *
+     H* SYSTEM       :茂世企業                                     *
+     H* SUBSYSTEM    :專櫃系統                                     *
+     H* REMARK       :失敗訂單報表                                 *
+     H*===============================================================
+     H* MODI CODE |   DATE   | DESCRIPTION
+     H*---------------------------------------------------------------
+     H*---------------------------------------------------------------
+     F****************************************************************
+     FW2BAPF  IP  E           K        DISK
+     FW2BBPF  IF  E           K        DISK
+     FW2BBLF01IF  E           K        DISK
+     F            BB0                               KRENAMEBBL1
+     FMTMAPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FW1AALF01IF  E           K        DISK
+     FIMIAPF  IF  E           K        DISK
+     FW2DCPF  O   E           K        DISK
+     E*--------------------------------------------------------------*
+     IBBL1
+     I              BB01                            BB01L
+     I              BB02                            BB02L
+     I              BB03                            BB03L
+     I              BB04                            BB04L
+     I              BB05                            BB05L
+     I              BB06                            BB06L
+     I              BB07                            BB07L
+     I              BB08                            BB08L
+     I              BB08A                           BB08AL
+     I              BB08B                           BB08BL
+     I              BB09                            BB09L
+     I              BB10                            BB10L
+     I              BB11                            BB11L
+     I              BBXX                            BBXXL
+     I              BBYY                            BBYYL
+     I              BBZZ                            BBZZL
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      119 1240$ADMDY
+     I                                      601 6080WBA01S
+     I                                      609 6160WBA01E
+     I                                      617 617 DATA
+     I*失敗原因
+     I              '無牌價  '          C         ERR1
+     I              '庫存不足'          C         ERR2
+     I              '超過上限'          C         ERR3
+     I              '超過下限'          C         ERR4
+     I              '已無錯誤'          C         ERR5
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEY#A     KLIST                           .PA#APF
+     C                     KFLD           #A01             代碼欄位
+     C                     KFLD           #A02             代碼內容
+     C           KEYAA     KLIST                           .W1AALF01
+     C                     KFLD           BB03             產品代號
+     C                     KFLD           BA01             訂單日期
+     C           KEYBBL    KLIST                           .W2BBLF01
+     C                     KFLD           BB01             訂單日期
+     C                     KFLD           BB03             產品代號
+     C           KEYIA     KLIST                           .IMIAPF
+     C                     KFLD           IA01             公司別
+     C                     KFLD           BA02             物流點
+     C                     KFLD           BB03             產品代號
+     C*==============================================================*
+     C*                    DEFINE
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *LIKE     DEFN BB04      BB045
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100
+     C                     EXSR R1000
+     C*===============================================================*
+     C*          R0100 ... INIT
+     C*===============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C                     IN   LDA
+|    C                     MOVEL'Y'       DATA
+|    C                     OUT  LDA
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C           BA03      SETLLBB0
+|    C           BA03      READEBB0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C                     EXSR R1100
+| 02-C           RTN       IFNE *BLANK                     已無錯誤
+|   C           RTN       ANDNE'E0'
+|   C                     WRITEDC0
+| 02-C                     ENDIF
+|   C           BA03      READEBB0                      46
+| 01-C                     ENDDO
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1100 ... WRITE W2DAPF
+     C*==============================================================*
+03===C           R1100     BEGSR
+|    C*
+|    C                     Z-ADDBA01      DC01             訂單日期
+|    C                     MOVELBA03      DC02      P      訂單單號
+|    C                     MOVELBA02      DC03      P      物流點
+|    C*
+|    C                     MOVEL'STORAGE' #A01      P
+|    C                     MOVELBA02      #A02      P
+|    C           KEY#A     CHAIN#A0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVEL#A03      DC04      P      物流點名稱
+| 01*C                     ELSE
+|   C                     MOVEL*BLANK    DC04             物流點名稱
+| 01-C                     ENDIF
+|    C*
+|    C                     MOVELBB03      DC05      P      產品代號
+|    C           BB03      CHAINMA0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELMA03      DC06      P      產品名稱
+| 02*C                     ELSE
+|   C                     MOVEL*BLANK    DC06             產品名稱
+| 02-C                     ENDIF
+|    C*
+|    C           KEYAA     SETGTAA0
+|    C           BB03      REDPEAA0                      48
+| 03-C           *IN48     IFEQ '0'
+|   C                     Z-ADDAA04      DC07             牌價
+| 03*C                     ELSE
+|   C                     Z-ADD0         DC07             牌價
+| 03-C                     ENDIF
+|    C*
+|    C           BB04      ADD  BB05      BB045
+| 04-C           BB045     IFNE 0
+|   C           BB07      DIV  BB045     DC08             單價
+| 04*C                     ELSE
+|   C                     Z-ADD0         DC08             單價
+| 04-C                     ENDIF
+|    C*金額檢核(牌價)
+|    C                     CALL 'KIP007'
+|    C                     PARM BB03      TAA02   9
+|    C                     PARM BA01      TAA03   80
+|    C                     PARM DC08      AMT    112
+|    C                     PARM           RTN     2
+|    C*
+| 05-C                     SELEC
+|   C           RTN       WHEQ 'E1'
+|   C                     MOVELERR1      DC11             失敗原因
+|   C           RTN       WHEQ 'E2'
+|   C                     MOVELERR3      DC11             失敗原因
+|   C           RTN       WHEQ 'E3'
+|   C                     MOVELERR4      DC11             失敗原因
+|   C           RTN       WHEQ *BLANK
+|   C           RTN       OREQ 'E0'
+|   C                     MOVELERR5      DC11             失敗原因
+| 05-C                     ENDSL
+|    C*加總訂單中某產品訂貨量
+|    C                     Z-ADD0         WQTY
+|    C                     Z-ADD0         WQTY1
+|    C*
+|    C           KEYBBL    SETLLBBL1
+|    C           KEYBBL    READEBBL1                     48
+| 06-C           *IN48     DOWEQ'0'
+| 07-C           BB09L     IFEQ 'E'
+| 08-C           BA06      IFEQ 'A1'
+|   C           BB04L     ADD  BB05L     WQTY1   90
+|   C                     ADD  WQTY1     WQTY    90
+| 08*C                     ELSE
+| 09-C           BA06      IFEQ 'A3'
+|   C                     ADD  BB06L     WQTY
+| 09-C                     ENDIF
+| 08-C                     ENDIF
+| 07-C                     ENDIF
+|   C           KEYBBL    READEBBL1                     48
+| 06-C                     ENDDO
+|    C*檢核庫存量
+|    C                     MOVEL'R'       IA01      P
+|    C           KEYIA     CHAINIA0                  40
+| 10-C           *IN40     IFEQ '0'
+|   C           IA10      ANDLTWQTY
+|   C           *IN40     OREQ '1'
+|   C                     MOVEL'E4'      RTN       P
+|   C                     MOVELERR2      DC11             失敗原因
+| 10-C                     ENDIF
+|    C*
+|    C                     Z-ADDBB04      DC09             銷售數量
+|    C                     Z-ADDBB05      DC10             搭贈數量
+|    C*
+03===C           E1100     ENDSR
+

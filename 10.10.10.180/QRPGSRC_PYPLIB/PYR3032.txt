@@ -1,0 +1,351 @@
+     H****************************************************************
+     H*   PROGRAM-ID   : PYR3032                                     *
+     H*   PROGRAM NAME :調薪差異比較表                             *
+     H*   AUTHER       : A1336 KLAUS                                 *
+     H*   CREATE DATE  : 90/07/27                                    *
+     H*   UPDATE DATE  :                                             *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR3021C                                    *
+     H*   PURPOSE      :                                             *
+     H*   INDICATORS   :                                             *
+     H*                                                              *
+     H*     *IN30 --- SPLIT LINE NOT WRITE AT FIRST TIME             *
+     H*     *IN31 --- CONTROL 調薪前 APPEAR                        *
+     H*     *IN32 --- CONTROL 調薪後 APPEAR                        *
+     H*                                                              *
+     H****************************************************************
+     FPYSHJF02IP  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYSSLF01IF  E           K        DISK
+     FPYSDPF  IF  E           K        DISK
+     FPYR303P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    A1X        48  2
+     E                    A2X        48 14
+     E                    R1X         8 14
+     E                    D1X        48  7 0
+     E                    R2X         8  7 0
+     E                    D2X        48  7 0
+     E                    R3X         8  7 0
+     E*---------------------------------------------------------------
+     ISHJF01
+     I                                              SH01  L2
+     I                                              SH02  L1
+     ILDA        UDS
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DSH01
+     I                                      623 629 DEM041
+     I                                      630 636 DEM042
+     I                                      513 520 DSH021
+     I                                      521 528 DSH022
+     I**                                    529 5340DSH031
+     I**                                    535 5400DSH032
+     I                                      541 5480WSH031
+     I                                      549 5560WSH032
+     I                                      600 6060DSH031
+     I                                      607 6130DSH032
+     I*
+     I            DS
+     I                                        1 112 R1X
+     I                                        1  14 SS021
+     I                                       15  28 SS022
+     I                                       29  42 SS023
+     I                                       43  56 SS024
+     I                                       57  70 SS025
+     I                                       71  84 SS026
+     I                                       85  98 SS027
+     I                                       99 112 SS028
+     I*
+     I            DS
+     I                                        1  560R2X
+     I                                        1   70SD051
+     I                                        8  140SD052
+     I                                       15  210SD053
+     I                                       22  280SD054
+     I                                       29  350SD055
+     I                                       36  420SD056
+     I                                       43  490SD057
+     I                                       50  560SD058
+     I*
+     I            DS
+     I                                        1  560R3X
+     I                                        1   70SD061
+     I                                        8  140SD062
+     I                                       15  210SD063
+     I                                       22  280SD064
+     I                                       29  350SD065
+     I                                       36  420SD066
+     I                                       43  490SD067
+     I                                       50  560SD068
+     I*
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN SS09      WSS09
+     C           *LIKE     DEFN SS05      WSS05
+     C           *LIKE     DEFN SS18      WSS18
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*==============================================================*
+     C*
+     C           KEYSS     KLIST                           *PYSSLF01
+     C                     KFLD           WSS09
+     C                     KFLD           WSS05
+     C                     KFLD           WSS18
+     C*
+     C           KEYSD     KLIST                           *PYSDPF
+     C                     KFLD           SD01
+     C                     KFLD           SD02
+     C                     KFLD           SD03
+     C*
+     C           KEYDP     KLIST                           *PYDPPF
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100                      *INITIAL
+     C*
+     C                     EXSR R1000                      *DETAIL
+     C*
+     CL2 10                EXSR R8200                      *END OF REPORT
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R0100.... INITIAL ROUTINE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C*
+|    C           DSH01     CHAINCM0                  40    *公司名稱
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELCM13      WSS18
+|   C                     MOVELCM14      DFMT
+|   C                     MOVELCM15      DTYPE
+| 01*C                     ELSE
+|   C                     MOVEL*BLANK    CM03
+|   C                     MOVEL*BLANK    WSS18
+|   C                     MOVEL*BLANK    DFMT
+|   C                     MOVEL*BLANK    DTYPE
+| 01-C                     END
+|    C*
+|    C                     MOVE *BLANK    A1X
+|    C                     MOVE *BLANK    A2X
+|    C*薪資項目
+|    C                     Z-ADD0         I       20
+|    C                     MOVEL'1'       WSS09
+|    C                     MOVEL'1'       WSS05
+|    C           KEYSS     SETLLSS0
+|    C           KEYSS     READESS0                      46
+| 02-C           *IN46     DOWEQ'0'
+|   C           I         ANDLT48
+|   C                     ADD  1         I
+|   C                     MOVELSS01      A1X,I
+|   C                     MOVELSS02      A2X,I
+|   C           KEYSS     READESS0                      46
+| 02-C                     END
+|     *
+|    C                     SETON                     10
+|    C                     MOVEL'Y'       $DATA
+|    C*---------------------------------------------------------------
+|    C*WRITE HEADING
+|    C                     Z-ADD0         J       20
+|    C                     Z-ADD0         L       20
+| 03-C           L         DOWLT8
+|   C                     ADD  1         J
+|   C                     ADD  1         L
+|   C                     MOVELA2X,J     R1X,L
+| 03-C                     END
+|    C                     WRITEPH1
+|    C*
+| 04-C           J         DOWLTI
+|   C                     MOVE *BLANKS   R1X
+|   C                     Z-ADD0         L
+| 05-C           L         DOWLT8
+|   C                     ADD  1         J
+|   C                     ADD  1         L
+|   C                     MOVELA2X,J     R1X,L
+| 05-C                     END
+| 04-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000.... GET DETAIL
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     MOVE *BLANK    R1X
+|    C*
+|    C           KEYDP     CHAINDP0                  40    *部門名稱
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVE DP02      DP02H  16
+| 01*C                     ELSE
+|   C                     MOVE *BLANK    DP02H
+| 01-C                     END
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM SH03      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM DFMT      P3104I  1
+|    C                     PARM DTYPE     P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    SH03P
+|    C*
+|    C                     Z-ADD0         D1X
+|    C                     Z-ADD0         D2X
+|    C                     Z-ADD0         R2X
+|    C                     Z-ADD0         R3X
+|    C*
+|    C                     MOVE SH01      SD01
+|    C                     MOVE SH02      SD02
+|    C                     Z-ADDSH03      SD03
+|    C*
+|    C           KEYSD     SETLLSD0
+|    C           KEYSD     READESD0                      46
+| 02-C           *IN46     DOWEQ'0'
+|   C                     Z-ADD1         M       20
+|   C           SD04      LOKUPA1X,M                    40
+| 03-C           *IN40     IFEQ '1'
+|   C                     Z-ADDSD05      D1X,M
+|   C                     Z-ADDSD06      D2X,M
+| 03-C                     END
+|   C           KEYSD     READESD0                      46
+| 02-C                     END
+|    C*
+|    C                     EXSR R1100
+|    C                     EXSR R1200
+|    C                     EXSR R1300
+|    C                     WRITEPD1
+|    C*
+02===C                     ENDSR
+     C*
+     C*==============================================================*
+     C*          R1100.... WRITE  DETAIL RECORD  PD2  調薪前
+     C*==============================================================*
+03===C           R1100     BEGSR
+|    C*
+|    C                     Z-ADD0         J       20
+|    C                     Z-ADD0         L       20
+| 01-C           L         DOWLT8
+|   C                     ADD  1         J
+|   C                     ADD  1         L
+|   C                     Z-ADDD1X,J     R2X,L
+| 01-C                     END
+|    C*
+|    C                     ADD  SH07      T1      80
+|    C                     ADD  SD051     T101    70
+|    C                     ADD  SD052     T102    70
+|    C                     ADD  SD053     T103    70
+|    C                     ADD  SD054     T104    70
+|    C                     ADD  SD055     T105    70
+|    C                     ADD  SD056     T106    70
+|    C                     ADD  SD057     T107    70
+|    C                     ADD  SD058     T108    70
+|    C*
+| 02-C           J         DOWLTI
+|   C                     MOVE *ZERO     R2X
+|   C                     Z-ADD0         L
+| 03-C           L         DOWLT8
+|   C                     ADD  1         J
+|   C                     ADD  1         L
+|   C                     Z-ADDD1X,J     R2X,L
+| 03-C                     END
+| 02-C                     END
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R1200.... WRITE  DETAIL RECORD  PD3  調薪後
+     C*==============================================================*
+04===C           R1200     BEGSR
+|    C*
+|    C                     Z-ADD0         J       20
+|    C                     Z-ADD0         L       20
+| 01-C           L         DOWLT8
+|   C                     ADD  1         J
+|   C                     ADD  1         L
+|   C                     Z-ADDD2X,J     R3X,L
+| 01-C                     END
+|    C*
+|    C                     ADD  SH08      T2      80
+|    C                     ADD  SD061     T201    70
+|    C                     ADD  SD062     T202    70
+|    C                     ADD  SD063     T203    70
+|    C                     ADD  SD064     T204    70
+|    C                     ADD  SD065     T205    70
+|    C                     ADD  SD066     T206    70
+|    C                     ADD  SD067     T207    70
+|    C                     ADD  SD068     T208    70
+|    C*
+| 02-C           J         DOWLTI
+|   C                     MOVE *ZERO     R3X
+|   C                     Z-ADD0         L
+| 03-C           L         DOWLT8
+|   C                     ADD  1         J
+|   C                     ADD  1         L
+|   C                     Z-ADDD2X,J     R3X,L
+| 03-C                     END
+|   C                     EXSR R1300
+| 02-C                     END
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1300.... WRITE  DETAIL RECORD  PD4  差異金額
+     C*==============================================================*
+05===C           R1300     BEGSR
+|    C*
+|    C           SH08      SUB  SH07      TOT
+|    C           SD061     SUB  SD051     TOT1
+|    C           SD062     SUB  SD052     TOT2
+|    C           SD063     SUB  SD053     TOT3
+|    C           SD064     SUB  SD054     TOT4
+|    C           SD065     SUB  SD055     TOT5
+|    C           SD066     SUB  SD056     TOT6
+|    C           SD067     SUB  SD057     TOT7
+|    C           SD068     SUB  SD058     TOT8
+|    C*
+|    C                     ADD  TOT       TT      80
+|    C                     ADD  TOT1      TTO1    70
+|    C                     ADD  TOT2      TTO2    70
+|    C                     ADD  TOT3      TTO3    70
+|    C                     ADD  TOT4      TTO4    70
+|    C                     ADD  TOT5      TTO5    70
+|    C                     ADD  TOT6      TTO6    70
+|    C                     ADD  TOT7      TTO7    70
+|    C                     ADD  TOT8      TTO8    70
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8200.... OVERFLOW
+     C*==============================================================*
+06===C           R8200     BEGSR
+|    C                     WRITEPT1
+|    C                     WRITEPE2
+|    C                     SETOF                     39
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8999.... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+07===C           R8999     BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR R0100
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+

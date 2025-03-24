@@ -1,0 +1,1841 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLA531                                     *
+     H*    PROGRAM NAME : 年結傳票調整－調整傳票                   *
+     H*    AUTHOR       : A1087  JOYCE                               *
+     H*    CREATE DATE  : 1992.12.04                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     F****************************************************************
+     FGLAHLF01UF  E           K        DISK                      A
+     FGLAPPF  IF  E           K        DISK
+     FGLAQPF  IF  E           K        DISK
+     FGLAAPF  IF  E           K        DISK
+     FGLADPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLA531D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     F                                        RRNC  KSFILE SFLSRC
+     F                                        RRND  KSFILE SFLSRD
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E*---------------------------------------------------------------*
+     E*: FUNCTION DATA :
+     E                    WFUN    5   5 14
+     E*輸入欄位代碼
+     E                    W02         7  2
+     E*輸入欄位名稱
+     E                    W03         7 20
+     E*檢核程式名稱
+     E                    W04         7 10
+     E*輸入欄位內容
+     E                    W05         4 20
+     E*輸入欄位內容說明
+     E                    W06         7 20
+     E*輸入欄位之控制碼
+     E                    W07         7  1
+     E*傳入參數名稱
+     E                    W08         7 10
+     E* KEEP RRN VALUES／分攤比率#AQ2
+     E                    W13        50  3 0 W14     7 4
+     E                    W15        50  7 4D
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      125 1270$CPY
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      139 139 $RMK01
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I*                                     211 2160DYMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I*檢核程式之參數
+     ICHKPGM      DS
+     I                                        1   2 WAK01
+     I                                        3  22 WPARM1
+     I                                       23  32 WPARM2
+     I                                       33  33 WCHK
+     I            DS
+     I                                        1   1 DOPT
+     I                                        1   10WNUM
+     I            DS
+     I                                        1   7 W07
+     I                                        1   7 AF18
+     I            DS
+     I                                        1 140 W03
+     I                                        1  20 DAA031
+     I                                       21  40 DAA032
+     I                                       41  60 DAA033
+     I                                       61  80 DAA034
+     I                                       81 100 DAA035
+     I                                      101 120 DAA036
+     I                                      121 140 DAA037
+     I            DS
+     I                                        1  80 W05
+     I                                        1  20 DAH05
+     I                                       21  40 DAH06
+     I                                       41  60 DAH07
+     I                                       61  80 DAH08
+     I            DS
+     I                                        1 140 W06
+     I                                        1  20 DAH051
+     I                                       21  40 DAH061
+     I                                       41  60 DAH071
+     I                                       61  80 DAH081
+     I                                       81 100 DAH091
+     I                                      101 120 DAH141
+     I                                      121 140 DAH151
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*
+     C           *LIKE     DEFN RRND      WRRND
+     C           *LIKE     DEFN RRNC      WRRNC
+     C           *LIKE     DEFN AH03      WNO
+     C*年結調整傳票之製票號碼
+     C           *LIKE     DEFN AH02      WAH02
+     C           *LIKE     DEFN AH10      WAH10
+     C           *LIKE     DEFN AP02      WAP02
+     C           *LIKE     DEFN AP03      WAP03
+     C           *LIKE     DEFN AP04      WAP04
+     C           *LIKE     DEFN AP05      WAP05
+     C*虛帳戶部份之借貸方金額累計屆時結轉至累積盈虧
+     C           *LIKE     DEFN AH12      WDR
+     C           *LIKE     DEFN AH13      WCR
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           DAH01     PARM           P531I1  2         公司別
+     C           WAH02     PARM           P531I2  9         傳票號碼
+     C           DAH10     PARM           P531I3  80        傳票日期
+     C                     PARM           @RTNC   2
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAH     KLIST                           *MAIN FILE
+     C                     KFLD           DAH01
+     C                     KFLD           WAH02
+     C           KEYAF     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           AF02
+     C           KEYAF1    KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           AQ04
+     C           KEYAA     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           W02,WI
+     C           KEYAD     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           AD02
+     C           KEYAP     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           WAP02
+     C                     KFLD           WAP03
+     C                     KFLD           WAP04
+     C                     KFLD           WAP05
+     C           KEYAQ     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           WAP02
+     C                     KFLD           WAP03
+     C                     KFLD           WAP04
+     C                     KFLD           WAP05
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C           @RTNC     ANDEQ*BLANK
+  02-C           SCID      CASEQ'SC01'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C                     MOVE *BLANK    @RTNC
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     MOVEL*BLANK    #B02
+|    C           DAH01     CHAIN#B0                  40
+|    C           DAH01     CHAINAK0                  40
+|    C*
+|    C* 日期格式轉換(SCREEN->FILE)
+|    C                     CALL 'P31'
+|    C                     PARM DAH10     P3101I  80
+|    C                     PARM AK11      P3102I  1
+|    C                     PARM AK09      P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WAH10     PARM           P3101O  80
+|    C*--------------------------------------------------------------*
+|    C                     EXSR R1C00
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC01'
+     C*==============================================================*
+02===C           R1C00     BEGSR
+|    C*
+|    C                     Z-ADD0         WNO               *AH03
+|    C                     Z-ADD0         RRND
+|    C                     Z-ADD0         RRNC
+|    C                     Z-ADD0         WRRND
+|    C                     Z-ADD0         WRRNC
+|    C                     Z-ADD0         DDTOT
+|    C                     Z-ADD0         DCTOT
+|    C*
+|    C                     SETON                     52
+|    C                     WRITESFLCRD
+|    C                     WRITESFLCRC
+|    C                     SETOF                     52
+|    C*
+|    C           KEYAH     SETLLAH0
+|    C           KEYAH     READEAH0                    9844
+| 01-C           *IN44     DOWEQ'0'
+| 02-C           *IN98     IFEQ '1'
+|   C                     EXSR ERRSR
+|   C                     GOTO E1C00
+| 02-C                     END
+|   C                     EXSR R1C10
+|   C*
+|   C                     MOVE AH04      AF02
+|   C           KEYAF     CHAINAF0                  40
+|   C*
+|   C*虛帳戶部份借貸方金額累加屆時結轉至累積盈虧
+| 03-C           AF05      IFEQ '2'                           虛帳戶
+|   C                     ADD  AH12      WDR
+|   C                     ADD  AH13      WCR
+|   C*
+|   C*實帳戶部份寫至SUBFILE
+| 03*C                     ELSE
+| 04-C           AH12      IFNE 0
+|   C                     ADD  1         RRND
+|   C                     WRITESFLSRD
+|   C                     ADD  AH12      DDTOT
+| 04*C                     ELSE
+|   C                     ADD  1         RRNC
+|   C                     WRITESFLSRC
+|   C                     ADD  AH13      DCTOT
+| 04-C                     END
+|   C                     ADD  1         WNO
+| 03-C                     END
+|   C*
+|   C           KEYAH     READEAH0                    9844
+| 01-C                     END
+|    C*
+|    C*虛帳戶之借貸方金額不一時，產生累積盈虧
+| 05-C           WDR       IFNE WCR
+|   C                     EXSR R1C20
+| 05-C                     END
+|    C*
+|    C                     Z-ADDRRND      WRRND
+|    C                     Z-ADDRRNC      WRRNC
+|    C*
+02===C           E1C00     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....DATA BASE FILE-> SAVE SFL
+     C*==============================================================*
+03===C           R1C10     BEGSR
+|    C*
+|    C                     Z-ADDAH12      DAH12D
+|    C                     Z-ADDAH13      DAH13D
+|    C                     MOVE AH04      DAH04D
+|    C                     MOVE AH05      DAH05D
+|    C                     MOVE AH05A     DAH05A
+|    C                     MOVE AH06      DAH06D
+|    C                     MOVE AH06A     DAH06A
+|    C                     MOVE AH07      DAH07D
+|    C                     MOVE AH07A     DAH07A
+|    C                     MOVE AH08      DAH08D
+|    C                     MOVE AH08A     DAH08A
+|    C                     Z-ADDAH09      DAH09D
+|    C                     MOVE AH09A     DAH09A
+|    C                     Z-ADDAH14      DAH14D
+|    C                     MOVE AH14A     DAH14A
+|    C                     MOVE AH15      DAH15D
+|    C                     MOVE AH15A     DAH15A
+|    C                     MOVE AH16      DAH16D
+|    C                     MOVE AH22      DAH22D
+|    C                     MOVE AH24      DAH24D
+|    C                     MOVE 'N'       DAH11D
+|    C                     MOVE 'N'       DLTCOD
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R1C20 ....累積盈虧
+     C*==============================================================*
+04===C           R1C20     BEGSR
+|    C*
+|    C                     MOVE AK04      AF02
+|    C           KEYAF     CHAINAF0                  40
+|    C*
+|    C                     MOVE AK04      DAH04D
+|    C                     MOVE *BLANKS   DAH05D
+|    C                     MOVE AF11      DAH05A
+|    C                     MOVE *BLANKS   DAH06D
+|    C                     MOVE AF12      DAH06A
+|    C                     MOVE *BLANKS   DAH07D
+|    C                     MOVE AF13      DAH07A
+|    C                     MOVE *BLANKS   DAH08D
+|    C                     MOVE AF14      DAH08A
+|    C                     Z-ADD0         DAH09D
+|    C                     MOVE AF15      DAH09A
+|    C                     Z-ADD0         DAH14D
+|    C                     MOVE AF16      DAH14A
+|    C                     MOVE *BLANKS   DAH15D
+|    C                     MOVE AF17      DAH15A
+|    C                     MOVE *BLANKS   DAH16D
+|    C                     MOVE *BLANKS   DAH22D
+|    C                     MOVE *BLANK    DAH24D
+|    C                     MOVE 'N'       DAH11D
+|    C                     MOVE 'N'       DLTCOD
+| 01-C           WDR       IFGT WCR
+|   C           WDR       SUB  WCR       DAH12D
+|   C                     Z-ADD0         DAH13D
+| 01*C                     ELSE
+|   C                     Z-ADD0         DAH12D
+|   C           WCR       SUB  WDR       DAH13D
+| 01-C                     END
+|    C*
+| 02-C           DAH12D    IFNE 0
+|   C                     ADD  1         RRND
+|   C                     WRITESFLSRD
+|   C                     ADD  DAH12D    DDTOT
+| 02*C                     ELSE
+|   C                     ADD  1         RRNC
+|   C                     WRITESFLSRC
+|   C                     ADD  DAH13D    DCTOT
+| 02-C                     END
+|    C*
+|    C                     ADD  1         WNO
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+05===C           R2000     BEGSR
+|    C*
+| 01-C           *IN03     DOWEQ'0'                        *CTL LOOP
+|   C           @RTNC     ANDEQ*BLANK
+|   C           SCID      ANDEQ'SC01'
+|   C*
+|   C                     EXSR R2A10                      *INIT SFLSR
+|   C                     EXSR R2A20                      *EXFMT SFLCR
+|   C*
+| 02-C           *IN03     IFEQ '0'
+|   C           *IN12     ANDEQ'0'
+|   C*
+| 03-C           *IN06     CASEQ'1'       R2D00
+|   C           *IN09     CASEQ'1'       R2D00
+|   C                     CAS            R2B00            *SC02 CHK
+| 03-C                     END
+| 02*C                     ELSE
+|   C* *IN12 ON | *IN03 ON
+|   C   03                MOVE '03'      @RTNC
+|   C   12                MOVE '12'      @RTNC
+| 02-C                     END
+| 01-C                     END                             *ENDDO
+|    C*
+05===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2A10 ....INIT 'SC02'
+     C*==============================================================*
+06===C           R2A10     BEGSR
+|    C* INIT SCR02
+|    C                     Z-ADD0         RRN
+|    C                     Z-ADD1         DRRN
+|    C                     SETON                     5251
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     MOVE *BLANKS   DOPT
+|    C*
+|    C                     Z-ADD1         WI
+|    C           WI        CHAINSFLSRD               4040
+| 01-C           *IN40     DOWEQ'0'
+| 02-C           DLTCOD    IFEQ 'N'
+|   C                     Z-ADDRRND      DNO
+|   C                     MOVE DAH04D    DAH041
+|   C                     MOVE *BLANKS   DAH042
+|   C                     EXSR R2A30
+| 02-C                     END
+|   C                     ADD  1         WI
+|   C           WI        CHAINSFLSRD               40
+| 01-C                     END
+|    C*
+|    C                     Z-ADD1         WI
+|    C           WI        CHAINSFLSRC               4040
+| 03-C           *IN40     DOWEQ'0'
+| 04-C           DLTCOD    IFEQ 'N'
+|   C                     Z-ADDRRNC      DNO
+|   C                     MOVE *BLANKS   DAH041
+|   C                     MOVE DAH04D    DAH042
+|   C                     EXSR R2A30
+| 04-C                     END
+|   C                     ADD  1         WI
+|   C           WI        CHAINSFLSRC               40
+| 03-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R2A20 ....EXFMT SFLSR
+     C*==============================================================*
+07===C           R2A20     BEGSR
+|    C*
+| 01-C           RRN       IFGT 0
+|   C                     SETON                     50
+| 01*C                     ELSE
+|   C                     SETON                     96
+|   C                     SETOF                     50
+| 01-C                     END
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,67
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R2A30 ....MOVE
+     C*==============================================================*
+08===C           R2A30     BEGSR
+|    C*
+|    C*GET AF03
+|    C                     MOVE *BLANKS   DAF031
+|    C                     MOVE DAH04D    AF02
+|    C           KEYAF     CHAINAF0                  40
+|    C  N40                MOVELAF03      DAF031
+|    C*
+|    C                     MOVE DAH11D    DAH111
+|    C                     MOVE DAH16D    DAH161
+|    C                     Z-ADDDAH12D    DAH121
+|    C                     Z-ADDDAH13D    DAH131
+|    C                     ADD  1         RRN
+|    C                     Z-ADDRRN       DAH031
+|    C                     WRITESFLSR
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'SC02' CHECK
+     C*==============================================================*
+09===C           R2B00     BEGSR
+|    C*
+|    C                     READCSFLSR                  5757
+| 01-C           *IN57     DOWEQ'0'
+| 02-C           DOPT      IFNE *BLANKS
+|   C                     EXSR R2B10                      *SFL-->SCR
+| 03-C           DOPT      CASLE'2'       R3000        3131
+|   C           DOPT      CASGE'4'       R4000
+| 03-C                     END
+| 02-C                     END
+|   C                     READCSFLSR                  5757
+| 01-C  N03N12             END
+|    C*
+09===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2B10 ....
+     C*==============================================================*
+10===C           R2B10     BEGSR
+|    C*
+|    C                     MOVE WFUN,WNUM DFUN
+|    C*
+| 01-C           DAH121    IFNE 0
+|   C           DNO       CHAINSFLSRD               40
+| 01*C                     ELSE
+|   C           DNO       CHAINSFLSRC               40
+| 01-C                     END
+|    C*
+|    C                     Z-ADDRRN       DAH03
+|    C                     MOVE DAH04D    DAH04
+|    C                     Z-ADDDAH12D    DAH12
+|    C                     Z-ADDDAH13D    DAH13
+|    C                     MOVE DAH11D    DAH11
+|    C                     MOVE DAH05D    DAH05
+|    C                     MOVE DAH05A    W02,1
+|    C                     MOVE DAH06D    DAH06
+|    C                     MOVE DAH06A    W02,2
+|    C                     MOVE DAH07D    DAH07
+|    C                     MOVE DAH07A    W02,3
+|    C                     MOVE DAH08D    DAH08
+|    C                     MOVE DAH08A    W02,4
+|    C                     Z-ADDDAH09D    DAH09
+|    C                     MOVE DAH09A    W02,5
+|    C                     Z-ADDDAH14D    DAH14
+|    C                     MOVE DAH14A    W02,6
+|    C                     MOVE DAH15D    DAH15
+|    C                     MOVE DAH15A    W02,7
+|    C                     MOVE DAH16D    DAH16
+|    C                     MOVE DAH22D    DAH22
+|    C                     MOVE DAH24D    DAH24
+|    C*GET AF03
+|    C                     MOVE *BLANKS   DAF03
+|    C                     MOVE DAH04D    AF02
+|    C           KEYAF     CHAINAF0                  40
+|    C  N40                MOVELAF03      DAF03
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....CHK & SAVE (SFL-->DBF)
+     C*==============================================================*
+11===C           R2D00     BEGSR
+|    C*
+|    C                     EXSR R2D10                      *CHK
+|    C  N99                EXSR R2D30                      *SAVE
+| 01-C           *IN98     IFEQ '0'
+|   C           *IN99     ANDEQ'0'
+| 02-C           *IN09     IFEQ '1'                        *列印傳票
+|   C                     OUT  LDA
+|   C                     CALL 'GLR1K0'
+|   C                     PARM DAH01     P1K0I1  2
+|   C                     PARM AH02      P1K0I2  9
+| 02-C                     END
+|   C                     MOVEA*ALL'0'   *IN,60
+|   C                     MOVE '00'      @RTNC
+| 01-C                     END
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....CHECK SC02 (PF06 ON)
+     C*==============================================================*
+12===C           R2D10     BEGSR
+|    C*
+|    C* CHK須有分錄存在
+|    C*
+| 01-C           WNO       IFEQ 0
+|   C                     MOVEL'UGL0012' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E2D10
+|    C*
+|    C* CHK借貸須平衡
+|    C*
+| 02-C           DDTOT     IFNE DCTOT
+|   C                     MOVEL'UGL0011' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     99
+| 02-C                     END
+|    C   99                GOTO E2D10
+|    C***
+|    C                     Z-ADDWRRND     WKRND   30
+|    C                     Z-ADDWRRNC     WKRNC   30
+|    C*
+|    C                     Z-ADD1         WI      30
+|    C           WI        CHAINSFLSRD               40
+| 03-C           WI        DOWLEWKRND
+|   C           *IN99     ANDEQ'0'
+| 04-C           DLTCOD    IFEQ 'N'
+| 05-C           DAH11D    IFEQ 'Y'
+|   C                     Z-ADDDAH12D    WTOT   132
+|   C                     EXSR R2D20
+|   C  N99                EXSR R2D60
+| 05*C                     ELSE
+|   C                     EXSR R2D80
+| 05-C                     END
+| 04-C                     END
+|   C                     ADD  1         WI
+|   C           WI        CHAINSFLSRD               40
+| 03-C                     END
+|    C   99                GOTO E2D10
+|    C*
+|    C                     Z-ADD1         WI      30
+|    C           WI        CHAINSFLSRC               40
+| 06-C           WI        DOWLEWKRNC
+|   C           *IN99     ANDEQ'0'
+| 07-C           DLTCOD    IFEQ 'N'
+| 08-C           DAH11D    IFEQ 'Y'
+|   C                     Z-ADDDAH13D    WTOT   132
+|   C                     EXSR R2D20
+|   C  N99                EXSR R2D70
+| 08*C                     ELSE
+|   C                     EXSR R2D80
+| 08-C                     END
+| 07-C                     END
+|   C                     ADD  1         WI
+|   C           WI        CHAINSFLSRC               40
+| 06-C                     END
+|    C   99                GOTO E2D10
+|    C*
+12===C           E2D10     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....分攤碼＝Ｙ
+     C*==============================================================*
+13===C           R2D20     BEGSR
+|    C*
+|    C                     Z-ADD100       WPSN    74
+|    C                     SETOF                     35
+|    C                     Z-ADD0         X       30
+|    C                     Z-ADD*ZEROS    W13
+|    C                     Z-ADD*ZEROS    W14
+|    C                     Z-ADD*ZEROS    W15
+|    C                     MOVELDAH04D    WAP02
+|    C                     MOVE *BLANK    WAP03
+|    C                     MOVELDAH05D    WAP04
+|    C                     MOVE '1'       WAP05
+|    C*
+|    C           KEYAP     CHAINAP0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C           AP06      ANDLEWAH10
+|   C*
+|   C                     EXSR R2D2A
+|   C* 逐筆讀取　費用分攤檔(GLAQPF)
+|   C           KEYAQ     SETLLAQ0
+|   C           KEYAQ     READEAQ0                      44
+| 02-C           *IN44     DOWEQ'0'
+|   C           *IN99     ANDEQ'0'
+|   C                     SETON                     35
+|   C                     EXSR R2D50
+|   C  N99      KEYAQ     READEAQ0                      44
+| 02-C                     END
+|   C   99                GOTO E2D20
+| 01-C                     END
+|    C*
+13===C           E2D20     ENDSR
+     C*==============================================================*
+     C*          R2D2A .... MOVE SFL DATA->WORK ARRAY
+     C*==============================================================*
+14===C           R2D2A     BEGSR
+|    C*
+|    C                     MOVE DAH05D    W05,1
+|    C                     MOVE DAH05A    W02,1
+|    C                     MOVE DAH06D    W05,2
+|    C                     MOVE DAH06A    W02,2
+|    C                     MOVE DAH07D    W05,3
+|    C                     MOVE DAH07A    W02,3
+|    C                     MOVE DAH08D    W05,4
+|    C                     MOVE DAH08A    W02,4
+|    C                     Z-ADDDAH09D    W0505   70
+|    C                     MOVE DAH09A    W02,5
+|    C                     Z-ADDDAH14D    W0506  132
+|    C                     MOVE DAH14A    W02,6
+|    C                     MOVE DAH15D    W0507  20
+|    C                     MOVE DAH15A    W02,7
+|    C                     MOVE DAH22D    DAH22
+|    C                     Z-ADDDAH12D    DAH12
+|    C                     Z-ADDDAH13D    DAH13
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R2D50 ....展開（欄位MATCH)
+     C*==============================================================*
+15===C           R2D50     BEGSR
+|    C*
+|    C           KEYAF1    CHAINAF0                  40
+|    C**
+|    C* GET乘分攤比率後金額
+|    C**
+| 01-C           DAH12     IFNE 0
+|   C           DAH12     MULT AQ12      P190I3
+|   C           P190I3    DIV  100       WK19I3 110H
+|   C                     Z-ADDWK19I3    P190I3
+|   C                     Z-ADD0         P190I4
+|   C                     SUB  P190I3    WTOT
+| 01*C                     ELSE
+|   C                     Z-ADD0         P190I3
+|   C           DAH13     MULT AQ12      P190I4
+|   C           P190I4    DIV  100       WK19I3    H
+|   C                     Z-ADDWK19I3    P190I4
+|   C                     SUB  P190I4    WTOT
+| 01-C                     END
+|    C**成本中心
+|    C                     MOVE *BLANK    P190I5
+| 02-C           AQ05      IFEQ *BLANK
+|   C                     Z-ADD1         I       30
+|   C           AF11      LOKUPW02,I                    59*
+| 03-C           *IN59     IFEQ '1'                        *FOUND
+| 04-C           I         IFEQ 5
+|   C                     MOVE W0505     P190I5
+| 04*C                     ELSE
+| 05-C           I         IFEQ 6
+|   C                     MOVE W0506     P190I5
+| 05*C                     ELSE
+|   C                     MOVE W05,I     P190I5
+| 05-C                     END
+| 04-C                     END
+| 03-C                     END
+| 02*C                     ELSE
+|   C                     MOVE AQ05      P190I5
+| 02-C                     END
+|    C**對象別
+|    C                     MOVE *BLANK    P190I6
+| 06-C           AQ06      IFEQ *BLANK
+|   C                     Z-ADD1         I       30
+|   C           AF12      LOKUPW02,I                    59*
+| 07-C           *IN59     IFEQ '1'                        *FOUND
+| 08-C           I         IFEQ 5
+|   C                     MOVE W0505     P190I6
+| 08*C                     ELSE
+| 09-C           I         IFEQ 6
+|   C                     MOVE W0506     P190I6
+| 09*C                     ELSE
+|   C                     MOVE W05,I     P190I6
+| 09-C                     END
+| 08-C                     END
+| 07-C                     END
+| 06*C                     ELSE
+|   C                     MOVE AQ06      P190I6
+| 06-C                     END
+|    C**相關號碼1
+|    C                     MOVE *BLANK    P190I7
+| 10-C           AQ07      IFEQ *BLANK
+|   C                     Z-ADD1         I       30
+|   C           AF13      LOKUPW02,I                    59*
+| 11-C           *IN59     IFEQ '1'                        *FOUND
+| 12-C           I         IFEQ 5
+|   C                     MOVE W0505     P190I7
+| 12*C                     ELSE
+| 13-C           I         IFEQ 6
+|   C                     MOVE W0506     P190I7
+| 13*C                     ELSE
+|   C                     MOVE W05,I     P190I7
+| 13-C                     END
+| 12-C                     END
+| 11-C                     END
+| 10*C                     ELSE
+|   C                     MOVE AQ07      P190I7
+| 10-C                     END
+|    C**相關號碼2
+|    C                     MOVE *BLANK    P190I8
+| 14-C           AQ08      IFEQ *BLANK
+|   C                     Z-ADD1         I       30
+|   C           AF14      LOKUPW02,I                    59*
+| 15-C           *IN59     IFEQ '1'                        *FOUND
+| 16-C           I         IFEQ 5
+|   C                     MOVE W0505     P190I8
+| 16*C                     ELSE
+| 17-C           I         IFEQ 6
+|   C                     MOVE W0506     P190I8
+| 17*C                     ELSE
+|   C                     MOVE W05,I     P190I8
+| 17-C                     END
+| 16-C                     END
+| 15-C                     END
+| 14*C                     ELSE
+|   C                     MOVE AQ08      P190I8
+| 14-C                     END
+|    C**日期
+|    C                     Z-ADD*ZEROS    P190I9
+| 18-C           AQ09      IFEQ 0
+|   C                     Z-ADD1         I       30
+|   C           AF15      LOKUPW02,I                    59*
+| 19-C           *IN59     IFEQ '1'                        *FOUND
+| 20-C           I         IFEQ 5
+|   C                     Z-ADDW0505     P190I9
+| 20*C                     ELSE
+| 21-C           I         IFEQ 6
+|   C                     Z-ADDW0506     P190I9
+| 21*C                     ELSE
+|   C                     MOVE W05,I     P190I9
+| 21-C                     END
+| 20-C                     END
+| 19-C                     END
+| 18*C                     ELSE
+|   C                     Z-ADDAQ09      P190I9
+| 18-C                     END
+|    C**數量
+|    C                     Z-ADD*ZEROS    P190IA
+| 22-C           AQ14      IFEQ 0
+|   C                     Z-ADD1         I       30
+|   C           AF16      LOKUPW02,I                    59*
+| 23-C           *IN59     IFEQ '1'                        *FOUND
+| 24-C           I         IFEQ 5
+|   C                     Z-ADDW0505     P190IA
+| 24*C                     ELSE
+| 25-C           I         IFEQ 6
+|   C                     Z-ADDW0506     P190IA
+| 25*C                     ELSE
+|   C                     MOVE W05,I     P190IA
+| 25-C                     END
+| 24-C                     END
+| 23-C                     END
+| 22*C                     ELSE
+|   C                     Z-ADDAQ14      P190IA
+| 22-C                     END
+|    C**其他
+|    C                     MOVE *BLANK    P190IB
+| 26-C           AQ15      IFEQ *BLANK
+|   C                     Z-ADD1         I       30
+|   C           AF17      LOKUPW02,I                    59*
+| 27-C           *IN59     IFEQ '1'                        *FOUND
+| 28-C           I         IFEQ 5
+|   C                     MOVE W0505     P190IB
+| 28*C                     ELSE
+| 29-C           I         IFEQ 6
+|   C                     MOVE W0506     P190IB
+| 29*C                     ELSE
+|   C                     MOVE W0507     P190IB
+| 29-C                     END
+| 28-C                     END
+| 27-C                     END
+| 26*C                     ELSE
+|   C                     MOVE AQ15      P190IB
+| 26-C                     END
+|    C*
+|    C                     CALL 'GLA190'
+|    C                     PARM DAH01     P190I1  2         公司別
+|    C           DAH04D    PARM AQ04      P190I2  8         會計科目
+|    C           DAH12D    PARM           P190I3 132        借方金額
+|    C           DAH13D    PARM           P190I4 132        貸方金額
+|    C           DAH05D    PARM           P190I5 20         成本中心
+|    C           DAH06D    PARM           P190I6 20         對象別
+|    C           DAH07D    PARM           P190I7 20         相關號碼1
+|    C           DAH08D    PARM           P190I8 20         相關號碼2
+|    C           DAH09D    PARM           P190I9  70        日期
+|    C           DAH14D    PARM           P190IA 132        數量
+|    C           DAH15D    PARM           P190IB 20         其他
+|    C           DAH16D    PARM AQ16      P190IC 50         摘要
+|    C                     PARM 'H'       P190ID  1         檔案
+|    C                     PARM           @RTNC   2          FUN KEY
+|    C*
+| 30-C           @RTNC     IFEQ '03'
+|   C                     SETON                     0399
+| 30-C                     END
+| 31-C           @RTNC     IFEQ '12'
+|   C                     SETON                     99
+|   C                     MOVE '00'      @RTNC
+| 31-C                     END
+|    C                     MOVE *BLANK    ERRID
+|    C                     MOVE *BLANK    ERRF
+|    C   99                GOTO E2D50
+|    C*
+|    C                     ADD  1         X
+|    C                     Z-ADDAQ12      W14,X
+|    C                     Z-ADDAQ12      W15,X
+|    C                     SUB  AQ12      WPSN
+|    C                     MOVE AF11      DAH05A
+|    C                     MOVE AF12      DAH06A
+|    C                     MOVE AF13      DAH07A
+|    C                     MOVE AF14      DAH08A
+|    C                     MOVE AF15      DAH09A
+|    C                     MOVE AF16      DAH14A
+|    C                     MOVE AF17      DAH15A
+| 32-C           AQ22      IFNE *BLANK
+|   C                     MOVE AQ22      DAH22D
+| 32*C                     ELSE
+|   C                     MOVE DAH22     DAH22D
+| 32-C                     END
+|    C*
+|    C                     MOVE 'N'       DAH11D
+|    C                     MOVE 'N'       DLTCOD
+| 33-C           DAH12     IFNE 0
+|   C           WRRND     ADD  1         RRND
+|   C                     Z-ADDRRND      WRRND
+|   C                     Z-ADDRRND      W13,X
+|   C                     WRITESFLSRD
+| 33*C                     ELSE
+|   C           WRRNC     ADD  1         RRNC
+|   C                     Z-ADDRRNC      WRRNC
+|   C                     Z-ADDRRNC      W13,X
+|   C                     WRITESFLSRC
+| 33-C                     END
+|    C                     ADD  1         WNO
+|    C*
+15===C           E2D50     ENDSR
+     C*==============================================================*
+     C*          R2D60 ....
+     C* 原分錄刪除OR分攤總分率不及１００％（原分錄金額改變）
+     C*==============================================================*
+16===C           R2D60     BEGSR
+|    C*
+| 01-C           *IN35     IFEQ '1'
+|   C           WI        CHAINSFLSRD               40
+| 02-C           WPSN      IFEQ 0
+|   C                     MOVE 'Y'       DLTCOD
+|   C                     SUB  1         WNO
+| 02*C                     ELSE
+|   C           DAH12D    MULT WPSN      DAH12D
+|   C           DAH12D    DIV  100       WK19I3    H
+|   C                     Z-ADDWK19I3    DAH12D
+|   C                     SUB  DAH12D    WTOT
+|   C*
+|   C                     CALL 'GLA190'
+|   C                     PARM DAH01     P190I1  2         公司別
+|   C           DAH04D    PARM DAH04D    P190I2  8         會計科目
+|   C           DAH12D    PARM DAH12D    P190I3 132        借方金額
+|   C           DAH13D    PARM DAH13D    P190I4 132        貸方金額
+|   C           DAH05D    PARM DAH05D    P190I5 20         成本中心
+|   C           DAH06D    PARM DAH06D    P190I6 20         對象別
+|   C           DAH07D    PARM DAH07D    P190I7 20         相關號碼1
+|   C           DAH08D    PARM DAH08D    P190I8 20         相關號碼2
+|   C           DAH09D    PARM DAH09D    P190I9  70        日期
+|   C           DAH14D    PARM DAH14D    P190IA 132        數量
+|   C           DAH15D    PARM DAH15D    P190IB 20         其他
+|   C           DAH16D    PARM DAH16D    P190IC 50         摘要
+|   C                     PARM 'H'       P190ID  1         檔案
+|   C                     PARM           @RTNC   2          FUN KEY
+|   C*
+| 03-C           @RTNC     IFEQ '03'
+|   C                     SETON                     0399
+| 03-C                     END
+| 04-C           @RTNC     IFEQ '12'
+|   C                     SETON                     99
+|   C                     MOVE 'SC01'    SCID
+| 04-C                     END
+|   C                     MOVE *BLANK    ERRID
+|   C                     MOVE *BLANK    ERRF
+|   C   99                GOTO E2D60
+| 02-C                     END
+|   C                     ADD  1         X
+|   C                     Z-ADDWPSN      W14,X
+|   C                     Z-ADDWPSN      W15,X
+|   C                     Z-ADDWI        W13,X
+|   C                     UPDATSFLSRD
+|   C                     SETOF                     35
+|   C*
+| 05-C           WTOT      IFNE 0
+|   C                     SORTAW15
+|   C                     Z-ADD1         I
+|   C           W15,1     LOKUPW14,I                    59*
+| 06-C           *IN59     IFEQ '1'
+|   C           W13,I     CHAINSFLSRD               40
+|   C                     ADD  WTOT      DAH12D
+|   C                     UPDATSFLSRD
+| 06-C                     END
+| 05-C                     END
+|   C*
+| 01*C                     ELSE
+|   C                     EXSR R2D80
+| 01-C                     END
+|    C*
+16===C           E2D60     ENDSR
+     C*==============================================================*
+     C*          R2D70 ....
+     C* 原分錄刪除OR分攤總分率不及１００％（原分錄金額改變）
+     C*==============================================================*
+17===C           R2D70     BEGSR
+|    C*
+| 01-C           *IN35     IFEQ '1'
+|   C           WI        CHAINSFLSRC               40
+| 02-C           WPSN      IFEQ 0
+|   C                     MOVE 'Y'       DLTCOD
+|   C                     SUB  1         WNO
+| 02*C                     ELSE
+|   C           DAH13D    MULT WPSN      DAH13D
+|   C           DAH13D    DIV  100       WK19I3    H
+|   C                     Z-ADDWK19I3    DAH13D
+|   C                     SUB  DAH13D    WTOT
+|   C*
+|   C                     CALL 'GLA190'
+|   C                     PARM DAH01     P190I1  2         公司別
+|   C           DAH04D    PARM DAH04D    P190I2  8         會計科目
+|   C           DAH12D    PARM DAH12D    P190I3 132        借方金額
+|   C           DAH13D    PARM DAH13D    P190I4 132        貸方金額
+|   C           DAH05D    PARM DAH05D    P190I5 20         成本中心
+|   C           DAH06D    PARM DAH06D    P190I6 20         對象別
+|   C           DAH07D    PARM DAH07D    P190I7 20         相關號碼1
+|   C           DAH08D    PARM DAH08D    P190I8 20         相關號碼2
+|   C           DAH09D    PARM DAH09D    P190I9  70        日期
+|   C           DAH14D    PARM DAH14D    P190IA 132        數量
+|   C           DAH15D    PARM DAH15D    P190IB 20         其他
+|   C           DAH16D    PARM DAH16D    P190IC 50         摘要
+|   C                     PARM 'H'       P190ID  1         檔案
+|   C                     PARM           @RTNC   2          FUN KEY
+|   C*
+| 03-C           @RTNC     IFEQ '03'
+|   C                     SETON                     0399
+| 03-C                     END
+| 04-C           @RTNC     IFEQ '12'
+|   C                     SETON                     99
+|   C                     MOVE 'SC01'    SCID
+| 04-C                     END
+|   C                     MOVE *BLANK    ERRID
+|   C                     MOVE *BLANK    ERRF
+|   C   99                GOTO E2D70
+|   C*
+| 02-C                     END
+|   C                     ADD  1         X
+|   C                     Z-ADDWPSN      W14,X
+|   C                     Z-ADDWPSN      W15,X
+|   C                     Z-ADDWI        W13,X
+|   C                     UPDATSFLSRC
+|   C                     SETOF                     35
+|   C*
+| 05-C           WTOT      IFNE 0
+|   C                     SORTAW15
+|   C                     Z-ADD1         I
+|   C           W15,1     LOKUPW14,I                    59*
+| 06-C           *IN59     IFEQ '1'
+|   C           W13,I     CHAINSFLSRC               40
+|   C                     ADD  WTOT      DAH13D
+|   C                     UPDATSFLSRC
+| 06-C                     END
+| 05-C                     END
+|   C*
+| 01*C                     ELSE
+|   C                     EXSR R2D80
+| 01-C                     END
+|    C*
+17===C           E2D70     ENDSR
+     C*==============================================================*
+     C*          R2D80 .... 分攤碼＝�洘剻�
+     C*==============================================================*
+18===C           R2D80     BEGSR
+|    C*
+|    C                     MOVE DAH04D    AF02
+|    C           KEYAF     CHAINAF0                  40
+|    C*
+|    C                     CALL 'GLA190'
+|    C                     PARM DAH01     P190I1  2         公司別
+|    C           DAH04D    PARM DAH04D    P190I2  8         會計科目
+|    C           DAH12D    PARM DAH12D    P190I3 132        借方金額
+|    C           DAH13D    PARM DAH13D    P190I4 132        貸方金額
+|    C           DAH05D    PARM DAH05D    P190I5 20         成本中心
+|    C           DAH06D    PARM DAH06D    P190I6 20         對象別
+|    C           DAH07D    PARM DAH07D    P190I7 20         相關號碼1
+|    C           DAH08D    PARM DAH08D    P190I8 20         相關號碼2
+|    C           DAH09D    PARM DAH09D    P190I9  70        日期
+|    C           DAH14D    PARM DAH14D    P190IA 132        數量
+|    C           DAH15D    PARM DAH15D    P190IB 20         其他
+|    C           DAH16D    PARM DAH16D    P190IC 50         摘要
+|    C                     PARM 'H'       P190ID  1         檔案
+|    C                     PARM           @RTNC   2          FUN KEY
+|    C*
+| 01-C           @RTNC     IFEQ '03'
+|   C                     SETON                     0399
+| 01-C                     END
+| 02-C           @RTNC     IFEQ '12'
+|   C                     SETON                     99
+|   C                     MOVE 'SC01'    SCID
+| 02-C                     END
+|    C                     MOVE *BLANK    ERRID
+|    C                     MOVE *BLANK    ERRF
+|    C   99                GOTO E2D80
+|    C*
+|    C                     MOVE AF11      DAH05A
+|    C                     MOVE AF12      DAH06A
+|    C                     MOVE AF13      DAH07A
+|    C                     MOVE AF14      DAH08A
+|    C                     MOVE AF15      DAH09A
+|    C                     MOVE AF16      DAH14A
+|    C                     MOVE AF17      DAH15A
+|    C                     MOVE 'N'       DAH11D
+|    C                     MOVE 'N'       DLTCOD
+| 03-C           DAH12D    IFNE 0
+|   C                     UPDATSFLSRD
+| 03*C                     ELSE
+|   C                     UPDATSFLSRC
+| 03-C                     END
+|    C*
+18===C           E2D80     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....SAVE (SFL->DB)
+     C*==============================================================*
+19===C           R2D30     BEGSR
+|    C*
+|    C                     CALL 'GLS002'
+|    C                     PARM DAH01     P002I1  2
+|    C                     PARM WAH10     P002I2  80
+|    C                     PARM 'F'       P002I3  1
+|    C           AH02      PARM           P002O1  9
+|    C*
+|    C                     MOVE '00'      @RTNC
+|    C*
+|    C                     MOVE DAH01     AH01
+|    C                     Z-ADDWAH10     AH10
+|    C                     MOVEL'GL'      AH17
+|    C                     MOVE *BLANK    AH18
+|    C* 主管核對作業
+| 01-C           AK02      IFEQ 'V'
+|   C                     MOVE 'V'       AH19
+| 01*C                     ELSE
+|   C                     MOVE *BLANK    AH19
+| 01-C                     END
+|    C*
+|    C                     MOVE *BLANK    AH20
+|    C                     Z-ADD0         AH21
+|    C                     Z-ADD$A8YMD    AH25
+|    C                     MOVE $USER     AH26
+|    C*
+|    C                     Z-ADD0         AH03
+|    C*
+|    C                     Z-ADD1         WI      30
+|    C           WI        CHAINSFLSRD               40
+| 02-C           *IN40     DOWEQ'0'
+| 03-C           DLTCOD    IFEQ 'N'
+|   C                     ADD  1         AH03
+|   C                     EXSR R2D40
+|   C                     WRITEAH0
+| 03-C                     END
+|   C                     ADD  1         WI
+|   C           WI        CHAINSFLSRD               40
+| 02-C                     END
+|    C*
+|    C                     Z-ADD1         WI
+|    C           WI        CHAINSFLSRC               40
+| 04-C           *IN40     DOWEQ'0'
+| 05-C           DLTCOD    IFEQ 'N'
+|   C                     ADD  1         AH03
+|   C                     EXSR R2D40
+|   C                     WRITEAH0
+| 05-C                     END
+|   C                     ADD  1         WI
+|   C           WI        CHAINSFLSRC               40
+| 04-C                     END
+|    C*
+19===C           E2D30     ENDSR
+     C*==============================================================*
+     C*          R2D40 ....MOVE DATA -> DETAIL FILE(GLAOPF)
+     C*==============================================================*
+20===C           R2D40     BEGSR
+|    C*
+|    C                     MOVE DAH04D    AH04
+|    C                     MOVE DAH05D    AH05
+|    C                     MOVE DAH05A    AH05A
+|    C                     MOVE DAH06D    AH06
+|    C                     MOVE DAH06A    AH06A
+|    C                     MOVE DAH07D    AH07
+|    C                     MOVE DAH07A    AH07A
+|    C                     MOVE DAH08D    AH08
+|    C                     MOVE DAH08A    AH08A
+|    C                     Z-ADDDAH09D    AH09
+|    C                     MOVE DAH09A    AH09A
+|    C                     Z-ADDDAH12D    AH12
+|    C                     Z-ADDDAH13D    AH13
+|    C                     Z-ADDDAH14D    AH14
+|    C                     MOVE DAH14A    AH14A
+|    C                     MOVE DAH15D    AH15
+|    C                     MOVE DAH15A    AH15A
+|    C                     MOVE DAH16D    AH16
+|    C                     MOVE DAH22D    AH22
+|    C                     MOVE DAH24D    AH24
+|    C                     TIME           AH97
+|    C                     Z-ADD$A8YMD    AH98
+|    C                     MOVE $USER     AH99
+|    C*
+20===C                     ENDSR
+     C*==============================================================*
+     C*          R3000 .... SELECT  DOPT='1' | DOPT='2'
+     C*==============================================================*
+21===C           R3000     BEGSR
+|    C*
+| 01-C           DOPT      IFEQ '1'
+|   C           WNO       ADD  1         DAH03             *AH03
+|   C                     MOVE *BLANK    DAH16
+| 01-C                     END
+|    C*
+| 02-C           *IN34     DOWEQ'0'
+|   C*
+|   C                     WRITEDSPC3
+|   C                     EXFMTDSPD3
+|   C                     MOVEA*ALL'0'   *IN,67
+|   C                     Z-ADD*ZERO     #LIN
+|   C                     Z-ADD*ZERO     #COL
+|   C*
+| 03-C           *IN03     IFEQ '0'
+|   C           *IN12     ANDEQ'0'
+|   C*
+| 04-C           *IN04     CASEQ'1'       R3E00
+|   C                     CAS            R3B00
+| 04-C                     END
+|   C*
+| 05-C           *IN04     IFEQ '0'
+|   C           *IN05     ANDEQ'0'
+|   C           *IN99     ANDEQ'0'
+| 06-C           DAH04D    IFNE DAH04
+|   C                     EXSR R3C00                       *INIT SCR03
+| 06-C                     END
+|   C                     EXSR R4000
+|   C  N12                SETON                     34
+| 05-C                     END
+|   C*
+| 03*C                     ELSE
+|   C                     SETON                     34
+| 03-C                     END
+|   C*
+| 02-C                     END
+|    C*
+|    C                     SETOF                     34
+21===C                     ENDSR
+     C*==============================================================*
+     C*          R3B00 ....'SC03' CHECK
+     C*==============================================================*
+22===C           R3B00     BEGSR
+|    C*
+|    C* CHK會計科目
+|    C*
+|    C                     MOVE *BLANK    DAF03
+| 01-C           DAH04     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7099
+| 01*C                     ELSE
+|   C                     MOVE DAH04     AF02
+|   C           KEYAF     CHAINAF0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7099
+| 02*C                     ELSE
+|   C                     MOVELAF03      DAF03
+| 03-C           AF08      IFNE '1'
+|   C                     MOVEL'UGL0009' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     7099
+| 03-C                     END
+| 02-C                     END
+| 01-C                     END
+|    C   99                GOTO E3B00
+|    C*
+|    C* CHK借貸須擇一方輸入
+|    C*
+| 04-C           DAH12     IFEQ 0
+|   C           DAH13     ANDEQ0
+|   C           DAH12     ORNE 0
+|   C           DAH13     ANDNE0
+|   C                     MOVEL'UGL0010' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     7199
+| 04-C                     END
+|    C   99                GOTO E3B00
+|    C*
+22===C           E3B00     ENDSR
+     C*==============================================================*
+     C*          R3C00 ....INIT 'SC04'
+     C*==============================================================*
+23===C           R3C00     BEGSR
+|    C*
+|    C                     MOVE *BLANKS   DAH05
+|    C                     MOVE *BLANKS   DAH06
+|    C                     MOVE *BLANKS   DAH07
+|    C                     MOVE *BLANKS   DAH08
+|    C                     Z-ADD0         DAH09
+|    C                     Z-ADD0         DAH14
+|    C                     MOVE *BLANKS   DAH15
+|    C                     MOVE *BLANKS   DAH22
+|    C                     MOVE *BLANKS   DAD03
+|    C                     MOVE *BLANKS   DAH24
+|    C                     MOVE *BLANKS   DAH16
+|    C*
+23===C                     ENDSR
+     C*==============================================================*
+     C*          R3E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+24===C           R3E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*科目
+| 01-C           #LIN      IFEQ 7
+|   C           #COL      ANDGE16
+|   C           #COL      ANDLE23
+|   C                     CALL 'GLI410'
+|   C                     PARM DAH01     P410I1  2
+|   C           DAH04     PARM DAH04     P410I2  8
+|   C                     PARM           @RTNC   2
+| 01-C                     END
+|    C*
+24===C                     ENDSR
+     C*==============================================================*
+     C*          R4000 .... 'SC04' SCREEN MAIN ROUTINE
+     C*==============================================================*
+25===C           R4000     BEGSR
+|    C*
+|    C                     EXSR R4A00
+|    C*
+| 01-C           *IN33     DOWEQ'0'                        *CTL LOOP
+|   C*
+| 02-C           DOPT      IFGE '4'
+|   C                     WRITEDSPC4
+| 02*C                     ELSE
+|   C                     WRITEDSPC3
+| 02-C                     END
+|   C                     WRITEDSPD3
+|   C                     EXFMTDSPD4
+|   C                     MOVEA*ALL'0'   *IN,67
+|   C                     Z-ADD*ZERO     #LIN
+|   C                     Z-ADD*ZERO     #COL
+|   C*
+| 03-C           *IN03     IFEQ '0'
+|   C           *IN12     ANDEQ'0'
+|   C*
+| 04-C           DOPT      IFLT '4'
+| 05-C           *IN04     CASEQ'1'       R4E00
+|   C                     CAS            R4B00            *CHK SC04
+| 05-C                     END
+| 04-C                     END
+|   C*
+| 06-C           *IN04     IFEQ '0'
+|   C           *IN05     ANDEQ'0'
+|   C           *IN99     ANDEQ'0'
+|   C                     EXSR R4D00                      *SAVE->SFL
+|   C                     SETON                     33
+| 06-C                     END
+|   C*  *IN12 ON
+| 03*C                     ELSE
+|   C                     SETON                     33
+| 03-C                     END                             *IN12 ENDIF
+|   C*
+| 01-C                     END                              ENDDO
+|    C*
+|    C                     SETOF                     33
+|    C*
+25===C           E4000     ENDSR
+     C*==============================================================*
+     C*          R4A00 ....INIT 'SC04'之輸入欄位
+     C*==============================================================*
+26===C           R4A00     BEGSR
+|    C*
+|    C* INIT SCR03
+|    C                     MOVE AF11      W02,1          60
+|    C                     MOVE AF12      W02,2          61
+|    C                     MOVE AF13      W02,3          62
+|    C                     MOVE AF14      W02,4          63
+|    C                     MOVE AF15      W02,5          64
+|    C                     MOVE AF16      W02,6          65
+|    C                     MOVE AF17      W02,7          66
+|    C                     MOVEA*BLANKS   W03
+|    C                     MOVEA*BLANKS   W04
+|    C                     MOVE '0'       WCHK
+|    C*
+| 01-C                     DO   5         WI      30
+|   C           54        ADD  WI        IN
+|   C                     MOVE '1'       *IN,IN
+| 01-C                     END
+|    C*
+| 02-C                     DO   7         WI      30
+|   C* KEYAA=DAN01+W02,WI
+| 03-C           W02,WI    IFNE *BLANKS
+|   C           KEYAA     CHAINAA0                  40
+|   C                     MOVE AA03      W03,WI
+|   C                     MOVE AA04      W04,WI
+|   C                     MOVE AA05      W08,WI
+|   C*
+|   C* 無檢核程式時，該說明不要HIGH LIGHT
+|   C*
+| 04-C           WI        IFLE 4
+| 05-C           AA04      IFNE *BLANK
+|   C           54        ADD  WI        IN
+|   C                     MOVE '0'       *IN,IN
+| 05-C                     END
+| 04-C                     END
+| 06-C           WI        IFEQ 7
+| 07-C           AA04      IFNE *BLANK
+|   C                     SETOF                     59
+| 07-C                     END
+| 06-C                     END
+| 03-C                     END
+| 02-C                     END
+|    C*
+|    C                     MOVEA*BLANKS   W06
+|    C                     EXSR R4A10
+|    C*
+26===C                     ENDSR
+     C*==============================================================*
+     C*          R4A10 ....GET 'SC04'輸入欄位說明
+     C*==============================================================*
+27===C           R4A10     BEGSR
+|    C*
+|    C                     MOVE DAH01     WAK01
+|    C*
+| 01-C                     DO   4         WI
+| 02-C           W05,WI    IFNE *BLANKS
+|   C           W04,WI    ANDNE*BLANKS
+|   C                     MOVE W05,WI    WPARM1
+|   C                     MOVE W08,WI    WPARM2
+|   C                     CALL W04,WI
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C           W06,WI    PARM           DESC   20
+| 02*C                     ELSE
+|   C                     MOVELW05,WI    W06,WI
+| 02-C                     END
+| 01-C                     END
+|    C*
+| 03-C           DAH09     IFNE 0
+|   C                     CALL 'P56'                      *P56(GET'/')
+|   C                     PARM DAH09     P5601I  80
+|   C                     PARM           P5601O 10
+|   C                     MOVELP5601O    W06,5
+| 03-C                     END
+|    C*
+| 04-C           DAH14     IFNE 0
+|   C                     CALL 'P55'                      *P55(GET,.)
+|   C                     PARM DAH14     P5501I 185
+|   C                     PARM 2         P5502I  10
+|   C                     PARM           P5501O 24
+|   C                     MOVELP5501O    W06,6
+| 04-C                     END
+|    C*
+| 05-C           W04,7     IFNE *BLANK
+|   C           DAH15     ANDNE*BLANK
+|   C                     MOVE DAH15     WPARM1
+|   C                     MOVE W08,7     WPARM2
+|   C                     CALL W04,7
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C                     PARM           W06,7
+| 05*C                     ELSE
+|   C                     MOVELDAH15     W06,7
+| 05-C                     END
+|    C*
+|    C                     MOVE *BLANK    DAD03
+| 06-C           DAH22     IFNE *BLANK
+|   C                     MOVELDAH22     AD02
+|   C           KEYAD     CHAINAD0                  40
+|   C  N40                MOVELAD03      DAD03
+| 06-C                     END
+|    C*
+27===C                     ENDSR
+     C*==============================================================*
+     C*          R4B00 ....'SC04' CHECK
+     C*==============================================================*
+28===C           R4B00     BEGSR
+|    C*
+|    C                     MOVE DAH01     WAK01
+|    C*
+|    C* CHK輸入欄位１－４（輸入控制碼）
+|    C*
+| 01-C                     DO   4         WI
+| 02-C           W07,WI    IFEQ 'V'
+|   C           W05,WI    ANDEQ*BLANKS
+|   C           WI        ADD  79        IN      20
+|   C                     MOVE '1'       *IN,IN
+|   C                     SETON                     99
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 02-C                     END
+| 01-C  N99                END
+|    C   99                GOTO E4B00
+|    C*
+|    C* CHK輸入欄位１－４& GET說明
+|    C*
+| 03-C                     DO   4         WI
+| 04-C           W05,WI    IFEQ *BLANKS
+|   C                     MOVE *BLANK    W06,WI
+| 04*C                     ELSE
+| 05-C           W04,WI    IFNE *BLANKS
+|   C                     MOVE W05,WI    WPARM1
+|   C                     MOVE W08,WI    WPARM2
+|   C                     CALL W04,WI
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C           W06,WI    PARM           DESC   20
+| 06-C           TORN      IFEQ 'N'
+|   C           WI        ADD  79        IN      20
+|   C                     MOVE '1'       *IN,IN
+|   C                     SETON                     99
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 06*C                     ELSE
+|   C                     MOVE WPARM1    W05,WI
+| 06-C                     END
+| 05*C                     ELSE
+|   C                     MOVELW05,WI    W06,WI
+| 05-C                     END
+| 04-C                     END
+| 03-C  N99                END
+|    C   99                GOTO E4B00
+|    C*
+| 07-C           W07,5     IFEQ 'V'
+|   C           DAH09     ANDEQ0
+|   C                     SETON                     8499
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 07-C                     END
+|    C   99                GOTO E4B00
+|    C*
+|    C* 輸入欄位５（日期）& GET說明
+|    C*
+|    C                     MOVE *BLANK    W06,5
+| 08-C           DAH09     IFNE 0
+|   C                     CALL 'P56'                      *P56(GET'/')
+|   C                     PARM DAH09     P5601I  80
+|   C                     PARM           P5601O 10
+|   C                     MOVELP5601O    W06,5
+| 08-C                     END
+|    C   99                GOTO E4B00
+|    C*
+| 09-C           W07,6     IFEQ 'V'
+|   C           DAH14     ANDEQ0
+|   C                     SETON                     8599
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 09-C                     END
+|    C   99                GOTO E4B00
+|    C*
+|    C* 輸入欄位６（數量）& GET說明
+|    C*
+|    C                     MOVE *BLANK    W06,6
+| 10-C           DAH14     IFNE 0
+|   C                     CALL 'P55'                      *P55(GET,.)
+|   C                     PARM DAH14     P5501I 185
+|   C                     PARM 2         P5502I  10
+|   C                     PARM           P5501O 24
+|   C                     MOVELP5501O    W06,6
+| 10-C                     END
+|    C   99                GOTO E4B00
+|    C*
+| 11-C           W07,7     IFEQ 'V'
+|   C           DAH15     ANDEQ*BLANK
+|   C                     SETON                     8699
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 11-C                     END
+|    C   99                GOTO E4B00
+|    C*
+|    C* CHK輸入欄位７& GET說明
+|    C*
+| 12-C           DAH15     IFEQ *BLANKS
+|   C                     MOVE *BLANK    DAH151
+| 12*C                     ELSE
+| 13-C           W04,7     IFNE *BLANK
+|   C                     MOVE DAH15     WPARM1
+|   C                     MOVE W08,7     WPARM2
+|   C                     CALL W04,7
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C                     PARM           W06,7
+| 14-C           TORN      IFEQ 'N'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8699
+| 14*C                     ELSE
+|   C                     MOVE WPARM1    DAH15
+| 14-C                     END
+| 13*C                     ELSE
+|   C                     MOVELDAH15     W06,7
+| 13-C                     END
+| 12-C                     END
+|    C   99                GOTO E4B00
+|    C*
+|    C* CHK資金代碼& GET說明
+|    C*
+|    C                     MOVE *BLANK    DAD03
+| 15-C           DAH22     IFNE *BLANK
+|   C                     MOVELDAH22     AD02
+|   C           KEYAD     CHAINAD0                  40
+| 16-C           *IN40     IFEQ '0'
+|   C                     MOVELAD03      DAD03
+| 16*C                     ELSE
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7299
+| 16-C                     END
+| 15-C                     END
+|    C   99                GOTO E4B00
+|    C*
+|    C* GET摘要
+|    C*
+| 17-C           *IN05     IFEQ '1'
+|   C           DAH16     OREQ *BLANKS
+|   C                     MOVE *BLANKS   DAH16
+|   C*
+| 18-C                     DO   7         WI
+| 19-C           W06,WI    IFNE *BLANKS
+|   C                     CALL 'GLS001'
+|   C                     PARM DAH16     S001I1 80
+|   C                     PARM W06,WI    S001I2 80
+|   C                     PARM 50        S001I3  30
+|   C           DAH16     PARM           S001O1 80
+| 19-C                     END
+| 18-C                     END
+|   C*
+| 17-C                     END
+|    C*
+28===C           E4B00     ENDSR
+     C*==============================================================*
+     C*          R4D00 ....SAVE TO SFL
+     C*==============================================================*
+29===C           R4D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ'1'       R4D10
+|   C           DOPT      CASEQ'2'       R4D20
+|   C           DOPT      CASEQ'4'       R4D30
+| 01-C                     END
+|    C*
+29===C                     ENDSR
+     C*==============================================================*
+     C*          R4D10 ....ADD
+     C*==============================================================*
+30===C           R4D10     BEGSR
+|    C*
+|    C                     EXSR R4DA0
+|    C*
+|    C                     ADD  DAH12     DDTOT
+|    C                     ADD  DAH13     DCTOT
+|    C*
+|    C                     MOVE 'N'       DLTCOD
+| 01-C           DAH12     IFNE 0
+|   C           WRRND     ADD  1         RRND
+|   C                     Z-ADDRRND      WRRND
+|   C                     WRITESFLSRD
+| 01*C                     ELSE
+|   C           WRRNC     ADD  1         RRNC
+|   C                     Z-ADDRRNC      WRRNC
+|   C                     WRITESFLSRC
+| 01-C                     END
+|    C                     ADD  1         WNO
+|    C*
+30===C                     ENDSR
+     C*==============================================================*
+     C*          R4D20 ....UPD
+     C*==============================================================*
+31===C           R4D20     BEGSR
+|    C*
+|    C                     ADD  DAH12     DDTOT
+|    C                     ADD  DAH13     DCTOT
+|    C                     SUB  DAH12D    DDTOT
+|    C                     SUB  DAH13D    DCTOT
+|    C*
+| 01-C           DAH12     IFEQ 0
+|   C           DAH12D    ANDEQ0
+|   C           DAH12     ORNE 0
+|   C           DAH12D    ANDNE0
+|   C                     EXSR R4DA0
+|   C                     MOVE 'N'       DLTCOD
+| 02-C           DAH12     IFNE 0
+|   C                     UPDATSFLSRD
+| 02*C                     ELSE
+|   C                     UPDATSFLSRC
+| 02-C                     END
+| 01*C                     ELSE
+|   C                     MOVE 'Y'       DLTCOD
+| 03-C           DAH12D    IFNE 0
+|   C                     UPDATSFLSRD
+| 03*C                     ELSE
+|   C                     UPDATSFLSRC
+| 03-C                     END
+|   C                     EXSR R4DA0
+|   C                     MOVE 'N'       DLTCOD
+| 04-C           DAH12     IFNE 0
+|   C           WRRND     ADD  1         RRND
+|   C                     Z-ADDRRND      WRRND
+|   C                     WRITESFLSRD
+| 04*C                     ELSE
+|   C           WRRNC     ADD  1         RRNC
+|   C                     Z-ADDRRNC      WRRNC
+|   C                     WRITESFLSRC
+| 04-C                     END
+| 01-C                     END
+31===C                     ENDSR
+     C*==============================================================*
+     C*          R4D30 ....DLT
+     C*==============================================================*
+32===C           R4D30     BEGSR
+|    C*
+|    C                     SUB  DAH12D    DDTOT
+|    C                     SUB  DAH13D    DCTOT
+|    C*
+|    C                     MOVE 'Y'       DLTCOD
+| 01-C           DAH12     IFNE 0
+|   C                     UPDATSFLSRD
+| 01*C                     ELSE
+|   C                     UPDATSFLSRC
+| 01-C                     END
+|    C                     SUB  1         WNO
+|    C*
+32===C                     ENDSR
+     C*==============================================================*
+     C*          R4DA0 ....DSP--> SAVE SFL
+     C*==============================================================*
+33===C           R4DA0     BEGSR
+|    C*
+|    C                     Z-ADDDAH12     DAH12D
+|    C                     Z-ADDDAH13     DAH13D
+|    C                     MOVE DAH04     DAH04D
+|    C                     MOVE DAH05     DAH05D
+|    C                     MOVE W02,1     DAH05A
+|    C                     MOVE DAH06     DAH06D
+|    C                     MOVE W02,2     DAH06A
+|    C                     MOVE DAH07     DAH07D
+|    C                     MOVE W02,3     DAH07A
+|    C                     MOVE DAH08     DAH08D
+|    C                     MOVE W02,4     DAH08A
+|    C                     Z-ADDDAH09     DAH09D
+|    C                     MOVE W02,5     DAH09A
+|    C                     MOVE DAH11     DAH11D
+|    C                     Z-ADDDAH14     DAH14D
+|    C                     MOVE W02,6     DAH14A
+|    C                     MOVE DAH15     DAH15D
+|    C                     MOVE W02,7     DAH15A
+|    C                     MOVE DAH16     DAH16D
+|    C                     MOVE DAH22     DAH22D
+|    C                     MOVE DAH24     DAH24D
+|    C*
+33===C                     ENDSR
+     C*==============================================================*
+     C*          R4E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+34===C           R4E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*
+|    C                     MOVE DAH01     WAK01
+|    C                     MOVE '1'       WCHK
+|    C*輸入欄位１
+| 01-C           #LIN      IFEQ 11
+|   C           #COL      ANDGE31
+|   C           #COL      ANDLE50
+| 02-C           W04,1     IFNE *BLANK
+|   C                     MOVE W05,1     WPARM1
+|   C                     MOVE W08,1     WPARM2
+|   C                     CALL W04,1
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C                     PARM           W06,1
+| 03-C           TORN      IFEQ 'Y'
+|   C                     MOVE WPARM1    W05,1
+| 03-C                     END
+| 02-C                     END
+| 01-C                     END
+|    C   99                GOTO E4E00
+|    C*輸入欄位２
+| 04-C           #LIN      IFEQ 12
+|   C           #COL      ANDGE31
+|   C           #COL      ANDLE50
+| 05-C           W04,2     IFNE *BLANK
+|   C                     MOVE W05,2     WPARM1
+|   C                     MOVE W08,2     WPARM2
+|   C                     CALL W04,2
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C                     PARM           W06,2
+| 06-C           TORN      IFEQ 'Y'
+|   C                     MOVE WPARM1    W05,2
+| 06-C                     END
+| 05-C                     END
+| 04-C                     END
+|    C   99                GOTO E4E00
+|    C*輸入欄位３
+| 07-C           #LIN      IFEQ 13
+|   C           #COL      ANDGE31
+|   C           #COL      ANDLE50
+| 08-C           W04,3     IFNE *BLANK
+|   C                     MOVE W05,3     WPARM1
+|   C                     MOVE W08,3     WPARM2
+|   C                     CALL W04,3
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C                     PARM           W06,3
+| 09-C           TORN      IFEQ 'Y'
+|   C                     MOVE WPARM1    W05,3
+| 09-C                     END
+| 08-C                     END
+| 07-C                     END
+|    C   99                GOTO E4E00
+|    C*輸入欄位４
+| 10-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE31
+|   C           #COL      ANDLE50
+| 11-C           W04,4     IFNE *BLANK
+|   C                     MOVE W05,4     WPARM1
+|   C                     MOVE W08,4     WPARM2
+|   C                     CALL W04,4
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C                     PARM           W06,4
+| 12-C           TORN      IFEQ 'Y'
+|   C                     MOVE WPARM1    W05,4
+| 12-C                     END
+| 11-C                     END
+| 10-C                     END
+|    C   99                GOTO E4E00
+|    C*輸入欄位７
+| 13-C           #LIN      IFEQ 17
+|   C           #COL      ANDGE31
+|   C           #COL      ANDLE50
+| 14-C           W04,7     IFNE *BLANK
+|   C                     MOVE DAH15     WPARM1
+|   C                     MOVE W08,7     WPARM2
+|   C                     CALL W04,7
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C                     PARM           W06,7
+| 15-C           TORN      IFEQ 'Y'
+|   C                     MOVE WPARM1    DAH15
+| 15-C                     END
+| 14-C                     END
+| 13-C                     END
+|    C   99                GOTO E4E00
+|    C*資金代碼
+| 16-C           #LIN      IFEQ 18
+|   C           #COL      ANDGE31
+|   C           #COL      ANDLE38
+|   C                     CALL 'GLI440'
+|   C                     PARM DAH01     P440I1  2        *公司別
+|   C           DAH22     PARM DAH22     P440I2  8        *資金代碼
+|   C                     PARM           @RTNC   2
+| 16-C                     END
+|    C   99                GOTO E4E00
+|    C*沖帳傳票號碼
+| 17-C           #LIN      IFEQ 19
+|   C           #COL      ANDGE31
+|   C           #COL      ANDLE39
+| 18-C           DAH12     IFNE 0
+|   C                     MOVE '1'       P1E0I3
+| 18*C                     ELSE
+|   C                     MOVE '2'       P1E0I3
+| 18-C                     END
+|   C                     CALL 'GLI1E0'
+|   C                     PARM DAH01     P1E0I1  2        *公司別
+|   C                     PARM DAH04     P1E0I2  8        *會計科目
+|   C                     PARM           P1E0I3  1        *借貸方
+|   C                     PARM DAH05     P1E0I4 20        *成本中心
+|   C                     PARM DAH06     P1E0I5 20        *對象別
+|   C                     PARM DAH07     P1E0I6 20        *相關號碼1
+|   C                     PARM DAH08     P1E0I7 20        *相關號碼2
+|   C                     PARM DAH09     P1E0I8  70       *日期
+|   C           DAH24     PARM DAH24     PIE0O1  9        *傳票號碼
+|   C                     PARM           @RTNC   2
+| 17-C                     END
+|    C   99                GOTO E4E00
+|    C*
+|    C           E4E00     TAG
+|    C                     MOVE '0'       WCHK
+|    C*
+34===C                     ENDSR
+     C*==============================================================*
+     C*          ERRSR ....FILE STATUE HANDLING
+     C*==============================================================*
+35===C           ERRSR     BEGSR
+|    C*
+|    C                     CALL 'P50'
+|    C           DMSG      PARM           P5001O 78
+|    C                     SETON                     98
+|    C*
+35===C                     ENDSR
+**
+傳票分錄新增傳票分錄修改　　　　　　傳票分錄刪除傳票分錄查詢
+

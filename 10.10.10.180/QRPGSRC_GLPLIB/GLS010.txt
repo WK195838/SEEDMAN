@@ -1,0 +1,220 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME : GLS010                                     *
+     H*    AUTHOR       : A1150                                      *
+     H*    CREATE DATE  : 81/12/11                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H*    REMARK       :                                            *
+     F****************************************************************
+     FPT#APF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLAFLF02IF  E           K        DISK
+     F            AF0                               KRENAMEAFL2
+     FGLAZPF  IF  E           K        DISK
+     FGLAXPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FGLAHLF11IF  E           K        DISK
+     C*==============================================================*
+     C*                    PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM           P010I1  2        *公司別
+     C                     PARM           P010I2  8        *會計科目
+     C                     PARM           P010I3  80       *日期
+     C                     PARM           P010I4  1        *日期型態
+     C                     PARM           P010I5  6        *成本中心
+     C                     PARM           P010O1 132       *未滿期金額
+     C*
+     C           *LIKE     DEFN AF02      WAF02
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYAF     KLIST
+     C                     KFLD           AH01             *公司別
+     C                     KFLD           AH04             *會計科目
+     C           KEYAH     KLIST                           *SETGT
+     C                     KFLD           WAF02            *會計科目
+     C                     KFLD           W01              *傳票日期
+     C           KEYAZ     KLIST
+     C                     KFLD           P010I1           *公司別
+     C                     KFLD           P010I5           *成本中心
+     C                     KFLD           WAH05            *成本中心
+     C           KEYAX     KLIST
+     C                     KFLD           P010I1           *公司別
+     C                     KFLD           AH01             *公司別　
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C* CLEAR *INIT
+     C                     Z-ADD0         W02    132
+     C                     Z-ADD0         P010O1
+     C*
+     C*求公司別P010I1之類別是否屬虛擬(#B12='2')
+     C*
+     C           P010I1    CHAIN#B0                  40
+     C*--------------------------------------------------
+     C   40                GOTO @END
+     C*--------------------------------------------------
+  01-C           #B12      IFEQ '2'
+    C           P010I1    CHAINAX0                  40
+    C*--------------------------------------------------
+    C   40                GOTO @END
+    C*--------------------------------------------------
+  01*C                     ELSE
+    C                     MOVELP010I1    AX02
+  01-C                     END
+     C*
+     C*-----------------------------------------
+     C*轉換日期格式----- P010I3-->W01
+     C*-----------------------------------------
+    C           AX02      CHAINAK0                  40
+    C*--------------------------------------------------
+    C   40                GOTO @END
+    C*--------------------------------------------------
+  02-C           P010I4    IFEQ 'S'
+    C                     Z-ADDP010I3    P3101I
+    C                     CALL 'P31'
+    C                     PARM           P3101I  80
+    C                     PARM AK11      P3102I  1
+    C                     PARM AK09      P3103I  1
+    C                     PARM '2'       P3104I  1
+    C                     PARM '1'       P3105I  1
+    C           W01       PARM           P3101O  80
+  02*C                     ELSE
+    C                     Z-ADDP010I3    W01     80
+  02-C                     END
+     C*
+     C*求傳入日期之所屬期間----
+     C*
+     C                     CALL 'GLS005'
+     C                     PARM AX02      P005I1  2
+     C                     PARM W01       P005I2  80
+     C                     PARM 'F'       P005I3  1
+     C                     PARM           P005O1  40       *會計年度
+     C                     PARM           P005O2  20       *會計期間
+     C                     PARM           P005O3  1
+     C                     PARM           P005O4  1
+     C*
+     C                     Z-ADDP005O1    WYEAR   40       *會計年度
+     C                     Z-ADDP005O2    WPRID   20       *會計期間
+     C*
+     C*求傳入日期之所屬期間之日期迄------
+     C                     CALL 'GLS006'
+     C                     PARM AX02      P006I1  2
+     C                     PARM WYEAR     P006I2  40       *會計年度
+     C                     PARM WPRID     P006I3  20       *會計期間
+     C                     PARM 'F'       P006I4  1
+     C                     PARM           P006O1  80
+     C                     PARM           P006O2  80       *日期迄
+     C                     PARM           P006O3  1
+     C                     PARM           P006O4  1
+     C*
+     C                     Z-ADDP006O2    W062T   80       *日期迄
+     C*
+     C           P010I2    IFNE AK05
+     C                     MOVE P010I2    WAF02
+     C                     EXSR R1000
+     C                     ELSE
+     C           AK01      SETLLAFL2
+     C           AK01      READEAFL2                     44
+     C           *IN44     DOWEQ'0'
+     C                     MOVE AF02      WAF02
+     C                     EXSR R1000
+     C           AK01      READEAFL2                     44
+     C                     END
+     C                     END
+     C*
+     C           @END      TAG
+     C                     SETON                     LR
+     C*****************************************************************
+     C*讀取會計傳票檔GLAHLF11
+     C*****************************************************************
+     C           R1000     BEGSR
+     C*
+     C           KEYAH     SETGTAH0
+     C           WAF02     READEAH0                      44
+  03-C           *IN44     DOWEQ'0'
+    C***A1034*
+    C           AH10      ANDLEW062T                      * P010I3
+    C*
+    C*****************************************************************
+    C*若公司別(P010I1)之類別屬虛擬(#B12='2')
+    C*-->公司別(P010I1)+公司別(AH01)須存在公司結構檔(GLAXPF)
+    C*否則
+    C*-->公司別(AH01)=公司別(P010I1)
+    C*****************************************************************
+    C*
+    C                     SETOF                     3233
+    C*
+  04-C           #B12      IFEQ '2'
+    C           KEYAX     CHAINAX0                  40
+  05-C           *IN40     IFEQ '0'
+    C                     SETON                     32
+  05-C                     END
+  04*C                     ELSE
+  06-C           AH01      IFEQ P010I1
+    C                     SETON                     32
+  06-C                     END
+  04-C                     END
+    C*
+    C*****************************************************************
+    C*若　成本中心(P010I5)為空白－＞挑選全部
+    C*若　成本中心(P010I5)屬正式(#A10='1')
+    C*    －＞成本中心(AH05)=成本中心(P010I5)
+    C*若　成本中心(P010I5)屬虛擬(#A10='2')
+    C*    －＞公司別(P010I1)+成本中心(P010I5)+成本中心(AH05)
+    C*    須存於成本中心結構檔(GLAZPF)
+    C*****************************************************************
+    C*
+  07-C           *IN32     IFEQ '1'
+    C*
+  08-C           P010I5    IFNE *BLANK
+    C           P010I5    CHAIN#A0                  40
+  09-C           *IN40     IFEQ '0'
+    C                     MOVELAH05      WAH05   6
+  10-C           #A10      IFEQ '1'
+    C           WAH05     ANDEQP010I5
+    C                     SETON                     33
+  10-C                     END
+  11-C           #A10      IFEQ '2'
+    C           KEYAZ     CHAINAZ0                  40
+  12-C           *IN40     IFEQ '0'
+    C                     SETON                     33
+  12-C                     END
+  11-C                     END
+  09-C                     END
+  08*C                     ELSE
+    C                     SETON                     33
+  08-C                     END
+    C*
+  07-C                     END
+    C*********************
+    C*計算未滿期金額---*
+    C*********************
+  13-C           *IN32     IFEQ '1'
+    C           *IN33     ANDEQ'1'
+    C*本期損益＋貸－借　其餘視科目屬性
+     C           P010I2    IFEQ AK05
+    C           AH13      SUB  AH12      W02
+     C                     ELSE
+    C*科目屬性AF06 -----
+    C           KEYAF     CHAINAF0                  40
+  14-C           AF06      IFEQ '1'                        *借方
+    C           AH12      SUB  AH13      W02
+  14*C                     ELSE                            *貸方
+    C           AH13      SUB  AH12      W02
+  14-C                     END
+  13-C                     END
+    C*
+    C                     ADD  W02       P010O1
+    C*
+  13-C                     END
+    C*
+    C           WAF02     READEAH0                      44
+  03-C                     END
+     C*
+     C                     ENDSR
+

@@ -1,0 +1,282 @@
+      *================================================================
+      * PROGRAM ID : NPR0483
+      * PROGRAM DESCRIPTION : CACULATED ACTUAL FEE FROM GLAHPF
+      * AUTHOR : MICHELLE
+      * DESIGNED DATE : 01.12.06
+      * UPDATE   DATE :
+      * PURPOSE : FOR A&P ANALYSIS
+      *----------------------------------------------------------------
+     H*================================================================
+     H* MODI CODE |  AUTHOR  |  DATE  | DESCRIPTION
+     H*----------------------------------------------------------------
+     H*           |          |        |
+     H*================================================================
+     FGLAHLF13IF  E           K        DISK
+     FMTMALF02IF  E           K        DISK
+     FAPUXLF01IF  E           K        DISK
+     FAPUXLF03IF  E           K        DISK
+     F            UX0                               KRENAMEUX0L
+     FNPNAPF  IF  E           K        DISK
+     FNPNBPF  IF  E           K        DISK
+     FNPNCLF01IF  E           K        DISK
+M02A FNPWF01  UF  E           K        DISK                      A
+M02A FNPWF08  UF  E           K        DISK                      A
+M02A FNPWF09  UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     E*---------------------------------------------------------------*
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     IGLDA01      DS
+     I                                        1  16 DA01
+     I*
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I* SCREEN INPUT FIELD  ++++++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DND01
+     I                                      509 5110DYEAR
+     I                                      512 5130DMM
+     I                                      535 5380$YEAR
+     I                                      541 542 DND03S
+     I                                      543 544 DND03E
+     I                                      545 546 DND04S
+     I                                      547 548 DND04E
+     I                                      551 5520M
+M001AI            DS
+M001AI                                        1   5 UX23
+M001AI                                        1   2 UX231
+M001AI                                        3   3 UX232
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           GLDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYWF     KLIST
+     C                     KFLD           WF0101
+     C                     KFLD           WF0102
+     C                     KFLD           WF0103
+     C                     KFLD           WF0104
+M001AC                     KFLD           WF0107
+M001AC                     KFLD           WF0108
+     C                     KFLD           WF0105
+     C           KEYNB     KLIST
+     C                     KFLD           DND01
+     C                     KFLD           AH04
+     C           KEYUX     KLIST
+     C                     KFLD           DND01
+     C                     KFLD           WUX02   8
+     C           KEYNA     KLIST
+     C                     KFLD           $YEAR
+      *A&P CODE
+     C                     KFLD           WF0105
+M02A C           KEYW8     KLIST
+M02A C                     KFLD           XUX02   8
+M02A C                     KFLD           XAH02   9
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     MOVELDND01     WF0101
+     C                     Z-ADD$YEAR     WF0102
+     C                     EXSR R0100
+     C           *LOVAL    SETLLAH0
+     C                     READ AH0                      46
+  01-C           *IN46     DOWEQ'0'
+      *判斷需存在會計科目NB
+    C           KEYNB     SETLLNB0                      40
+  02-C           *IN40     IFEQ '1'
+      *判斷需存在A&P檔NA
+    C*CHAIN APUXLF01
+  08-C           AH07A     IFEQ '17'
+|    C                     MOVEL*BLANK    WF0104
+    C                     MOVELAH07      WUX02
+|    C                     Z-ADD0         ACT
+| 13-C           AH12      IFNE 0
+|   C                     Z-ADDAH12      ACT    132
+| 13*C                     ELSE
+|   C                     Z-SUBAH13      ACT
+  13-C                     END
+|    C*
+    C           KEYUX     CHAINUX0                  41
+  09-C           *IN41     IFEQ '0'
+|   C                     MOVELUX07      WF0104
+    C                     MOVELUX08      WF0105
+    C                     MOVELUX08      WF0106
+M001AC                     MOVELUX231     WF0107
+M001AC                     MOVELUX232     WF0108
+    C           KEYNA     SETLLNA0                      42
+  10-C           *IN42     IFEQ '1'
+      *PROCESS FILE
+    C                     EXSR R1000
+  10-C                     END
+  09-C                     END
+  08-C                     END
+  02-C                     END
+    C                     READ AH0                      46
+  01-C                     END
+     C*----------------------------------------------------------------
+     C* READ APUXLF03
+     C*----------------------------------------------------------------
+     C           *LOVAL    SETLLUX0L
+     C                     READ UX0L                     49
+  01-C           *IN49     DOWEQ'0'
+      *
+     C           UX01      IFEQ DND01
+     C           UX05      ANDEQ$YEAR
+     C           UX06      ANDGEDND03S
+     C           UX06      ANDLEDND03E
+     C           UX07      ANDGEDND04S
+     C           UX07      ANDLEDND04E
+     C           UX22      ANDNE'V'
+      *
+     C                     MOVELUX02      YUX02
+     C                     Z-ADDUX12      YUX12
+     C           UX02      CHAINWF09R                50
+     C           *IN50     IFEQ '1'
+     C                     WRITEWF09R
+     C                     END
+      *----------------------------------------------------------------
+     C                     MOVELUX01      WF0101
+     C                     Z-ADDUX05      WF0102
+|   C                     MOVELUX06      WF0103
+|   C                     MOVELUX07      WF0104
+    C                     MOVELUX08      WF0105
+    C                     MOVELUX08      WF0106
+     C                     MOVELUX231     WF0107
+     C                     MOVELUX232     WF0108
+     C                     Z-ADDUX12      WFLD   112
+|   C           KEYWF     CHAINWF010                41
+| 16-C           *IN41     IFEQ '0'
+|   C                     ADD  WFLD      WF0113
+|   C                     UPDATWF010
+| 16*C                     ELSE
+|   C                     Z-ADD0         WF0110
+|   C                     Z-ADD0         WF0111
+|   C                     Z-ADD0         WF0112
+|   C                     Z-ADDWFLD      WF0113
+|   C                     WRITEWF010
+| 16-C                     END
+     C                     END
+     C                     READ UX0L                     49
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ... NPB021P HEADING INITIAL
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... GET DATA TO WORK FILE
+     C*==============================================================*
+02===C           R1000     BEGSR
+      *GET品牌
+|    C           WF0104    CHAINNC0                  40
+| 14-C           *IN40     IFEQ '0'
+      *存在合併品牌中以９９為合併品牌
+|   C                     MOVEL'99'      WF0104
+|   C                     MOVELNC01      WF0103
+| 15-C           WF0103    IFGE DND03S
+|   C           WF0103    ANDLEDND03E
+|   C           WF0104    ANDGEDND04S
+|   C           WF0104    ANDLEDND04E
+M02A C                     MOVELUX02      XUX02
+M02A C                     MOVELAH02      XAH02
+M02A C                     EXSR R2000
+|   C           KEYWF     CHAINWF010                41
+| 16-C           *IN41     IFEQ '0'
+|   C                     ADD  ACT       WF0111
+|   C                     UPDATWF010
+| 16*C                     ELSE
+|   C                     Z-ADD0         WF0110
+|   C                     Z-ADD0         WF0112
+|   C                     Z-ADD0         WF0113
+|   C                     Z-ADDACT       WF0111
+|   C                     WRITEWF010
+| 16-C                     END
+| 15-C                     END
+      *
+| 14*C                     ELSE
+      *不存在合併品牌中，產品組別以產品主檔中ＭＡ１１寫入
+|   C                     MOVEL'99'      WF0103
+|   C                     MOVELAH02      WAH02   9
+|   C*用產品主檔之等級一碼當組別
+|   C           WF0104    SETLLMA0
+|   C           WF0104    READEMA0                      46
+| 17-C           *IN46     DOWEQ'0'
+| 18-C           MA11      IFNE *BLANK
+|   C                     MOVELMA11      WFLD2   1
+| 19-C           WFLD2     IFEQ '1'
+|   C                     MOVEL'10'      WF0103
+| 19-C                     END
+| 20-C           WFLD2     IFEQ '2'
+|   C                     MOVEL'20'      WF0103
+| 20-C                     END
+| 21-C           WFLD2     IFEQ '3'
+|   C                     MOVEL'30'      WF0103
+| 21-C                     END
+|   C                     SETON                     46
+| 18-C                     END
+|   C  N46      WF0104    READEMA0                      46
+| 17-C                     END
+|   C*
+| 22-C           WF0103    IFGE DND03S
+|   C           WF0103    ANDLEDND03E
+|   C           WF0104    ANDGEDND04S
+|   C           WF0104    ANDLEDND04E
+M02A C                     MOVELUX02      XUX02
+M02A C                     MOVELAH02      XAH02
+M02A C                     EXSR R2000
+|   C           KEYWF     CHAINWF010                41
+      *不存在合併品牌中以ＷＮＤ０４原品牌
+| 23-C           *IN41     IFEQ '0'
+|   C                     ADD  ACT       WF0111
+|   C                     UPDATWF010
+| 23*C                     ELSE
+|   C                     Z-ADD0         WF0110
+|   C                     Z-ADD0         WF0112
+|   C                     Z-ADDACT       WF0111
+|   C                     WRITEWF010
+| 23-C                     END
+| 22-C                     END
+| 14-C                     END
+      *
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... GET DATA TO WORK FILE
+     C*==============================================================*
+02===C           R2000     BEGSR
+     C                     Z-ADD0         AH1213
+     C                     MOVELAH16      WAH16  50
+     C                     CALL 'GLS920'
+     C                     PARM WAH16     G1     50
+     C                     PARM           G2     50
+      *
+     C           KEYW8     CHAINWF08R                49
+     C           *IN49     IFEQ '0'
+     C                     MOVELG2        XAH16
+     C                     ADD  ACT       AH1213
+     C                     UPDATWF08R
+     C                     ELSE
+     C                     MOVELG2        XAH16
+     C                     Z-ADDACT       AH1213
+     C                     WRITEWF08R
+     C                     END
+      *
+     C                     ENDSR
+     C*==============================================================*
+

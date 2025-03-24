@@ -1,0 +1,225 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H* PROGRAM NAME : SOR094                                        *
+     H* AUTHER       : DEREK                                         *
+     H* CREATE DATE  : 2013/06/05                                    *
+     H* UPDATE DATE  :                                               *
+     H* SYSTEM       :茂世企業                                     *
+     H* SUBSYSTEM    :銷售訂單系統                                 *
+     H* REMARK       :產品出貨彙總表                               *
+     H*===============================================================
+     H* MODI CODE |   DATE   | DESCRIPTION
+     H*---------------------------------------------------------------
+     H*---------------------------------------------------------------
+     F****************************************************************
+     FSOR094D CF  E                    WORKSTN
+     F                                              KINFDS DSPFDS
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      119 1240$ADMDY
+     I                                      129 1340$ADDMY
+     I                                      131 1340$ADMY
+     I                                      162 1620$EVR
+     I                                      601 605 DMA12S
+     I                                      606 610 DMA12E
+     I                                      611 6180DYMD1S
+     I                                      619 6260DYMD1E
+     I                                      627 6340DYMD2
+     I                                      635 6420LYMD1S
+     I                                      635 6380LY1S
+     I                                      643 6500LYMD1E
+     I                                      643 6460LY1E
+     I                                      651 6580LYMD2
+     I                                      651 6540LY2
+     I*
+     I* FOR F4 HELP -- GET CURSOR POSITION
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN98     PARM *IN98     IN98    1
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    DEFINE
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *LIKE     DEFN P3801I    FMY
+     C           *LIKE     DEFN P3801I    NEWFMT
+     C           *LIKE     DEFN P3811O    ERROR
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+  01-C           *IN98     IFEQ '0'
+    C                     EXSR R0100                      .INIT SCREEN
+  01*C                     ELSE
+    C                     MOVEL'UPT2142' ERRID
+    C                     MOVEL'PTMF'    ERRF
+    C                     SETON                     99
+  01-C                     ENDIF
+     C*
+  02-C           *IN03     DOUEQ'1'
+    C           *IN99     OREQ '0'
+    C                     EXSR R1000                      *PROCESS
+  02-C                     ENDDO
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+     C*===============================================================*
+     C*          R0100 ... INIT SCREEN
+     C*===============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   LDA
+|    C*
+|    C                     Z-ADD$ADMDY    DDATE            系統日
+|    C                     MOVEL*BLANK    DMA12S           供應廠商起
+|    C                     MOVEL*BLANK    DMA12E           供應廠商迄
+|    C                     Z-ADD$ADMY     DMY01            當月送貨日期
+|    C                     Z-ADD$ADMY     DMY02            累積送貨日期
+|    C                     Z-ADD1         $EVR
+|    C*INIT OTHER FIELD
+|    C                     Z-ADD0         DYMD1S           當月送貨日期起
+|    C                     Z-ADD0         DYMD1E           當月送貨日期迄
+|    C                     Z-ADD0         DYMD2            累積送貨日期
+|    C                     Z-ADD0         LYMD1S           去年當月送貨日期起
+|    C                     Z-ADD0         LYMD1E           去年當月送貨日期迄
+|    C                     Z-ADD0         LYMD2            去年累積送貨日期
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*          R0200 ...驗證月份
+     C*===============================================================*
+02===C           R0200     BEGSR
+|    C*
+|    C                     CALL 'P38'
+|    C                     PARM FMY       P3801I  60       月份
+|    C                     PARM '3'       P3802I  1        日期格式
+|    C                     PARM '1'       P3803I  1        曆別
+|    C                     PARM           P3801O  60       轉換後月份
+|    C           ERROR     PARM           P3811O  1        驗證結果
+|    C*
+02===C                     ENDSR
+     C*===============================================================*
+     C*          R0300 ...轉換月份格式
+     C*===============================================================*
+03===C           R0300     BEGSR
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM FMY       P3901I  60       原始月份
+|    C                     PARM '3'       P3902I  1        原日期格式
+|    C                     PARM '1'       P3903I  1        原曆別
+|    C                     PARM '2'       P3904I  1        轉換後格式
+|    C                     PARM '1'       P3905I  1        轉換後曆別
+|    C           NEWFMT    PARM           P3911O  60       轉換後月份
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... PROCESS
+     C*==============================================================*
+04===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     97
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     ENDIF
+|    C*
+|    C                     EXSR R1B00                      *CHK SCREEN1
+|    C*
+| 02-C           *IN99     IFEQ '0'
+|   C****       *IN13     ANDEQ'1'
+|   C                     SETON                     96
+|   C                     WRITEDSPC1
+|   C                     OUT  LDA
+| 02-C                     ENDIF
+|    C*
+04===C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00 ... CHECK SCREEN
+     C*===============================================================*
+05===C           R1B00     BEGSR
+|    C*供應廠商
+| 01-C           DMA12S    IFEQ *BLANK
+|   C                     MOVEL*LOVAL    DMA12S
+| 01-C                     END
+|    C*
+| 02-C           DMA12E    IFEQ *BLANK
+|   C                     MOVEL*HIVAL    DMA12E
+| 02-C                     END
+|    C*
+|    C*供應廠商起值不可大於迄值
+| 03-C           DMA12S    IFGT DMA12E
+|   C                     SETON                     606199
+|   C                     MOVEL'UPT1011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*當月送貨日期
+| 04-C           DMY01     IFEQ 0
+|   C                     SETON                     6299
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 04*C                     ELSE
+|   C                     Z-ADDDMY01     FMY
+|   C                     EXSR R0200
+| 05-C           ERROR     IFEQ 'N'
+|   C                     SETON                     6299
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 05-C                     ENDIF
+| 04-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*轉換當月送貨日期格式
+|    C                     Z-ADDDMY01     FMY
+|    C                     EXSR R0300
+|    C                     MOVELNEWFMT    DYMD1S
+|    C                     MOVELNEWFMT    DYMD1E
+|    C                     MOVE '01'      DYMD1S
+|    C                     MOVE '31'      DYMD1E
+|    C*累積送貨日期
+| 06-C           DMY02     IFNE 0
+|   C                     Z-ADDDMY02     FMY
+|   C                     EXSR R0200
+| 07-C           ERROR     IFEQ 'N'
+|   C                     SETON                     6399
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 07-C                     ENDIF
+| 06-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*轉換當月送貨日期格式
+| 08-C           DMY02     IFNE 0
+|   C                     Z-ADDDMY02     FMY
+|   C                     EXSR R0300
+|   C                     MOVELNEWFMT    DYMD2
+|   C                     MOVE '01'      DYMD2
+| 08*C                     ELSE
+|   C                     Z-ADD0         DYMD2
+| 08-C                     END
+|    C*
+| 09-C           DYMD2     IFGT DYMD1E
+|   C                     SETON                     626399
+|   C                     MOVEL'URE0170' ERRID
+|   C                     MOVEL'REMF'    ERRF
+| 09-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*計算去年同期
+|    C                     Z-ADDDYMD1S    LYMD1S
+|    C                     Z-ADDDYMD1E    LYMD1E
+|    C                     Z-ADDDYMD2     LYMD2
+|    C                     SUB  1         LY1S
+|    C                     SUB  1         LY1E
+| 10-C           DYMD2     IFNE 0
+|   C                     SUB  1         LY2
+| 10-C                     END
+|    C*
+05===C           E1B00     ENDSR
+

@@ -1,0 +1,223 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H* PROGRAM NAME : SAR0871                                       *
+     H* AUTHER       : DEREK                                         *
+     H* CREATE DATE  : 2015/09/25                                    *
+     H* UPDATE DATE  :                                               *
+     H* SYSTEM       :茂世企業                                     *
+     H* SUBSYSTEM    :銷售分析系統                                 *
+     H* REMARK       :銷售排行榜                                   *
+     H*===============================================================
+     H* MODI CODE |   DATE   | DESCRIPTION
+     H*---------------------------------------------------------------
+     H*---------------------------------------------------------------
+     F****************************************************************
+     FSOSCLF04IF  E           K        DISK
+     FSOSDPF  IF  E           K        DISK
+     FSAR087PFUF  E           K        DISK                      A
+     E*---------------------------------------------------------------*
+     E                    @A01       12  9 0             數量
+     E                    @A02       12 13 0             金額
+     E                    @A03       12  6 0             年月
+     E*---------------------------------------------------------------*
+     I*LDA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$ADMDY
+     I                                      129 1340$ADDMY
+     I                                      131 1340$ADMY
+     I                                      601 609 SD03S
+     I                                      610 618 SD03E
+     I                                      619 6260YMDS
+     I                                      619 6220YYS
+     I                                      623 6240MMS
+     I                                      627 6340YMDE
+     I                                      627 6320YME
+     I*數量
+     I            DS
+     I                                        1 1080@A01
+     I                                        1   90F8701A
+     I                                       10  180F8702A
+     I                                       19  270F8703A
+     I                                       28  360F8704A
+     I                                       37  450F8705A
+     I                                       46  540F8706A
+     I                                       55  630F8707A
+     I                                       64  720F8708A
+     I                                       73  810F8709A
+     I                                       82  900F8710A
+     I                                       91  990F8711A
+     I                                      100 1080F8712A
+     I*金額
+     I            DS
+     I                                        1 1560@A02
+     I                                        1  130F8701B
+     I                                       14  260F8702B
+     I                                       27  390F8703B
+     I                                       40  520F8704B
+     I                                       53  650F8705B
+     I                                       66  780F8706B
+     I                                       79  910F8707B
+     I                                       92 1040F8708B
+     I                                      105 1170F8709B
+     I                                      118 1300F8710B
+     I                                      131 1430F8711B
+     I                                      144 1560F8712B
+     I*年月
+     I            DS
+     I                                        1  720@A03
+     I                                        1   60WYM01
+     I                                        7  120WYM02
+     I                                       13  180WYM03
+     I                                       19  240WYM04
+     I                                       25  300WYM05
+     I                                       31  360WYM06
+     I                                       37  420WYM07
+     I                                       43  480WYM08
+     I                                       49  540WYM09
+     I                                       55  600WYM10
+     I                                       61  660WYM11
+     I                                       67  720WYM12
+     I*年月
+     I            DS
+     I                                        1   60WYM
+     I                                        1   40WYY
+     I                                        5   60WMM
+     I*確認年月
+     I            DS
+     I                                        1   80SC39
+     I                                        1   60SC39YM
+     I*產品代號
+     I            DS
+     I                                        1   9 SD03
+     I                                        1   7 SD03A
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    DEFINE
+     C*==============================================================*
+     C           *LIKE     DEFN F8701A    WQTY             數量
+     C           *LIKE     DEFN F8701B    WAMT             金額
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      .INIT
+     C*
+     C                     EXSR R1000                      .PROCESS
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ... INITIAL
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     Z-ADD0         @A01             數量
+|    C                     Z-ADD0         @A02             金額
+|    C                     Z-ADD0         @A03             年月
+|    C*計算畫面輸入之年月前十一個月
+|    C                     Z-ADDYME       WYM
+|    C                     Z-ADD12        X       20
+| 01-C                     DO   12
+|   C                     Z-ADDWYM       @A03,X
+|   C                     SUB  1         X
+|   C                     SUB  1         WMM
+| 02-C           WMM       IFEQ 0
+|   C                     Z-ADD12        WMM
+|   C                     SUB  1         WYY
+| 02-C                     ENDIF
+| 01-C                     ENDDO
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C           YMDS      SETLLSC0
+|    C                     READ SC0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C           SC39      ANDLEYMDE
+|   C*
+| 02-C           SC01      IFGE 'R1'                       茂世
+|   C           SC01      ANDLE'R9'                       茂世
+|   C           SC13      ANDEQ'V'                        已確認
+|   C           SC03      ANDNE'S4'                       試飲
+|   C*
+|   C           SC02      SETLLSD0
+|   C           SC02      READESD0                      47
+| 03-C           *IN47     DOWEQ'0'
+|   C*
+| 04-C           SD03      IFGE SD03S                      產品編號
+|   C           SD03      ANDLESD03E                      產品編號
+|   C                     EXSR R1100
+| 04-C                     END
+|   C*
+|   C           SC02      READESD0                      47
+| 03-C                     END
+|   C*
+| 02-C                     END
+|   C*
+|   C                     READ SC0                      46
+| 01-C                     END
+|    C*
+01===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1100 ... WRITE SAR087PF
+     C*==============================================================*
+02===C           R1100     BEGSR
+|    C*
+|    C                     Z-ADD0         WQTY             數量
+|    C                     Z-ADD0         WAMT             金額
+|    C                     Z-ADD0         @A01             數量
+|    C                     Z-ADD0         @A02             金額
+|    C                     CLEARF870
+|    C*
+|    C                     MOVELSD03A     F8700     P      產品代號前七碼
+|    C           SD04      ADD  SD05      WQTY             數量
+|    C                     Z-ADDSD07      WAMT             金額
+|    C*
+|    C           F8700     CHAINF870                 40
+|    C*
+| 01-C                     SELEC
+|   C           SC39YM    WHEQ WYM01
+|   C                     Z-ADD1         X
+|   C           SC39YM    WHEQ WYM02
+|   C                     Z-ADD2         X
+|   C           SC39YM    WHEQ WYM03
+|   C                     Z-ADD3         X
+|   C           SC39YM    WHEQ WYM04
+|   C                     Z-ADD4         X
+|   C           SC39YM    WHEQ WYM05
+|   C                     Z-ADD5         X
+|   C           SC39YM    WHEQ WYM06
+|   C                     Z-ADD6         X
+|   C           SC39YM    WHEQ WYM07
+|   C                     Z-ADD7         X
+|   C           SC39YM    WHEQ WYM08
+|   C                     Z-ADD8         X
+|   C           SC39YM    WHEQ WYM09
+|   C                     Z-ADD9         X
+|   C           SC39YM    WHEQ WYM10
+|   C                     Z-ADD10        X
+|   C           SC39YM    WHEQ WYM11
+|   C                     Z-ADD11        X
+|   C           SC39YM    WHEQ WYM12
+|   C                     Z-ADD12        X
+| 01-C                     ENDSL
+|    C*
+|    C                     ADD  WQTY      @A01,X           數量
+|    C                     ADD  WAMT      @A02,X           金額
+|    C*
+| 02-C           *IN40     IFEQ '1'
+|   C                     WRITEF870
+| 02*C                     ELSE
+|   C                     UPDATF870
+| 02-C                     ENDIF
+|    C*
+02===C           E1100     ENDSR
+

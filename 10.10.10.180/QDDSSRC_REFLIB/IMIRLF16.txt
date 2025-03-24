@@ -1,0 +1,812 @@
+     A*****************************************************************
+     A*          庫存異動明細檔(IMIRLF)
+     A*================================================================
+     A* #A01 = IMIRLF
+     A* #A02 = IMIRLF'S RECORD NAME (EX. PE0, PG0 ......)
+     A* #A03  第一碼: '+' -該數量屬　進貨
+     A*                 '-' -該數量屬　出貨
+     A*                 ' ' -該數量屬　進或出視 IR09而定
+     A*                 '*' -該數量為正者　屬進貨
+     A*                      該數量為負者　屬出貨
+     A*       第二碼: 'Y' -有成本資料
+     A*                 'N' -無成本資料
+     A*       第三碼: 'T' -該成本資料為總成本
+     A*                 'U' -該成本資料為單位成本
+     A****
+     A*================================================================
+     A*序號|代號|      檔　案　名　稱      |   #A03   | RCD NAME|
+     A*======|======|============================|==========|=========|
+     A*  01  |POPEPF|國外採購驗收明細檔        | ＋ＹＴ | PE0     |
+     A*  02  |POPGPF|國外採購完稅明細檔 -保稅| －ＹＴ | PG0     |
+     A*  03  |POPGPF|國外採購完稅明細檔 -完稅| ＋ＹＴ | PG0#    |
+     A*  04  |POPIPF|國內採購驗收明細檔        | ＋ＹＵ | PI0     |
+     A*  05  |SOSDPF|銷售訂單明細檔            | －ＹＵ | SD0     |
+     A*  06  |SOSFPF|送貨單明細檔 - 出貨     | －ＹＵ | SF0     |
+     A*  07  |SOSFPF|送貨單明細檔 - 進貨     | ＋ＹＵ | SF0#    |
+     A*  08  |SOSHPF|銷貨退回明細檔            | ＋ＹＴ | SH0     |
+     A*  09  |SOSOPF|產品收回明細檔 - 出貨   | －ＹＴ | SO0     |
+     A*  10  |SOSOPF|產品收回明細檔 - 進貨   | ＋ＹＴ | SO0#    |
+     A*  11  |IMIFPF|產品報廢明細檔            | －ＹＴ | IF0     |
+     A*  12  |IMIHPF|調整明細檔 - 調出       | －ＹＴ | IH0     |
+     A*  13  |IMIHPF|調整明細檔 - 調入       | ＋ＹＴ | IH0#    |
+     A*  14  |IMIJPF|存貨調撥明細檔 - 出貨   | －ＹＴ | IJ0     |
+     A*  15  |IMIJPF|存貨調撥明細檔 - 收貨   | ＋ＹＴ | IJ0#    |
+     A*  16  |IMILPF|禮盒組拆明細檔            | 　ＹＴ | IL0     |
+     A*  17  |IMIBPF|產品成本調整資料檔        | もＹＴ | IB0     |
+     A*  18  |IMIUPF|盤盈虧檔                  | もＹＴ | IU0     |
+     A*****************************************************************
+     A*----------------------------------------
+     A*國外採購驗收明細檔(POPEPF) ＋Ｙ
+     A*----------------------------------------
+     A          R PE0                       PFILE(POPEPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(PE01 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(PE01 2 1)
+     A            IR02      R               COLHDG('進貨物流點')
+     A                                      RENAME(PE10)
+     A            IR03      R               COLHDG('產品代號')
+     A                                      RENAME(PE04)
+     A            IR04      R               COLHDG('進貨日期')
+     A                                      RENAME(PE05)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(PE02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(PE02 4 1)
+     A            IR06      R               COLHDG('驗收單號')
+     A                                      RENAME(PE02)
+     A            IR071     R    6S 0       COLHDG('到貨量')
+     A                                      RENAME(PE06)
+     A***         IR072     R    6S 0       COLHDG('數量２')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  進
+     A            IR101     R   11P 2       COLHDG('F.O.B.')
+     A                                      RENAME(PE07)
+     A            IR102     R   11P 2       COLHDG('FREIGHT')
+     A                                      RENAME(PE08)
+     A            IR103     R   11P 2       COLHDG('HANDLE')
+     A                                      RENAME(PE09)
+     A***         IR11                      COLHDG('對應物流點')
+     A            IR121     R    6S 0       COLHDG('到貨量－確認')
+     A                                      RENAME(PE06)
+     A***         IR122     R    6S 0       COLHDG('確認量2')
+     A            IR13      R               COLHDG('採購單號')
+     A                                      RENAME(PE03)
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A*
+     A*----------------------------------------------
+     A*國外採購完稅明細檔(POPGPF) -保稅 －Ｙ
+     A*---------------------------------------------
+     A          R PG0                       PFILE(POPGPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(PG01 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(PG01 2 1)
+     A            IR02      R               COLHDG('保稅物流點')
+     A                                      RENAME(PG10)
+     A            IR03      R               COLHDG('產品代號')
+     A                                      RENAME(PG03)
+     A            IR04      R               COLHDG('完稅日期')
+     A                                      RENAME(PG04)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(PG02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(PG02 4 1)
+     A            IR06      R               COLHDG('驗收單號')
+     A                                      RENAME(PG02)
+     A            IR071     R    6S 0       COLHDG('完稅量')
+     A                                      RENAME(PG05)
+     A***         IR072     R    6S 0       COLHDG('數量２')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  出
+     A            IR101     R   11P 2       COLHDG('FOB-TOT')
+     A                                      RENAME(PG12)
+     A            IR102     R   11P 2       COLHDG('FHI-TOT')
+     A                                      RENAME(PG13)
+     A            IR103     R   11P 2       COLHDG('公賣利益')
+     A                                      RENAME(PG06)
+     A            IR11      R               COLHDG('完稅物流點')
+     A                                      RENAME(PG11)
+     A            IR121     R    6S 0       COLHDG('確認數量')
+     A                                      RENAME(PG07)
+     A***         IR122     R    6S 0       COLHDG('確認量2')
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A*
+     A*-----------------------------------------------
+     A*國外採購完稅明細檔(POPGPF) -完稅 ＋Ｙ
+     A*-----------------------------------------------
+     A          R PG0#                      PFILE(POPGPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(PG01 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(PG01 2 1)
+     A            IR02      R               COLHDG('完稅物流點')
+     A                                      RENAME(PG11)
+     A            IR03      R               COLHDG('產品代號')
+     A                                      RENAME(PG03)
+     A            IR04      R               COLHDG('完稅日期')
+     A                                      RENAME(PG04)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(PG02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(PG02 4 1)
+     A            IR06      R               COLHDG('驗收單號')
+     A                                      RENAME(PG02)
+     A            IR071     R    6S 0       COLHDG('完稅量')
+     A                                      RENAME(PG05)
+     A***         IR072     R    6S 0       COLHDG('數量２')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  進
+     A            IR101     R   11P 2       COLHDG('FOB-TOT')
+     A                                      RENAME(PG12)
+     A            IR102     R   11P 2       COLHDG('FHI-TOT')
+     A                                      RENAME(PG13)
+     A            IR103     R   11P 2       COLHDG('公賣利益')
+     A                                      RENAME(PG06)
+     A            IR11      R               COLHDG('保稅物流點')
+     A                                      RENAME(PG10)
+     A            IR121     R    6S 0       COLHDG('確認數量')
+     A                                      RENAME(PG07)
+     A***         IR122     R    6S 0       COLHDG('確認量2')
+     A*
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A*
+     A*--------------------------------------
+     A*國內採購驗收明細檔(POPIPF)  ＋Ｙ
+     A*--------------------------------------
+     A          R PI0                       PFILE(POPIPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(PI01 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(PI01 2 1)
+     A            IR02      R               COLHDG('進貨物流點')
+     A                                      RENAME(PI08)
+     A            IR03      R               COLHDG('產品代號')
+     A                                      RENAME(PI04)
+     A            IR04      R               COLHDG('進貨日期')
+     A                                      RENAME(PI05)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(PI02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(PI02 4 1)
+     A            IR06      R               COLHDG('驗收單號')
+     A                                      RENAME(PI02)
+     A            IR071     R    6S 0       COLHDG('驗收量')
+     A                                      RENAME(PI06)
+     A***         IR072     R    6S 0       COLHDG('數量２')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  進
+     A            IR101     R   11P 2       COLHDG('單價')
+     A                                      RENAME(PI07)
+     A***         IR102     R   11P 2       COLHDG('COST 2')
+     A***         IR103     R   11P 2       COLHDG('COST 3')
+     A***         IR11                      COLHDG('對應物流點')
+     A            IR121     R    6S 0       COLHDG('驗收量－確認')
+     A                                      RENAME(PI06)
+     A***         IR122     R    6S 0       COLHDG('確認量2')
+     A            IR13      R               COLHDG('採購單號')
+     A                                      RENAME(PI03)
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A*
+     A*--------------------------------------
+     A*銷售訂單明細檔(SOSDPF)     －Ｙ
+     A*--------------------------------------
+     A          R SD0                       PFILE(SOSDPF)
+     A            IR011     R               COLHDG('公司別第一碼')
+     A                                      RENAME(SD16)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(SD01 2 1)
+     A            IR02      R               COLHDG('進貨物流點')
+     A                                      RENAME(SD21)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(SD03)
+     A            IR04      R               COLHDG('預計送貨日期')
+     A                                      RENAME(SD19)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(SD02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(SD02 4 1)
+     A            IR06      R               COLHDG('訂單號碼')
+     A                                      RENAME(SD02)
+     A            IR071     R    6S 0       COLHDG('訂貨數量')
+     A                                      RENAME(SD04)
+     A            IR072     R    6S 0       COLHDG('搭贈數量')
+     A                                      RENAME(SD05)
+     A***         IR09                      COLHDG('進／出')
+     A****                                  出
+     A            IR101     R   11P 2       COLHDG('單位成本-FOB')
+     A                                      RENAME(SD10)
+     A            IR102     R   11P 2       COLHDG('單位成本-FHI')
+     A                                      RENAME(SD11)
+     A            IR103     R   11P 2       COLHDG('單位成本-DUTY')
+     A                                      RENAME(SD12)
+     A***         IR11                      COLHDG('對應物流點')
+     A            IR121     R    6S 0       COLHDG('訂購量－確認')
+     A                                      RENAME(SD04)
+     A            IR122     R    6S 0       COLHDG('搭贈量－確認')
+     A                                      RENAME(SD05)
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A          S IR05                      COMP(EQ 'S2')
+     A          S IR05                      COMP(EQ 'S3')
+     A*
+     A*--------------------------------------
+     A*送貨單明細檔(SOSFPF)   出貨－Ｙ
+     A*--------------------------------------
+     A          R SF0                       PFILE(SOSFPF)
+     A            IR011     R               COLHDG('公司別第一碼')
+     A                                      RENAME(SF16)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(SF01 2 1)
+     A            IR02      R               COLHDG('出貨物流點')
+     A                                      RENAME(SF26)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(SF03)
+     A            IR04      R               COLHDG('交貨日期')
+     A                                      RENAME(SF25)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(SF02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(SF02 4 1)
+     A            IR06      R               COLHDG('送貨單號')
+     A                                      RENAME(SF02)
+     A            IR071     R    6S 0       COLHDG('訂貨數量')
+     A                                      RENAME(SF04)
+     A            IR072     R    6S 0       COLHDG('搭贈數量')
+     A                                      RENAME(SF05)
+     A***         IR09                      COLHDG('進／出')
+     A****                                  出
+     A            IR101     R   11P 2       COLHDG('單位成本-FOB')
+     A                                      RENAME(SF10)
+     A            IR102     R   11P 2       COLHDG('單位成本-FHI')
+     A                                      RENAME(SF11)
+     A            IR103     R   11P 2       COLHDG('單位成本-DUTY')
+     A                                      RENAME(SF12)
+     A            IR11                      COLHDG('對應物流點')
+     A                                      RENAME(SF27)
+     A            IR121     R    6S 0       COLHDG('訂購量－確認')
+     A                                      RENAME(SF19)
+     A            IR122     R    6S 0       COLHDG('搭贈量－確認')
+     A                                      RENAME(SF20)
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A          S IR02                      COMP(NE ' ')
+     A*
+     A*--------------------------------------
+     A*送貨單明細檔(SOSFPF)   進貨＋Ｙ
+     A*--------------------------------------
+     A          R SF0#                      PFILE(SOSFPF)
+     A            IR011     R               COLHDG('公司別第一碼')
+     A                                      RENAME(SF16)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(SF01 2 1)
+     A            IR02      R               COLHDG('收貨物流點')
+     A                                      RENAME(SF27)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(SF03)
+     A            IR04      R               COLHDG('交貨日期')
+     A                                      RENAME(SF25)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(SF02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(SF02 4 1)
+     A            IR06      R               COLHDG('送貨單號')
+     A                                      RENAME(SF02)
+     A            IR071     R    6S 0       COLHDG('訂貨數量')
+     A                                      RENAME(SF04)
+     A            IR072     R    6S 0       COLHDG('搭贈數量')
+     A                                      RENAME(SF05)
+     A***         IR09                      COLHDG('進／出')
+     A****                                  進
+     A            IR101     R   11P 2       COLHDG('單位成本-FOB')
+     A                                      RENAME(SF10)
+     A            IR102     R   11P 2       COLHDG('單位成本-FHI')
+     A                                      RENAME(SF11)
+     A            IR103     R   11P 2       COLHDG('單位成本-DUTY')
+     A                                      RENAME(SF12)
+     A            IR11                      COLHDG('對應物流點')
+     A                                      RENAME(SF26)
+     A            IR121     R    6S 0       COLHDG('訂購量－確認')
+     A                                      RENAME(SF19)
+     A            IR122     R    6S 0       COLHDG('搭贈量－確認')
+     A                                      RENAME(SF20)
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A          S IR02                      COMP(NE ' ')
+     A*
+     A*--------------------------------------
+     A*銷貨退回明細檔(SOSHPF)   ＋Ｙ
+     A*--------------------------------------
+     A          R SH0                       PFILE(SOSHPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      RENAME(SH11)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(SH01 2 1)
+     A            IR02      R               COLHDG('退回物流點')
+     A                                      RENAME(SH10)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(SH03)
+     A            IR04      R               COLHDG('退回日期')
+     A                                      RENAME(SH09)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(SH02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(SH02 4 1)
+     A            IR06      R               COLHDG('退貨單號')
+     A                                      RENAME(SH02)
+     A            IR071     R    6S 0       COLHDG('數量')
+     A                                      RENAME(SH04)
+     A            IR072     R    6S 0       COLHDG('搭贈數量')
+     A                                      RENAME(SH05)
+     A***         IR09                      COLHDG('進／出')
+     A****                                  進
+     A            IR101     R   11P 2       COLHDG('銷退成本-FOB')
+     A                                      RENAME(SH14)
+     A            IR102     R   11P 2       COLHDG('銷退成本-FHI')
+     A                                      RENAME(SH15)
+     A            IR103     R   11P 2       COLHDG('銷退成本-DITY')
+     A                                      RENAME(SH16)
+     A***         IR11                      COLHDG('對應物流點')
+     A            IR121     R    6S 0       COLHDG('分配量－訂購')
+     A                                      RENAME(SH12)
+     A            IR122     R    6S 0       COLHDG('分配量－搭贈')
+     A                                      RENAME(SH13)
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A*
+     A*--------------------------------------
+     A*產品收回明細檔(SOSOPF) 出貨－Ｎ
+     A*--------------------------------------
+     A          R SO0                       PFILE(SOSOPF)
+     A            IR011     R               COLHDG('公司別第一碼')
+     A                                      RENAME(SO11)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(SO01 2 1)
+     A            IR02      R               COLHDG('出貨物流點')
+     A                                      RENAME(SO09)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(SO03)
+     A            IR04      R               COLHDG('收回日期')
+     A                                      RENAME(SO08)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(SO02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(SO02 4 1)
+     A            IR06      R               COLHDG('單據號碼')
+     A                                      RENAME(SO02)
+     A            IR071     R    6S 0       COLHDG('數量')
+     A                                      RENAME(SO04)
+     A***         IR072     R    6S 0       COLHDG('數量2')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  出
+     A***         IR101     R   11P 2       COLHDG('COST 1')
+     A***         IR102     R   11P 2       COLHDG('COST 2')
+     A**          IR103     R   11P 2       COLHDG('COST 3')
+     A            IR11                      COLHDG('對應物流點')
+     A                                      RENAME(SO10)
+     A            IR121     R    6S 0       COLHDG('確認量')
+     A                                      RENAME(SO05)
+     A**          IR122     R    6S 0       COLHDG('確認數量2')
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A*
+     A*--------------------------------------
+     A*產品收回明細檔(SOSOPF) 進貨＋Ｎ
+     A*--------------------------------------
+     A          R SO0#                      PFILE(SOSOPF)
+     A            IR011     R               COLHDG('公司別第一碼')
+     A                                      RENAME(SO11)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(SO01 2 1)
+     A            IR02      R               COLHDG('收貨物流點')
+     A                                      RENAME(SO10)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(SO03)
+     A            IR04      R               COLHDG('收回日期')
+     A                                      RENAME(SO08)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(SO02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(SO02 4 1)
+     A            IR06      R               COLHDG('單據號碼')
+     A                                      RENAME(SO02)
+     A            IR071     R    6S 0       COLHDG('數量')
+     A                                      RENAME(SO04)
+     A***         IR072     R    6S 0       COLHDG('數量2')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  進
+     A***         IR101     R   11P 2       COLHDG('COST 1')
+     A***         IR102     R   11P 2       COLHDG('COST 2')
+     A**          IR103     R   11P 2       COLHDG('COST 3')
+     A            IR11                      COLHDG('對應物流點')
+     A                                      RENAME(SO09)
+     A            IR121     R    6S 0       COLHDG('確認量')
+     A                                      RENAME(SO05)
+     A**          IR122     R    6S 0       COLHDG('確認數量2')
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A*
+     A*--------------------------------------
+     A*產品報廢明細檔(IMIFPF)  －Ｙ
+     A*--------------------------------------
+     A          R IF0                       PFILE(IMIFPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(IF01 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(IF01 2 1)
+     A            IR02      R               COLHDG('物流點')
+     A                                      RENAME(IF07)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(IF03)
+     A            IR04      R               COLHDG('報廢日期')
+     A                                      RENAME(IF06)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(IF02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(IF02 4 1)
+     A            IR06      R               COLHDG('單據號碼')
+     A                                      RENAME(IF02)
+     A            IR071     R    6S 0       COLHDG('數量')
+     A                                      RENAME(IF04)
+     A***         IR072     R    6S 0       COLHDG('數量2')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  出
+     A            IR101     R   11P 2       COLHDG('FOB-TOT')
+     A                                      RENAME(IF08)
+     A            IR102     R   11P 2       COLHDG('FHI-TOT')
+     A                                      RENAME(IF09)
+     A            IR103     R   11P 2       COLHDG('DUTY-TOT')
+     A                                      RENAME(IF10)
+     A***         IR11                      COLHDG('對應物流點')
+     A            IR121     R    6S 0       COLHDG('確認量')
+     A                                      RENAME(IF04)
+     A**          IR122     R    6S 0       COLHDG('確認數量2')
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A*
+     A*--------------------------------------
+     A*調整明細檔(IMIHPF)   調出－Ｎ
+     A*--------------------------------------
+     A          R IH0                       PFILE(IMIHPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(IH01 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(IH01 2 1)
+     A            IR02      R               COLHDG('物流點')
+     A                                      RENAME(IH07)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(IH03)
+     A            IR04      R               COLHDG('調整日期')
+     A                                      RENAME(IH06)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(IH02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(IH02 4 1)
+     A            IR06      R               COLHDG('單據號碼')
+     A                                      RENAME(IH02)
+     A            IR071     R    6S 0       COLHDG('數量')
+     A                                      RENAME(IH05)
+     A***         IR072     R    6S 0       COLHDG('數量2')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  出
+     A            IR101     R   11P 2       COLHDG('FOB-TOT')
+     A                                      RENAME(IH08)
+     A            IR102     R   11P 2       COLHDG('FHI-TOT')
+     A                                      RENAME(IH09)
+     A            IR103     R   11P 2       COLHDG('DUTY-TOT')
+     A                                      RENAME(IH10)
+     A***         IR11                      COLHDG('對應物流點')
+     A            IR121     R    6S 0       COLHDG('確認量')
+     A                                      RENAME(IH05)
+     A**          IR122     R    6S 0       COLHDG('確認數量2')
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A*
+     A*--------------------------------------
+     A*調整明細檔(IMIHPF)   調入＋Ｎ
+     A*--------------------------------------
+     A          R IH0#                      PFILE(IMIHPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(IH01 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(IH01 2 1)
+     A            IR02      R               COLHDG('物流點')
+     A                                      RENAME(IH07)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(IH04)
+     A            IR04      R               COLHDG('調整日期')
+     A                                      RENAME(IH06)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(IH02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(IH02 4 1)
+     A            IR06      R               COLHDG('單據號碼')
+     A                                      RENAME(IH02)
+     A            IR071     R    6S 0       COLHDG('數量')
+     A                                      RENAME(IH05)
+     A***         IR072     R    6S 0       COLHDG('數量2')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  進
+     A            IR101     R   11P 2       COLHDG('FOB-TOT')
+     A                                      RENAME(IH08)
+     A            IR102     R   11P 2       COLHDG('FHI-TOT')
+     A                                      RENAME(IH09)
+     A            IR103     R   11P 2       COLHDG('DUTY-TOT')
+     A                                      RENAME(IH10)
+     A***         IR11                      COLHDG('對應物流點')
+     A            IR121     R    6S 0       COLHDG('確認量')
+     A                                      RENAME(IH05)
+     A**          IR122     R    6S 0       COLHDG('確認數量2')
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A*
+     A*--------------------------------------
+     A*存貨調撥明細檔(IMIJPF) 出貨－Ｎ
+     A*--------------------------------------
+     A          R IJ0                       PFILE(IMIJPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(IJ01 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(IJ01 2 1)
+     A            IR02      R               COLHDG('出貨物流點')
+     A                                      RENAME(IJ07)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(IJ03)
+     A            IR04      R               COLHDG('調撥日期')
+     A                                      RENAME(IJ06)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(IJ02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(IJ02 4 1)
+     A            IR06      R               COLHDG('單據號碼')
+     A                                      RENAME(IJ02)
+     A            IR071     R    6S 0       COLHDG('數量')
+     A                                      RENAME(IJ04)
+     A***         IR072     R    6S 0       COLHDG('數量2')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  出
+     A            IR101     R   11P 2       COLHDG('FOB-TOT')
+     A                                      RENAME(IJ09)
+     A            IR102     R   11P 2       COLHDG('FHI-TOT')
+     A                                      RENAME(IJ10)
+     A            IR103     R   11P 2       COLHDG('DUTY-TOT')
+     A                                      RENAME(IJ11)
+     A            IR11                      COLHDG('對應物流點')
+     A                                      RENAME(IJ08)
+     A            IR121     R    6S 0       COLHDG('確認量')
+     A                                      RENAME(IJ05)
+     A**          IR122     R    6S 0       COLHDG('確認數量2')
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A*
+     A*--------------------------------------
+     A*存貨調撥明細檔(IMIJPF) 收貨＋Ｎ
+     A*--------------------------------------
+     A          R IJ0#                      PFILE(IMIJPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(IJ12 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(IJ12 2 1)
+     A            IR02      R               COLHDG('收貨物流點')
+     A                                      RENAME(IJ08)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(IJ03)
+     A            IR04      R               COLHDG('調撥日期')
+     A                                      RENAME(IJ06)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(IJ02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(IJ02 4 1)
+     A            IR06      R               COLHDG('單據號碼')
+     A                                      RENAME(IJ02)
+     A            IR071     R    6S 0       COLHDG('數量')
+     A                                      RENAME(IJ04)
+     A***         IR072     R    6S 0       COLHDG('數量2')
+     A***         IR09                      COLHDG('進／出')
+     A****                                  進
+     A            IR101     R   11P 2       COLHDG('FOB-TOT')
+     A                                      RENAME(IJ09)
+     A            IR102     R   11P 2       COLHDG('FHI-TOT')
+     A                                      RENAME(IJ10)
+     A            IR103     R   11P 2       COLHDG('DUTY-TOT')
+     A                                      RENAME(IJ11)
+     A            IR11                      COLHDG('對應物流點')
+     A                                      RENAME(IJ07)
+     A            IR121     R    6S 0       COLHDG('確認量')
+     A                                      RENAME(IJ05)
+     A**          IR122     R    6S 0       COLHDG('確認數量2')
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A*
+     A*--------------------------------------
+     A*禮盒組拆明細檔(IMILPF)  　Ｎ
+     A*--------------------------------------
+     A          R IL0                       PFILE(IMILPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(IL01 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(IL01 2 1)
+     A            IR02      R               COLHDG('物流點')
+     A                                      RENAME(IL03)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(IL05)
+     A            IR04      R               COLHDG('組拆日期')
+     A                                      RENAME(IL04)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(IL02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(IL02 4 1)
+     A            IR06      R               COLHDG('單據號碼')
+     A                                      RENAME(IL02)
+     A            IR071     R    6S 0       COLHDG('數量')
+     A                                      RENAME(IL06)
+     A***         IR072     R    6S 0       COLHDG('數量2')
+     A            IR09      R               COLHDG('進／出')
+     A                                      RENAME(IL07)
+     A*                                     +1 -進
+     A*                                     -1 -出
+     A            IR101     R   11P 2       COLHDG('FOB -TOT ')
+     A                                      RENAME(IL08)
+     A            IR102     R   11P 2       COLHDG('FHI -TOT ')
+     A                                      RENAME(IL09)
+     A            IR103     R   11P 2       COLHDG('DUTY-TOT ')
+     A                                      RENAME(IL10)
+     A**          IR11                      COLHDG('對應物流點')
+     A            IR121     R    6S 0       COLHDG('確認量')
+     A                                      RENAME(IL06)
+     A**          IR122     R    6S 0       COLHDG('確認數量2')
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A*
+     A*--------------------------------------
+     A*產品成本調整資料檔(IMIBPF)   もＹ
+     A*--------------------------------------
+     A          R IB0                       PFILE(IMIBPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(IB02 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(IB02 2 1)
+     A            IR02      R               COLHDG('物流點')
+     A                                      RENAME(IB03)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(IB01)
+     A            IR04      R               COLHDG('調整日期')
+     A                                      RENAME(IB04)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(IB16 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(IB16 4 1)
+     A            IR06      R               COLHDG('單據號碼')
+     A                                      RENAME(IB16)
+     A            IR071     R    6S 0       COLHDG('數量')
+     A                                      RENAME(IB13)
+     A*                                     正值表進
+     A*                                     負值表出
+     A***         IR072     R    6S 0       COLHDG('數量2')
+     A****        IR09           1P 0       COLHDG('進／出')
+     A            IR101     R   11P 2       COLHDG('FOB調整數')
+     A                                      RENAME(IB10)
+     A            IR102     R   11P 2       COLHDG('FHI調整數')
+     A                                      RENAME(IB11)
+     A            IR103     R   11P 2       COLHDG('DUTY調整數')
+     A                                      RENAME(IB12)
+     A**          IR11                      COLHDG('對應物流點')
+     A            IR121     R    6S 0       COLHDG('確認量')
+     A                                      RENAME(IB13)
+     A**          IR122     R    6S 0       COLHDG('確認數量2')
+     A
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A******    S IR02                      COMP(NE ' ')
+     A*--------------------------------------
+     A*盤盈虧檔(IMIUPF)   もＹＵ
+     A*--------------------------------------
+     A          R IU0                       PFILE(IMIUPF)
+     A            IR011          1   I      COLHDG('公司別第一碼')
+     A                                      SST(IU01 1 1)
+     A            IR012          1   I      COLHDG('公司別第二碼')
+     A                                      SST(IU02 2 1)
+     A            IR02      R               COLHDG('物流點')
+     A                                      RENAME(IU03)
+     A            IR03      R               COLHDG('產品編號')
+     A                                      RENAME(IU05)
+     A            IR04      R               COLHDG('盤點日期')
+     A                                      RENAME(IU04)
+     A            IR05           2   I      COLHDG('單別')
+     A                                      SST(IU02 3 2)
+     A            IR051          1   I      COLHDG('單別')
+     A                                      SST(IU02 4 1)
+     A            IR06      R               COLHDG('單據號碼')
+     A                                      RENAME(IU02)
+     A            IR071     R    6S 0       COLHDG('良品數量異動')
+     A                                      RENAME(IU06)
+     A*                                     正值表進
+     A*                                     負值表出
+     A            IR072     R    6S 0       COLHDG('壞品數量異動')
+     A                                      RENAME(IU07)
+     A*                                     正值表進
+     A*                                     負值表出
+     A****        IR09           1P 0       COLHDG('進／出')
+     A            IR101     R   11P 2       COLHDG('FOB-TOT')
+     A                                      RENAME(IU08)
+     A            IR102     R   11P 2       COLHDG('FHI-TOT')
+     A                                      RENAME(IU09)
+     A            IR103     R   11P 2       COLHDG('DUTY-TOT')
+     A                                      RENAME(IU10)
+     A**          IR11                      COLHDG('對應物流點')
+     A            IR121     R    6S 0       COLHDG('確認量1')
+     A                                      RENAME(IU06)
+     A            IR122     R    6S 0       COLHDG('確認量2')
+     A                                      RENAME(IU07)
+     A          K IR03
+     A          K IR04
+     A          K IR06
+     A          O IR051                     COMP(LT '0')
+     A          O IR011                     COMP(EQ 'K')
+     A          S IR02                      COMP(NE ' ')
+

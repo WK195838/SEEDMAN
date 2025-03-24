@@ -1,0 +1,276 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYA4012                                     *
+     H*   AUTHER       : A1070 CHOIE                                 *
+     H*   CREATE DATE  : 79/07/21                                    *
+     H*   UPDATE DATE  : 82/01/12 PHILIP                             *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYPBPF  O   E           K        DISK                      A
+     FPYPYPF  IF  E           K        DISK
+     FPYPDPF  IF  E           K        DISK
+     FPYSHPF  IF  E           K        DISK
+     FPYSDPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYTAPF  IF  E           K        DISK
+     FPYTXPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     I           UDS
+     I                                      187 1920DDATE
+     I                                      101 110 $USER
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DPB01
+     I                                      503 5040DPB03
+     I                                      505 506 DPB04
+     I                                      507 5120DPB05I
+     I                                      507 5100DPB05
+     I                                      511 5120DPB05D
+     I                                      513 5151D01
+     I                                      516 5210D02
+     I                                      522 5290WD02
+     I*
+     I                                      532 5370WFYMD
+     I                                      532 5330WFY
+     I                                      534 5350WFM
+     I                                      532 5350WFYM
+     I                                      536 5370WFD
+     I*
+     I                                      538 5430WTYMD
+     I                                      538 5390WTY
+     I                                      540 5410WTM
+     I                                      538 5410WTYM
+     I                                      542 5430WTD
+     I            DS
+     I                                        1   60D02F
+     I                                        1   20D02FY
+     I                                        3   40D02FM
+     I                                        5   60D02FD
+     I            DS
+     I                                        1   60D02H
+     I                                        1   20D02HY
+     I                                        3   40D02HM
+     I                                        1   40D02HYM
+     I                                        5   60D02HD
+     I*
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY  LIST
+     C*==============================================================*
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C           KEYEM     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C           KEYSH     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WD02
+     C           KEYSD     KLIST
+     C                     KFLD           SH01
+     C                     KFLD           SH02
+     C                     KFLD           SH03
+     C                     KFLD           SD04
+     C           KEYPD     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           PD03
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C*到職不滿半年不發
+  01-C           EM13      IFLE D02H
+    C                     EXSR RTN100                     .發放基準
+    C*
+    C                     EXSR RTN200                     .發放金額
+    C*
+  02-C           WPB06     IFGT *ZERO
+    C                     EXSR RTN400                     . WRITE PB
+  02-C                     END
+  01-C                     END
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C*GET PAYROLL PARAMETER
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C*TAX
+|    C           '0'       CHAINTA0                  40
+|    C*
+|    C*年節日期(D02)一年起日
+|    C                     Z-ADDD02       D02F
+|    C                     SUB  1         D02FY
+|    C                     CALL 'P62'
+|    C                     PARM D02F      P6201I  60
+|    C                     PARM 1         P6202I  40
+|    C           D02F      PARM           P6211O  60
+|    C*
+|    C*年節日期(D02)半年前日期
+|    C                     Z-ADDD02       D02H
+|    C                     SUB  6         D02HM
+| 01-C           D02HM     IFLT 1
+|   C                     ADD  12        D02HM
+|   C                     SUB  1         D02HY
+| 01-C                     END
+|    C*
+|    C                     CALL 'P22'
+|    C                     PARM D02HYM    P2201I  40
+|    C                     PARM *BLANK    P2211O  1
+|    C           D02HD     PARM           P2212O  20
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*     RTN100 :發放基準=年節日當天之底薪
+     C*              (WBASE)
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C*底薪
+|    C           KEYEM     CHAINPY0                  40
+|    C   40                Z-ADD*ZERO     PY03
+|    C                     Z-ADDPY03      WBASE   90
+|    C*伙食津貼
+|    C                     MOVELPM314     PD03
+|    C           KEYPD     CHAINPD0                  40
+|    C   40                Z-ADD*ZERO     PD04
+|    C                     ADD  PD04      WBASE   90
+|    C*職務加給
+|    C                     MOVELPM302     PD03
+|    C           KEYPD     CHAINPD0                  40
+|    C   40                Z-ADD*ZERO     PD04
+|    C                     ADD  PD04      WBASE   90
+|    C*調薪
+|    C           KEYSH     SETGTSH0
+|    C           KEYEM     READESH0                      40
+|    C*
+| 01-C           *IN40     IFEQ '0'
+|   C           SH06      ANDNE*ZERO
+|   C                     Z-ADDSH07      WBASE            底薪
+|   C*伙食津貼
+|   C                     MOVELPM314     SD04
+|   C           KEYSD     CHAINSD0                  40
+|   C   40                Z-ADD*ZERO     SD05
+|   C                     ADD  SD05      WBASE   90
+|   C*職務加給
+|   C                     MOVELPM302     SD04
+|   C           KEYSD     CHAINSD0                  40
+|   C   40                Z-ADD*ZERO     SD05
+|   C                     ADD  SD05      WBASE   90
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*     RTN200 :發放金額=發放基準X D01 X
+     C*                        到職日至年節日間天數 / 365
+     C*==============================================================*
+03===C           RTN200    BEGSR
+|    C*
+| 01-C           EM13      IFLE D02F
+|   C           EM17      ANDLTD02F
+|   C           EM18      ANDLTD02F
+|   C           EM18      ANDGEEM17
+|   C           WBASE     MULT D01       WPB06     H
+|   C                     GOTO END200
+| 01-C                     END
+|    C*
+|    C*超過一年，以當年度一月一日起算
+| 02-C           EM13      IFLE D02F
+|   C                     Z-ADDD02F      P2001I
+| 02*C                     ELSE
+|   C                     Z-ADDEM13      P2001I  60
+| 02-C                     END
+|    C*
+|    C                     Z-ADDD02       P2002I  60
+|    C                     CALL 'P20'
+|    C                     PARM           P2001I
+|    C                     PARM           P2002I
+|    C           P2011X    PARM           P2011O  90
+|    C                     ADD  1         P2011X  90
+|    C*扣留職停薪日數　
+|    C*留職停薪日數計萛
+|    C*超過一年，以當年度一月一日起算
+| 03-C           EM13      IFLE D02F
+|   C                     Z-ADDD02F      #C08I2
+| 03*C                     ELSE
+|   C                     Z-ADDEM13      #C08I2  60
+| 03-C                     END
+|    C                     Z-ADDD02       #C08I3  60
+|    C                     EXSR #C0800
+|    C                     SUB  #C08D1    P2011X
+|    C*
+|    C           WBASE     MULT D01       WAMT   216
+|    C           WAMT      MULT P2011X    WAMT
+|    C                     DIV  365       WAMT      H
+|    C*
+|    C                     Z-ADDWAMT      WPB06   70H      .發放金額
+|    C*
+03===C           END200    ENDSR
+     C*==============================================================*
+     C*     RTN400 :寫入獎金檔中
+     C*==============================================================*
+04===C           RTN400    BEGSR
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DPB01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DPB05     P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C                     PARM           P3911O  60
+|    C                     Z-ADDP3911O    WPB05   60
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DPB03     P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C                     PARM           P3911O  60
+|    C                     MOVELP3911O    WPB03   40
+|    C*
+|    C*
+|    C                     MOVELEM01      PB01
+|    C                     MOVELEM02      PB02
+|    C                     Z-ADDWPB03     PB03
+|    C                     MOVELDPB04     PB04
+|    C                     Z-ADDWPB05     PB05
+|    C                     Z-ADDDPB05D    PB05D
+|    C                     Z-ADDWPB06     PB06
+|    C                     Z-ADDTA07      PB07
+| 01-C           PB06      IFLE 10000
+|   C                     Z-ADD*ZERO     PB08
+| 01*C                     ELSE
+|   C           PB06      MULT PB07      PB08      H
+| 01-C                     END
+|    C                     Z-ADD*ZERO     PB96
+|    C                     Z-ADD$A8YMD    PB97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     PB98
+|    C                     MOVEL$USER     PB99
+|    C*
+|    C                     WRITEPB0
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*留職停薪日數計萛
+     C/COPY PYRPGSRC,PYC08
+

@@ -1,0 +1,251 @@
+     H            D
+     F****************************************************************
+     F*    CUSTOMER NAME : SINGAPORE AIRLINE                         *
+     F*    SYSTEM   NAME : ADMINISTRATION SYSTEM                     *
+     F*    PROGRAM FUNCTION : 福委會收支明細列印                   *
+     F*    S.A.         :  CLEMENS CHEN                              *
+     F*    PROGRAMMER   :  CLEMENS CHEN                              *
+     F*    DATE         :  93/12/27                                  *
+     F*    REVISE DATE  :                                            *
+     F*    TEXT:                                                     *
+     F*        WELL BEGUN IS HALF DONE..........                     *
+     F*                                                              *
+     F*    INDICATOR USEAGE                                          *
+     F*                                                              *
+     A****************************************************************
+     FPYERPF  IPE E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FQSYSPRT O   F     132     OA    LPRINTER
+     FQSYSPRT1O   F     132     OV    LPRINTER
+      *
+     LQSYSPRT  66FL 60OL
+     LQSYSPRT1 66FL 60OL
+      *================================================================
+     IER0         01
+     I                                              ER02  L1
+     I           UDS
+     I                                      501 502 DER01
+     I                                      503 5060DER03
+     I                                      503 5040DER03Y
+     I                                      505 5060DER03M
+     I                                      511 5160WER03
+     I                                      503 504 #YEAR
+     I                                      505 5060#MONTH
+     I            DS
+     I                                        1  120TTM
+     I                                        1   60TTIME
+     I                                        7  120TDATE
+     I            DS
+     I                                        1   4 WNO1
+     I                                        1   40WNO
+     I            DS
+     I                                        1   80ER03
+     I                                        7   80#DD
+     I                                        5   60#MM
+     I                                        3   40#YY
+     I                                        3   80ER03P
+     I            DS
+     I                                        1  62 EM031
+     I                                        1  19 EM032
+     I                                       33  44 EM033
+     I                                       45  51 EM034
+     I                                       33  51 EM031P
+     C*===============================================================
+     C                     EXSR @DTIME
+     CLR                   EXSR @TL1
+     C*===============================================================
+      *
+     C*--------------------+
+     C* INITIAL SUBROUTINE |
+     C*--------------------------------------------------------------+
+01===CSR         *INZSR    BEGSR                                     |
+|    C                     TIME           TTM                        |
+|    C                     Z-ADD1         BMM     20                 |
+|    C                     Z-ADD0         XGRO1   80                 |
+|    C                     Z-ADD0         XGRO2   70                 |
+|    C                     Z-ADD0         XNET    80                 |
+01===CSR                   ENDSR                                     |
+     C*--------------------------------------------------------------+
+     C*-------------+
+     C*  D-TIME L1  |
+     C*--------------------------------------------------------------+
+02===CSR         @DL1      BEGSR                                     |
+02===CSR                   ENDSR                                     |
+     C*--------------------------------------------------------------+
+     C*-------------+
+     C*  D-TIME     |
+     C*--------------------------------------------------------------+
+03===CSR         @DTIME    BEGSR                                     |
+|    C           KEYEM     KLIST
+|    C                     KFLD           ER01
+|    C                     KFLD           ER02
+|    C           KEYEM     CHAINEM0                  40
+|    C   40                SETON                     13
+|    C   40                GOTO NXTTAG
+|    C  N40                SETOF                     13
+| 01-C           EM033     IFNE *BLANK
+|   C                     SETON                     55
+| 01*C                     ELSE
+|   C                     SETOF                     55
+| 01-C                     END
+|    C*年報表                                                      |
+| 02-C           #MM       IFNE BMM                                  |
+|   C                     SETOF                     12              |
+|   C                     EXSR @TL1                                 |
+|   C                     Z-ADD#MM       BMM     20                 |
+| 02-C                     END                                       |
+|    C*月報表                                                      |
+| 03-C           #MM       IFEQ #MONTH                               |
+|   C                     SETON                     12              |
+| 04-C           ER04      IFEQ '1'                                  |
+|   C                     ADD  ER05      XGRO1   80                 |
+| 04*C                     ELSE                                      |
+|   C                     ADD  ER05      XGRO2   70                 |
+| 04-C                     END                                       |
+|   C           XGRO1     SUB  XGRO2     XNET    80                 |
+| 03-C                     END                                       |
+|    C*                                                              |
+| 05-C           ER05      IFGT 0                                    |
+|   C   L1                ADD  1         CNT1    30
+|   C   L1                ADD  1         CNT     30
+|   C                     SETOF                     13              |
+| 06-C           ER04      IFEQ '1'                                  |
+|   C                     ADD  ER05      WGRO1   80                 |
+|   C                     Z-ADDER05      TGRO1   50                 |
+|   C                     Z-ADD0         TGRO2                      |
+| 06*C                     ELSE                                      |
+|   C                     ADD  ER05      WGRO2   70                 |
+|   C                     Z-ADDER05      TGRO2   50                 |
+|   C                     Z-ADD0         TGRO1                      |
+| 06-C                     END                                       |
+|   C           TGRO1     SUB  TGRO2     TNET    50                 |
+| 05*C                     ELSE                                      |
+|   C                     SETON                     13              |
+| 05-C                     END                                       |
+|    C           NXTTAG    TAG
+03===CSR                   ENDSR                                     |
+     C*--------------------------------------------------------------+
+     C*-------------+
+     C* CLEAR DATA  |
+     C*--------------------------------------------------------------+
+04===CSR         @CDATA    BEGSR                                     |
+|    C                     Z-ADD0         WGRO1   80                 |
+|    C                     Z-ADD0         WGRO2   70                 |
+|    C                     Z-ADD0         WNET    80                 |
+04===CSR                   ENDSR                                     |
+     C*--------------------------------------------------------------+
+     C*-------------+
+     C* T-TIME  L1  |
+     C*--------------------------------------------------------------+
+05===CSR         @TL1      BEGSR                                     |
+|    C           WGRO1     SUB  WGRO2     WNET    80                 |
+|    C                     ADD  WGRO1     #GRO1   80                 |
+|    C                     ADD  WGRO2     #GRO2   70                 |
+|    C                     ADD  WNET      #NET    80                 |
+|    C*                    EXCPT@11                                  |
+|    C                     EXSR @CDATA                               |
+05===CSR                   ENDSR                                     |
+     C*--------------------------------------------------------------+
+     O*================================================================
+     OQSYSPRT1H  1 3   1P
+     O       OR        OV
+     O                                   18 'Singapore Airlines'
+     O                                 +  1 'Taiwan'
+     O                         TDATE Y   80
+     O        H  1     1P
+     O       OR        OV
+     O                                    8 '福委會'
+     O                         #YEAR   +  0
+     O                                 +  0 '收支明細表'
+     O                                   75 'Page :'
+     O                         PAGE  1   80
+     O        H 1      1P
+     O       OR        OV
+     O                                   20 '--------------------'
+     O                                 +  0 '--------------------'
+     O                                 +  0 '--------------------'
+     O                                 +  0 '--------------------'
+     O        H 12     1P
+     O       OR        OV
+     O                                    8 'STF NO'
+     O                                 +  2 'NAME'
+     O                                   50 '給付總額'
+     O                                   60 '收入金額'
+     O                                   70 '給付淨額'
+     O                                   81 '收支日期'
+     O        D  1     01N13
+     O                         ER02       9
+     O                         EM03      22
+     O                         EM033     34
+     O                       55EM031P    41
+     O                      N55EM032     41
+     O                         TGRO1 N   49
+     O                         TGRO2 N   59
+     O                         TNET  N   70
+     O                         ER03P Y   80
+     O*       E 12     L1
+     O*                        WGRO1 N   49
+     O*                        WGRO2 N   59
+     O*                        WNET  N   70
+     O        T  1     OV
+     O       OR        LR
+     O                                   20 '--------------------'
+     O                                 +  0 '--------------------'
+     O                                 +  0 '--------------------'
+     O                                 +  0 '--------------------'
+     O        T 11     LR
+     O                                    7 'TOTAL :'
+     O                         CNT1  NB  20
+     O                         #GRO1 NB  49
+     O                         #GRO2 NB  59
+     O                         #NET  NB  70
+     O*================================================================
+     OQSYSPRT H  1 3   1P
+     O       OR        OA
+     O                                   18 'Singapore Airlines'
+     O                                 +  1 'Taiwan'
+     O                         TDATE Y   80
+     O        H  1     1P
+     O       OR        OA
+     O                                    8 '福委會'
+     O                         #YEAR   +  0
+     O                                 +  0 '/'
+     O                         #MONTH  +  0
+     O                                 +  0 '收支明細表'
+     O                                   75 'Page :'
+     O                         PAGE2 1   80
+     O        H 1      1P
+     O       OR        OA
+     O                                   20 '--------------------'
+     O                                 +  0 '--------------------'
+     O                                 +  0 '--------------------'
+     O                                 +  0 '--------------------'
+     O        H 12     1P
+     O       OR        OA
+     O                                    8 'STF NO'
+     O                                 +  2 'NAME'
+     O                                   50 '給付總額'
+     O                                   60 '收入金額'
+     O                                   70 '給付淨額'
+     O                                   81 '收支日期'
+     O        D  1     01 12N13
+     O                         ER02   B   8
+     O                         EM03      22
+     O                       55EM031P    41
+     O                      N55EM032     41
+     O                         TGRO1 NB  49
+     O                         TGRO2 NB  59
+     O                         TNET  NB  70
+     O                         ER03P Y   80
+     O        T  1     LR
+     O                                   20 '--------------------'
+     O                                 +  0 '--------------------'
+     O                                 +  0 '--------------------'
+     O                                 +  0 '--------------------'
+     O        T 11     LR
+     O                                    7 'TOTAL :'
+     O                         CNT   NB  20
+     O                         XGRO1 NB  49
+     O                         XGRO2 NB  59
+     O                         XNET  NB  70
+

@@ -1,0 +1,260 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLR1G01                                    *
+     H*    PROGRAM NAME :日記表　　　　　                          *
+     H*    AUTHOR       : A1150                                      *
+     H*    CREATE DATE  : 81/11/20                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FGLAHLF01IP  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLABPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLR1G0P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     IAH0
+     I                                              AH04  L1
+     I                                              AH10  L2
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAH01
+     I                                      519 519 DFLD
+     I            DS
+     I                                        1   9 P02F
+     I                                        1   60YMD1
+     I                                        7   9 TMP1
+     I            DS
+     I                                        1   9 P02T
+     I                                        1   60YMD2
+     I                                        7   90AB03
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY#B     KLIST
+     C                     KFLD           DAH01            *公司別
+     C           KEYAB     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           AH10
+     C           KEYAF     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           AH04             *會計科目
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*+ LEVEL BREAK INIT PROCESS +++++++++++++++++++++++++++++++++++
+     C   L1                EXSR R7100
+     C   L2                EXSR R7200
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     C*+ LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++
+     CL1 10                EXSR R8100
+     CL2 10                EXSR R8200
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C*
+|    C           KEY#B     CHAIN#B0                  40
+|    C   40                MOVEL*BLANK    #B16
+|    C*
+|    C                     Z-ADD0         PAH12
+|    C                     Z-ADD0         PAH13
+|    C                     Z-ADD0         TOT12
+|    C                     Z-ADD0         TOT13
+|    C                     Z-ADD0         CNT12
+|    C                     Z-ADD0         CNT13
+|    C                     Z-ADD0         TCNT2
+|    C                     Z-ADD0         TCNT3
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C*+<<DATA SET>>+++++++++++++++++++++++++++++++++++++++++++++++++++
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 01-C                     END
+|    C*
+|    C*借方金額＆筆數之計算--------
+| 02-C           AH12      IFNE 0
+|   C                     ADD  1         CNT12
+|   C                     ADD  AH12      PAH12
+| 02-C                     END
+|    C*貸方金額＆筆數之計算--------
+| 03-C           AH13      IFNE 0
+|   C                     ADD  1         CNT13
+|   C                     ADD  AH13      PAH13
+| 03-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+03===C           R7100     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    PAF03
+|    C           KEYAF     CHAINAF0                  40
+|    C  N40                MOVELAF03      PAF03
+|    C*
+|    C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R7200 ... LEVEL BREAK 2 :INIT PROCESS
+     C*==============================================================*
+04===C           R7200     BEGSR
+|    C*
+|    C                     SETON                     39
+|    C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|    C*製票日期 FOR PH1 ------
+|    C           KEY#B     CHAINAK0                  40
+|    C*日期格式轉換FOR PH1 ----------
+|    C                     CALL 'P31'
+|    C                     PARM AH10      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C                     PARM           P3101O  80
+|    C*
+|    C                     Z-ADDP3101O    PAH10
+|    C*
+|    C*若　選擇內容='1'時始列印傳票號碼之起迄---
+|    C*
+| 01-C           DFLD      IFNE '1'
+|   C                     SETOF                     30
+| 01*C                     ELSE
+|   C                     SETON                     30
+|   C*AH10轉換為螢幕曆別後取YYMMDD六碼-----
+| 02-C           AK09      IFEQ '1'                        *西元年
+|   C                     CALL 'P31'
+|   C                     PARM AH10      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '1'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           YMD1      PARM           P3101O  80
+|   C                     Z-ADDYMD1      YMD2
+| 02*C                     ELSE                            *中國年
+|   C                     CALL 'P31'
+|   C                     PARM AH10      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '2'       P3105I  1
+|   C           YMD1      PARM           P3101O  80
+|   C                     Z-ADDYMD1      YMD2
+| 02-C                     END
+|   C*傳票號碼 --------------------------
+|   C                     MOVEL'001'     TMP1
+|   C           KEYAB     CHAINAB0                  40
+| 01-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+05===C           R8100     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     WRITEPD1
+|    C*計算合計-----------
+|    C*借方
+|    C                     ADD  PAH12     TOT12
+|    C                     ADD  CNT12     TCNT2
+|    C*貸方
+|    C                     ADD  PAH13     TOT13
+|    C                     ADD  CNT13     TCNT3
+|    C*
+|    C                     Z-ADD0         PAH12
+|    C                     Z-ADD0         CNT12
+|    C                     Z-ADD0         PAH13
+|    C                     Z-ADD0         CNT13
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8200 ... LEVEL BREAK L2
+     C*==============================================================*
+06===C           R8200     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'GLS008'
+     C                     PARM 'GLR1G0P' P008I1 10        *PRTF NAME
+     C                     PARM '1'       P008I2  1        *中文報表
+     C           P8O1      PARM           P008O1198        *簽名內容
+     C           P8O2      PARM           P008O2198        *簽名內容
+     C*
+|    C                     WRITEPT1
+|    C*
+|    C                     Z-ADD0         PAH12
+|    C                     Z-ADD0         PAH13
+|    C                     Z-ADD0         TOT12
+|    C                     Z-ADD0         TOT13
+|    C                     Z-ADD0         CNT12
+|    C                     Z-ADD0         CNT13
+|    C                     Z-ADD0         TCNT2
+|    C                     Z-ADD0         TCNT3
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+07===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R1000
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+07===C                     ENDSR
+

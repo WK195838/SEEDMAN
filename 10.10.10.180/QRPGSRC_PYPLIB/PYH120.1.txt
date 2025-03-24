@@ -1,0 +1,326 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM NAME : PYH120                                     *
+     H*    PROGRAM NAME :退休金試算作業                          *
+     H*    AUTHER       : SHARON A1386                               *
+     H*    CREATE DATE  : 94/03/31                                   *
+     H*    SYSTEM       :勞退新制作業                              *
+     H****************************************************************
+     FPYH4PF  IF  E           K        DISK
+     FPYH8PF  IF  E           K        DISK
+     FPYHAPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYPDPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYWDPF  IF  E           K        DISK
+     FPYPYPF  IF  E           K        DISK
+     FPYH7LF02IF  E           K        DISK
+     FPYHCPF  UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I/COPY PYDDSSRC,PYPMDS01
+     I*
+     I            DS
+     I                                        1   60DSYYMM
+     I                                        5   6 DSMM
+     I            DS
+     I                                        1   80DSBDAT
+     I                                        1   60DSBYM
+     I            DS
+     I                                        1   80DSEDAT
+     I                                        1   60DSEYM
+     I            DS
+     I                                        1   80DSDATE
+     I                                        1   60DSMOTH
+     I                                        7   80DSDAY
+     I            DS
+     I                                        1   80EM13
+     I                                        1   60EM13YM
+     I                                        7   80EM13D
+     I            DS
+     I                                        1   80EM19
+     I                                        1   60EM19YM
+     I                                        7   80EM19D
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      211 2160DDATE
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           DH601     PARM           P1011I  2         公司編號
+     C           DH602     PARM           P1012I  8         員工編號
+     C           WYM       PARM           P1013I  60        薪資月份
+     C           DH605     PARM           P1014O  60        自提金額
+     C           DH606     PARM           P1015O  60        企提金額
+     C                     PARM           @RTNC   2          FUN KEY
+     C*==============================================================*
+     C*                    KEY  LIST
+     C*==============================================================*
+     C*PYH4PF
+     C           KEYH4     KLIST
+     C                     KFLD           DH601   2        .公司
+     C                     KFLD           DH602   8        .員編
+     C*PYH6PF
+     C           KEYHC     KLIST
+     C                     KFLD           DH601            .公司
+     C                     KFLD           DH602            .員編
+     C                     KFLD           WYM     60       .薪資年月
+     C*PYPDPF
+     C           KEYPD     KLIST
+     C                     KFLD           DH601            .公司
+     C                     KFLD           DH602            .員編
+     C                     KFLD           H802             .薪資年月
+     C*PYPYPF
+     C           KEYPY     KLIST
+     C                     KFLD           DH601            .公司
+     C                     KFLD           DH602            .員編
+     C*PYHAPF
+     C           KEYHA     KLIST
+     C                     KFLD           HA01             .公司
+     C                     KFLD           HA02             .薪資月份
+     C*PYPMPF
+     C           KEYPM     KLIST
+     C                     KFLD           KPM01            .類別
+     C                     KFLD           DH601            .公司編號
+     C*PYWDPF
+     C           KEYWD     KLIST
+     C                     KFLD           DH601            .公司
+     C                     KFLD           WYM              .薪資年月
+     C                     KFLD           WD04             .期別
+     C                     KFLD           DH602            .員編
+     C                     KFLD           WD05             .薪資項目
+     C           KEYH7     KLIST
+     C                     KFLD           H702             下限
+     C           KEYEM     KLIST
+     C                     KFLD           EM01             .公司別
+     C                     KFLD           EM02             .員工編號
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     .INIT.
+     C*
+     C                     EXSR RTN100
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C*
+|    C                     Z-ADD*ZERO     DH605   60       *自提金額
+|    C                     Z-ADD*ZERO     DH606   60       *企提金額
+|    C                     Z-ADDWYM       DSYYMM
+|    C                     Z-ADD30        TEMP    20
+|    C*
+|    C                     MOVEL'01'      KPM01   2
+|    C           KEYPM     CHAINPM0                  40
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100 提撥金額計算
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+     C                     Z-ADD*ZERO     SALRY   90
+     C                     Z-ADD*ZERO     TP409   60
+|    C           KEYH4     CHAINH40                  42
+     C           *IN42     IFEQ '0'
+     C           H405      ANDNE'2'
+     C*
+     C                     Z-ADDH422      DSBDAT
+     C                     Z-ADDH423      DSEDAT
+     C*計算當月在職天數
+     C                     MOVE H401      EM01
+     C                     MOVE H402      EM02
+     C           KEYEM     CHAINPYEMPF               40
+     C*全月在職(DEFAULT)
+     C                     Z-ADDTEMP      PW07    20
+     C                     Z-ADDTEMP      PW071   20
+     C                     Z-ADDTEMP      PW08    20
+     C*到職日
+     C           EM13      IFNE 0
+     C                     Z-ADDEM13      DSDATE
+     C           DSMOTH    IFEQ WYM
+     C           TEMP      SUB  DSDAY     PW07
+     C                     ADD  1         PW07
+     C                     END
+     C                     END
+     C*新制生效日
+     C           H406      IFNE 0
+     C                     Z-ADDH406      DSDATE
+     C           DSMOTH    IFEQ WYM
+     C           TEMP      SUB  DSDAY     PW071
+     C                     ADD  1         PW071
+     C                     END
+     C                     END
+     C           PW071     IFLT PW07
+     C                     Z-ADDPW071     PW07
+     C                     END
+     C*復職日
+     C           EM18      IFNE 0
+     C                     Z-ADDEM18      DSDATE
+     C           DSMOTH    IFEQ WYM
+     C           TEMP      SUB  DSDAY     PW071
+     C                     ADD  1         PW071
+     C                     END
+     C                     END
+     C           PW071     IFLT PW07
+     C                     Z-ADDPW071     PW07
+     C                     END
+     C*
+     C*離職日
+     C           EM19      IFNE 0
+     C                     Z-ADDEM19      DSDATE
+     C           DSMOTH    IFEQ WYM
+     C                     Z-ADDDSDAY     PW071
+     C                     END
+     C                     END
+     C           PW071     IFLT PW07
+     C                     Z-ADDPW071     PW07
+     C                     END
+     C           EM19YM    IFEQ EM13YM
+     C           EM19D     SUB  EM13D     PW07
+     C                     ADD  1         PW07
+     C                     END
+     C*留職停薪
+     C           EM17      IFNE 0
+     C                     Z-ADDEM17      DSDATE
+     C           DSMOTH    IFEQ WYM
+     C                     Z-ADDDSDAY     PW071
+     C                     END
+     C                     END
+     C           PW071     IFLT PW07
+     C                     Z-ADDPW071     PW07
+     C                     END
+     C*自提生效日
+     C           H422      IFNE 0
+     C                     Z-ADDH422      DSDATE
+     C           DSMOTH    IFEQ WYM
+     C           TEMP      SUB  DSDAY     PW08
+     C                     ADD  1         PW08
+     C                     END
+     C                     END
+     C           PW07      IFLT PW08
+     C                     Z-ADDPW07      PW08
+     C                     END
+     C*計算經常性支付薪資
+     C           DH601     SETLLH80
+     C           DH601     READEH80                      57
+     C           *IN57     DOWEQ'0'
+     C*
+     C           H802      IFEQ PM301                      .本薪
+     C           KEYPY     CHAINPY0                  41
+     C  N41                ADD  PY03      SALRY
+     C                     ELSE
+     C           KEYPD     CHAINPD0                  42
+     C  N42                ADD  PD04      SALRY
+     C   42                DO
+     C                     MOVE '1'       WD04
+     C                     MOVE H802      WD05
+     C           KEYWD     CHAINWD0                  43
+     C  N43                ADD  WD06      SALRY
+     C                     END
+     C                     END
+     C*
+     C           DH601     READEH80                      57
+     C                     END
+     C*計算月提繳工資
+     C                     Z-ADDSALRY     H703
+     C           KEYH7     SETGTPYH7LF02
+     C                     READPPYH7LF02                 31
+     C**                   Z-ADDH704      TP409
+     C*若是採一段期間平均值者則直接讀勞退主檔之月提繳工資
+     C                     Z-ADDH409      TP409
+     C**
+     C                     Z-ADD0         DH605
+     C                     Z-ADD0         DH606
+     C                     Z-ADD0         P1014O
+     C                     Z-ADD0         P1015O
+     C*適合新制且選新制者(可自提及企提)
+     C           H404      IFEQ 'Y'
+     C           H405      ANDEQ'1'
+     C*在自提期限內
+     C           WYM       IFGE DSBYM
+     C           WYM       ANDLEDSEYM
+     C           TP409     MULT H407      DH605     H      .自提額
+     C           DH605     DIV  100       DH605     H      .自提額
+     C                     ELSE
+     C                     Z-ADD0         DH605
+     C                     END
+     C           PW08      IFLT TEMP
+     C                     MULT PW08      DH605     H
+     C                     DIV  TEMP      DH605     H
+     C                     END
+     C           TP409     MULT H408      DH606     H      .企提額
+     C           DH606     DIV  100       DH606     H      .企提額
+     C           PW07      IFLT TEMP
+     C                     MULT PW07      DH606     H
+     C                     DIV  TEMP      DH606     H
+     C                     END
+     C                     END
+     C*不適合新制且選新制者(只可自提)
+     C           H404      IFEQ 'N'
+     C           H405      ANDEQ'1'
+     C*在自提期限內
+     C           WYM       IFGE DSBYM
+     C           WYM       ANDLEDSEYM
+     C           TP409     MULT H407      DH605     H      .自提額
+     C           DH605     DIV  100       DH605     H      .自提額
+     C                     ELSE
+     C                     Z-ADD0         DH605
+     C                     END
+     C           PW08      IFLT TEMP
+     C                     MULT PW08      DH605     H
+     C                     DIV  TEMP      DH605     H
+     C                     END
+     C                     Z-ADD0         DH606
+     C                     END
+     C*
+     C                     Z-ADDDH605     P1014O            自提金額
+     C                     Z-ADDDH606     P1015O            企提金額
+     C*
+     C           KEYHC     CHAINHC0                  43
+     C                     EXSR RTN101
+     C  N43                UPDATHC0
+     C   43                WRITEHC0
+     C                     END
+|    C*
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          RTN101  WRITE PYHCPF
+     C*==============================================================*
+03===C           RTN101    BEGSR
+|    C*
+|    C                     MOVELDH601     HC01
+|    C                     MOVELDH602     HC02
+|    C                     Z-ADDWYM       HC03
+|    C*
+|    C                     MOVELHC01      HA01
+|    C                     Z-ADDHC03      HA02
+|    C           KEYHA     CHAINPYHAPF               40
+|    C  N40                Z-ADDHA03      HC04
+|    C   40                Z-ADD*ZERO     HC04
+|    C                     Z-ADDDH605     HC05
+|    C                     Z-ADDTP409     HC0A
+|    C                     Z-ADDDH606     HC06
+|    C                     Z-ADD*ZERO     HC07
+|    C                     Z-ADD*ZERO     HC08
+|    C                     Z-ADD*ZERO     HC09
+|    C                     Z-ADD$A8YMD    HC97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     HC98
+|    C                     MOVEL$USER     HC99
+|    C*
+07===C           END101    ENDSR
+

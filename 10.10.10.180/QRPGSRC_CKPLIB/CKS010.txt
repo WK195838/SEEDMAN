@@ -1,0 +1,387 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : CKS010                                     *
+     H*    PROGRAM NAME :票據代碼視窗查詢                          *
+     H*    AUTHOR       : A1062   JEANNY                             *
+     H*    CREATE DATE  : 82/01/12                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     F*代碼資料檔---*IN30
+     FPA#APF  IF  E           K        DISK
+     F*代碼類別檔
+     FPA#1PF  IF  E           K        DISK
+     F*客戶資料檔---*IN31
+     FMTMEPF  IF  E           K        DISK
+     F*廠商資料檔---*IN32
+     FMTMBPF  IF  E           K        DISK
+     F*員工資料檔---*IN33
+     FMTMCPF  IF  E           K        DISK
+     FCKS010D CF  E                    WORKSTN
+     E*----------------------------------------------------------------
+     E                    @SL         8  1               資料選擇
+     E                    @CD         8 10               代碼
+     E                    @NM         8 18               說明
+     E                    @HD     3   3  6               標題
+     E*----------------------------------------------------------------
+     I*DEFINE SCREEN FIELD
+     I            DS
+     I                                        1   8 @SL
+     I                                        1   1 DSEL1
+     I                                        2   2 DSEL2
+     I                                        3   3 DSEL3
+     I                                        4   4 DSEL4
+     I                                        5   5 DSEL5
+     I                                        6   6 DSEL6
+     I                                        7   7 DSEL7
+     I                                        8   8 DSEL8
+     I            DS
+     I                                        1  80 @CD
+     I                                        1  10 DCODE1
+     I                                       11  20 DCODE2
+     I                                       21  30 DCODE3
+     I                                       31  40 DCODE4
+     I                                       41  50 DCODE5
+     I                                       51  60 DCODE6
+     I                                       61  70 DCODE7
+     I                                       71  80 DCODE8
+     I            DS
+     I                                        1 144 @NM
+     I                                        1  18 DNAME1
+     I                                       19  36 DNAME2
+     I                                       37  54 DNAME3
+     I                                       55  72 DNAME4
+     I                                       73  90 DNAME5
+     I                                       91 108 DNAME6
+     I                                      109 126 DNAME7
+     I                                      127 144 DNAME8
+     I*==============================================================*
+     I*                    DEFN
+     I*==============================================================*
+     I              '*EOF*       '        C         @EMSG
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM           S0101I 10         代碼欄位
+     C                     PARM           S0102I 10         代碼內容
+     C                     PARM           S0101O 18         代碼說明
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN #A01      W#A01            .#A0 TOP KEY
+     C           *LIKE     DEFN #A02      W#A02T           .#A0 TOP KEY
+     C           *LIKE     DEFN #A02      W#A02B           .#A0 BTM KEY
+     C           *LIKE     DEFN ME01      WME01T           .MD0 TOP KEY
+     C           *LIKE     DEFN ME01      WME01B           .MD0 BTM KEY
+     C           *LIKE     DEFN MB01      WMB01T           .MB0 TOP KEY
+     C           *LIKE     DEFN MB01      WMB01B           .MB0 BTM KEY
+     C           *LIKE     DEFN MC01      WMC01T           .MC0 TOP KEY
+     C           *LIKE     DEFN MC01      WMC01B           .MC0 BTM KEY
+     C           *LIKE     DEFN DSTRK     WSTRKO           .OLD STR-KEY
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*代碼資料檔---*IN30
+     C           KEY#AT    KLIST                           *#A TOP
+     C                     KFLD           W#A01
+     C                     KFLD           W#A02T
+     C           KEY#AB    KLIST                           *#A BTM
+     C                     KFLD           W#A01
+     C                     KFLD           W#A02B
+     C*客戶資料檔---*IN31
+     C           KEYMET    KLIST                           *ME TOP
+     C                     KFLD           WME01T
+     C           KEYMEB    KLIST                           *ME BTM
+     C                     KFLD           WME01B
+     C*廠商資料檔---*IN32
+     C           KEYMBT    KLIST                           *MB TOP
+     C                     KFLD           WMB01T
+     C           KEYMBB    KLIST                           *MB BTM
+     C                     KFLD           WMB01B
+     C*員工資料檔---*IN33
+     C           KEYMCT    KLIST                           *MC TOP
+     C                     KFLD           WMC01T
+     C           KEYMCB    KLIST                           *MC BTM
+     C                     KFLD           WMC01B
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+     C           @RTNC     DOWEQ*BLANK
+     C                     EXSR R1000
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C                     MOVELS0101I    W#A01
+     C* SET INIT VALUE *---------------------------------------------*
+     C                     MOVEL*BLANK    @RTNC   2        *OUT PARM
+     C                     Z-ADD8         @PRCD   20       *PAGE RCD
+     C                     Z-ADD60        @INFR   20       *INDICATOR FROM
+     C                     MOVEL*BLANK    DHEAD
+     C******               MOVE S0101I    DCOMP            *公司別
+     C                     MOVELS0101I    WTYPE   4        *類別
+     C                     MOVEL*BLANK    S0101O           *代碼資料
+     C                     SETOF                     303132*檔案控制
+     C                     SETOF                     33    *檔案控制
+     C*客戶HEADING
+     C           WTYPE     IFEQ 'PT#C'
+     C                     MOVEL@HD,1     DHEAD
+     C                     SETON                     31
+     C                     END
+     C*廠商HEADING
+     C           WTYPE     IFEQ 'PT#D'
+     C                     MOVEL@HD,2     DHEAD
+     C                     SETON                     32
+     C                     END
+     C*人員HEADING
+     C           WTYPE     IFEQ 'PT#E'
+     C                     MOVEL@HD,3     DHEAD
+     C                     SETON                     33
+     C                     END
+     C*代碼HEADING
+     C           DHEAD     IFEQ *BLANK
+     C           W#A01     CHAIN#10                  40
+     C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #102      P6501I 80
+|   C                     PARM 14        P6502I  30
+|   C           DHEAD     PARM           P6511O 80
+|   C                     PARM           P6512O 80
+     C                     SETON                     30
+     C                     END
+     C*
+     C                     END
+     C*--------------------------------------------------------------*
+     C                     EXSR R1A00                      .SFL INIT
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+     C           R1000     BEGSR
+     C*
+     C                     EXFMTDSPD1
+     C*
+     C           *IN12     IFEQ '1'                        *PREVIOUS
+     C                     MOVEL'12'      @RTNC
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN25     IFEQ '1'                        *NEXT PAGE
+     C   30      KEY#AB    SETGT#A0
+     C   31      KEYMEB    SETGTME0
+     C   32      KEYMBB    SETGTMB0
+     C   33      KEYMCB    SETGTMC0
+     C                     EXSR R1N00
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN26     IFEQ '1'                        *PREV PAGE
+     C   30      KEY#AT    SETLL#A0
+     C   31      KEYMET    SETLLME0
+     C   32      KEYMBT    SETLLMB0
+     C   33      KEYMCT    SETLLMC0
+     C                     EXSR R1P00
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           WSTRKO    IFNE DSTRK                      *START KEY
+     C                     EXSR R1A00                      *SFL INIT
+     C                     GOTO E1000
+     C                     END
+     C*
+     C                     EXSR R1C00                      *OPTION
+     C*
+     C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+     C           R1A00     BEGSR
+     C*
+     C                     MOVELDSTRK     WSTRKO           *KEY SAVE
+     C   30                MOVELDSTRK     W#A02T            *KEY TOP
+     C   31                MOVELDSTRK     WMB01T
+     C   32                MOVELDSTRK     WME01T
+     C   33                MOVELDSTRK     WMC01T
+     C* INIT SUBFILE
+     C                     EXSR R1Z04                      *CLEAR SUBF
+     C                     Z-ADD1         @R
+     C                     MOVEL@EMSG     @NM,@R           *EOF
+     C* START
+     C   30      KEY#AT    SETLL#A0
+     C   31      KEYMET    SETLLME0
+     C   32      KEYMBT    SETLLMB0
+     C   33      KEYMCT    SETLLMC0
+     C                     EXSR R1N00                      *ADD SFL DTA
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1C00 ....挑選資料
+     C*=============================================================*
+     C           R1C00     BEGSR
+     C*
+     C                     Z-ADD1         @R
+     C           @R        DOWLE@PRCD
+     C*
+     C           @SL,@R    IFNE *BLANK
+     C* <<SET OUTPUT PARM>>++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL@CD,@R    S0102I
+     C                     MOVEL@NM,@R    S0101O
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL'00'      @RTNC
+     C                     Z-ADD@PRCD     @R
+     C                     END
+     C*
+     C                     ADD  1         @R
+     C                     END
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1N00 .... PREPARE NEXT PAGE
+     C*=============================================================*
+     C           R1N00     BEGSR
+     C*
+     C   30      W#A01     READE#A0                      46
+     C   31                READ ME0                      46
+     C   32                READ MB0                      46
+     C   33                READ MC0                      46
+     C           *IN46     IFEQ '0'
+     C                     EXSR R1Z03                      *KEY TOP
+     C                     ELSE                            *LAST PAGE
+     C                     GOTO E1N00
+     C                     END
+     C*
+     C                     EXSR R1Z04                      *CLEAR SUBF
+     C* PREPARE SUBFILE
+     C                     Z-ADD0         @R      20
+     C           @R        DOWLT@PRCD
+     C           *IN46     ANDEQ'0'
+     C*
+     C                     ADD  1         @R
+     C                     EXSR R1Z01                      *ADD SFL
+     C                     EXSR R1Z02                      *KEY BOTTOM
+     C*
+     C   30      W#A01     READE#A0                      46
+     C   31                READ ME0                      46
+     C   32                READ MB0                      46
+     C   33                READ MC0                      46
+     C                     END
+     C*
+     C           @R        IFLT @PRCD
+     C                     ADD  1         @R
+     C                     MOVEL@EMSG     @NM,@R
+     C                     END
+     C*
+     C           E1N00     ENDSR
+     C*=============================================================*
+     C*          R1P00 .... PREPARE PREVIOUS  PAGE
+     C*=============================================================*
+     C           R1P00     BEGSR
+     C*
+     C   30      W#A01     REDPE#A0                      46
+     C   31                READPME0                      46
+     C   32                READPMB0                      46
+     C   33                READPMC0                      46
+     C           *IN46     IFEQ '0'
+     C                     EXSR R1Z02                      *KEY BOTTOM
+     C                     ELSE                            *FIRST PAGE
+     C                     GOTO E1P00
+     C                     END
+     C*
+     C           @PRCD     ADD  1         @R
+     C           @R        DOWGT1
+     C           *IN46     ANDEQ'0'
+     C*
+     C                     SUB  1         @R
+     C                     EXSR R1Z01                      *ADD SFL
+     C                     EXSR R1Z03                      *KEY TOP
+     C*
+     C   30      W#A01     REDPE#A0                      46
+     C   31                READPME0                      46
+     C   32                READPMB0                      46
+     C   33                READPMC0                      46
+     C                     END
+     C*
+     C           @R        IFGT 1                          *READ TOP
+     C   30                MOVELW#A02T    W#A02B
+     C   30      KEY#AT    SETLL#A0
+     C   31                MOVELWME01T    WME01B
+     C   31      KEYMET    SETLLME0
+     C   32                MOVELWMB01T    WMB01B
+     C   32      KEYMBT    SETLLMB0
+     C   33                MOVELWMC01T    WMC01B
+     C   33      KEYMCT    SETLLMC0
+     C                     EXSR R1N00
+     C                     END
+     C*
+     C           E1P00     ENDSR
+     C*=============================================================*
+     C*          R1Z01 .... SUBFILE DATA SET
+     C*=============================================================*
+     C           R1Z01     BEGSR
+     C*
+     C           @R        ADD  @INFR     @I      20
+     C                     MOVEL'1'       *IN,@I
+     C                     MOVEL*BLANK    @SL,@R
+     C           *IN30     IFEQ '1'
+     C                     MOVEL#A02      @CD,@R
+|   C                     CALL 'P65'
+|   C                     PARM #A03      P6501I 80
+|   C                     PARM 18        P6502I  30
+|   C           @NM,@R    PARM           P6511O 80
+|   C                     PARM           P6512O 80
+     C                     END
+     C           *IN31     IFEQ '1'
+     C                     MOVELME01      @CD,@R
+     C                     MOVELME04      @NM,@R
+     C                     END
+     C           *IN32     IFEQ '1'
+     C                     MOVELMB01      @CD,@R
+     C                     MOVELMB03      @NM,@R
+     C                     END
+     C           *IN33     IFEQ '1'
+     C                     MOVELMC01      @CD,@R
+     C                     MOVELMC02      @NM,@R
+     C                     END
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1Z02 .... SET KEY BOTTOM
+     C*=============================================================*
+     C           R1Z02     BEGSR
+     C   30                MOVEL#A02      W#A02B
+     C   31                MOVELME01      WME01B
+     C   32                MOVELMB01      WMB01B
+     C   33                MOVELMC01      WMC01B
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1Z03 .... SET KEY TOP
+     C*=============================================================*
+     C           R1Z03     BEGSR
+     C   30                MOVEL#A02      W#A02T
+     C   31                MOVELME01      WME01T
+     C   32                MOVELMB01      WMB01T
+     C   33                MOVELMC01      WMC01T
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1Z04 .... CLEAR SUBFILE
+     C*=============================================================*
+     C           R1Z04     BEGSR
+     C*
+     C                     MOVEA*ALL'0'   *IN,60
+     C                     MOVEL*BLANK    @SL
+     C                     MOVEL*BLANK    @CD
+     C                     MOVEL*BLANK    @NM
+     C*
+     C                     ENDSR
+**
+客戶廠商人員
+

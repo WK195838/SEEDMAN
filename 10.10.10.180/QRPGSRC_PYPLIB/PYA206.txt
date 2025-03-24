@@ -1,0 +1,1458 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : PYA206                                     *
+     H*    PROGRAM NAME :員工排班資料維護                          *
+     H*    AUTHOR       : A1226 PETER                                *
+     H*    CREATE DATE  : 85/02/26                                   *
+     H*    UPDATE DATE  : 91/06/19 A1336 KLAUS                       *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYT2PF  UF  E           K        DISK                      A
+     FPYT1PF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYA206D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E                    @T1        31  2 0             日期
+     E**                  @T2        31  8               星期別
+     E                    @T3        31  2               刷卡別
+     E                    @T4        31  2               刷卡別
+     E**                  @WK1    7   7  8               星期說明
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I            DS
+     I                                        1  620@T1
+     I                                        1   20DATE01
+     I                                        3   40DATE02
+     I                                        5   60DATE03
+     I                                        7   80DATE04
+     I                                        9  100DATE05
+     I                                       11  120DATE06
+     I                                       13  140DATE07
+     I                                       15  160DATE08
+     I                                       17  180DATE09
+     I                                       19  200DATE10
+     I                                       21  220DATE11
+     I                                       23  240DATE12
+     I                                       25  260DATE13
+     I                                       27  280DATE14
+     I                                       29  300DATE15
+     I                                       31  320DATE16
+     I                                       33  340DATE17
+     I                                       35  360DATE18
+     I                                       37  380DATE19
+     I                                       39  400DATE20
+     I                                       41  420DATE21
+     I                                       43  440DATE22
+     I                                       45  460DATE23
+     I                                       47  480DATE24
+     I                                       49  500DATE25
+     I                                       51  520DATE26
+     I                                       53  540DATE27
+     I                                       55  560DATE28
+     I                                       57  580DATE29
+     I                                       59  600DATE30
+     I                                       61  620DATE31
+     I            DS
+     I                                        1  62 @T3
+     I                                        1  62 DT205
+     I                                        1   2 DT2501
+     I                                        3   4 DT2502
+     I                                        5   6 DT2503
+     I                                        7   8 DT2504
+     I                                        9  10 DT2505
+     I                                       11  12 DT2506
+     I                                       13  14 DT2507
+     I                                       15  16 DT2508
+     I                                       17  18 DT2509
+     I                                       19  20 DT2510
+     I                                       21  22 DT2511
+     I                                       23  24 DT2512
+     I                                       25  26 DT2513
+     I                                       27  28 DT2514
+     I                                       29  30 DT2515
+     I                                       31  32 DT2516
+     I                                       33  34 DT2517
+     I                                       35  36 DT2518
+     I                                       37  38 DT2519
+     I                                       39  40 DT2520
+     I                                       41  42 DT2521
+     I                                       43  44 DT2522
+     I                                       45  46 DT2523
+     I                                       47  48 DT2524
+     I                                       49  50 DT2525
+     I                                       51  52 DT2526
+     I                                       53  54 DT2527
+     I                                       55  56 DT2528
+     I                                       57  58 DT2529
+     I                                       59  60 DT2530
+     I                                       61  62 DT2531
+     I            DS
+     I                                        1  62 @T4
+     I                                        1  62 T205
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I            DS
+     I                                        1   7 DT206
+     I                                        1   1 DT2061
+     I                                        2   2 DT2062
+     I                                        3   3 DT2063
+     I                                        4   7 DT2064
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN $A8YMD    FDATE            .TRANS DATE USE
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C           *LIKE     DEFN T203      WT203
+     C           *LIKE     DEFN T203      WT203C
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYT2     KLIST                           *HEAD FILE
+     C                     KFLD           DT201
+     C                     KFLD           DT202
+     C                     KFLD           WT203
+     C           KEYT2C    KLIST                           *COPY REC.
+     C                     KFLD           DT201C
+     C                     KFLD           DT202C
+     C                     KFLD           WT203C
+     C           KEYEM     KLIST
+     C                     KFLD           DT201
+     C                     KFLD           DT202
+     C           KEYDP     KLIST
+     C                     KFLD           DT2061
+     C                     KFLD           DT2062
+     C                     KFLD           DT2063
+     C                     KFLD           DT2064
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N99                EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DT201
+|    C                     MOVEL*BLANK    DT202
+|    C                     MOVEL*ZERO     DT203
+|    C                     MOVEL*BLANK    DT201C
+|    C                     MOVEL*BLANK    DT202C
+|    C                     Z-ADD0         DT203C
+|    C**                   MOVEL'N'       DFLD
+|    C                     MOVE *BLANK    DT206
+|    C*--------------------------------------------------------------*
+|    C*
+|    C*公司別
+|    C                     MOVEL$COR      DT201
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'                        *PROMPT
+|   C                     EXSR R1E00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+|   C                     MOVEL'SC02'    SCID
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*公司別
+|    C                     MOVEL*BLANK    DT201N
+| 02-C           DT201     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DT201     CM001I  2         公司代號
+|    C           DT201N    PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 03-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 04-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*員工編號
+| 05-C           DT202     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVEL*BLANK    DT202N
+|    C           KEYEM     CHAINEM0                  40
+|    C  N40                MOVELEM03      DT202N
+|    C*          *IN40     IFEQ '1'
+|    C*                    MOVEL'UPT2010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     606199
+|    C*                    END
+|    C*  99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*部門別
+| 06-C*          DT206     IFEQ *BLANK
+|   C*                    MOVEL'UPT0010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6499
+| 06-C*                    ELSE
+| 06-C           KEYDP     CHAINDP0                  40
+| 06-C   40                MOVEL*BLANK    T206N
+| 06-C  N40                MOVELDP02      T206N
+| 06-C*                    END
+|    C   99                GOTO E1B00
+|    C*
+| 06-C           DT206     IFNE *BLANK
+| 06-C           DT206     ANDNEEM04
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*                    CALL 'PYSCM1'
+|    C*                    PARM EM01      CM101I  2         公司代號
+|    C*                    PARM EM04      CM102I  5         部門代號
+|    C*                    PARM           CM103O 14         部門名稱
+|    C*                    PARM           CM199O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 06-C*          CM199O    IFEQ 'N'
+|   C*                    SETON                     6199
+|   C*                    MOVEL'US#0098' ERRID
+|   C*                    MOVEL'S#MF'    ERRF
+| 06-C*                    END
+|    C*  99                GOTO E1B00
+|    C*
+| 07-C*          CM199O    IFEQ *BLANK
+|   C*                    SETON                     606199
+|   C*                    MOVEL'US#1111' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+| 07-C*                    END
+|    C*  99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*年月
+| 08-C           DT203     IFEQ 0
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*驗證年月
+|    C                     CALL 'P38'
+|    C                     PARM DT203     P3801I  60
+|    C                     PARM DFMT      P3802I  1
+|    C                     PARM DTYPE     P3803I  1
+|    C                     PARM           P3801O  60
+|    C                     PARM           P3811O  1
+|    C*
+| 09-C           P3811O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 09-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DT203     P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           WT203     PARM           P3911O  60
+|    C*
+|    C           KEYT2     CHAINT20                  40
+|    C*
+| 10-C           DOPT      IFEQ 1                          *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606163
+|   C                     SETON                     99
+| 10-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 11-C           DOPT      IFNE 1                          *UPD,DEL,INQ
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606163
+|   C                     SETON                     99
+| 11-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 12-C           DOPT      IFEQ 1                          *ADD
+| 13-C           DT201C    IFNE *BLANK                     *COPY
+|   C           DT202C    ANDNE*BLANK
+|   C                     CALL 'P39'
+|   C                     PARM DT203C    P3901I  60
+|   C                     PARM DFMT      P3902I  1
+|   C                     PARM DTYPE     P3903I  1
+|   C                     PARM '2'       P3904I  1
+|   C                     PARM '1'       P3905I  1
+|   C           WT203C    PARM           P3911O  60
+|   C*
+|   C*需為同一年月才能作拷貝
+|   C**         WT203C    IFNE WT203
+|   C**                   MOVEL'UMI0680' ERRID
+|   C**                   MOVEL'CEMF'    ERRF
+|   C**                   SETON                     6299
+|   C**                   END
+|   C** 99                GOTO E1B00
+|   C*
+|   C           KEYT2C    CHAINT20                  40
+| 14-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT0060' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 14-C                     END
+|   C*
+| 13-C                     END
+| 12-C                     END
+|    C   99                GOTO E1B00
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+|    C                     SETOF                     313334*IN CONTROL
+|    C                     SETOF                     35    *IN CONTROL
+|    C* ADD
+| 01-C           DOPT      IFEQ 1
+|   C                     SETON                     31
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 02-C           DT201C    IFEQ *BLANK                     *NON-COPY
+|   C           DT202C    ANDEQ*BLANK
+|   C           WT203C    ANDEQ*ZERO
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C                     EXSR R1CA0                      *INIT HEAD
+| 02*C                     ELSE
+|   C                     EXSR R1CB0                      *HEADING
+| 02-C                     END
+| 01-C                     END
+|    C* UPD
+| 03-C           DOPT      IFEQ 2
+|   C                     SETON                     31
+|   C                     EXSR R1CB0                      *HEADING
+| 03-C                     END
+|    C* DEL & INQ
+| 04-C           DOPT      IFEQ 4
+|   C           DOPT      OREQ 5
+|   C                     EXSR R1CB0                      *HEADING
+| 04-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)++++++++++++++++++++++++++++++++++*
+| 05-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C           *LOVAL    SETLLT20                        *HEAD FILE
+| 05-C                     END
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1CA0 ....SFL HEAD INIT : ADD (NO COPY)
+     C*==============================================================*
+05===C           R1CA0     BEGSR
+|    C*計算當月天數
+|    C                     CALL 'P22'
+|    C                     PARM DT203     P2201I  40       年月
+|    C                     PARM           P2211O  1        驗證結果
+|    C                     PARM           P2212O  20       日數
+|    C                     Z-ADDP2212O    DAY     20
+|    C*
+| 01-C           DAY       IFGT 28
+|   C                     SETON                     33
+| 01-C                     END
+| 02-C           DAY       IFGT 29
+|   C                     SETON                     34
+| 02-C                     END
+| 03-C           DAY       IFGT 30
+|   C                     SETON                     35
+| 03-C                     END
+|    C*
+|    C                     Z-ADD*ZERO     @T1
+|    C**                   MOVEA*BLANKS   @T2
+|    C                     MOVEL*BLANKS   @T3
+|    C*
+| 04-C                     DO   DAY       X       20       本月日數
+|   C*計算星期
+|   C**         DFLD      IFEQ 'Y'
+|   C**                   Z-ADDX         P4001I
+|   C**                   MOVELDT203     P4001I
+|   C**                   CALL 'P40'
+|   C**                   PARM           P4001I  60
+|   C**                   PARM           Y       10
+|   C**                   MOVEL@WK1,Y    @T2,X
+|   C**                   END
+|   C*
+|   C                     Z-ADDX         @T1,X
+|   C*
+| 04-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1CB0 ....SFL HEAD INIT : U/D/I/A-COPY
+     C*==============================================================*
+06===C           R1CB0     BEGSR
+|    C*
+|    C*計算當月天數
+|    C                     CALL 'P22'
+|    C                     PARM DT203     P2201I  40       年月
+|    C                     PARM           P2211O  1        驗證結果
+|    C                     PARM           P2212O  20       日數
+|    C                     Z-ADDP2212O    DAY     20
+|    C*
+| 01-C           DAY       IFGT 28
+|   C                     SETON                     33
+| 01-C                     END
+| 02-C           DAY       IFGT 29
+|   C                     SETON                     34
+| 02-C                     END
+| 03-C           DAY       IFGT 30
+|   C                     SETON                     35
+| 03-C                     END
+|    C*
+|    C                     Z-ADD*ZERO     @T1
+|    C**                   MOVEA*BLANKS   @T2
+|    C                     MOVEA*BLANKS   @T3
+|    C*
+| 04-C                     DO   DAY       X       20       本月日數
+|   C*計算星期
+|   C**         DFLD      IFEQ 'Y'
+|   C**                   Z-ADDX         P4001I
+|   C**                   MOVELDT203     P4001I
+|   C**                   CALL 'P40'
+|   C**                   PARM           P4001I  60
+|   C**                   PARM           Y       10
+|   C**                   MOVEL@WK1,Y    @T2,X
+|   C**                   END
+|   C*
+|   C                     Z-ADDX         @T1,X
+|   C                     MOVEL@T4,X     @T3,X
+|   C*
+| 04-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+07===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*部門編號DT206
+| 01-C           #LIN      IFEQ 5
+|   C           #COL      ANDGE14
+|   C           #COL      ANDLE18
+|   C                     CALL 'PYI512'
+|   C           DT206     PARM DT206     I512I1  5         部門代碼
+|   C                     PARM           @RTNC   2          FUN KEY
+| 01-C                     END
+|    C*
+|    C*員工編號
+| 01-C           #LIN      IFEQ 6
+|   C           #COL      ANDGE14
+|   C           #COL      ANDLE21
+|   C                     CALL 'PYI101'
+|   C           DT201     PARM DT201     P101I1  2        公司別
+|   C           DT202     PARM DT202     P101I2  8        員工號
+|   C                     PARM           @RTNC   2        FUN KEY
+| 01-C                     END
+|    C*
+| 02-C           @RTNC     IFEQ '03'
+|   C                     SETON                     03
+| 02-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+08===C           R2000     BEGSR
+|    C*
+|    C                     EXFMTDSPD2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'                        *PROMPT
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPDATE
+|   C                     EXSR R2E00
+| 03-C                     END
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 04-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C* RELEAS FILE --------------------------------------------------*
+|   C           *LOVAL    SETLLT20
+|   C*---------------------------------------------------------------*
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 04-C                     END
+|    C*
+| 05-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R2B00                      *SC02 CHK
+| 05-C                     END
+|    C*
+| 06-C           *IN05     IFEQ '1'                        *CHECK ONLY
+|   C                     GOTO E2000
+| 06-C                     END
+|    C*
+| 07-C           *IN99     IFEQ '0'                        *CHK OK
+|   C                     EXSR R2D00                      *FILE UPD
+|   C                     MOVE 'SC01'    SCID
+| 07-C                     END
+|    C*
+08===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'SC02' CHECK
+     C*==============================================================*
+09===C           R2B00     BEGSR
+|    C*班別
+|    C*          DT2501    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     6099
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 01-C           DT2501    IFNE *BLANK
+|   C           DT2501    CHAINT10                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|   C   99                GOTO E2B00
+| 01-C                     END
+|    C*
+|    C*          DT2502    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     6199
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 03-C           DT2502    IFNE *BLANK
+|   C           DT2502    CHAINT10                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 04-C                     END
+|   C   99                GOTO E2B00
+| 03-C                     END
+|    C*
+|    C*          DT2503    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     6299
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 05-C           DT2503    IFNE *BLANK
+|   C           DT2503    CHAINT10                  40
+| 06-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 06-C                     END
+|   C   99                GOTO E2B00
+| 05-C                     END
+|    C*
+|    C*          DT2504    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     6399
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 07-C           DT2504    IFNE *BLANK
+|   C           DT2504    CHAINT10                  40
+| 08-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 08-C                     END
+|   C   99                GOTO E2B00
+| 07-C                     END
+|    C*
+|    C*          DT2505    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     6499
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 09-C           DT2505    IFNE *BLANK
+|   C           DT2505    CHAINT10                  40
+| 10-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 10-C                     END
+|   C   99                GOTO E2B00
+| 09-C                     END
+|    C*
+|    C*          DT2506    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     6599
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 11-C           DT2506    IFNE *BLANK
+|   C           DT2506    CHAINT10                  40
+| 12-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 12-C                     END
+|   C   99                GOTO E2B00
+| 11-C                     END
+|    C*
+|    C*          DT2507    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     6699
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 13-C           DT2507    IFNE *BLANK
+|   C           DT2507    CHAINT10                  40
+| 14-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 14-C                     END
+|   C   99                GOTO E2B00
+| 13-C                     END
+|    C*
+|    C*          DT2508    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     6799
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 15-C           DT2508    IFNE *BLANK
+|   C           DT2508    CHAINT10                  40
+| 16-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6799
+| 16-C                     END
+|   C   99                GOTO E2B00
+| 15-C                     END
+|    C*
+|    C*          DT2509    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     6899
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 17-C           DT2509    IFNE *BLANK
+|   C           DT2509    CHAINT10                  40
+| 18-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6899
+| 18-C                     END
+|   C   99                GOTO E2B00
+| 17-C                     END
+|    C*
+|    C*          DT2510    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     6999
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 19-C           DT2510    IFNE *BLANK
+|   C           DT2510    CHAINT10                  40
+| 20-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6999
+| 20-C                     END
+|   C   99                GOTO E2B00
+| 19-C                     END
+|    C*
+|    C*          DT2511    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     7099
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 21-C           DT2511    IFNE *BLANK
+|   C           DT2511    CHAINT10                  40
+| 22-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7099
+| 22-C                     END
+|   C   99                GOTO E2B00
+| 21-C                     END
+|    C*
+|    C*          DT2512    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     7199
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 23-C           DT2512    IFNE *BLANK
+|   C           DT2512    CHAINT10                  40
+| 24-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7199
+| 24-C                     END
+|   C   99                GOTO E2B00
+| 23-C                     END
+|    C*
+|    C*          DT2513    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     7299
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 25-C           DT2513    IFNE *BLANK
+|   C           DT2513    CHAINT10                  40
+| 26-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7299
+| 26-C                     END
+|   C   99                GOTO E2B00
+| 25-C                     END
+|    C*
+|    C*          DT2514    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     7399
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 27-C           DT2514    IFNE *BLANK
+|   C           DT2514    CHAINT10                  40
+| 28-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7399
+| 28-C                     END
+|   C   99                GOTO E2B00
+| 27-C                     END
+|    C*
+|    C*          DT2515    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     7499
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 29-C           DT2515    IFNE *BLANK
+|   C           DT2515    CHAINT10                  40
+| 30-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7499
+| 30-C                     END
+|   C   99                GOTO E2B00
+| 29-C                     END
+|    C*
+|    C*          DT2516    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     7599
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 31-C           DT2516    IFNE *BLANK
+|   C           DT2516    CHAINT10                  40
+| 32-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7599
+| 32-C                     END
+|   C   99                GOTO E2B00
+| 31-C                     END
+|    C*
+|    C*          DT2517    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     7699
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 33-C           DT2517    IFNE *BLANK
+|   C           DT2517    CHAINT10                  40
+| 34-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7699
+| 34-C                     END
+|   C   99                GOTO E2B00
+| 33-C                     END
+|    C*
+|    C*          DT2518    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     7799
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 35-C           DT2518    IFNE *BLANK
+|   C           DT2518    CHAINT10                  40
+| 36-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7799
+| 36-C                     END
+|   C   99                GOTO E2B00
+| 35-C                     END
+|    C*
+|    C*          DT2519    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     7899
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 37-C           DT2519    IFNE *BLANK
+|   C           DT2519    CHAINT10                  40
+| 38-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7899
+| 38-C                     END
+|   C   99                GOTO E2B00
+| 37-C                     END
+|    C*
+|    C*          DT2520    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     7999
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 39-C           DT2520    IFNE *BLANK
+|   C           DT2520    CHAINT10                  40
+| 40-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7999
+| 40-C                     END
+|   C   99                GOTO E2B00
+| 39-C                     END
+|    C*
+|    C*          DT2521    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     8099
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 41-C           DT2521    IFNE *BLANK
+|   C           DT2521    CHAINT10                  40
+| 42-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8099
+| 42-C                     END
+|   C   99                GOTO E2B00
+| 41-C                     END
+|    C*
+|    C*          DT2522    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     8199
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 43-C           DT2522    IFNE *BLANK
+|   C           DT2522    CHAINT10                  40
+| 44-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8199
+| 44-C                     END
+|   C   99                GOTO E2B00
+| 43-C                     END
+|    C*
+|    C*          DT2523    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     8299
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 45-C           DT2523    IFNE *BLANK
+|   C           DT2523    CHAINT10                  40
+| 46-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8299
+| 46-C                     END
+|   C   99                GOTO E2B00
+| 45-C                     END
+|    C*
+|    C*          DT2524    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     8399
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 47-C           DT2524    IFNE *BLANK
+|   C           DT2524    CHAINT10                  40
+| 48-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8399
+| 48-C                     END
+|   C   99                GOTO E2B00
+| 47-C                     END
+|    C*
+|    C*          DT2525    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     8499
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 49-C           DT2525    IFNE *BLANK
+|   C           DT2525    CHAINT10                  40
+| 50-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8499
+| 50-C                     END
+|   C   99                GOTO E2B00
+| 49-C                     END
+|    C*
+|    C*          DT2526    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     8599
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 51-C           DT2526    IFNE *BLANK
+|   C           DT2526    CHAINT10                  40
+| 52-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8599
+| 52-C                     END
+|   C   99                GOTO E2B00
+| 51-C                     END
+|    C*
+|    C*          DT2527    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     8699
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 53-C           DT2527    IFNE *BLANK
+|   C           DT2527    CHAINT10                  40
+| 54-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8699
+| 54-C                     END
+|   C   99                GOTO E2B00
+| 53-C                     END
+|    C*
+|    C*          DT2528    IFEQ *BLANK
+|    C*                    MOVEL'UPT0010' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     8799
+|    C*                    END
+|    C*  99                GOTO E2B00
+|    C*
+| 55-C           DT2528    IFNE *BLANK
+|   C           DT2528    CHAINT10                  40
+| 56-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8799
+| 56-C                     END
+|   C   99                GOTO E2B00
+| 55-C                     END
+|    C*
+| 57-C           *IN33     IFEQ '1'
+|   C*          DT2529    IFEQ *BLANK
+|   C*                    MOVEL'UPT0010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     8899
+|   C*                    END
+|   C*  99                GOTO E2B00
+|   C*
+| 58-C           DT2529    IFNE *BLANK
+|   C           DT2529    CHAINT10                  40
+| 59-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8899
+| 59-C                     END
+|   C   99                GOTO E2B00
+| 58-C                     END
+| 57-C                     END
+|    C*
+| 60-C           *IN34     IFEQ '1'
+|   C*          DT2530    IFEQ *BLANK
+|   C*                    MOVEL'UPT0010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     8999
+|   C*                    END
+|   C*  99                GOTO E2B00
+|   C*
+| 61-C           DT2530    IFNE *BLANK
+|   C           DT2530    CHAINT10                  40
+| 62-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8999
+| 62-C                     END
+|   C   99                GOTO E2B00
+| 61-C                     END
+| 60-C                     END
+|    C*
+| 63-C           *IN35     IFEQ '1'
+|   C*          DT2531    IFEQ *BLANK
+|   C*                    MOVEL'UPT0010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     9099
+|   C*                    END
+|   C*  99                GOTO E2B00
+|   C*
+| 64-C           DT2531    IFNE *BLANK
+|   C           DT2531    CHAINT10                  40
+| 65-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     9099
+| 65-C                     END
+|   C   99                GOTO E2B00
+| 64-C                     END
+| 63-C                     END
+|    C*
+09===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+10===C           R2D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R2D10
+|   C           DOPT      CASEQ2         R2D20
+|   C           DOPT      CASEQ4         R2D30
+| 01-C                     END
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+11===C           R2D10     BEGSR
+|    C*
+|    C                     EXSR R2D12
+|    C*
+|    C                     WRITET20
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R2D12 ....FILE PROCESS : ADD  (ADD NEW)
+     C*==============================================================*
+12===C           R2D12     BEGSR
+|    C*
+|    C                     MOVELDT201     T201
+|    C                     MOVELDT202     T202
+|    C                     Z-ADDWT203     T203
+|    C                     MOVELDT205     T205
+|    C                     MOVELDT206     T206
+|    C                     Z-ADD0         T296
+|    C                     Z-ADD$A8YMD    T297
+|    C                     TIME           T298
+|    C                     MOVEL$USER     T299
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+13===C           R2D20     BEGSR
+|    C*
+|    C                     EXSR R2D12
+|    C                     UPDATT20
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+14===C           R2D30     BEGSR
+|    C*
+|    C                     DELETT20
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R2E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+15===C           R2E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*
+| 01-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE13
+|   C           #COL      ANDLE14
+|   C                     CALL 'PYI506'
+|   C           DT2501    PARM DT2501    P506I1  2
+|   C                     PARM           @RTNC   2
+| 01-C                     END
+|    C*
+| 02-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE17
+|   C           #COL      ANDLE18
+|   C                     CALL 'PYI506'
+|   C           DT2502    PARM DT2502    P506I1  2
+|   C                     PARM           @RTNC   2
+| 02-C                     END
+|    C*
+| 03-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE21
+|   C           #COL      ANDLE22
+|   C                     CALL 'PYI506'
+|   C           DT2503    PARM DT2503    P506I1  2
+|   C                     PARM           @RTNC   2
+| 03-C                     END
+|    C*
+| 04-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE25
+|   C           #COL      ANDLE26
+|   C                     CALL 'PYI506'
+|   C           DT2504    PARM DT2504    P506I1  2
+|   C                     PARM           @RTNC   2
+| 04-C                     END
+|    C*
+| 05-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE29
+|   C           #COL      ANDLE30
+|   C                     CALL 'PYI506'
+|   C           DT2505    PARM DT2505    P506I1  2
+|   C                     PARM           @RTNC   2
+| 05-C                     END
+|    C*
+| 06-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE33
+|   C           #COL      ANDLE34
+|   C                     CALL 'PYI506'
+|   C           DT2506    PARM DT2506    P506I1  2
+|   C                     PARM           @RTNC   2
+| 06-C                     END
+|    C*
+| 07-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE37
+|   C           #COL      ANDLE38
+|   C                     CALL 'PYI506'
+|   C           DT2507    PARM DT2507    P506I1  2
+|   C                     PARM           @RTNC   2
+| 07-C                     END
+|    C*
+| 08-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE41
+|   C           #COL      ANDLE42
+|   C                     CALL 'PYI506'
+|   C           DT2508    PARM DT2508    P506I1  2
+|   C                     PARM           @RTNC   2
+| 08-C                     END
+|    C*
+| 09-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE45
+|   C           #COL      ANDLE46
+|   C                     CALL 'PYI506'
+|   C           DT2509    PARM DT2509    P506I1  2
+|   C                     PARM           @RTNC   2
+| 09-C                     END
+|    C*
+| 10-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE49
+|   C           #COL      ANDLE50
+|   C                     CALL 'PYI506'
+|   C           DT2510    PARM DT2510    P506I1  2
+|   C                     PARM           @RTNC   2
+| 10-C                     END
+|    C*
+| 11-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE53
+|   C           #COL      ANDLE54
+|   C                     CALL 'PYI506'
+|   C           DT2511    PARM DT2511    P506I1  2
+|   C                     PARM           @RTNC   2
+| 11-C                     END
+|    C*
+| 12-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE57
+|   C           #COL      ANDLE58
+|   C                     CALL 'PYI506'
+|   C           DT2512    PARM DT2512    P506I1  2
+|   C                     PARM           @RTNC   2
+| 12-C                     END
+|    C*
+| 13-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE61
+|   C           #COL      ANDLE62
+|   C                     CALL 'PYI506'
+|   C           DT2513    PARM DT2513    P506I1  2
+|   C                     PARM           @RTNC   2
+| 13-C                     END
+|    C*
+| 14-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE65
+|   C           #COL      ANDLE66
+|   C                     CALL 'PYI506'
+|   C           DT2514    PARM DT2514    P506I1  2
+|   C                     PARM           @RTNC   2
+| 14-C                     END
+|    C*
+| 15-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE69
+|   C           #COL      ANDLE70
+|   C                     CALL 'PYI506'
+|   C           DT2515    PARM DT2515    P506I1  2
+|   C                     PARM           @RTNC   2
+| 15-C                     END
+|    C*
+| 16-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE13
+|   C           #COL      ANDLE14
+|   C                     CALL 'PYI506'
+|   C           DT2516    PARM DT2516    P506I1  2
+|   C                     PARM           @RTNC   2
+| 16-C                     END
+|    C*
+| 17-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE17
+|   C           #COL      ANDLE18
+|   C                     CALL 'PYI506'
+|   C           DT2517    PARM DT2517    P506I1  2
+|   C                     PARM           @RTNC   2
+| 17-C                     END
+|    C*
+| 18-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE21
+|   C           #COL      ANDLE22
+|   C                     CALL 'PYI506'
+|   C           DT2518    PARM DT2518    P506I1  2
+|   C                     PARM           @RTNC   2
+| 18-C                     END
+|    C*
+| 19-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE25
+|   C           #COL      ANDLE26
+|   C                     CALL 'PYI506'
+|   C           DT2519    PARM DT2519    P506I1  2
+|   C                     PARM           @RTNC   2
+| 19-C                     END
+|    C*
+| 20-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE29
+|   C           #COL      ANDLE30
+|   C                     CALL 'PYI506'
+|   C           DT2520    PARM DT2520    P506I1  2
+|   C                     PARM           @RTNC   2
+| 20-C                     END
+|    C*
+| 21-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE33
+|   C           #COL      ANDLE34
+|   C                     CALL 'PYI506'
+|   C           DT2521    PARM DT2521    P506I1  2
+|   C                     PARM           @RTNC   2
+| 21-C                     END
+|    C*
+| 22-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE37
+|   C           #COL      ANDLE38
+|   C                     CALL 'PYI506'
+|   C           DT2522    PARM DT2522    P506I1  2
+|   C                     PARM           @RTNC   2
+| 22-C                     END
+|    C*
+| 23-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE41
+|   C           #COL      ANDLE42
+|   C                     CALL 'PYI506'
+|   C           DT2523    PARM DT2523    P506I1  2
+|   C                     PARM           @RTNC   2
+| 23-C                     END
+|    C*
+| 24-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE45
+|   C           #COL      ANDLE46
+|   C                     CALL 'PYI506'
+|   C           DT2524    PARM DT2524    P506I1  2
+|   C                     PARM           @RTNC   2
+| 24-C                     END
+|    C*
+| 25-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE49
+|   C           #COL      ANDLE50
+|   C                     CALL 'PYI506'
+|   C           DT2525    PARM DT2525    P506I1  2
+|   C                     PARM           @RTNC   2
+| 25-C                     END
+|    C*
+| 26-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE53
+|   C           #COL      ANDLE54
+|   C                     CALL 'PYI506'
+|   C           DT2526    PARM DT2526    P506I1  2
+|   C                     PARM           @RTNC   2
+| 26-C                     END
+|    C*
+| 27-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE57
+|   C           #COL      ANDLE58
+|   C                     CALL 'PYI506'
+|   C           DT2527    PARM DT2527    P506I1  2
+|   C                     PARM           @RTNC   2
+| 27-C                     END
+|    C*
+| 28-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE61
+|   C           #COL      ANDLE62
+|   C                     CALL 'PYI506'
+|   C           DT2528    PARM DT2528    P506I1  2
+|   C                     PARM           @RTNC   2
+| 28-C                     END
+|    C*
+| 29-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE65
+|   C           #COL      ANDLE66
+|   C                     CALL 'PYI506'
+|   C           DT2529    PARM DT2529    P506I1  2
+|   C                     PARM           @RTNC   2
+| 29-C                     END
+|    C*
+| 30-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE69
+|   C           #COL      ANDLE70
+|   C                     CALL 'PYI506'
+|   C           DT2530    PARM DT2530    P506I1  2
+|   C                     PARM           @RTNC   2
+| 30-C                     END
+|    C*
+| 31-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE73
+|   C           #COL      ANDLE74
+|   C                     CALL 'PYI506'
+|   C           DT2531    PARM DT2531    P506I1  2
+|   C                     PARM           @RTNC   2
+| 31-C                     END
+|    C*
+15===C           E2E00     ENDSR
+     C*==============================================================*
+

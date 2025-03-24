@@ -1,0 +1,169 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA2071 (FOR YKK)                          *
+     H*    PROGRAM NAME :刷卡轉檔作業                              *
+     H*    AUTHOR       : A1226 PETER                                *
+     H*    CREATE DATE  : 2004/03/16                                 *
+     H*    UPDATE DATE  : 2004/03/16 A1386 SHARON                    *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYT5PFX IP  E           K        DISK
+     FPYEMLF02IF  E           K        DISK
+     FPYT5PF  O   E           K        DISK
+     I*---------------------------------------------------------------
+     I           UDS
+     I                                      101 110 $USER
+     I                                      187 1920DDATE
+     I                                      201 2080$A8YMD
+     I            DS
+     I                                        1  60 W501X
+     I                                        1   80T5DS1
+     I                                       10  110T5DS2
+     I                                       12  130T5DS3
+     I                                       24  31 T5DS4
+     I                                       33  35 T5DS5
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C                     MOVELT501X     W501X
+     C           HH1       IFNE T5DS2
+     C           HH1       ANDEQ0
+     C                     Z-ADDT5DS2     HH1     20
+     C                     EXSR R1000
+     C                     GOTO $END
+     C                     END
+     C*
+     C           T5DS2     SUB  HH1       HH2     20
+     C*
+     C           HH2       IFLE 14
+     C                     EXSR R2000                      WRITE DATA
+     C                     ELSE
+     C                     EXSR R2000
+     C                     END
+     C           $END      TAG
+     C*==============================================================
+     C*         R1000      WRITE DATA
+     C*==============================================================
+     C           R1000     BEGSR
+     C*
+     C*                    MOVELT501X     W501X
+     C                     MOVELT5DS4     WT501   8
+     C                     Z-ADDT5DS1     WT502   80
+     C                     Z-ADDT5DS2     WT503   20
+     C                     Z-ADDT5DS3     WT504   20
+     C*
+     C           T5DS4     CHAINEM0                  88
+     C           *IN88     IFEQ '0'
+     C                     MOVELEM01      WT505   2
+     C                     MOVELEM04      WT506   7
+     C                     END
+     C*          HH2       IFLE 12
+     C*                    MOVEL'1'       WT507   1
+     C*                    ELSE
+     C*                    MOVEL'2'       WT507
+     C*                    END
+     C                     MOVELT5DS5     WT508   3
+     C                     Z-ADD$A8YMD    WT597   80
+     C                     TIME           WT598   60
+     C                     MOVEL$USER     WT599  10
+     C*
+     C                     ENDSR
+     C*==============================================================
+     C*         R2000      WRITE DATA
+     C*==============================================================
+     C           R2000     BEGSR
+     C*
+     C*                    MOVELT501X     W501X
+     C                     MOVELT5DS4     T501
+     C                     Z-ADDT5DS1     T502
+     C                     Z-ADDT5DS2     T503
+     C                     Z-ADDT5DS3     T504
+     C*
+     C           T5DS4     CHAINEM0                  88
+     C           *IN88     IFEQ '0'
+     C                     MOVELEM01      T505
+     C                     MOVELEM04      T506
+     C                     END
+     C           HH2       IFLE 14
+     C                     MOVEL'2'       T507
+     C                     ELSE
+     C                     MOVEL'1'       T507
+     C                     END
+     C                     MOVELT5DS5     T508
+     C                     Z-ADD$A8YMD    T597
+     C                     TIME           T598
+     C                     MOVEL$USER     T599
+     C                     WRITET50                        下班
+     C                     EXSR R2100
+     C                     WRITET50                        上班
+     C*
+     C                     EXSR BLANK
+     C*
+     C                     ENDSR
+     C*==============================================================
+     C*         R2100      WRITE DATA
+     C*==============================================================
+     C           R2100     BEGSR
+     C*
+     C                     MOVELWT501     T501
+     C                     Z-ADDWT502     T502
+     C                     Z-ADDWT503     T503
+     C                     Z-ADDWT504     T504
+     C*
+     C           HH2       IFLE 14
+     C                     MOVEL'1'       T507
+     C                     ELSE
+     C                     MOVEL'2'       T507
+     C                     END
+     C                     MOVELWT505     T505
+     C                     MOVELWT506     T506
+     C*                    MOVELWT507     T507
+     C                     MOVELWT508     T508
+     C                     Z-ADDWT597     T597
+     C                     Z-ADDWT598     T598
+     C                     MOVELWT599     T599
+     C*
+     C                     ENDSR
+     C*==============================================================
+     C*          R2000     DATA INIT
+     C*==============================================================
+     C           BLANK     BEGSR
+     C*
+     C*
+     C                     MOVEL*BLANK    T501
+     C                     Z-ADD*ZERO     T502
+     C                     Z-ADD*ZERO     T503
+     C                     Z-ADD*ZERO     T504
+     C                     MOVEL*BLANK    T505
+     C                     MOVEL*BLANK    T506
+     C                     MOVEL*BLANK    T507
+     C                     MOVEL*BLANK    T508
+     C                     Z-ADD*ZERO     T597
+     C                     Z-ADD*ZERO     T598
+     C                     MOVEL*BLANK    T599
+     C*
+     C*
+     C                     MOVEL*BLANK    WT501
+     C                     Z-ADD*ZERO     WT502
+     C                     Z-ADD*ZERO     WT503
+     C                     Z-ADD*ZERO     WT504
+     C                     MOVEL*BLANK    WT505
+     C                     MOVEL*BLANK    WT506
+     C                     MOVEL*BLANK    WT507   1
+     C                     MOVEL*BLANK    WT508
+     C                     Z-ADD*ZERO     WT597
+     C                     Z-ADD*ZERO     WT598
+     C                     MOVEL*BLANK    WT599
+     C                     Z-ADD0         HH1
+     C                     Z-ADD0         HH2
+     C*
+     C                     ENDSR
+

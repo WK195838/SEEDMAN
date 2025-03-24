@@ -1,0 +1,168 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLR1402                                    *
+     H*    PROGRAM NAME :核准作業資料列印                          *
+     H*    AUTHOR       : A1152  ANGY                                *
+     H*    CREATE DATE  : 81/11/05                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FGLAHLF01UF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLA1402PO   E             39     PRINTER
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     E*---------------------------------------------------------------
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      533 541 WAH02F
+     I                                      542 550 WAH02T
+     I                                      551 560 WAH26F
+     I                                      561 570 WAH26T
+     I                                      571 572 WAH17F
+     I                                      573 574 WAH17T
+     I                                      575 576 WAH01
+     I                                      601 6070DAH25F
+     I                                      609 6150DAH25T
+     I                                      617 6230DAH10F
+     I                                      625 6310DAH10T
+     I*<輸入SUBSTR>
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           *LIKE     DEFN AH02      WAH02
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      .INIT
+     C*
+     C                     EXSR R0200                      .MAIN
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETON                     39
+|    C*<HEAD>
+     C                     IN   PTDA01
+     C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           PDATE     PARM           P3101O  80
+     C*
+|    C           WAH01     CHAIN#B0                  40
+|    C  N40                MOVEL#B03      P#B03
+|    C                     Z-ADDDAH25F    PAH25F
+|    C                     Z-ADDDAH25T    PAH25T
+|    C                     Z-ADDDAH10F    PAH10F
+|    C                     Z-ADDDAH10T    PAH10T
+|    C                     MOVELWAH02F    PAH02F
+|    C                     MOVELWAH02T    PAH02T
+|    C                     MOVELWAH26F    PAH26
+|    C                     MOVELWAH17F    PAH17
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ... MAIN PROCESS  (GET DATA)
+     C*==============================================================*
+02===C           R0200     BEGSR
+|    C*
+|    C* GET DATA +++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD0         COUNT   50
+|    C                     Z-ADD0         NO      50
+|    C                     READ AH0                      42
+| 01-C           *IN42     IFEQ '1'                        .NO DATA
+|   C                     EXSR R8999
+| 01-C                     END
+|    C*
+| 02-C           *IN42     DOWEQ'0'                        .EOF
+|   C*
+|   C                     EXSR R2000                      .DETAIL
+|   C                     READ AH0                      42
+| 02-C                     END
+|    C*
+|    C                     WRITEPH2
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+03===C           R2000     BEGSR
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*<DATA SET>
+|    C*<傳票號碼>
+     C           AH02      IFNE WAH02
+     C*
+|    C                     ADD  1         COUNT
+|    C                     ADD  1         NO
+| 02-C           COUNT     IFEQ 1
+|   C                     Z-ADDNO        NO1
+|   C                     MOVELAH02      AH021
+|   C                     WRITEPD1
+| 02-C                     END
+| 03-C           COUNT     IFEQ 2
+|   C                     Z-ADDNO        NO2
+|   C                     MOVELAH02      AH022
+|   C                     WRITEPD2
+| 03-C                     END
+| 04-C           COUNT     IFEQ 3
+|   C                     Z-ADDNO        NO3
+|   C                     MOVELAH02      AH023
+|   C                     WRITEPD3
+| 04-C                     END
+| 05-C           COUNT     IFEQ 4
+|   C                     Z-ADD0         COUNT
+|   C                     Z-ADDNO        NO4
+|   C                     MOVELAH02      AH024
+|   C                     WRITEPD4
+| 05-C                     END
+|    C*
+     C                     MOVE AH02      WAH02
+| 05-C                     END
+|    C*
+|    C                     MOVEL'V'       AH19
+|    C                     TIME           AH97
+|    C                     Z-ADD$A8YMD    AH98
+|    C                     MOVEL$USER     AH99
+|    C                     UPDATAH0
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ...  NO DATA
+     C*==============================================================*
+04===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R0100
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+04===C                     ENDSR
+     C*=============================================================
+

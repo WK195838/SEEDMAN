@@ -1,0 +1,534 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : CKB310                                     *
+     H*    PROGRAM NAME :產生會計傳票　　                          *
+     H*    AUTHOR       : A1149   HUANG.SHU-MEI                      *
+     H*    CREATE DATE  : 1993.05.13                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 票據系統                                 *
+     F****************************************************************
+     FCKB310F IP  E           K        DISK
+     FCKHALF01UF  E           K        DISK
+     FCKHBLF01IF  E           K        DISK
+     FCKHDLF01IF  E           K        DISK
+     FCKHGLF01IF  E           K        DISK
+     FCKHFLF04IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FPT#XPF  IF  E           K        DISK
+     FGLAHLF01O   E           K        DISK
+     E*===============================================================*
+     E*           附註欄位 TABLE
+     E*===============================================================*
+     E** 票據資料代碼***(HG03)
+     E                    DNO         7  2
+     E** 票據資料***(WFF01-WFF07)
+     E                    DCK         7 10
+     E** 代碼欄位***(WFF01A-WFF07A)
+     E                    DCD         7  2
+     E** 代碼中文說明***(WFF01A-WFF07A之相對應中文說明)
+     E                    D16         7 32
+     E** 摘要***
+     E                    W16     2   2 14
+     E*===============================================================*
+     I* L3 =公司＋日期＋票類  |
+     I* L2 =借貸別＋科目代號  |
+     I* L1 =彙總KEY-LIST      |
+     I*--------------------------
+     IWF0
+     I                                              WF01  L3
+     I                                              WF02  L3
+     I                                              WF03  L3
+     I                                              WF04  L2
+     I                                              WF05  L2
+     I                                              WF08  L1
+     I*LOCAL DATA AREA ++++++++++++++++++++++++++++++++++++++++
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I** PROGRAM USE FIELD ******
+     I                                      501 502 DHA02
+     I                                      503 5100$HA15
+     I*------------------------------------------------------------
+     I* 票據資料代碼 DNO  |
+     I*----------------------
+     I            DS
+     I                                        1  14 HG03
+     I                                        1  14 DNO
+     I                                        1   2 DNO1
+     I                                        3   4 DNO2
+     I                                        5   6 DNO3
+     I                                        7   8 DNO4
+     I                                        9  10 DNO5
+     I                                       11  12 DNO6
+     I                                       13  14 DNO7
+     I*-------------------------
+     I* 票據代碼欄位說明 DCK |
+     I*-------------------------
+     I            DS
+     I                                        1  70 DCK
+     I                                        1  10 WFF01
+     I                                       11  20 WFF02
+     I                                       21  30 WFF03
+     I                                       31  40 WFF04
+     I                                       41  50 WFF05
+     I                                       51  60 WFF06
+     I                                       61  70 WFF07
+     I*-----------------
+     I* 票據代碼 DCD |
+     I*-----------------
+     I            DS
+     I                                        1  14 DCD
+     I                                        1   2 WFF01A
+     I                                        3   4 WFF02A
+     I                                        5   6 WFF03A
+     I                                        7   8 WFF04A
+     I                                        9  10 WFF05A
+     I                                       11  12 WFF06A
+     I                                       13  14 WFF07A
+     I/COPY QRPGSRC,PT#XDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN HB01      WHB01
+     C           *LIKE     DEFN HD04      WHD04
+     C           *LIKE     DEFN #X01      W#X01
+     C           *LIKE     DEFN #X02      W#X02
+     C           *LIKE     DEFN #A01      W#A01
+     C           *LIKE     DEFN #A02      W#A02
+     C           *LIKE     DEFN AH12      WCASH
+     C           *LIKE     DEFN WF04      W04
+     C*
+     C           *LIKE     DEFN HA02      #C001I
+     C           *LIKE     DEFN HA04      #C002I
+     C           *LIKE     DEFN HA02      #D001I
+     C           *LIKE     DEFN HA04      #D002I
+     C           *LIKE     DEFN HA02      #E001I
+     C           *LIKE     DEFN HA13      #E002I
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHA     KLIST
+     C                     KFLD           WF03
+     C                     KFLD           WF01
+     C                     KFLD           WF06
+     C           KEYHB     KLIST
+     C                     KFLD           WHB01
+     C           KEYHD     KLIST
+     C                     KFLD           WF01
+     C                     KFLD           WHD04
+     C           KEYHG     KLIST
+     C                     KFLD           WF01
+     C                     KFLD           WF05
+     C           KEYHF     KLIST
+     C                     KFLD           WF06
+     C                     KFLD           WF01
+     C           KEYAF     KLIST
+     C                     KFLD           WF01
+     C                     KFLD           WF05
+     C           KEYAH     KLIST
+     C                     KFLD           AH01              *公司別
+     C                     KFLD           AH02              *傳票號碼
+     C                     KFLD           AH03              *傳票項次
+     C           KEY#A     KLIST
+     C                     KFLD           W#A01
+     C                     KFLD           W#A02
+     C           KEY#X     KLIST
+     C                     KFLD           W#X01
+     C                     KFLD           W#X02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C   L1                EXSR R7100
+     C   L3                EXSR R7300
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     EXSR R2000
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     CL1 10NL2NL3          EXSR R8100
+     CL2 10NL3             EXSR R8100
+     CL3 10                EXSR R8100
+     C*
+     CLR                   RETRN
+     C*
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C                     Z-ADD*ZEROS    WCASH
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*-----------------------------------------
+|    C*每讀一筆，累計票據金額WF07 ==> WCASH  |
+|    C*-----------------------------------------
+|    C                     ADD  WF07      WCASH
+|    C*--- KEEP借貸值
+|    C                     MOVELWF04      W04
+|    C*-------------------------------------------------------
+|    C*每讀一筆，更新票據檔GLAHLF01之AH18=傳票採番號碼 |
+|    C*-------------------------------------------------------
+|    C           KEYHA     CHAINHA0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELAH02      HA18
+|   C                     UPDATHA0
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1
+     C*==============================================================*
+03===C           R7100     BEGSR
+|    C*----清除傳票檔欄位
+|    C                     EXSR R72A0
+|    C*----會計科目
+|    C                     MOVELWF05      AH04
+|    C*----------------------------------
+|    C* CHAIN 會計科目檔GLAFPF        |
+|    C* CHAIN 會計科目設定檔CKHGLF01  |
+|    C*---------------------------------------------
+|    C* AH05A,AH06A,AH07A,AH08A,AH09A,SP14A,AH15A  |
+|    C*---------------------------------------------
+|    C           KEYAF     CHAINAF0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELAF11      AH05A
+|   C                     MOVELAF12      AH06A
+|   C                     MOVELAF13      AH07A
+|   C                     MOVELAF14      AH08A
+|   C                     MOVELAF15      AH09A
+|   C                     MOVELAF16      AH14A
+|   C                     MOVELAF17      AH15A
+| 01-C                     END
+|    C*---------------------------------------
+|    C* AH05,AH06,AH07,AH08,AH09,AH14,AH15   |
+|    C*---------------------------------------
+|    C           KEYHG     CHAINHG0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C*
+| 03-C                     DO   7         X1      10
+|   C                     Z-ADD1         Y1      10
+| 04-C           DNO,X1    IFNE *BLANKS
+|   C           DNO,X1    LOKUPDCD,Y1                   47
+| 05-C           *IN47     IFEQ '1'
+|   C                     EXSR R72C0
+| 05-C                     END
+| 04-C                     END
+| 03-C                     END
+| 02-C                     END
+|    C*-----摘要
+|    C                     EXSR R72B0
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R72A0 ... 清除傳票檔欄位
+     C*==============================================================*
+04===C           R72A0     BEGSR
+|    C*----------------------------------------
+|    C* 未清除之欄位，含AH01,AH02,AH03,AH10 |
+|    C*----------------------------------------
+|    C                     MOVEL*BLANKS   AH04
+|    C                     MOVEL*BLANKS   AH05
+|    C                     MOVEL*BLANKS   AH05A
+|    C                     MOVEL*BLANKS   AH06
+|    C                     MOVEL*BLANKS   AH06A
+|    C                     MOVEL*BLANKS   AH07
+|    C                     MOVEL*BLANKS   AH07A
+|    C                     MOVEL*BLANKS   AH08
+|    C                     MOVEL*BLANKS   AH08A
+|    C                     Z-ADD*ZEROS    AH09
+|    C                     MOVEL*BLANKS   AH09A
+|    C                     Z-ADD*ZEROS    AH12
+|    C                     Z-ADD*ZEROS    AH13
+|    C                     Z-ADD*ZEROS    AH14
+|    C                     MOVEL*BLANKS   AH14A
+|    C                     MOVEL*BLANKS   AH15
+|    C                     MOVEL*BLANKS   AH15A
+|    C                     MOVEL*BLANKS   AH16
+|    C                     MOVEL'CK'      AH17
+|    C                     MOVEL*BLANKS   AH18
+|    C                     MOVEL*BLANKS   AH19
+|    C                     MOVEL*BLANKS   AH20
+|    C                     Z-ADD*ZEROS    AH21
+|    C                     MOVEL*BLANKS   AH22
+|    C                     MOVEL*BLANKS   AH23
+|    C                     MOVEL*BLANKS   AH24
+|    C                     Z-ADD$A8YMD    AH25
+|    C                     MOVEL$USER     AH26
+|    C*
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R72B0 ... 摘要
+     C*==============================================================*
+05===C           R72B0     BEGSR
+|    C*
+|    C                     MOVEA*BLANKS   D16
+| 01-C           HG03      IFEQ *BLANKS
+| 02-C           WF03      IFEQ '1'
+|   C                     MOVELW16,1     AH16
+| 02*C                     ELSE
+|   C                     MOVELW16,2     AH16
+| 02-C                     END
+| 01-C                     END
+|    C*
+| 03-C           HG03      IFNE *BLANKS
+| 04-C                     DO   7         X1
+|   C                     Z-ADD1         Y1
+|   C           DNO,X1    LOKUPDCD,Y1                   47
+| 05-C           *IN47     IFEQ '1'
+|   C*---收開票日
+|   C*---到期日
+|   C*---預兌日期
+| 06-C           DCD,Y1    IFEQ '04'
+|   C           DCD,Y1    OREQ '05'
+|   C           DCD,Y1    OREQ '12'
+| 07-C           DCK,Y1    IFNE *BLANKS
+|   C                     MOVELDCK,Y1    WDATE   80
+|   C                     CALL 'P31'
+|   C                     PARM WDATE     P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM #X101     P3104I  1
+|   C                     PARM #X102     P3105I  1
+|   C                     PARM           P3101O  80
+|   C*
+|   C                     CALL 'P56'                      *P56(GET'/')
+|   C                     PARM P3101O    P5601I  80
+|   C                     PARM           P5601O 10
+|   C                     MOVELP5601O    D16,Y1
+| 07-C                     END
+| 06-C                     END
+|   C*---票據號碼
+| 08-C           DCD,Y1    IFEQ '01'
+|   C                     MOVELDCK,Y1    D16,Y1
+| 08-C                     END
+|   C*---票據金額
+| 09-C           DCD,Y1    IFEQ '09'
+| 10-C           DCK,Y1    IFNE *BLANKS
+|   C                     MOVELDCK,Y1    WNUM   185
+|   C****
+|   C                     CALL 'P55'                      *P55(GET,.)
+|   C                     PARM WNUM      P5501I 185
+|   C                     PARM 0         P5502I  10
+|   C                     PARM           P5501O 24
+|   C                     MOVELP5501O    D16,Y1
+| 10-C                     END
+| 09-C                     END
+|   C*---使用匯率
+| 11-C           DCD,Y1    IFEQ '10'
+| 12-C           DCK,Y1    IFNE *BLANKS
+|   C                     MOVELDCK,Y1    WNUM
+|   C****
+|   C                     CALL 'P55'                      *P55(GET,.)
+|   C                     PARM WNUM      P5501I 185
+|   C                     PARM 4         P5502I  10
+|   C                     PARM           P5501O 24
+|   C                     MOVELP5501O    D16,Y1
+| 12-C                     END
+| 11-C                     END
+|   C*---客戶廠商
+| 13-C           DCD,Y1    IFEQ '02'
+| 14-C           WF03      IFEQ '2'
+|   C*                   廠商檔
+     C           KEYHF     CHAINCKHFLF04             40
+     C           *IN40     IFEQ '0'
+     C                     MOVELHF77      D16,Y1
+     C                     ELSE
+|   C                     CALL 'CKS#D0'
+|   C                     PARM '  '      #D001I
+|   C                     PARM DCK,Y1    #D002I
+|   C           D16,Y1    PARM           #D003O 18
+|   C                     PARM           #D004O 42
+|   C                     PARM           #D005O 62
+|   C                     PARM           #D098O 50
+|   C                     PARM           #D099O  1
+|   C                     MOVEL#D003O    D16,Y1
+| 14-C                     END
+| 14-C                     END
+|   C*
+| 15-C           WF03      IFEQ '1'
+|   C*                   客戶檔
+|   C                     CALL 'CKS#C0'
+|   C                     PARM WF01      #C001I            公司代號
+|   C                     PARM DCK,Y1    #C002I            客戶代號
+|   C           D16,Y1    PARM           #C003O 10         客戶簡稱
+|   C                     PARM           #C004O 42         客戶名稱
+|   C                     PARM           #C005O 10         業務人員
+|   C                     PARM           #C098O 50         備用欄
+|   C                     PARM           #C099O  1         存在否？
+| 15-C                     END
+| 13-C                     END
+|   C*---票據類別
+| 16-C           DCD,Y1    IFEQ '03'
+|   C                     MOVEL*BLANKS   W#A01
+|   C                     MOVEL*BLANKS   W#A02
+|   C                     MOVEL'HA05'    W#A01
+|   C                     MOVELDCK,Y1    W#A02
+|   C           KEY#A     CHAIN#A0                  40
+|   C  N40                MOVEL#A03      D16,Y1
+|   C   40                MOVEL*BLANKS   D16,Y1
+| 16-C                     END
+|   C*---銀行名稱
+| 17-C           DCD,Y1    IFEQ '06'
+|   C           7         SUBSTDCK,Y1    WHB01
+|   C           WHB01     CHAINHB0                  40
+|   C  N40                MOVELHB03      D16,Y1
+|   C   40                MOVEL*BLANKS   D16,Y1
+| 17-C                     END
+|   C*---帳戶號碼
+| 18-C           DCD,Y1    IFEQ '07'
+|   C                     MOVELDCK,Y1    WHD04
+|   C           KEYHD     CHAINHD0                  40
+|   C  N40                MOVELHD02      D16,Y1
+|   C   40                MOVEL*BLANKS   D16,Y1
+| 18-C                     END
+|   C*---帳戶種類
+| 19-C           DCD,Y1    IFEQ '08'
+|   C                     MOVEL*BLANKS   W#A01
+|   C                     MOVEL*BLANKS   W#A02
+|   C                     MOVEL'HD05'    W#A01
+|   C                     MOVELDCK,Y1    W#A02
+|   C           KEY#A     CHAIN#A0                  40
+|   C  N40                MOVEL#A03      D16,Y1
+|   C   40                MOVEL*BLANKS   D16,Y1
+| 19-C                     END
+|   C*---來源用途
+| 20-C           DCD,Y1    IFEQ '11'
+|   C                     MOVEL*BLANKS   W#A01
+|   C                     MOVEL*BLANKS   W#A02
+|   C                     MOVEL'HA23'    W#A01
+|   C                     MOVELDCK,Y1    W#A02
+|   C           KEY#A     CHAIN#A0                  40
+|   C  N40                MOVEL#A03      D16,Y1
+|   C   40                MOVEL*BLANKS   D16,Y1
+| 20-C                     END
+|   C*---業務人員
+| 21-C           DCD,Y1    IFEQ '13'
+|   C                     CALL 'CKS#E0'
+|   C                     PARM WF01      #E001I            公司代號
+|   C                     PARM DCK,Y1    #E002I            員工代號
+|   C           D16,Y1    PARM           #E003O 14         員工姓名
+|   C                     PARM           #E098O 50         備用欄
+|   C                     PARM           #E099O  1         存在否？
+| 21-C                     END
+|   C*
+| 05-C                     END
+| 04-C                     END
+| 03-C                     END
+|    C*
+| 22-C                     DO   7         X1
+| 23-C           D16,X1    IFNE *BLANKS
+|   C                     CALL 'GLS001'
+|   C                     PARM AH16      S001I1 80
+|   C                     PARM D16,X1    S001I2 80
+|   C                     PARM 50        S001I3  30
+|   C           AH16      PARM           S001O1 80
+| 23-C                     END
+| 22-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R72C0 ... AH05-AH15
+     C*==============================================================*
+06===C           R72C0     BEGSR
+|    C*
+| 01-C           X1        IFEQ 1
+|   C                     MOVELDCK,Y1    AH05
+| 01-C                     END
+|    C*
+| 02-C           X1        IFEQ 2
+|   C                     MOVELDCK,Y1    AH06
+| 02-C                     END
+|    C*
+| 03-C           X1        IFEQ 3
+|   C                     MOVELDCK,Y1    AH07
+| 03-C                     END
+|    C*
+| 04-C           X1        IFEQ 4
+|   C                     MOVELDCK,Y1    AH08
+| 04-C                     END
+|    C*
+| 05-C           X1        IFEQ 5
+|   C                     MOVELDCK,Y1    WDATE
+|   C****
+|   C                     MOVEL*BLANKS   W#X01
+|   C                     MOVEL*BLANKS   W#X02
+|   C                     MOVEL'CK'      W#X01
+|   C                     MOVELWF01      W#X02
+|   C           KEY#X     CHAIN#X0                  40
+|   C                     CALL 'P31'
+|   C                     PARM WDATE     P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM #X101     P3104I  1
+|   C                     PARM #X102     P3105I  1
+|   C                     PARM           P3101O  80
+|   C                     MOVELP3101O    AH09
+| 05-C                     END
+|    C*
+| 06-C           X1        IFEQ 6
+|   C                     MOVELDCK,Y1    AH14
+| 06-C                     END
+|    C*
+| 07-C           X1        IFEQ 7
+|   C                     MOVELDCK,Y1    AH15
+| 07-C                     END
+|    C*
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R7300 ... LEVEL BREAK 3
+     C*==============================================================*
+07===C           R7300     BEGSR
+|    C*
+|    C                     MOVEL*BLANKS   S002O1
+|    C                     Z-ADD*ZEROS    AH03
+|    C                     MOVELWF01      AH01
+|    C                     MOVELWF02      AH10
+|    C*----取得傳票號碼
+|    C                     CALL 'GLS002'
+|    C                     PARM WF01      S002I1  2
+|    C                     PARM WF02      S002I2  80
+|    C                     PARM 'F'       S002I3  1
+|    C           AH02      PARM           S002O1  9
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1,2,3
+     C*==============================================================*
+08===C           R8100     BEGSR
+|    C*
+|    C*----傳票金額
+| 01-C           W04       IFEQ '2'
+|   C                     Z-ADDWCASH     AH13
+|   C                     Z-ADD*ZEROS    AH12
+| 01*C                     ELSE
+|   C                     Z-ADDWCASH     AH12
+|   C                     Z-ADD*ZEROS    AH13
+| 01-C                     END
+|    C*----傳票項次
+|    C                     ADD  1         AH03
+|    C*----傳票金額
+|    C                     Z-ADD*ZEROS    WCASH
+|    C*
+|    C                     WRITEAH0
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+**
+應收票據兌現應付票據兌現
+

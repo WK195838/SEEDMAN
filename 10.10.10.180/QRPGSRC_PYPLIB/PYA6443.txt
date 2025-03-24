@@ -1,0 +1,394 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA543                                     *
+     H*    PROGRAM NAME :每月扣繳健保費分攤                        *
+     H*    AUTHOR       : A1445 HONDA                                *
+     H*    CREATE DATE  : 95/03/22                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYTIPF  UF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYTAPF  IF  E           K        DISK
+     FPYE8PF  IF  E           K        DISK
+     FPYE4PF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     E* RT1 眷屬ＩＤ
+     E                    RT1         3 10
+     E*---------------------------------------------------------------
+     E* RT2 眷屬姓名
+     E                    RT2         3 14
+     E*---------------------------------------------------------------
+     E* RT3 眷屬稱謂
+     E                    RT3         3  1
+     E*---------------------------------------------------------------
+     E* RT4 眷屬補助碼
+     E                    RT4         3  1
+     E*---------------------------------------------------------------
+     E* RT5 眷屬保費
+     E                    RT5         3  5 0
+     E*---------------------------------------------------------------
+     E*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160DDATE
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I*----------------------------------------------------------
+     I*程式使用
+     I                                      501 502 DPW01
+     I                                      503 5070DPW03
+     I                                      503 5050DPW03Y
+     I                                      506 5070DPW03M
+     I                                      508 508 DPW04
+     I                                      511 5160WPW03
+     I*以下定義PYTIPF的眷屬ID欄位在ARRAY中
+     I*----------------------------------------------------------
+     I           IDS
+     I                                        1  30 RT1
+     I                                        1  10 TI111
+     I                                       11  20 TI121
+     I                                       21  30 TI131
+     I*以下定義PYTIPF的眷屬姓名 欄位在ARRAY中
+     I*----------------------------------------------------------
+     I           IDS
+     I                                        1  42 RT2
+     I                                        1  14 TI112
+     I                                       15  28 TI122
+     I                                       29  42 TI132
+     I*----------------------------------------------------------
+     I*以下定義PYTIPF的眷屬稱謂 欄位在ARRAY中
+     I*----------------------------------------------------------
+     I           IDS
+     I                                        1   3 RT3
+     I                                        1   1 TI113
+     I                                        2   2 TI123
+     I                                        3   3 TI133
+     I*----------------------------------------------------------
+     I*以下定義PYTIPF的眷屬補助碼 欄位 在ARRAY中
+     I*----------------------------------------------------------
+     I           IDS
+     I                                        1   3 RT4
+     I                                        1   1 TI114
+     I                                        2   2 TI124
+     I                                        3   3 TI134
+     I*----------------------------------------------------------
+     I*以下定義PYTIPF的眷屬保費   欄位 在ARRAY中
+     I*----------------------------------------------------------
+     I           IDS
+     I                                        1  150RT5
+     I                                        1   50TI115
+     I                                        6  100TI125
+     I                                       11  150TI135
+     I*----------------------------------------------------------
+     I           IDS
+     I                                        1   80WNYMD
+     I                                        1   60WNYM
+     I                                        1   40WNY
+     I                                        5   60WNM
+     I                                        7   80WND
+     I*
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*
+     C           KEYE1     KLIST
+     C                     KFLD           TI01
+     C                     KFLD           TI03
+     C                     KFLD           WTYMD
+     C*
+     C           KEYTI2    KLIST
+     C                     KFLD           DPW01            公司別
+     C                     KFLD           WPW03            年月
+     C*
+     C           KEYEM     KLIST
+     C                     KFLD           TI01              年月
+     C                     KFLD           TI03              員工編號
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INI. RTN.
+     C*
+     C                     EXSR UPDTIF                     *UPD  PYTIPF
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL ROUTINE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*<<初始值設定>>
+|    C                     CLEARRT1
+|    C                     CLEARRT2
+|    C                     CLEARRT3
+|    C                     CLEARRT4
+|    C                     CLEARRT5
+|    C*GET THIS MONTH LAST DATE (WTYMD)
+|    C                     MOVELWPW03     WTYMD   80
+|    C*
+|    C*CALL P22   ( Z-ADDDPW03     P2201I  40  )
+|    C                     CALL 'P34'
+|    C                     PARM WPW03     P3401I  60
+|    C                     PARM '2'       P3403I  1
+|    C                     PARM '1'       P3404I  1
+|    C                     PARM           P3411O  1
+|    C                     PARM           P3412O  20
+|    C                     MOVE P3412O    WTYMD
+|    C*
+|    C* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+|    C* 二月份未滿 30 天日數計算
+|    C                     MOVE WTYMD     WM2A    20
+| 01-C           WM2A      IFLT 30
+|   C           30        SUB  WM2A      WM2A
+| 01*C                     ELSE
+|   C                     Z-ADD*ZERO     WM2A
+| 01-C                     END
+|    C*
+|    C*GET NEXT MONTH FIRST DATE(WNYMD)
+|    C                     Z-ADDWPW03     WNYM
+|    C                     ADD  1         WNM
+| 02-C           WNM       IFGT 12
+|   C                     ADD  1         WNY
+|   C                     SUB  12        WNM
+| 02-C                     END
+|    C                     Z-ADD01        WND
+|    C*
+|    C*TAX
+|    C           '0'       CHAINTA0                  40
+|    C*
+|    C* 健保參數
+|    C                     READ E40                      40
+|    C*
+|    C*GET THIS MONTH FIRST DATE (WFYMD)  YYYYMM01
+|    C                     MOVE '01'      WFYMD
+|    C                     MOVELWPW03     WFYMD   80
+|    C*
+|    C                     Z-ADDWFYMD     #YMDF   80            起
+|    C                     Z-ADDWTYMD     #YMDT   80       .計算止日
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          UPDTIF.... 寫基本資料至PYWLPF
+     C*==============================================================*
+02===C           UPDTIF    BEGSR
+|    C*
+|    C           KEYTI2    SETLLTI0
+|    C           KEYTI2    READETI0                      44
+|    C*
+| 01-C           *IN44     DOWEQ*OFF
+|   C*
+|   C                     EXSR RTN147
+|   C                     UPDATTI0
+|   C                     CLEARTI0
+|   C*                    CLEARRT1
+|   C*                    CLEARRT2
+|   C*                    CLEARRT3
+|   C*                    CLEARRT4
+|   C*                    CLEARRT5
+|   C*
+|   C           KEYTI2    READETI0                      44
+| 01-C                     ENDDO
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*   RTN147... GET 健保費
+     C*==============================================================*
+03===C           RTN147    BEGSR
+|    C*
+|    C           KEYEM     CHAINPYEMPF               40
+|    C*
+|    C*GET到本月底之投保狀況
+|    C           KEYE1     SETGTE80
+|    C           KEYEM     REDPEE80                      40
+|    C   40                GOTO END147                     無投保
+|    C*
+| 01-C           E806      IFEQ 0                          全部停保
+|   C                     GOTO END147
+| 01-C                     END
+|    C*
+|    C* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+|    C*離職，當月不計
+| 02-C           EM19      IFNE *ZERO
+|   C           EM19      ANDLT#YMDT
+|   C                     GOTO END147
+| 02-C                     END
+|    C*
+|    C*退保，當月不計
+| 03-C           E804      IFEQ '9'                        退保
+|   C           E803      ANDLT#YMDT
+|   C                     GOTO END147
+| 03-C                     END
+|    C*健保費＝投保額Ｘ費率
+|    C           TI05      MULT E401      TP24    94H
+|    C           TP24      MULT E402      TP25    70H
+|    C                     Z-ADDTP25      PW24    70H
+|    C                     Z-ADDTP25      TI08             個人保費
+|    C*
+|    C                     Z-ADD1         PW26    10       投保人數
+|    C                     Z-ADD0         PWAMT   70       補助累積
+|    C*計算健保補助款－本人
+| 04-C           TI06      IFEQ 'A'
+|   C                     Z-ADDTP25      PWAMT            補助累積
+| 04-C                     END
+|    C*
+| 05-C           TI06      IFEQ 'B'
+|   C           TP25      DIV  2         TPANT   70
+|   C                     ADD  604       TPANT
+| 06-C           TPANT     IFGT TP25
+|   C                     Z-ADDTP25      PWAMT
+| 06*C                     ELSE
+|   C                     Z-ADDTPANT     PWAMT
+| 06-C                     END
+| 05-C                     END
+|    C*
+| 07-C           TI06      IFEQ 'C'
+|   C           TP25      DIV  4         TPANT   70
+|   C                     ADD  604       TPANT
+| 08-C           TPANT     IFGT TP25
+|   C                     Z-ADDTP25      PWAMT
+| 08*C                     ELSE
+|   C                     Z-ADDTPANT     PWAMT
+| 08-C                     END
+| 07-C                     END
+|    C*
+| 09-C           TI06      IFEQ '0'
+|   C           TI06      OREQ '1'
+|   C                     Z-ADD604       TPANT
+| 10-C           TPANT     IFGT TP25
+|   C                     Z-ADDTP25      PWAMT
+| 10*C                     ELSE
+|   C                     Z-ADDTPANT     PWAMT
+| 10-C                     END
+| 09-C                     END
+|    C*
+| 11-C           TI06      IFEQ '2'
+|   C           TP25      DIV  2         TPANT
+| 12-C           TPANT     IFGT TP25
+|   C                     Z-ADDTP25      PWAMT
+| 12*C                     ELSE
+|   C                     Z-ADDTPANT     PWAMT
+| 12-C                     END
+| 11-C                     END
+|    C*
+| 13-C           TI06      IFEQ '3'
+|   C                     Z-ADDTP25      PWAMT
+| 13-C                     END
+|    C*
+| 14-C           TI06      IFEQ '4'
+|   C           TP25      DIV  4         TPANT
+| 15-C           TPANT     IFGT TP25
+|   C                     Z-ADDTP25      PWAMT
+| 15*C                     ELSE
+|   C                     Z-ADDTPANT     PWAMT
+| 15-C                     END
+| 14-C                     END
+|    C*
+| 16-C           TI06      IFEQ '5'
+|   C           TP25      DIV  2         TPANT
+| 17-C           TPANT     IFGT TP25
+|   C                     Z-ADDTP25      PWAMT
+| 17*C                     ELSE
+|   C                     Z-ADDTPANT     PWAMT
+| 17-C                     END
+| 16-C                     END
+|    C*
+| 18-C           TI06      IFEQ '6'
+|   C           TP25      DIV  4         TPANT
+|   C                     MULT 3         TPANT
+| 19-C           TPANT     IFGT TP25
+|   C                     Z-ADDTP25      PWAMT
+| 19*C                     ELSE
+|   C                     Z-ADDTPANT     PWAMT
+| 19-C                     END
+| 18-C                     END
+|    C*將累計補助設給ASUB(員工可扣額)
+|    C                     Z-ADDPWAMT     ASUB    70
+|    C*
+|    C           TI08      SUB  ASUB      TI08
+|    C*設定眷屬的補助額BSUB
+|    C                     Z-ADD0         BSUB    70
+|    C*設定眷屬的保費額BAMT
+|    C                     Z-ADD0         BAMT    70
+|    C*
+|    C*計算健保補助款－眷屬
+|    C                     Z-ADD1         E       20       健保INDEX
+|    C                     Z-ADD0         TPANT
+| 20-C           E         DOWLE3
+|   C*眷屬ID空白不計
+| 21-C           RT1,E     IFEQ ' '
+|   C                     GOTO NEXT1
+| 21-C                     END
+|   C*投保人數小於四
+| 22-C           E         IFLE 3
+|   C                     ADD  TP25      BAMT
+| 22-C                     ENDIF
+|   C                     MOVE RT4,E     AA      1
+|   C*計算健保補助款－親屬
+| 23-C                     SELEC
+|   C           RT4,E     WHEQ 'A'
+|   C                     Z-ADDTP25      TPANT            補助累積
+|   C*                    ADD  TP25      PWAMT            補助累積
+|   C*
+|   C           RT4,E     WHEQ 'B'
+|   C           TP25      DIV  2         TPANT   70
+|   C                     ADD  604       TPANT
+|   C*
+|   C           RT4,E     WHEQ 'C'
+|   C           TP25      DIV  4         TPANT   70
+|   C                     ADD  604       TPANT
+|   C*
+|   C           RT4,E     WHEQ '0'
+|   C           RT4,E     OREQ '1'
+|   C                     Z-ADD604       TPANT
+|   C*
+|   C           RT4,E     WHEQ '2'
+|   C           TP25      DIV  2         TPANT
+|   C*
+|   C           RT4,E     WHEQ '3'
+|   C                     Z-ADDTP25      TPANT
+|   C*
+|   C           RT4,E     WHEQ '4'
+|   C           TP25      DIV  4         TPANT
+|   C*
+|   C           RT4,E     WHEQ '5'
+|   C           TP25      DIV  2         TPANT
+|   C*
+|   C           RT4,E     WHEQ '6'
+|   C           TP25      DIV  4         TPANT
+|   C                     MULT 3         TPANT
+| 23-C                     ENDSL
+|   C*補助額大於基數時，該眷屬保費為0元
+| 24-C           TPANT     IFGT TP25
+|   C                     Z-ADD*ZERO     RT5,E
+| 24*C                     ELSE
+|   C           TP25      SUB  TPANT     RT5,E
+| 24-C                     END
+|   C*
+|   C*                    ADD  1         PW26
+|   C*
+|   C           NEXT1     TAG
+|   C                     Z-ADD0         TPANT
+|   C                     ADD  1         E
+|   C*
+| 20-C                     ENDDO
+|    C*
+|    C           TI04      SUB  TI08      TEMP08  70
+|    C                     SUB  RT5,1     TEMP08
+|    C                     SUB  RT5,2     TEMP08
+|    C                     SUB  RT5,3     TEMP08
+|    C*保額扣員工及眷屬的保額後，不等於零時，把餘額加到TI08及差額
+| 25-C           TEMP08    IFNE 0
+|   C                     ADD  TEMP08    TI08
+|   C                     Z-ADDTEMP08    TI09             保費差額
+| 25-C                     END
+|    C*
+03===C           END147    ENDSR
+     C*==============================================================*
+

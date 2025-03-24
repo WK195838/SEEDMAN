@@ -1,0 +1,249 @@
+     A*================================================================
+     A* MODI CODE | AUTHOR |  DATE  | DESCRIPTION
+     A*----------------------------------------------------------------
+     A*  M001     |MICHELLE|01.08.03| A&P增加種類代碼及容量選項
+     A*----------------------------------------------------------------
+     A*  M001     |MICHELLE|01.08.03|變更鍵值
+     A*----------------------------------------------------------------
+     A*  M02      |MICHELLE|01.12.07| INTEGRATED PROGRESS
+     A*----------------------------------------------------------------
+     A*================================================================
+     FNPWF01  IP  E           K        DISK
+     FNPNAPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FNPR048BPO   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    ARR1    1   1 30
+     IWF010
+     I                                              WF0106L1
+M001AI                                              WF0108L2
+M001AI                                              WF0107L2
+     I                                              WF0104L2
+     I                                              WF0103L2
+     I*
+     I*DATA AREA
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* SCREEN INPUT FIELD  ++++++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DND01
+     I                                      509 5110DYEAR
+     I                                      512 5130DMM
+     I                                      535 5380$YEAR
+     I                                      541 542 DND03
+     I                                      545 546 DND04S
+     I                                      547 548 DND04E
+     I                                      551 5520M
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN NA02      WNA02
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY#A     KLIST
+     C                     KFLD           #A01
+     C                     KFLD           #A02
+     C           KEYNA     KLIST
+     C                     KFLD           $YEAR
+     C                     KFLD           WNA02
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+  01-C           *IN10     IFEQ '0'
+    C                     EXSR RTN010
+  01*C                     ELSE
+  02-C           *INL2     IFEQ '1'
+    C                     EXSR RTN010
+  02-C                     END
+  01-C                     END
+     C*
+     C                     EXSR RTN100
+     C*
+     CL1 10                EXSR RTNL1
+     CL2 10                EXSR RTNL2
+     CLR                   EXSR RTNLR
+     C*==============================================================*
+     C*          RTN010....GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           DYEAR     ADD  1         DYEAR1
+|    C*
+|    C                     MOVEL*BLANK    #A03
+     C           WF0104    IFEQ '99'
+|   C                     MOVELARR1,1    #A03
+      *
+| 04-C           WF0103    IFEQ '10'
+|   C                     MOVE 'BRANDY'  #A03
+| 04*C                     ELSE
+| 05-C           WF0103    IFEQ '20'
+|   C                     MOVE 'WISKY'   #A03
+| 05*C                     ELSE
+| 06-C           WF0103    IFEQ '30'
+|   C                     MOVE 'WINE'    #A03
+| 06-C                     END
+| 05-C                     END
+| 04-C                     END
+      *
+| 03*C                     ELSE
+|   C                     MOVEL'BRAND'   #A01
+|   C                     MOVELWF0104    #A02
+|   C           KEY#A     CHAIN#A0                  41
+| 03-C                     END
+|    C                     WRITEPH1
+|    C                     SETOF                     39
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN100....PD1
+      *==============================================================*
+02===C           RTN100    BEGSR
+|    C                     SETOF                     212223
+|    C                     SETOF                     242526
+|    C                     SETOF                     2728
+|    C*A&P CODE
+|    C                     MOVEL*BLANK    NA03
+|    C                     MOVELWF0105    WNA02
+|    C           KEYNA     CHAINNA0                  40
+|    C*MONTH VAR.
+|    C           WF0110    SUB  WF0111    TVAR
+|    C                     SUB  WF0112    TVAR
+|    C*Y-T-D VAR.
+M02A C           WF0113    SUB  WF0111    WF0114 132
+     C                     SUB  WF0114    TVAR
+|    C*BAL
+      *正負號
+| 01-C           WF0110    IFLT 0
+|   C                     SETON                     21
+| 01-C                     END
+| 02-C           WF0111    IFLT 0
+|   C                     SETON                     22
+| 02-C                     END
+| 02-C           WF0112    IFLT 0
+|   C                     SETON                     25
+| 02-C                     END
+| 03-C           WF0114    IFLT 0
+|   C                     SETON                     23
+| 03-C                     END
+| 04-C           TVAR      IFLT 0
+|   C                     SETON                     24
+| 04-C                     END
+      *
+|    C   39                EXSR RTN900
+|    C                     WRITEPD1
+|    C                     ADD  WF0110    T1TBUG
+|    C                     ADD  WF0111    T1TACT
+|    C                     ADD  WF0112    T1ACT2
+|    C                     ADD  WF0114    T1COMM
+|    C                     ADD  TVAR      T1TVAR
+|    C                     Z-ADD0         TVAR
+|    C*
+02===C                     ENDSR
+      *==============================================================*
+      *          RTNL1 ....PT1
+      *==============================================================*
+03===C           RTNL1     BEGSR
+|    C*
+|    C                     SETOF                     212223
+|    C                     SETOF                     242526
+|    C                     SETOF                     2728
+|    C                     MOVELWF0106    T1ND05
+|    C                     MOVE '00'      T1ND05
+|    C                     MOVEL*BLANK    NA03
+|    C                     MOVELT1ND05    WNA02
+|    C                     MOVE '00'      WNA02
+|    C           KEYNA     CHAINNA0                  40
+      *正負號
+| 01-C           T1TBUG    IFLT 0
+|   C                     SETON                     21
+| 01-C                     END
+| 02-C           T1TACT    IFLT 0
+|   C                     SETON                     22
+| 02-C                     END
+| 02-C           T1ACT2    IFLT 0
+|   C                     SETON                     25
+| 02-C                     END
+| 03-C           T1COMM    IFLT 0
+|   C                     SETON                     23
+| 03-C                     END
+| 04-C           T1TVAR    IFLT 0
+|   C                     SETON                     24
+| 04-C                     END
+|    C   39                EXSR RTN900
+|    C                     WRITEPT1
+|    C                     ADD  T1TBUG    T2TBUG
+|    C                     ADD  T1TACT    T2TACT
+|    C                     ADD  T1ACT2    T2ACT2
+|    C                     ADD  T1COMM    T2COMM
+|    C                     ADD  T1TVAR    T2TVAR
+|    C                     Z-ADD0         T1TBUG
+|    C                     Z-ADD0         T1TACT
+|    C                     Z-ADD0         T1ACT2
+|    C                     Z-ADD0         T1COMM
+|    C                     Z-ADD0         T1TVAR
+|    C*
+03===C                     ENDSR
+      *==============================================================*
+      *          RTNL2 ....PT2
+      *==============================================================*
+04===C           RTNL2     BEGSR
+|    C*
+|    C                     SETOF                     212223
+|    C                     SETOF                     242526
+|    C                     SETOF                     2728
+      *正負號
+| 01-C           T2TBUG    IFLT 0
+|   C                     SETON                     21
+| 01-C                     END
+| 02-C           T2TACT    IFLT 0
+|   C                     SETON                     22
+| 02-C                     END
+| 02-C           T2ACT2    IFLT 0
+|   C                     SETON                     25
+| 02-C                     END
+| 03-C           T2COMM    IFLT 0
+|   C                     SETON                     23
+| 03-C                     END
+| 04-C           T2TVAR    IFLT 0
+|   C                     SETON                     24
+| 04-C                     END
+      *
+|    C   39                EXSR RTN900
+|    C                     WRITEPT2
+|    C                     Z-ADD0         T2TBUG
+|    C                     Z-ADD0         T2TACT
+|    C                     Z-ADD0         T2ACT2
+|    C                     Z-ADD0         T2COMM
+|    C                     Z-ADD0         T2TVAR
+|    C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN900....OVERFLOW
+      *==============================================================*
+05===C           RTN900    BEGSR
+|    C*
+|    C                     WRITEPH1
+|    C                     SETOF                     39
+|    C*
+05===C                     ENDSR
+      *==============================================================*
+      *          RTNLR ....(NO DATA)
+      *==============================================================*
+06===C           RTNLR     BEGSR
+| 01-C           *IN10     IFEQ '0'
+|   C                     EXSR RTN010
+|   C                     WRITEPE9
+| 01-C                     END
+06===C                     ENDSR
+**
+MISCELLANEOUS
+

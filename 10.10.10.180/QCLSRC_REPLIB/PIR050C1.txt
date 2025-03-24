@@ -1,0 +1,56 @@
+     /***************************************************************/
+     /*   人頭馬匯東洋酒股份有限公司－版權所有      TEL:5042266   */
+     /*                                                             */
+     /*    AUTHOR       : YVONNE                                    */
+     /*    CREATE DATE  : 08/23/21                                  */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : PIR050C                                   */
+     /*    SYSTEM       :人頭馬匯東                               */
+     /*    SUBSYSTEM    :盤點系統                                 */
+     /*    REMARK       :年終各倉庫庫存量及金額                   */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&$EVR)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)   TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTID) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6601I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6602I) TYPE(*DEC)  LEN(1 0)
+             DCL        VAR(&P6603I) TYPE(*DEC)  LEN(3 0)
+             DCL        VAR(&P6604I) TYPE(*DEC)  LEN(2 0)
+
+             DCL        VAR(&COMP)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DIY15)   TYPE(*CHAR) LEN(4)
+             DCL        VAR(&YMD8S)  TYPE(*CHAR) LEN(6)
+             DCL        VAR(&DIY03S)  TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DIY03E)  TYPE(*CHAR) LEN(9)
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             CHGVAR     VAR(&YMD8S)  VALUE(%SST(*LDA 850 6))
+             CHGVAR     VAR(&COMP)   VALUE(%SST(*LDA 650 1))
+             CHGVAR     VAR(&DIY15)   VALUE(%SST(*LDA 640 4))
+             CHGVAR     VAR(&DIY03S)  VALUE(%SST(*LDA 615 9))
+             CHGVAR     VAR(&DIY03E)  VALUE(%SST(*LDA 624 9))
+             CHGVAR     VAR(&LIB)   VALUE('REFLIB')
+             CHGVAR     VAR(&FILE)  VALUE('PIR050PF')
+
+             CLRPFM     FILE(*LIBL/PIR050PF)
+
+             OVRDBF     FILE(IMIYPF) SHARE(*YES)
+             OPNQRYF    FILE((IMIYPF)) QRYSLT('CIY15 *EQ "' *CAT +
+                          &YMD8S *CAT '" & IY01 *EQ "' *CAT &COMP +
+                          *CAT '" & IY03 *EQ %RANGE("' *CAT &DIY03S +
+                          *CAT '" "' *CAT &DIY03E *CAT '")') +
+                          KEYFLD((IY15) (IY02) (IY03)) +
+                          MAPFLD((CIY15 IY15 *CHAR 6))
+
+
+             CALL       PIR0501
+             CLOF       OPNID(IMIYPF)
+             DLTOVR     FILE(*ALL)
+
+             /*將PIR050PF轉換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+ ENDSR:      ENDPGM
+

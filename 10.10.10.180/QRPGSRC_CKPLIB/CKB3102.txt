@@ -1,0 +1,423 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*    PROGRAM ID   : CKB310                                     *
+     H*    PROGRAM NAME :產生會計傳票　　                          *
+     H*    AUTHOR       : A1149   HUANG.SHU-MEI                      *
+     H*    CREATE DATE  : 1993.05.13                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 票據系統                                 *
+     F****************************************************************
+     FCKHAPF  IP  E           K        DISK
+     FCKHDLF01IF  E           K        DISK
+     FCKHGLF01IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FCKB310F O   E           K        DISK
+     E*===============================================================*
+     E*           附註欄位 TABLE
+     E*===============================================================*
+     E** 彙總***(HG04)
+     E                    DSM         7  1 0
+     E** 票據資料代碼***(HG03)
+     E                    DNO         7  2
+     E** 暫存檔欄位***(WFF01-WFF07)
+     E                    WF          7 10
+     E** 暫存檔欄位***(WFF01A-WFF07A)
+     E                    WFA         7  2
+     E*===============================================================*
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I** PROGRAM USE FIELD ******
+     I                                      501 502 DHA02
+     I                                      503 5100$HA15
+     I*------------------------------------------------------------
+     I* 票據資料代碼HG03  |
+     I*----------------------
+     I            DS
+     I                                        1  14 HG03
+     I                                        1  14 DNO
+     I                                        1   2 DNO1
+     I                                        3   4 DNO2
+     I                                        5   6 DNO3
+     I                                        7   8 DNO4
+     I                                        9  10 DNO5
+     I                                       11  12 DNO6
+     I                                       13  14 DNO7
+     I*----------------------
+     I* 票據彙總順序HG04  |
+     I*----------------------
+     I            DS
+     I                                        1   70HG04
+     I                                        1   70DSM
+     I                                        1   10DSM1
+     I                                        2   20DSM2
+     I                                        3   30DSM3
+     I                                        4   40DSM4
+     I                                        5   50DSM5
+     I                                        6   60DSM6
+     I                                        7   70DSM7
+     I*-------------------------
+     I* 票據代碼欄位說明 10A |
+     I*-------------------------
+     I            DS
+     I                                        1  70 WF
+     I                                        1  10 WFF01
+     I                                       11  20 WFF02
+     I                                       21  30 WFF03
+     I                                       31  40 WFF04
+     I                                       41  50 WFF05
+     I                                       51  60 WFF06
+     I                                       61  70 WFF07
+     I*-----------------
+     I* 票據代碼  2A |
+     I*-----------------
+     I            DS
+     I                                        1  14 WFA
+     I                                        1   2 WFF01A
+     I                                        3   4 WFF02A
+     I                                        5   6 WFF03A
+     I                                        7   8 WFF04A
+     I                                        9  10 WFF05A
+     I                                       11  12 WFF06A
+     I                                       13  14 WFF07A
+     I*----------------------------------------
+     I*  WORK-FILE => CKB310F之FIELD  WF08  |
+     I*----------------------------------------
+     I            DS
+     I                                        1  84 WF08
+     I                                        1  10 $FF01
+     I                                       11  12 $FF01A
+     I                                       13  22 $FF02
+     I                                       23  24 $FF02A
+     I                                       25  34 $FF03
+     I                                       35  36 $FF03A
+     I                                       37  46 $FF04
+     I                                       47  48 $FF04A
+     I                                       49  58 $FF05
+     I                                       59  60 $FF05A
+     I                                       61  70 $FF06
+     I                                       71  72 $FF06A
+     I                                       73  82 $FF07
+     I                                       83  84 $FF07A
+     I*-----------------------------
+     I*  銀行帳號後六碼即＝簡碼  |
+     I*-----------------------------
+     I            DS
+     I                                        1  14 HA16
+     I                                        9  14 WHA16
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN AF02      WAF02
+     C           *LIKE     DEFN AF02      HDGL
+     C           *LIKE     DEFN AF02      HAGL
+     C           *LIKE     DEFN AF06      WAF06
+     C*
+     C           *LIKE     DEFN HA02      #B001I
+     C           *LIKE     DEFN HA02      #C001I
+     C           *LIKE     DEFN HA04      #C002I
+     C           *LIKE     DEFN HA02      #D001I
+     C           *LIKE     DEFN HA04      #D002I
+     C           *LIKE     DEFN HA02      #E001I
+     C           *LIKE     DEFN HA13      #E002I
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHD     KLIST                           *MAIN FILE
+     C                     KFLD           HA02
+     C                     KFLD           WHA16
+     C           KEYHG     KLIST
+     C                     KFLD           HA02
+     C                     KFLD           WAF02            *會計科目
+     C           KEYAF     KLIST
+     C                     KFLD           HA02
+     C                     KFLD           WAF02            *會計科目
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C                     EXSR R1000
+     C                     EXSR R2000
+     C                     EXSR R3000
+     C*
+     CLR                   RETRN
+     C*
+     C*==============================================================*
+     C*          R1000  取得�牰�行帳戶�洃孚|計科目代碼
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C           KEYHD     CHAINHD0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELHD08      HDGL
+| 01*C                     ELSE
+|   C                     MOVEL*BLANKS   HDGL
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000  取得�炰撫矞��洃孚|計科目代碼
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*----應收票據 '1131' ACCOUNT CODE
+| 01-C           HA01      IFEQ '1'
+     C                     MOVEL*BLANKS   HAGL
+     C                     MOVEL'1131'    HAGL
+|   C*客戶檔
+|   C*****                MOVEL*BLANKS   #C098O
+|   C*****                CALL 'CKS#C0'
+|   C*****                PARM HA02      #C001I
+|   C*****                PARM HA04      #C002I
+|   C*****                PARM           #C003O 10
+|   C*****                PARM           #C004O 42
+|   C*****                PARM           #C005O 10
+|   C*****                PARM           #C098O 50
+|   C*****                PARM           #C099O  1
+|   C*****
+|   C*****      8         SUBST#C098O:43 HAGL
+| 01-C                     END
+|    C*----應付票據
+| 02-C           HA01      IFEQ '2'
+     C                     MOVEL*BLANKS   HAGL
+     C                     MOVEL'2121'    HAGL
+|   C*廠商檔
+|   C*****                MOVEL*BLANKS   #D098O
+|   C*****                CALL 'CKS#D0'
+|   C*                    PARM HA02      #D001I
+|   C*                    PARM HA04      #D002I
+|   C*                    PARM           #D003O 10
+|   C*                    PARM           #D004O 42
+|   C*                    PARM           #D005O 10
+|   C*                    PARM           #D098O 50
+|   C*                    PARM           #D099O  1
+|   C*
+|   C*          8         SUBST#D098O:43 HAGL
+| 02-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R3000   寫入 WIRK FILE => CKB310F
+     C*==============================================================*
+03===C           R3000     BEGSR
+|    C*------------------------------------------------
+|    C* 分別寫入二筆資料（借，貸）至暫存檔          |THIS DESCRIPTION
+|    C* Ｏ．先判斷票據之借貸                        | IS ERROR .
+|    C*         1.若票據類屬借方，應先處理之 HAGL   |  MARKED BY
+|    C*         2.若票據類屬貸方，應後處理之 HDGL   |    ---> MAY
+|    C* 一．寫票據類HAGL.以AF06決定（借，貸）   |    1995.02.20
+|    C* 二．寫銀行帳HDGL.為票據類之相反值         |
+|    C*------------------------------------------------
+|    C                     MOVELHAGL      WAF02
+|    C           KEYAF     CHAINAF0                  40
+|    C***
+| 01-C           HA01      IFEQ '1'
+|   C                     MOVEL'2'       WAF06
+|   C           KEYHG     CHAINHG0                  40
+|   C                     EXSR R3100
+|   C*
+|   C                     MOVELHDGL      WAF02
+|   C                     MOVEL'1'       WAF06
+|   C           KEYHG     CHAINHG0                  40
+|   C                     EXSR R3100
+|   C*
+| 01*C                     ELSE
+|   C*
+|   C                     MOVEL'2'       WAF06
+|   C                     MOVELHDGL      WAF02
+|   C           KEYHG     CHAINHG0                  40
+|   C                     EXSR R3100
+|   C*
+|   C                     MOVEL'1'       WAF06
+|   C                     MOVELHAGL      WAF02
+|   C           KEYHG     CHAINHG0                  40
+|   C                     EXSR R3100
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R3100 ==票據類資料寫入暫存檔
+     C*==============================================================*
+04===C           R3100     BEGSR
+|    C*
+|    C                     MOVELHA02      WF01
+|    C                     Z-ADDHA15      WF02
+|    C                     MOVELHA01      WF03
+|    C                     MOVELWAF06     WF04
+|    C                     MOVELWAF02     WF05
+|    C                     MOVELHA03      WF06
+|    C                     Z-ADDHA10      WF07
+|    C*-----------------------------------------------------
+|    C* 依彙總順序決定1.WFF01-WFF07   (10A)票據資料    |
+|    C*                 2.WFF01A-WFF07A ( 2A)代碼欄位    |
+|    C* 一．先計算DSM其值不為零者，依順序1-7逐筆為之 |
+|    C* 二．後計算DSM其值為零者，依欄位順序逐筆為之    |
+|    C*                                                    |
+|    C* PS : VARIBLE=Z1代表DSM其值不為零者之個數       |
+|    C*      目的是用來檢查欄位WFF01-WFF07,WFF01A-WFF07A |
+|    C*-----------------------------------------------------
+|    C                     MOVEA*BLANKS   WF
+|    C                     MOVEA*BLANKS   WFA
+|    C                     MOVEL*BLANKS   WF08
+|    C*****
+| 01-C                     DO   7         X1      10
+|   C                     Z-ADD1         Y1      10
+|   C           X1        LOKUPDSM,Y1                   47
+| 02-C           *IN47     IFEQ '1'
+|   C                     MOVELDNO,Y1    WFA,X1
+|   C                     Z-ADDX1        Z1      10
+|   C                     EXSR R31A0
+|   C                     EXSR R31B0
+|   C                     EXSR R31C0
+| 02-C                     END
+| 01-C                     END
+|    C*
+| 03-C                     DO   7         Y1
+| 04-C           DSM,Y1    IFEQ *ZEROS
+| 04-C           DNO,Y1    ANDNE*BLANKS
+|   C                     Z-ADDY1        Z1
+|   C                     MOVELDNO,Y1    WFA,Y1
+|   C                     EXSR R31A0
+|   C                     EXSR R31B0
+|   C                     EXSR R31C0
+| 04-C                     END
+| 03-C                     END
+|    C*
+|    C                     WRITEWF0
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R31A0  == 暫存檔欄位之取得( WF08 )=>$FF01A-$FF07A
+     C*==============================================================*
+05===C           R31A0     BEGSR
+|    C*
+| 01-C           Y1        IFEQ 1
+|   C                     MOVELDNO,1     $FF01A
+| 01-C                     END
+|    C*
+| 02-C           Y1        IFEQ 2
+|   C                     MOVELDNO,2     $FF02A
+| 02-C                     END
+|    C*
+| 03-C           Y1        IFEQ 3
+|   C                     MOVELDNO,3     $FF03A
+| 03-C                     END
+|    C*
+| 04-C           Y1        IFEQ 4
+|   C                     MOVELDNO,4     $FF04A
+| 04-C                     END
+|    C*
+| 05-C           Y1        IFEQ 5
+|   C                     MOVELDNO,5     $FF05A
+| 05-C                     END
+|    C*
+| 06-C           Y1        IFEQ 6
+|   C                     MOVELDNO,6     $FF06A
+| 06-C                     END
+|    C*
+| 07-C           Y1        IFEQ 7
+|   C                     MOVELDNO,7     $FF07A
+| 07-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R31B0  == 判斷代碼欄位值 WFF01-WFF07
+     C*==============================================================*
+06===C           R31B0     BEGSR
+|    C*---票據號碼
+| 01-C           DNO,Y1    IFEQ '01'
+|   C                     MOVELHA03      WF,Z1
+| 01-C                     END
+|    C*---客戶廠商
+| 02-C           DNO,Y1    IFEQ '02'
+|   C                     MOVELHA04      WF,Z1
+| 02-C                     END
+|    C*---票據類別
+| 03-C           DNO,Y1    IFEQ '03'
+|   C                     MOVELHA05      WF,Z1
+| 03-C                     END
+|    C*---收開票日
+| 04-C           DNO,Y1    IFEQ '04'
+|   C                     MOVELHA06      WF,Z1
+| 04-C                     END
+|    C*---到期日
+| 05-C           DNO,Y1    IFEQ '05'
+|   C                     MOVELHA07      WF,Z1
+| 05-C                     END
+|    C*---銀行名稱
+| 06-C           DNO,Y1    IFEQ '06'
+|   C                     MOVELHD03      WF,Z1
+| 06-C                     END
+|    C*---帳戶號碼
+| 07-C           DNO,Y1    IFEQ '07'
+|   C                     MOVELWHA16     WF,Z1
+| 07-C                     END
+|    C*---帳戶種類
+| 08-C           DNO,Y1    IFEQ '08'
+|   C                     MOVELHD05      WF,Z1
+| 08-C                     END
+|    C*---票據金額
+| 09-C           DNO,Y1    IFEQ '09'
+|   C                     MOVELHA10      WF,Z1
+| 09-C                     END
+|    C*---使用匯率
+| 10-C           DNO,Y1    IFEQ '10'
+|   C                     MOVELHA19      WF,Z1
+| 10-C                     END
+|    C*---來源用途
+| 11-C           DNO,Y1    IFEQ '11'
+|   C                     MOVELHA23      WF,Z1
+| 11-C                     END
+|    C*---預兌日期
+| 12-C           DNO,Y1    IFEQ '12'
+|   C                     MOVELHA11      WF,Z1
+| 12-C                     END
+|    C*---業務人員
+| 13-C           DNO,Y1    IFEQ '13'
+|   C                     MOVELHA13      WF,Z1
+| 13-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R31C0  == 暫存檔欄位之取得 WF08-$FF01-$FF07
+     C*==============================================================*
+07===C           R31C0     BEGSR
+|    C*
+| 01-C           Y1        IFEQ 1
+|   C                     MOVELWF,Z1     $FF01
+| 01-C                     END
+|    C*
+| 02-C           Y1        IFEQ 2
+|   C                     MOVELWF,Z1     $FF02
+| 02-C                     END
+|    C*
+| 03-C           Y1        IFEQ 3
+|   C                     MOVELWF,Z1     $FF03
+| 03-C                     END
+|    C*
+| 04-C           Y1        IFEQ 4
+|   C                     MOVELWF,Z1     $FF04
+| 04-C                     END
+|    C*
+| 05-C           Y1        IFEQ 5
+|   C                     MOVELWF,Z1     $FF05
+| 05-C                     END
+|    C*
+| 06-C           Y1        IFEQ 6
+|   C                     MOVELWF,Z1     $FF06
+| 06-C                     END
+|    C*
+| 07-C           Y1        IFEQ 7
+|   C                     MOVELWF,Z1     $FF07
+| 07-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+

@@ -1,0 +1,310 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA306                                     *
+     H*    PROGRAM NAME :薪資試算作業                            *
+     H*    AUTHOR       : A1413 CLOUD                                *
+     H*    CREATE DATE  : 95/03/15                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYPMPF  UF  E           K        DISK
+     FPYPWPF  UF  E           K        DISK
+     FPYWDPF  UF  E           K        DISK
+     FPYA306D CF  E                    WORKSTN
+     E*---------------------------------------------------------------
+     I/COPY QDDSSRC,PYPMDS01
+     I*
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      203 2080DDATE
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DPW01
+     I                                      503 5060DPW03
+     I                                      503 5040DPW03Y
+     I                                      505 5060DPW03M
+     I                                      508 508 DPW04
+     I                                      511 5160WPW03
+     I                                      511 5140WPW03Y
+     I                                      515 5160WPW03M
+     I                                      517 5180WPWDD
+     I                                      521 5280GPW03
+     I                                      521 5240GPW03Y
+     I                                      525 5260GPW03M
+     I                                      601 601 DOPT
+     I*
+     I*上期薪資確認日期
+     I            DS
+     I                                        1   50PP202
+     I                                        1   30PP202Y
+     I                                        4   50PP202M
+     I*下期薪資確認日期
+     I            DS
+     I                                        1   50PP206
+     I                                        1   30PP206Y
+     I                                        4   50PP206M
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DPW01            公司別
+     C           KEYPW     KLIST
+     C                     KFLD           DPW01            公司別
+     C                     KFLD           WPW03            計薪年月
+     C                     KFLD           DPW04            期別
+     C           KEYWD     KLIST
+     C                     KFLD           DPW01            公司別
+     C                     KFLD           WPW03            計薪年月
+     C                     KFLD           DPW04            期別
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INI. RTN.
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C                     EXSR R1000                      *MAIN
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL ROUTINE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C*
+|    C*                    Z-ADD01        WPWDD
+|    C                     Z-ADD0         DPW03            計薪年月
+|    C                     MOVEL'1'       DPW04            期別
+|    C                     MOVEL'Y'       DOPT             .重新處理
+|    C*
+|    C                     MOVEL$COR      DPW01            公司別
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 .... MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     97
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *CHK SCREEN1
+|    C*
+| 02-C           *IN99     IFEQ '0'
+|   C           *IN13     ANDEQ'1'
+|   C           DOPT      ANDEQ'Y'
+|   C                     EXSR R1200                      *PROCESS
+| 02-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 ....CHECK SCREEN1
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C* << CHACK 公司別NOT *BLANK >>
+| 01-C           DPW01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DPW01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 02-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 03-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*人事薪資參數檔此公司之資料必需存在
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 04-C                     END
+|    C*----------------------------------------------------------------
+|    C*計薪年月不可為零,且要大於薪資確認年月
+|    C*
+| 05-C           DPW03     IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 05*C                     ELSE
+|   C                     CALL 'P38'
+|   C                     PARM DPW03     P3801I  60
+|   C                     PARM '1'       P3802I  1
+|   C                     PARM '1'       P3803I  1
+|   C           WPW03     PARM           P3801O  60
+|   C                     PARM           P3811O  1
+| 06-C           P3811O    IFEQ 'N'
+|   C                     SETON                     6199
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 06-C                     END
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 07-C           DPW04     IFEQ '1'                        下期
+| 08-C           WPW03     IFLE PM206
+|   C                     SETON                     6199
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 08-C                     END
+| 07*C                     ELSE                            上期
+| 09-C           WPW03     IFLE PM202
+|   C                     SETON                     6199
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 09-C                     END
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*----------------------------------------------------------
+|    C*
+|    C*                    Z-ADDPM206     PP206
+|    C*                    ADD  1         PP206M
+|    C*          PP206M    IFGT 12
+|    C*          PP206M    SUB  12        PP206M
+|    C*                    ADD  1         PP206Y
+|    C*                    END
+|    C*上月下期薪資未確認
+|    C*          PM202     IFEQ PM206
+|    C*          DPW03     ANDNEPP206
+|    C*                    MOVEL'UMI0620' ERRID
+|    C*                    MOVEL'CEMF'    ERRF
+|    C*                    SETON                     6199
+|    C*                    END
+|    C*  99                GOTO E1B00
+|    C*                    END
+|    C*
+|    C*                    Z-ADDPM206     PP206
+|    C*                    ADD  1         PP206M
+|    C*          PP206M    IFGT 12
+|    C*                    Z-ADD1         PP206M
+|    C*                    ADD  1         PP206Y
+|    C*                    END
+|    C*上期薪資未確認
+|    C*          PM202     IFEQ PP206
+|    C*          DPW03     ANDNEPP206
+|    C*                    MOVEL'UMI0630' ERRID
+|    C*                    MOVEL'CEMF'    ERRF
+|    C*                    SETON                     6199
+|    C*                    END
+|    C*  99                GOTO E1B00
+|    C*                    END
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1200 .... PROCESS
+     C*==============================================================*
+04===C           R1200     BEGSR
+|    C*
+|    C                     SETON                     96
+|    C                     WRITEDSPC1
+|    C*
+|    C*計薪年月下月1日
+|    C           WPW03     MULT 100       GPW03   80
+|    C                     ADD  1         GPW03
+|    C*
+|    C                     ADD  1         GPW03M
+| 01-C           GPW03M    IFGT 12
+|   C                     ADD  1         GPW03Y
+|   C                     Z-ADD1         GPW03M
+| 01-C                     END
+|    C*清PYWDPF,PYPWPF檔
+|    C                     EXSR R1210
+|    C*
+| 02-C           DPW04     IFEQ '1'
+|   C                     Z-ADDWPW03     PM205
+| 02-C                     END
+|    C*
+| 03-C           DPW04     IFEQ '2'
+|   C                     Z-ADDWPW03     PM201
+| 03-C                     END
+|    C*
+|    C                     Z-ADD$A8YMD    PM97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     PM98
+|    C                     MOVEL$USER     PM99
+|    C                     UPDATPM0
+|    C*
+|    C                     OUT  *NAMVAR
+|    C*
+| 04-C                     SELEC
+|   C           DPW04     WHEQ '1'                        .下期薪資
+|   C                     CALL 'PYA3061C'
+|   C           DPW04     WHEQ '2'                        .上期薪資
+|   C                     CALL 'PYA3062C'
+| 04-C                     END
+|    C*
+|    C                     SETON                     93
+|    C                     SETOF                     96
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1210 .... PROCESS
+     C*==============================================================*
+05===C           R1210     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    PW02
+|    C           KEYPW     SETLLPW0
+|    C           KEYPW     READEPW0                      42
+| 01-C           *IN42     DOWEQ'0'
+|   C                     DELETPW0
+|   C           KEYPW     READEPW0                      42
+| 01-C                     END
+|    C*
+|    C           KEYWD     SETLLWD0
+|    C           KEYWD     READEWD0                      42
+| 02-C           *IN42     DOWEQ'0'
+|   C                     DELETWD0
+|   C           KEYWD     READEWD0                      42
+| 02-C                     END
+|    C*
+05===C                     ENDSR
+

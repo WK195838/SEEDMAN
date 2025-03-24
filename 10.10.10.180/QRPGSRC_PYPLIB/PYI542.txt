@@ -1,0 +1,361 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     A*    PROGRAM-ID   :PYI542                                      *
+     A*    PROGRAM NAME :理賠資料查詢　　                          *
+     A*    AUTHOR       :A1336 KLAUS                                 *
+     A*    CREATE DATE  :91/09/23                                    *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       :人事薪資                                  *
+     F****************************************************************
+     FPYR2PF  IF  E           K        DISK
+     FPYR2LF01IF  E           K        DISK
+     F            R20                               KRENAMER2L1
+     FPYR2LF02IF  E           K        DISK
+     F            R20                               KRENAMER2L2
+     FPYEMPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FPYI542D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E                    S#01       50  5               部門代號
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      152 161 $USERN
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*DEFIND STRAT KEY
+     I           IDS
+     I                                        1  16 @KR2O
+     I           IDS
+     I                                        1  16 @KR2N
+     I                                        1   8 DR202
+     I                                        9   9 DR203
+     I                                       10  160DR204
+     I            DS
+     I                                        1 250 S#01
+     I                                        1 250 CM202O
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C           *LIKE     DEFN R204      WR204
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           DR201     PARM           I542I1  2         公司編號
+     C           DR202     PARM           I542I2  8         員工編號
+     C           DR203     PARM           I542I3  2         理賠險種
+     C           R203N     PARM           I542I4  9         險種說明
+     C           DR204     PARM           I542I5  70        申請日期
+     C                     PARM           @RTNC   2          FUN KEY
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYR2     KLIST                           *PYR2PF
+     C                     KFLD           DR201            公司編號
+     C                     KFLD           DR202            員工編號
+     C                     KFLD           DR203            理賠險種
+     C                     KFLD           WR204            申請日期
+     C           KEYR21    KLIST
+     C                     KFLD           DR201
+     C                     KFLD           DR203
+     C           KEYR22    KLIST
+     C                     KFLD           DR201
+     C                     KFLD           WR204
+     C           KEYEM     KLIST                           *PYEMPF
+     C                     KFLD           R201
+     C                     KFLD           R202
+     C           KEY#Y     KLIST                           *PY#YPF
+     C                     KFLD           #Y01
+     C                     KFLD           #Y02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+  01-C           @RTNC     DOWEQ*BLANK
+    C                     EXSR R1000                      *SCR PROCESS
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C* INIT VALUE SET *---------------------------------------------*
+|    C                     MOVEL*BLANK    @RTNC
+|    C                     Z-ADD14        @PRCD            .PAGE SIZE
+|    C*--------------------------------------------------------------*
+|    C*檢核是否對全部的部門有權利並帶出管制的部門
+|    C                     CALL 'PYSCM2'
+|    C                     PARM DR201     CM201I  4        公司
+|    C                     PARM           CM201O  1        權利
+|    C                     PARM           CM202O           部門代號
+|    C*　　　　　　　
+|    C*--------------------------------------------------------------*
+|    C                     EXSR R1A00                      .SFL INIT
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     MOVEL'03'      @RTNC
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C                     MOVEL'12'      @RTNC
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 03-C           *IN25     IFEQ '1'                        *NEXT PAGE
+|   C                     EXSR R1N00
+|   C                     GOTO E1000
+| 03-C                     END
+|    C*
+| 04-C           @KR2O     IFNE @KR2N                      *START KEY
+|   C                     EXSR R1A00                      *SFL INIT
+|   C                     GOTO E1000
+| 04-C                     END
+|    C*
+|    C                     EXSR R1C00                      *OPTION
+|    C*
+02===C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C                     Z-ADD0         DRRN
+|    C                     Z-ADD0         RRN
+|    C                     Z-ADD0         @DRCD            *DSP RCD
+|    C                     MOVEL'N'       @BOTOM  1        *BOTTOM
+|    C*
+|    C                     SETOF                     51    *SFLDSPCTL
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     5053  *SFLDSP,END
+|    C*
+|    C                     EXSR R1A20                      *SFL HEAD
+|    C   99                GOTO E1A00
+|    C* <<SFL INITIAITAL DATA ADD>>
+|    C                     MOVEL@KR2N     @KR2O            *KEY SAVE
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DR204     P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WR204     PARM           P3101O  80
+|    C*
+| 01-C           DR202     IFEQ *BLANK                     員工編號
+| 02-C           DR203     IFEQ *BLANK                     理賠險種
+| 03-C           DR204     IFEQ *ZERO                      申請日期
+|   C           *LOVAL    SETLLR20
+| 03*C                     ELSE
+|   C           KEYR22    SETLLR2L2
+| 03-C                     END
+|   C*
+| 02*C                     ELSE
+|   C           KEYR21    SETLLR2L1
+| 02-C                     END
+|   C*
+| 01*C                     ELSE
+|   C           KEYR2     SETLLR20
+| 01-C                     END
+|    C*
+|    C                     EXSR R1A10                      *ADD SFL DTA
+|    C*
+| 04-C           RRN       IFGT 0
+|   C                     SETON                     50    *SFLDSP
+| 04*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 04-C                     END
+|    C*
+03===C           E1A00     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+04===C           R1A10     BEGSR
+|    C*
+|    C                     ADD  @PRCD     @DRCD
+| 01-C           RRN       DOWLT@DRCD
+|   C*
+| 02-C           DR202     IFEQ *BLANK
+| 03-C           DR203     IFEQ *BLANK
+| 04-C           DR204     IFEQ *ZERO
+|   C           DR201     READER20                      46
+| 04*C                     ELSE
+|   C           DR201     READER2L2                     46
+| 04-C                     END
+|   C*
+| 03*C                     ELSE
+|   C           DR201     READER2L1                     46
+| 03-C                     END
+|   C*
+| 02*C                     ELSE
+|   C           DR201     READER20                      46
+| 02-C                     END
+|   C*
+| 05-C           *IN46     IFEQ '0'
+|   C*
+|   C                     MOVEL*BLANK    EM03
+|   C           KEYEM     CHAINEM0                  40
+|   C*
+|   C                     EXSR R1A11                      *WRITE SFL
+| 01*C                     ELSE                            *EOF
+|   C                     Z-ADDRRN       @DRCD
+|   C                     MOVE 'Y'       @BOTOM
+|   C                     SETON                     9653  *SFLEND
+| 01-C                     END
+|    C*
+|    C           TAG1      TAG
+ERRORC                     END
+|    C*
+|    C                     Z-ADDRRN       DRRN
+|    C*
+04===C                     ENDSR
+     C*=============================================================*
+     C*          R1A11 .... WRITE SUBFILE DATA
+     C*=============================================================*
+05===C           R1A11     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << SUBFILE DATA VALUE SET >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     MOVEL*BLANK    R203N
+|    C                     MOVEL'R203'    #Y01
+|    C                     MOVELR203      #Y02
+|    C           KEY#Y     CHAIN#Y0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #Y03      P6501I 80
+|   C                     PARM 9         P6502I  30
+|   C           R203N     PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 01-C                     END
+|    C*
+|    C                     ADD  1         RRN
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM R204      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM DFMT      P3104I  1
+|    C                     PARM DTYPE     P3105I  1
+|    C           R204D     PARM           P3101O  80
+|    C*
+|    C                     WRITESFLSR
+|    C*
+05===C                     ENDSR
+     C*=============================================================*
+     C*          R1A20 .... SFL HEADING (SFL CONTROL DATA PREPARE)
+     C*=============================================================*
+06===C           R1A20     BEGSR
+|    C*
+|    C* << CHACK 公司別NOT *BLANK >>
+|    C                     MOVEL*BLANK    R201N
+| 01-C           DR201     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1A20
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DR201     CM001I  2         公司代號
+|    C           R201N     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 02-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 02-C                     END
+|    C   99                GOTO E1A20
+|    C*
+| 03-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     END
+|    C   99                GOTO E1A20
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DR204     P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           WR204     PARM           P3101O  80
+|    C*
+06===C           E1A20     ENDSR
+     C*=============================================================*
+     C*          R1C00 ....挑選資料
+     C*=============================================================*
+07===C           R1C00     BEGSR
+|    C*
+|    C                     READCSFLSR                  4242
+| 01-C           *IN42     DOWEQ'0'
+|   C*
+| 02-C           DOPT      IFNE *BLANK
+|   C* <<SET OUTPUT PARM>>++++++++++++++++++++++++++++++++++++++++++++
+|   C                     MOVELR201      I542I1
+|   C                     MOVELR202      I542I2
+|   C                     MOVELR203      I542I3
+|   C                     MOVELR203N     I542I4
+|   C                     MOVELR204D     I542I5
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C                     MOVEL'00'      @RTNC
+|   C                     SETON                     42
+| 02-C                     END
+|   C*
+|   C  N42                READCSFLSR                    42
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+     C*=============================================================*
+     C*          R1N00 ....ROLLUP MAIN ROUTINE
+     C*=============================================================*
+08===C           R1N00     BEGSR
+|    C*
+| 01-C           @BOTOM    IFEQ 'Y'                        *EOF
+|   C                     SETON                         96*LST PAG
+|   C                     Z-ADDRRN       DRRN
+| 01*C                     ELSE
+|   C                     EXSR R1A10                      *ADD SFL DTA
+| 01-C                     END
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+

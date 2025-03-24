@@ -1,0 +1,301 @@
+     FPYBTPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FSYBNPF  IF  E           K        DISK
+     FPYI706D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E                    S#01       35  7               部門代號
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      187 1920DDATE
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      152 161 $USERN
+     I*DEFIND STRAT KEY
+     I            DS
+     I                                        1  17 @KBTO
+     I            DS
+     I                                        1  17 @KBTN
+     I                                        1   2 DBT01
+     I                                        3   3 DBT03
+     I                                       21  280DBT045
+     I                                       21  260DBT04
+     I                                       27  280DBT05
+     I                                       10  12 DBT061
+     I                                       13  20 DBT02
+     I            DS
+     I                                        1   80BT045
+     I                                        1   60BT04
+     I                                        7   80BT05
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I            DS
+     I                                        1 245 S#01
+     I                                        1 245 CM202O
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           DBT01     PARM           P706I1  2
+     C           DBT02     PARM           P706I2  8
+     C           DBT03     PARM           P706I3  1
+     C           DBT045    PARM           P706I4  80
+     C           DBT061    PARM           P706I5  3
+     C                     PARM           @RTNC   2          FUN KEY
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYBT     KLIST                           *MAIN FILE
+     C                     KFLD           DBT01
+     C                     KFLD           DBT03
+     C                     KFLD           DBT04
+     C                     KFLD           DBT05
+     C                     KFLD           DBT061
+     C                     KFLD           DBT02
+     C           KEYEM     KLIST                           *MAIN FILE
+     C                     KFLD           BT01
+     C                     KFLD           BT02
+     C           KEYBN     KLIST                           *MAIN FILE
+     C                     KFLD           BN011
+     C                     KFLD           BN012
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+  01-C           @RTNC     DOWEQ*BLANK
+    C                     EXSR R1000                      *SCR PROCESS
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C                     MOVEL*BLANK    @RTNC
+|    C                     Z-ADD15        @PRCD            .PAGE SIZE
+|    C*--------------------------------------------------------------*
+|    C*檢核是否對全部的部門有權利並帶出管制的部門
+|    C                     CALL 'PYSCM2'
+|    C                     PARM DBT01     CM201I  4        公司
+|    C                     PARM           CM201O  1        權利
+|    C                     PARM           CM202O           部門代號
+|    C*　　　　　　　
+|    C*--------------------------------------------------------------*
+|    C                     EXSR R1A00                      .SFL INIT
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C**                   Z-ADD*ZERO     #LIN
+|    C**                   Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     MOVEL'03'      @RTNC
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C                     MOVEL'12'      @RTNC
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 03-C           *IN25     IFEQ '1'                        *NEXT PAGE
+|   C                     EXSR R1N00
+|   C                     GOTO E1000
+| 03-C                     END
+|    C*
+| 04-C           @KBTO     IFNE @KBTN                      *START KEY
+|   C                     EXSR R1A00                      *SFL INIT
+|   C                     GOTO E1000
+| 04-C                     END
+|    C*
+|    C                     EXSR R1C00                      *OPTION
+|    C*
+02===C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C                     Z-ADD0         DRRN
+|    C                     Z-ADD0         RRN
+|    C                     Z-ADD0         @DRCD            *DSP RCD
+|    C                     MOVEL'N'       @BOTOM  1        *BOTTOM
+|    C*
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     5053  *SFLDSP,END
+|    C*
+|    C**                   EXSR R1A20                      *SFL HEAD
+|    C* <<SFL INITIAITAL DATA ADD>>
+|    C                     MOVEL@KBTN     @KBTO            *KEY SAVE
+|    C                     MOVE *BLANK    DOPT
+|    C*
+|    C           KEYBT     SETLLBT0
+|    C                     EXSR R1A10                      *ADD SFL DTA
+|    C*
+|    C*
+| 01-C           RRN       IFGT 0
+|   C                     SETON                     50    *SFLDSP
+| 01*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+04===C           R1A10     BEGSR
+|    C*
+|    C                     ADD  @PRCD     @DRCD
+| 01-C           RRN       DOWLT@DRCD
+|   C*
+|   C                     READ BT0                      46
+| 02-C           *IN46     IFEQ '0'
+|   C*
+|   C                     MOVEL*BLANK    EM03
+|   C           KEYEM     CHAINPYEMPF               40
+|   C*檢查部門權利
+| 03-C           CM201O    IFNE 'Y'
+|   C                     Z-ADD1         I       20
+|   C           EM04      LOKUPS#01,I                   40
+| 04-C           S#01,I    IFEQ *BLANK
+|   C                     SETOF                         40
+| 04-C                     END
+|   C  N40                GOTO TAG1
+| 03-C                     END
+|   C*
+|   C                     EXSR R1A11                      *WRITE SFL
+| 02*C                     ELSE                            *EOF
+|   C                     Z-ADDRRN       @DRCD
+|   C                     MOVE 'Y'       @BOTOM
+|   C                     SETON                     9653  *SFLEND
+| 02-C                     END
+|   C*
+|   C           TAG1      TAG
+| 01-C                     END
+|    C*
+|    C                     Z-ADDRRN       DRRN
+|    C*
+04===C                     ENDSR
+     C*=============================================================*
+     C*          R1A11 .... WRITE SUBFILE DATA
+     C*=============================================================*
+05===C           R1A11     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << SUBFILE DATA VALUE SET >>
+|    C                     MOVEL*BLANK    BN04
+|    C                     MOVELBT061     BN011
+|    C                     MOVEL*BLANK    BN012
+|    C           KEYBN     CHAINSYBNPF               40
+|     *
+|    C                     MOVE *BLANK    BT03N
+| 01-C           BT03      IFEQ '1'
+|   C                     MOVEL'下期'  BT03N
+| 01*C                     ELSE
+| 02-C           BT03      IFEQ '2'
+|   C                     MOVEL'上期'  BT03N
+| 02*C                     ELSE
+| 03-C           BT03      IFEQ '5'
+|   C                     MOVEL'獎金'  BT03N
+| 03-C                     END
+| 02-C                     END
+| 01-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  1         RRN
+|    C                     WRITESFLSR
+|    C*
+05===C                     ENDSR
+     C*=============================================================*
+     C*          R1A20 .... SFL HEADING (SFL CONTROL DATA PREPARE)
+     C*=============================================================*
+     C**         R1A20     BEGSR
+     C*
+     C*
+     C**                   ENDSR
+     C*=============================================================*
+     C*          R1C00 ....挑選資料
+     C*=============================================================*
+06===C           R1C00     BEGSR
+|    C*
+|    C                     READCSFLSR                  4242
+| 01-C           *IN42     DOWEQ'0'
+|   C*
+| 02-C           DOPT      IFNE *BLANK
+|   C* <<SET OUTPUT PARM>>++++++++++++++++++++++++++++++++++++++++++++
+|   C                     MOVELBT01      P706I1
+|   C                     MOVELBT02      P706I2
+|   C                     MOVELBT03      P706I3
+|   C                     Z-ADDBT045     P706I4
+|   C                     MOVELBT061     P706I5
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C                     MOVEL'00'      @RTNC
+|   C                     SETON                     42
+| 02-C                     END
+|   C*
+|   C  N42                READCSFLSR                    42
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+     C**         R1E00     BEGSR
+     C*
+     C*          #CSR      DIV  256       #LIN             *LINE
+     C*                    MVR            #COL             *COLUMN
+     C*
+     C* SFL POSITION KEEP-------------------------------------------*
+     C*                    Z-ADD#DRRN     DRRN
+     C*-------------------------------------------------------------*
+     C**                   ENDSR
+     C*=============================================================*
+     C*          R1N00 ....ROLLUP MAIN ROUTINE
+     C*=============================================================*
+07===C           R1N00     BEGSR
+|    C*
+| 01-C           @BOTOM    IFEQ 'Y'                        *EOF
+|   C*                    SETON                         96*LST PAG
+|   C                     MOVEL'CPF5203' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+|   C                     Z-ADDRRN       DRRN
+| 01*C                     ELSE
+|   C                     EXSR R1A10                      *ADD SFL DTA
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+

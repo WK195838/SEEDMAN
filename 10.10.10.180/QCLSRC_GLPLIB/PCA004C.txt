@@ -1,0 +1,141 @@
+     /***************************************************************/
+     /*    AUTHOR       : TINA                                      */
+     /*    CREATE DATE  : 82/10/07                                  */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : PCA004                                    */
+     /*    SYSTEM       :人頭馬匯東                               */
+     /*    SUBSYSTEM    :零用金系統                               */
+     /*    REMARK       :支付撥補／取消作業                       */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&IN03)   TYPE(*LGL)  LEN(1)
+             DCL        VAR(&DCA01)  TYPE(*CHAR) LEN(2)
+             DCL        VAR(&COMPS)  TYPE(*CHAR) LEN(1)
+             DCL        VAR(&COMPE)  TYPE(*CHAR) LEN(1)
+             DCL        VAR(&YCA10S)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YCA10E)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YDATE)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YM)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DCA02S)  TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DCA02E)  TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DSEL1)  TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DSEL2)  TYPE(*CHAR) LEN(1)
+
+ START:      CALL       PGM(PCA004) PARM(&IN03)
+             IF         COND(&IN03) THEN(DO)
+             CHGVAR     VAR(%SST(*LDA 601 100)) VALUE(' ')
+             RETURN
+             ENDDO
+             CHGVAR     VAR(&DCA01) VALUE(%SST(*LDA 601 2))
+             CHGVAR     VAR(&COMPS) VALUE(%SST(*LDA 603 1))
+             CHGVAR     VAR(&COMPE) VALUE(%SST(*LDA 604 1))
+             CHGVAR     VAR(&DSEL1) VALUE(%SST(*LDA 605 1))
+             CHGVAR     VAR(&DSEL2) VALUE(%SST(*LDA 606 1))
+             CHGVAR     VAR(&YCA10S) VALUE(%SST(*LDA 611 8))
+             CHGVAR     VAR(&YCA10E) VALUE(%SST(*LDA 621 8))
+             CHGVAR     VAR(&YDATE) VALUE(%SST(*LDA 651 8))
+             CHGVAR     VAR(&YM) VALUE(%SST(*LDA 651 6))
+             CHGVAR     VAR(&DCA02S) VALUE(%SST(*LDA 631 9))
+             CHGVAR     VAR(&DCA02E) VALUE(%SST(*LDA 641 9))
+             OVRDBF     FILE(PCCALF02) SHARE(*YES)
+
+             IF         COND(&DSEL1 = 'A') THEN(DO)
+     /*確認支付*/
+             IF         COND(&DSEL2 = 'A') THEN(DO)
+             OPNQRYF    FILE((PCCALF02)) OPTION(*ALL) QRYSLT(' CA01 +
+                          *EQ ("' *CAT &DCA01 *CAT '") & CA02L *EQ +
+                          %RANGE("' *CAT &COMPS *CAT '" "' *CAT +
+                          &COMPE *CAT '") & CA02 *EQ %RANGE("' *CAT +
+                          &DCA02S *CAT '" "' *CAT &DCA02E *CAT '") +
+                          & CA10 *EQ %RANGE(' *CAT &YCA10S *CAT ' ' +
+                          *CAT &YCA10E *CAT ') & (' *CAT &YDATE +
+                          *CAT ') *GE CA10 & CA11 *EQ 0 & CA29 *EQ +
+                          0 & CA20 *NE "V" ') KEYFLD(*FILE) +
+                          MAPFLD((CA02L '%SST(CA02 2 1)' *CHAR 1))
+            ENDDO
+     /*確認撥補*/
+             IF         COND(&DSEL2 = 'B') THEN(DO)
+             OPNQRYF    FILE((PCCALF02)) OPTION(*ALL) QRYSLT(' CA01 +
+                          *EQ ("' *CAT &DCA01 *CAT '") & CA02L *EQ +
+                          %RANGE("' *CAT &COMPS *CAT '" "' *CAT +
+                          &COMPE *CAT '") & CA02 *EQ %RANGE("' *CAT +
+                          &DCA02S *CAT '" "' *CAT &DCA02E *CAT '") +
+                          & CA10 *EQ %RANGE(' *CAT &YCA10S *CAT ' ' +
+                          *CAT &YCA10E *CAT ') & CA10 *LE ' *CAT +
+                          &YDATE *CAT ' & CA11 *LE ' *CAT &YDATE +
+                          *CAT ' & CA11 *NE 0 & CA29 *EQ 0 & CA20 +
+                          *NE "V" & ( CA18 *NE "*" *OR CA10YM *NE +
+                          "' *CAT &YM *CAT '") ') KEYFLD(*FILE) +
+                          MAPFLD((CA02L '%SST(CA02 2 1)' *CHAR 1) +
+                          (CA10C CA10 *CHAR 8) (CA10YM '%SST(CA10C +
+                          1 6 )' *CHAR 6))
+            ENDDO
+     /*確認支付撥補*/
+             IF         COND(&DSEL2 = 'C') THEN(DO)
+             OPNQRYF    FILE((PCCALF02)) OPTION(*ALL) QRYSLT(' CA01 +
+                          *EQ ("' *CAT &DCA01 *CAT '") & CA02L *EQ +
+                          %RANGE("' *CAT &COMPS *CAT '" "' *CAT +
+                          &COMPE *CAT '") & CA02 *EQ %RANGE("' *CAT +
+                          &DCA02S *CAT '" "' *CAT &DCA02E *CAT '") +
+                          & CA10 *EQ %RANGE(' *CAT &YCA10S *CAT ' ' +
+                          *CAT &YCA10E *CAT ') & CA10 *LE ' *CAT +
+                          &YDATE *CAT ' & (CA11 *EQ 0 *OR (CA11 *NE +
+                          0 & CA11 *LE ' *CAT &YDATE *CAT '))& CA29 +
+                          *EQ 0 & CA20 *NE "V" & ( CA18 *NE "*" *OR +
+                          CA10YM *NE "' *CAT &YM *CAT '" ) ') +
+                          KEYFLD(*FILE) MAPFLD((CA02L '%SST(CA02 2 +
+                          1)' *CHAR 1) (CA10C CA10 *CHAR 8) (CA10YM +
+                          '%SST(CA10C 1 6)' *CHAR 6))
+            ENDDO
+            ENDDO
+     /*取消支付*/
+             ELSE       CMD(DO)
+             IF         COND(&DSEL2 = 'A') THEN(DO)
+             OPNQRYF    FILE((PCCALF02)) OPTION(*ALL) QRYSLT(' CA01 +
+                          *EQ ("' *CAT &DCA01 *CAT '") & CA02L *EQ +
+                          %RANGE("' *CAT &COMPS *CAT '" "' *CAT +
+                          &COMPE *CAT '") & CA02 *EQ %RANGE("' *CAT +
+                          &DCA02S *CAT '" "' *CAT &DCA02E *CAT '") +
+                          & CA10 *EQ %RANGE(' *CAT &YCA10S *CAT ' ' +
+                          *CAT &YCA10E *CAT ') & CA11 *NE 0 & CA29 +
+                          *EQ 0 & CA18 *NE "V" & CA18 *NE "@" ') +
+                          KEYFLD(*FILE) MAPFLD((CA02L '%SST(CA02 2 +
+                          1)' *CHAR 1))
+            ENDDO
+     /*取消撥補*/
+             IF         COND(&DSEL2 = 'B') THEN(DO)
+             OPNQRYF    FILE((PCCALF02)) OPTION(*ALL) QRYSLT(' CA01 +
+                          *EQ ("' *CAT &DCA01 *CAT '") & CA02L *EQ +
+                          %RANGE("' *CAT &COMPS *CAT '" "' *CAT +
+                          &COMPE *CAT '") & CA02 *EQ %RANGE("' *CAT +
+                          &DCA02S *CAT '" "' *CAT &DCA02E *CAT '") +
+                          & CA10 *EQ %RANGE(' *CAT &YCA10S *CAT ' ' +
+                          *CAT &YCA10E *CAT ') &  CA29 *NE 0 & CA20 +
+                          *NE "V" & CA18 *NE "V" & CA18 *NE "@" ') +
+                          KEYFLD(*FILE) MAPFLD((CA02L '%SST(CA02 2 +
+                          1)' *CHAR 1))
+            ENDDO
+     /*取消支付撥補*/
+             IF         COND(&DSEL2 = 'C') THEN(DO)
+             OPNQRYF    FILE((PCCALF02)) OPTION(*ALL) QRYSLT(' CA01 +
+                          *EQ ("' *CAT &DCA01 *CAT '") & CA02L *EQ +
+                          %RANGE("' *CAT &COMPS *CAT '" "' *CAT +
+                          &COMPE *CAT '") & CA02 *EQ %RANGE("' *CAT +
+                          &DCA02S *CAT '" "' *CAT &DCA02E *CAT '") +
+                          & CA10 *EQ %RANGE(' *CAT &YCA10S *CAT ' ' +
+                          *CAT &YCA10E *CAT ') & (CA29 *NE 0 *OR +
+                          CA11 *NE 0) & CA20 *NE "V" & CA18 *NE "V" +
+                          & CA18 *NE "@" ') KEYFLD(*FILE) +
+                          MAPFLD((CA02L '%SST(CA02 2 1)' *CHAR 1))
+            ENDDO
+            ENDDO
+
+             CALL       PGM(PCA0041) PARM(&IN03)
+
+             CLOF       OPNID(PCCALF02)
+             DLTOVR     FILE(PCCALF02)
+
+             GOTO       START
+             ENDPGM
+

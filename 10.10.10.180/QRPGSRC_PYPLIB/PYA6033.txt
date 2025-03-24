@@ -1,0 +1,348 @@
+     A****************************************************************
+     A*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     A*                                                              *
+     A*    PROGRAM ID   : PYA6033  (CPY FROM PYA6032)                *
+     A*    PROGRAM NAME : 福委會所得扣繳申報作業　　　             *
+     A*    AUTHOR       : A1266 HANK                                 *
+     A*    CREATE DATE  : 910103                                     *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       :                                            *
+     A****************************************************************
+     FPYERPF  IP  E           K        DISK
+     FPYERLF06IF  E           K        DISK
+     F            ER0                               KRENAMEER6
+     FPYERLF05IF  E           K        DISK
+     F            ER0                               KRENAMEER5
+     FSYCMLF01IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYTDPF  UF  E           K        DISK                      A
+     F**PYTDPF1 UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     IER0
+     I                                              ER02  L1
+     I*
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 118 $CHYMD
+     I                                      119 124 $ADMDY
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 504 DTD02
+     I                                      505 5080DTD01
+     I                                      509 509 DOPT
+     I*
+     I                                      510 511 KCM01
+     I                                      512 5180DATES
+     I                                      520 5260DATEF
+     I                                      601 6080WDATES
+     I                                      609 6160WDATEF
+     I*
+     I            DS
+     I                                        1   80ER03
+     I                                        1   40ER03A
+     I                                        5   80ER03B
+     I                                        1   60ER03C
+     I                                        7   80ER03D
+     I            DS
+     I                                        1   80EM13
+     I                                        1   60EM13YM
+     I*
+     I            DS
+     I                                        1   1 EM321
+     I                                        2   8 EM04
+     I                                        2   2 EM041
+     I                                        3   3 EM042
+     I                                        4   4 EM043
+     I                                        5   8 EM044
+     I                                        1  10 WTD99
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN $A8YMD    FDATE            .TRANS DATE USE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYTD     KLIST
+     C                     KFLD           KCM01            .公司編號
+     C                     KFLD           DTD01            .年度
+     C           KEYTD2    KLIST
+     C                     KFLD           KCM01            .公司編號
+     C                     KFLD           DTD01            .年度
+     C                     KFLD           WTD17            .統一編號
+     C                     KFLD           WTD04   2        .格式代號
+     C                     KFLD           EM31             .身份證號
+     C*
+     C           KEYEM     KLIST
+     C                     KFLD           KCM01            .公司編號
+     C                     KFLD           ER02             .員工編號
+     C*
+     C           KEYER     KLIST
+     C                     KFLD           KCM01            .公司編號
+     C                     KFLD           ER02             .員工編號
+     C*
+     C           KEYER1    KLIST
+     C                     KFLD           KCM01            .公司編號
+     C                     KFLD           ER02             .員工編號
+     C                     KFLD           WDATES            .異動日期
+     C*
+     C           KEYER2    KLIST
+     C                     KFLD           KCM01            .公司編號
+     C                     KFLD           ER02             .員工編號
+     C                     KFLD           WDATEF            .異動日期
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      .DETAIL
+     CL1 10                EXSR R8100                      .L1
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C                     SETON                     10
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C*重新處理... YES
+|    C*******    DOPT      IFEQ 'Y'
+|    C*清除舊資料
+|    C           KEYTD     SETLLTD0
+|    C           KEYTD     READETD0                      42
+| 01-C           *IN42     DOWEQ'0'
+|   A*TD04=格式
+| 02-C           TD04      IFEQ '91'
+|   C           TD04      OREQ '92'
+|   A*TD96('核定日期')
+| 03-C           TD96      IFEQ 0
+|   C                     DELETTD0
+| 03-C                     END
+| 02-C                     END
+|   C           KEYTD     READETD0                      42
+| 01-C                     END
+|    C* -------------------------------------
+|    C*          KEYTD     SETLLTD1
+|    C*          KEYTD     READETD1                      42
+|    C*          *IN42     DOWEQ'0'
+|    A*TD04=格式
+|    C*          TD04      IFEQ '91'
+|    C*          TD04      OREQ '92'
+|    A*TD96('核定日期')
+|    C*          TD96      IFEQ 0
+|    C*                    DELETTD1
+|    C*                    END
+|    C*                    END
+|    C*          KEYTD     READETD1                      42
+|    C*                    END
+|    C*
+|    C*******              END
+|    C*910117HANK S*
+|    C*          DTD02     CHAINCM0                  40
+|    C*
+|    C*公司統一由工廠報稅，無論工廠、公司都寫入工廠統編
+|    C*
+|    C           '01'      CHAINCM0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C                     MOVELCM04      WTD17   8        .統一編號
+| 04*C                     ELSE
+|   C                     MOVEL*BLANK    WTD17   8        .統一編號
+| 04-C                     END
+|    C*910117HANK E*
+|    C*
+01===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*所得代碼：９１．競技及機會中獎*TD07A&TD08A--------------------
+| 01-C                     SELEC
+|   C           ER06      WHEQ 'OA'                       年終摸彩　
+|   C           ER06      OREQ 'OB'                       競賽獎金　
+|   C                     ADD  ER05      TD07A   90        .給付總額
+|   C           ER06      WHEQ 'OC'                       中獎扣繳
+|   C                     ADD  ER05      TD08A   90        .扣繳稅額
+| 01-C                     END
+|    C*所得代碼：９２．其他所得*TD07B&TD08B--------------------------
+| 02-C                     SELEC
+|   C           ER06      WHEQ 'A2'                       補助金發放
+|   C           ER06      OREQ 'O1'                       生日禮金
+|   C           ER06      OREQ 'O2'                       春節禮金
+|   C           ER06      OREQ 'O3'                       端午禮金
+|   C           ER06      OREQ 'O4'                       中秋禮金
+|   C           ER06      OREQ 'O5'                       勞動禮金
+|   C           ER06      OREQ 'O6'                       旅遊補註
+|   C           ER06      OREQ 'O7'                       結婚禮金
+|   C           ER06      OREQ 'O8'                       喪病禮金
+|   C           ER06      OREQ 'O9'                       住院補助
+|   C                     ADD  ER05      TD07B   90        .給付總額
+|   C           ER06      WHEQ 'B1'                       薪資福利金
+|   C                     SUB  ER05      TD07B   90        .給付總額
+| 02-C                     END
+|    C                     Z-ADD0         TD08B   90        .扣繳稅額
+|    C*
+02===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK L1             .員工編號
+     C*==============================================================*
+03===C           R8100     BEGSR
+|    C*
+|    C           KEYEM     CHAINEM0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     CLEAREM0
+| 01-C                     END
+|    C*
+|    C*所得代碼：９１．競技及機會中獎*TD07A&TD08A--------------------
+|    C                     MOVEL'91'      WTD04     P      格式代號
+|    C                     EXSR R8110
+|    C*所得代碼：９２．其他所得*TD07B&TD08B--------------------------
+|    C                     MOVEL'92'      WTD04     P      格式代號
+|    C                     EXSR R8110
+|    C*
+|    C                     CLEARTD0
+|    C                     Z-ADD0         TD07A             .給付總額
+|    C                     Z-ADD0         TD07B             .給付總額
+|    C                     Z-ADD0         TD08A             .扣繳稅額
+|    C                     Z-ADD0         TD08B             .扣繳稅額
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8110 ... LEVEL BREAK L1             .員工編號
+     C*==============================================================*
+04===C           R8110     BEGSR
+|    C*
+|    C                     CLEARTD0
+|    C*          EM321     IFEQ 'F'
+|    C*          KEYTD2    CHAINTD1                  41
+|    C*                    ELSE
+|    C           KEYTD2    CHAINTD0                  41
+|    C*                    END
+|    A*TD96('核定日期')
+| 01-C           TD96      IFNE 0
+|   C                     GOTO E8110
+| 01-C                     END
+|    C*         .......................................................
+|    C                     EXSR R811A                      *MOVE DATA
+|    C*         0....................................................
+| 02-C           *IN41     IFEQ '1'
+| 03-C           WTD04     IFEQ '91'                       格式代號
+|   C           TD07A     ANDGT0
+|   C           WTD04     OREQ '92'                       格式代號
+|   C           TD07B     ANDGT0
+|   C*
+|   C*          EM321     IFEQ 'F'
+|   C*                    WRITETD1
+|   C*                    ELSE
+|   C                     WRITETD0
+|   C*                    END
+| 03-C                     END
+| 02-C                     END
+|    C*          ------------------------------------------------------
+|    C*HANK
+|    C*H         *IN41     IFEQ '0'
+|    C*H        1......................................................
+|    C*H         WTD04     IFEQ '91'                       格式代號
+|    C*H         TD07A     ANDGT0
+|    C*H         WTD04     OREQ '92'                       格式代號
+|    C*H         TD07B     ANDGT0
+|    C*H
+|    C*H         EM321     IFEQ 'F'
+|    C*H                   UPDATTD1
+|    C*H                   ELSE
+|    C*H                   UPDATTD0
+|    C*H                   END
+|    C*H        2..................................................
+|    C*H                   ELSE
+|    C*H         EM321     IFEQ 'F'
+|    C*H                   DELETTD1
+|    C*H                   ELSE
+|    C*H                   DELETTD0
+|    C*H                   END
+|    C*H                   END
+|    C*HANK                END
+|    C*
+04===C           E8110     ENDSR
+     C*==============================================================*
+     C*          R811A ... MOVE DATA
+     C*==============================================================*
+05===C           R811A     BEGSR
+|    C*
+|    C*寫入所得稅課稅資料檔中 PYTDPF
+|    C                     Z-ADDDTD01     TD01             .年度
+|    C                     MOVELDTD02     TD02             .媒體單位
+|    C                     Z-ADD0         TD03             .流水號
+|    C                     MOVELWTD04     TD04             .格式
+|    C                     MOVELEM31      TD05             .身份證號
+|    C*
+| 01-C                     SELEC
+|   C           EM321     WHEQ 'F'                        國籍
+|   C           EM39      ANDEQ*BLANK                     戶籍地址
+|   C                     MOVEL'3'       TD06             .證號別
+|   C*
+|   C           EM321     WHEQ 'F'                        國籍
+|   C           EM39      ANDNE*BLANK                     戶籍地址
+|   C                     MOVEL'4'       TD06             .證號別
+|   C                     OTHER
+|   C                     MOVEL*BLANK    TD06             .證號別
+| 01-C                     END
+|    C*
+| 02-C           WTD04     IFEQ '91'                       格式代號
+|   C                     Z-ADDTD07A     TD07              .給付總額
+|   C                     Z-ADDTD08A     TD08              .扣繳稅額
+| 02-C                     END
+| 03-C           WTD04     IFEQ '92'                       格式代號
+|   C                     Z-ADDTD07B     TD07              .給付總額
+|   C                     Z-ADDTD08B     TD08              .扣繳稅額
+| 03-C                     END
+|    C*
+|    C                     MOVEL*BLANK    TD09             .特定編號
+|    C                     MOVEL*BLANK    TD10             .錯誤註記
+|    C                     MOVELKCM01     TD11             .公司編號
+|    C                     MOVELER02      TD12             .員工編號
+|    C                     MOVELEM03      TD13             .員工姓名
+|    C*
+|    C                     CALL 'P65'
+|    C                     PARM EM39      P6501I 80
+|    C                     PARM 61        P6502I  30
+|    C           TD14      PARM           P6501O 80
+|    C                     PARM           P6502O 80
+|    C***********          MOVELEM39      TD14             .地　　址
+|    C*
+|    C                     Z-ADD$A8YMD    TD97             .更新日期
+|    C**                   TIME           WTIME  120
+|    C**                   MOVELWTIME     TD98             .更新時間
+|    C                     TIME           TD98             .更新時間
+|    C                     MOVELWTD99     TD99             .使用者ID
+|    C                     MOVELWTD17     TD17             .統一編號
+|    C*所得月份-迄  *----------------------------------------------起
+|    C           KEYER     CHAINER5                  40
+| 04-C           *IN40     IFEQ '0'
+|   C                     Z-ADDER03C     TD16             .所得月份-起
+| 04*C                     ELSE
+|   C                     Z-ADD0         TD16             .所得月份-起
+| 04-C                     END
+|    C*所得月份-起*------------------------------------------------
+|    C           KEYER     CHAINER6                  40
+| 05-C           *IN40     IFEQ '0'
+|   C                     Z-ADDER03C     TD15             .所得月份-迄
+| 05*C                     ELSE
+|   C                     Z-ADD0         TD15             .所得月份-起
+| 05-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+

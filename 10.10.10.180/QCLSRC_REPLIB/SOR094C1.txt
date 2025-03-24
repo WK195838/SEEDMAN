@@ -1,0 +1,62 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250  */
+     /*                                                             */
+     /*    AUTHOR       : DEREK                                     */
+     /*    CREATE DATE  : 2013/06/06                                */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : SOR094C1                                  */
+     /*    SYSTEM       :茂世企業                                 */
+     /*    SUBSYSTEM    :銷售訂單系統                             */
+     /*    REMARK       :產品出貨彙總表                           */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&DMA12S) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DMA12E) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DYMD1S) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DYMD1E) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DYMD2)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&LYMD1S) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&LYMD1E) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&LYMD2)  TYPE(*CHAR) LEN(8)
+
+             CHGVAR     VAR(&DMA12S) VALUE(%SST(*LDA 601 5))
+             CHGVAR     VAR(&DMA12E) VALUE(%SST(*LDA 606 5))
+             CHGVAR     VAR(&DYMD1S) VALUE(%SST(*LDA 611 8))
+             CHGVAR     VAR(&DYMD1E) VALUE(%SST(*LDA 619 8))
+             CHGVAR     VAR(&DYMD2)  VALUE(%SST(*LDA 627 8))
+             CHGVAR     VAR(&LYMD1S) VALUE(%SST(*LDA 635 8))
+             CHGVAR     VAR(&LYMD1E) VALUE(%SST(*LDA 643 8))
+             CHGVAR     VAR(&LYMD2)  VALUE(%SST(*LDA 651 8))
+
+             CHGVAR     VAR(&LIB)   VALUE('REFLIB')
+             CHGVAR     VAR(&FILE)  VALUE('SOR094PF')
+
+             CLRPFM     FILE(SOR094WF)
+             CLRPFM     FILE(SOR094PF)
+
+       /*出貨資料*/
+             CALL       PGM(SOR0941)
+
+       /*銷退資料*/
+             CALL       PGM(SOR0942)
+
+       /*試飲回收*/
+             CALL       PGM(SOR0943)
+
+       /*產生報表*/
+             OVRDBF     FILE(SOR094WF) TOFILE(SOR094WF) SHARE(*YES)
+  /*         OPNQRYF    FILE((SOR094WF)) KEYFLD((WF04) (WF03) (WF01))      */
+             OPNQRYF    FILE((SOR094WF)) KEYFLD((WF04)  (WF01))
+             CALL       PGM(SOR0944)
+             CLOF       OPNID(SOR094WF)
+             DLTOVR     FILE(SOR094WF)
+
+             /*將SOR094PF轉換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

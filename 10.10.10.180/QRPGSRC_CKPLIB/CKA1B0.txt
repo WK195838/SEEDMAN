@@ -1,0 +1,621 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : CKA1B0                                     *
+     H*    PROGRAM NAME :票據作廢作業                              *
+     H*    AUTHOR       : A1149   MAY                                *
+     H*    CREATE DATE  : 1992.09.25                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :票據系統                                  *
+     H****************************************************************
+     FCKHALF01UF  E           K        DISK
+     FCKHELF01O   E           K        DISK
+     FCKHBLF01IF  E           K        DISK
+     FCKHFLF04IF  E           K        DISK
+     FPT#XPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FCKA1B0D CF  E                    WORKSTN
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I/COPY QRPGSRC,PT#XDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN #A01      W#A01
+     C           *LIKE     DEFN #A02      W#A02
+     C           *LIKE     DEFN #X01      D#X03
+     C*
+     C           *LIKE     DEFN HA02      #B001I
+     C           *LIKE     DEFN HA02      #C001I
+     C           *LIKE     DEFN HA04      #C002I
+     C           *LIKE     DEFN HA02      #D001I
+     C           *LIKE     DEFN HA04      #D002I
+     C           *LIKE     DEFN HA02      #E001I
+     C           *LIKE     DEFN HA13      #E002I
+     C           *LIKE     DEFN HA02      #F001I
+     C           *LIKE     DEFN HA04      #F002I
+     C           *LIKE     DEFN HA02      #G001I
+     C           *LIKE     DEFN HA04      #G002I
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHA     KLIST
+     C                     KFLD           DHA01   1
+     C                     KFLD           DHA02
+     C                     KFLD           DHA03
+     C           KEYHF     KLIST
+     C                     KFLD           DHA03
+     C                     KFLD           DHA02
+     C           KEY#A     KLIST
+     C                     KFLD           W#A01
+     C                     KFLD           W#A02
+     C           KEY#X     KLIST                           *GET TBNAM
+     C                     KFLD           D#X03
+     C                     KFLD           DHA02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+     C           *IN03     DOWEQ'0'
+     C           SCID      CASEQ'SC01'    R1000            *SCR1
+     C           SCID      CASEQ'SC02'    R2000            *SCR2
+     C                     END
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C                     IN   PTDA01
+     C*
+     C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*
+     C                     MOVE 'SC01'    SCID    4
+     C* SC01 FIELD INITIALIZE *--------------------------------------*
+     C                     MOVEL$COR      DHA02
+     C*公司檔
+     C                     CALL 'CKS#B0'
+     C                     PARM DHA02     #B001I
+     C           DHA02N    PARM           #B002O 16
+     C                     PARM           #B003O 34
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C*
+     C                     MOVEL*BLANK    DHA03
+     C                     MOVEL'2'       DHA01
+     C*--------------------------------------------------------------*
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+     C           R1000     BEGSR
+     C*
+     C* N99                SETON                     88
+     C*
+     C                     EXFMTDSPD1
+     C                     MOVEA*ALL'0'   *IN,60
+     C*
+     C           *IN03     IFEQ '1'
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN18     IFEQ '1'                        *BROWSE
+     C                     EXSR R1A00
+     C                     GOTO E1000
+     C                     END
+     C*
+     C                     EXSR R1B00                      *SCR CHK
+     C*
+     C           *IN99     IFEQ '0'                        *SCR CHK OK
+     C                     EXSR R1C00
+     C                     MOVEL'SC02'    SCID
+     C                     END
+     C*
+     C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+     C           R1A00     BEGSR
+     C*
+     C           DHA01     IFEQ '1'
+     C* AUT CHECK
+     C                     CALL 'S#S01'
+     C                     PARM $USER     S0101I 10
+     C                     PARM 'CKI110'  S0102I 10
+     C                     PARM           S0101O  1
+     C           S0101O    IFEQ 'N'
+     C                     SETON                     99
+     C                     MOVEL'UPT2150' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C   99                GOTO E1A00
+     C*
+     C* CALL SUB-PROGRAM
+     C                     CALL 'CKI110'
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     PARM DHA02     P110I1  2
+     C           DHA03     PARM DHA03     P110I2 10
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     PARM           @RTNC   2
+     C                     END
+     C*
+     C           DHA01     IFEQ '2'
+     C* AUT CHECK
+     C                     CALL 'S#S01'
+     C                     PARM $USER     S0101I 10
+     C                     PARM 'CKI120'  S0102I 10
+     C                     PARM           S0101O  1
+     C           S0101O    IFEQ 'N'
+     C                     SETON                     99
+     C                     MOVEL'UPT2150' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C   99                GOTO E1A00
+     C*
+     C* CALL SUB-PROGRAM
+     C                     CALL 'CKI120'
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     PARM DHA02     P000I1  2
+     C           DHA03     PARM DHA03     P000I2 10
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     PARM           @RTNC   2
+     C                     END
+     C* RETURN CODE CHECK
+     C           @RTNC     IFEQ '03'                       *PF3
+     C                     SETON                     03
+     C                     END
+     C*
+     C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+     C           R1B00     BEGSR
+     C* DATA CHECK *--------------------------------------------------*
+     C                     MOVE *BLANKS   DHA02N
+     C           DHA02     IFEQ *BLANK
+     C                     MOVEL'UPT0010' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6199
+     C                     ELSE
+     C*公司檔
+     C                     CALL 'CKS#B0'
+     C                     PARM DHA02     #B001I
+     C           DHA02N    PARM           #B002O 16
+     C                     PARM           #B003O 34
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C           #B099O    IFNE 'Y'
+     C                     MOVEL'UPT0030' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6199
+     C                     END
+     C*
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C           DHA03     IFEQ *BLANK
+     C                     MOVEL'UPT0010' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6299
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C           DHA01     IFEQ *BLANK
+     C                     MOVEL'UPT0010' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6399
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C           KEYHA     CHAINHA0                  40
+     C           *IN40     IFEQ '1'
+     C                     MOVEL'UPT2010' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     616299
+     C                     ELSE
+     C           DHA01     IFEQ '1'
+     C           HA17      ANDNE'1'
+     C                     MOVEL'UCK0007' ERRID
+     C                     MOVEL'CKMF'    ERRF
+     C                     SETON                     616299
+     C                     END
+     C           DHA01     IFEQ '2'
+     C           HA17      ANDNE'2'
+     C                     MOVEL'UCK0007' ERRID
+     C                     MOVEL'CKMF'    ERRF
+     C                     SETON                     616299
+     C                     END
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+     C           R1C00     BEGSR
+     C*<應收>
+     C           DHA01     IFEQ '1'
+     C                     EXSR R1C10                      *PRE-SC02
+     C                     END
+     C*<應付>
+     C           DHA01     IFEQ '2'
+     C                     EXSR R1C20                      *PRE-SC03
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*  R1C10 ....'SC02' FIELD GET
+     C*==============================================================*
+     C           R1C10     BEGSR
+     C*客戶
+     C                     MOVELHA04      DHA04
+     C                     CALL 'CKS#C0'
+     C                     PARM DHA02     #C001I
+     C                     PARM DHA04     #C002I
+     C           D#C03     PARM           #C003O 10
+     C                     PARM           #C004O 42
+     C                     PARM           #C005O 10
+     C                     PARM           #C098O 50
+     C                     PARM           #C099O  1
+     C*票類
+     C                     MOVEL*BLANKS   W#A01
+     C                     MOVEL*BLANKS   W#A02
+     C                     MOVELHA05      DHA05
+     C                     MOVEL'CKTYPE'  W#A01
+     C                     MOVELDHA05     W#A02
+     C                     MOVEL*BLANKS   DHA05C
+     C           KEY#A     CHAIN#A0                  40    *GET #A03
+     C           *IN40     IFEQ '0'
+|   C                     MOVEL#A03      DHA05C
+| 02-C                     END
+|    C*
+     C*收開票日
+     C                     MOVEL'CK'      D#X03
+     C           KEY#X     CHAIN#X0                  40
+     C                     CALL 'P31'
+     C                     PARM HA06      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           DHA06     PARM           P3101O  80
+     C*到期日
+     C                     CALL 'P31'
+     C                     PARM HA07      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           DHA07     PARM           P3101O  80
+     C*付款銀行
+     C                     MOVELHA08      DHA08
+     C                     MOVEL*BLANK    DHB03
+     C           DHA08     CHAINHB0                  40    *GET HB03
+     C  N40                MOVELHB03      DHB03
+     C*帳號
+     C                     MOVE HA09      DHA09
+     C*金額
+     C                     Z-ADDHA10      DHA10
+     C*預兌日期
+     C                     CALL 'P31'
+     C                     PARM HA11      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           DHA11     PARM           P3101O  80
+     C*業務人員檔
+     C                     MOVELHA13      DHA13
+     C                     CALL 'CKS#E0'
+     C                     PARM DHA02     #E001I
+     C                     PARM DHA13     #E002I
+     C           D#E03     PARM           #E003O 14
+     C                     PARM           #E098O 50
+     C                     PARM           #E099O  1
+     C*業務區
+     C                     MOVELHA14      DHA14
+     C*處理日期
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           DHA15     PARM           P3101O  80
+     C*處理帳號
+     C                     MOVELHA16      DHA16
+     C*票據狀況
+     C                     MOVEL*BLANKS   W#A01
+     C                     MOVEL*BLANKS   W#A02
+     C                     MOVELHA17      DHA17
+     C                     MOVEL'CKSTS'   W#A01
+     C                     MOVELDHA17     W#A02
+     C                     MOVEL*BLANKS   DHA17C
+     C           KEY#A     CHAIN#A0                  40    *GET #A03
+     C           *IN40     IFEQ '0'
+|   C                     MOVEL#A03      DHA17C
+| 02-C                     END
+|    C*
+     C*來源用途
+     C                     MOVELHA23      DHA23
+     C                     MOVEL*BLANK    DHA23C
+     C                     MOVEL*BLANK    W#A01
+     C                     MOVEL*BLANK    W#A02
+     C                     MOVEL'CKUSED'  W#A01
+     C                     MOVELDHA23     W#A02
+     C           KEY#A     CHAIN#A0                  40
+     C           *IN40     IFEQ '0'
+|   C                     MOVEL#A03      DHA23C
+| 02-C                     END
+|    C*
+     C*票據區
+     C                     MOVELHA24      DHA24
+     C*對帳記號
+     C                     MOVELHA26      DHA26
+     C*入帳類別
+     C                     MOVELHA27      DHA27
+     C*貨款記號
+     C                     MOVELHA28      DHA28
+     C*備註
+     C                     MOVELHA32      DHA32
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....'SC03' FIELD GET
+     C*==============================================================*
+     C           R1C20     BEGSR
+     C*廠商
+     C                     MOVELHA04      DHA04
+     C           KEYHF     CHAINCKHFLF04             40
+     C           *IN40     IFEQ '0'
+     C                     MOVELHF77      D#D03
+     C                     ELSE
+     C                     CALL 'CKS#D0'
+     C                     PARM DHA02     #D001I
+     C                     PARM DHA04     #D002I
+     C           D#D03     PARM           #D003O 10
+     C                     PARM           #D004O 42
+     C                     PARM           #D005O 62
+     C                     PARM           #D098O 50
+     C                     PARM           #D099O  1
+     C                     END
+     C*票類
+     C                     MOVELHA05      DHA05
+     C                     MOVEL*BLANK    DHA05C
+     C                     MOVEL*BLANK    W#A01
+     C                     MOVEL*BLANK    W#A02
+     C                     MOVEL'CKTYPE'  W#A01
+     C                     MOVELDHA05     W#A02
+     C           KEY#A     CHAIN#A0                  40
+     C           *IN40     IFEQ '0'
+|   C                     MOVEL#A03      DHA05C
+| 02-C                     END
+|    C*
+     C*收開票日
+     C                     MOVEL'CK'      D#X03
+     C           KEY#X     CHAIN#X0                  40
+     C                     CALL 'P31'
+     C                     PARM HA06      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           DHA06     PARM           P3101O  80
+     C*到期日
+     C                     CALL 'P31'
+     C                     PARM HA07      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           DHA07     PARM           P3101O  80
+     C*付款銀行
+     C                     MOVEL*BLANK    HB03N
+     C                     MOVELHA08      DHA08
+     C           DHA08     CHAINHB0                  40
+     C  N40                MOVELHB03      HB03N
+     C*付款帳號
+     C                     MOVE HA09      DHA09N
+     C                     MOVE HA09      HD02
+     C*金額
+     C                     Z-ADDHA10      DHA10
+     C*預兌日期
+     C                     CALL 'P31'
+     C                     PARM HA11      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           DHA11     PARM           P3101O  80
+     C*處理日期
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           DHA15     PARM           P3101O  80
+     C*處理帳號
+     C                     MOVELHA16      DHA16
+     C*票據狀況
+     C                     MOVELHA17      DHA17
+     C                     MOVEL*BLANK    W#A01
+     C                     MOVEL*BLANK    W#A02
+     C                     MOVEL'CKSTS'   W#A01
+     C                     MOVELDHA17     W#A02
+     C                     MOVEL*BLANK    DHA17C
+     C           KEY#A     CHAIN#A0                  40
+     C           *IN40     IFEQ '0'
+|   C                     MOVEL#A03      DHA17C
+| 02-C                     END
+|    C*
+     C*來源用途
+     C                     MOVELHA23      DHA23
+     C                     MOVEL*BLANK    DHA23C
+     C                     MOVEL*BLANK    W#A01
+     C                     MOVEL*BLANK    W#A02
+     C                     MOVEL'CKUSED'  W#A01
+     C                     MOVELDHA23     W#A02
+     C           KEY#A     CHAIN#A0                  40
+     C* N40                MOVEL#A03      DHA23C
+     C           *IN40     IFEQ '0'
+|   C                     MOVEL#A03      DHA23C
+| 02-C                     END
+|    C*
+     C*對帳記號
+     C                     MOVELHA26      DHA26
+     C*入帳類別
+     C                     MOVELHA27      DHA27
+     C*貨款記號
+     C                     MOVELHA28      DHA28
+     C*備註
+     C                     MOVELHA32      DHA32
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+     C           R2000     BEGSR
+     C*
+     C           DHA01     IFEQ '1'
+     C                     EXFMTDSPD2
+     C                     END
+     C           DHA01     IFEQ '2'
+     C                     EXFMTDSPD3
+     C                     END
+     C                     MOVEA*ALL'0'   *IN,60
+     C*
+     C           *IN03     IFEQ '1'                        *END
+     C                     GOTO E2000
+     C                     END
+     C*
+     C           *IN12     IFEQ '1'                        *PREVIOUS
+     C* RELEAS FILE --------------------------------------------------*
+     C           *LOVAL    SETLLHA0
+     C*---------------------------------------------------------------*
+     C                     MOVEL'SC01'    SCID
+     C                     GOTO E2000
+     C                     END
+     C*
+     C                     EXSR R2B00
+     C*
+     C           *IN99     IFEQ '0'                        *CHK OK
+     C                     EXSR R2D00                      *FILE UPD
+     C                     MOVE 'SC01'    SCID
+     C                     END
+     C*
+     C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'SC02' CHECK
+     C*==============================================================*
+     C           R2B00     BEGSR
+     C*
+     C                     MOVEL'CK'      D#X03
+     C           KEY#X     CHAIN#X0                  40
+     C                     CALL 'P30'
+     C                     PARM DHA15     P3001I  80
+     C                     PARM #X101     P3002I  1
+     C                     PARM #X102     P3003I  1
+     C                     PARM           P3011O  1
+     C*
+     C           P3011O    IFEQ 'N'
+     C                     MOVEL'UPT0040' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6199
+     C                     END
+     C   99                GOTO E2B00
+     C*
+     C*
+     C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+     C           R2D00     BEGSR
+     C*<UPDATE CKHALF01>
+     C                     CALL 'P31'
+     C                     PARM DHA15     P3101I  80
+     C                     PARM #X101     P3102I  1
+     C                     PARM #X102     P3103I  1
+     C                     PARM '2'       P3104I  1
+     C                     PARM '1'       P3105I  1
+     C           HA15      PARM           P3101O  80
+     C*
+     C*<UPDATE CKHELF01>
+     C                     MOVE HA01      HE01
+     C                     MOVE HA02      HE02
+     C                     MOVE HA03      HE03
+     C           DHA01     IFEQ '1'
+     C                     MOVELHA16      HE04
+     C                     ELSE
+     C                     MOVELHD02      HE04
+     C                     END
+     C                     Z-ADDHA15      HE05
+     C                     MOVE '0'       HE06
+     C                     MOVE *BLANKS   HE07
+     C                     MOVE HA17      HE08
+     C                     TIME           HE97
+     C                     Z-ADD$A8YMD    HE98
+     C                     MOVEL$USER     HE99
+     C                     WRITEHE0
+     C*<UPDATE HALF01>
+     C           KEYHA     CHAINHA0                  40
+     C           *IN40     IFEQ '0'
+     C                     MOVE HE05      HA15
+     C                     MOVE HE06      HA17
+     C                     TIME           HA97
+     C                     Z-ADD$A8YMD    HA98
+     C                     MOVEL$USER     HA99
+     C                     UPDATHA0
+     C                     END
+     C*應收
+     C*          DHA01     IFEQ '1'
+     C*<UPDATE PT#FPF客戶餘額檔>
+     C*                    Z-SUBHA10      DHA10M  90
+     C*                    CALL 'CKS#F0'
+     C*                    PARM DHA02     #F001I           公司別
+     C*                    PARM DHA04     #F002I           客戶代號
+     C*                    PARM HA10      #F003I  90       應收帳款
+     C*                    PARM DHA10M    #F004I  90       應收票據
+     C*                    PARM DHA10M    #F005I  90       已收未沖
+     C*                    PARM 0         #F006I  90       信用額度
+     C*                    PARM           #F098O  90       備用
+     C*                    PARM           #F099O  1        成功否
+     C*應付
+     C*                    ELSE
+     C*<UPDATE PT#GPF廠商餘額檔>
+     C*                    Z-SUBHA10      DHA10M  90
+     C*                    CALL 'CKS#G0'
+     C*                    PARM DHA02     #G001I           公司別
+     C*                    PARM DHA04     #G002I           廠商代號
+     C*                    PARM HA10      #G003I  90       應付帳款
+     C*                    PARM DHA10M    #G004I  90       應付票據
+     C*                    PARM DHA10M    #G005I  90       已付未沖
+     C*                    PARM 0         #G006I  90       信用額度
+     C*                    PARM           #G098O  90       備用
+     C*                    PARM           #G099O  1        成功否
+     C*                    END
+     C*
+     C                     ENDSR
+

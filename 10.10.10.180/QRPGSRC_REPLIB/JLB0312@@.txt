@@ -1,0 +1,1920 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250
+     H*
+     H*    PROGRAM ID   : JLB031
+     H*    PROGRAM NAME : 收款沖帳傳票批次
+     H*    AUTHOR       : D910121 CHARLES
+     H*    CREATE DATE  : 1993.06.21
+     H*    UPDATE DATE  :
+     H*    SYSTEM       : 進銷存收TO總帳
+     A*===============================================================
+      * MODI CODE |   DATE   | DESCRIPTION
+      *---------------------------------------------------------------
+      *  M001     | 98.11.17 | MANUAL MODIFY BY MICHELLE FOR Y2K
+      *---------------------------------------------------------------
+      *  M002     | 98.12.09 | FOR專櫃會計科目
+      *           | 00.05.02 |專櫃擴點
+      *---------------------------------------------------------------
+      *  M003     | 99.02.11 |開放指定客戶A0003
+      *---------------------------------------------------------------
+      *  M004     | 00.05.11 |菸酒稅法實施，取消事前折扣科目
+      *---------------------------------------------------------------
+      *  M006     | 02.01.17 |匯齡銷退沖帳時，銷項稅額應減少
+      *---------------------------------------------------------------
+     A*  M007     | 03.01.23 | CHKFLD ERROR
+     A*---------------------------------------------------------------
+     A*  M008     | 03.07.14 | 04原因價差含稅時,提列2193
+     A*---------------------------------------------------------------
+      *  M009     | 12.07.02 |增加欄位：控制一(ARAFPF)
+      *---------------------------------------------------------------
+     A*M010需求單號: 1050365
+     A*M010 2016/07/20 DEREK同一天同一客戶之收款或沖帳
+     A*                     各自產生預收款科目分錄
+     A*---------------------------------------------------------------
+     F****************************************************************
+     FWFJL10PFUF  E           K        DISK                      A
+     FWFJL10LFIF  E           K        DISK
+     F            WFJL10R                           KRENAMEWFJL10L
+     FWFJL26PFUF  E           K        DISK                      A
+     FPA#GPF  UF  E           K        DISK                      A
+     FARACPF  UF  E           K        DISK
+     FARACLF  IF  E           K        DISK
+     F            AC0                               KRENAMEAC0L
+     FARADPF  UF  E           K        DISK
+     FARADLF05IF  E           K        DISK
+     F            AD0                               KRENAMEAD0L5
+     F*DEREKARADLF06IF  E           K        DISK
+     F*DEREK      AD0                               KRENAMEAD0L6
+     FARAFPF  IF  E           K        DISK
+     F            AF0                               KRENAMEARAF
+     FSOSIPF  IF  E           K        DISK
+     F*DEREKSOSJPF  IF  E           K        DISK
+     F*DEREKSOSDPF  IF  E           K        DISK
+     FGLAAPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     F            AF0                               KRENAMEGLAF
+     FCKHDLF01IF  E           K        DISK
+     F*DEREKARAGPF  IF  E           K        DISK
+     FGLAHPF  O   E           K        DISK
+     F*WF#GPF  O   E           K        DISK
+     FWFADPF  O   E           K        DISK
+     E*---------------------------------------------------------------*
+     E*輸入欄位代碼 ... EX.( 10 )=>AH05A
+     E                    CHK1        7  2
+     E*輸入欄位內容 ... EX.( R&D )=>AH05
+     E                    CHK2        4 20
+     E*輸入欄位說明 EX.(研發部)=>CALL 檢核程式&AA04得之.
+     E                    CHK3        7 20
+     IARAF
+     I              AF01                            AF01$
+     I              AF02                            AF02$
+     I              AF03                            AF03$
+     I              AF04                            AF04$
+     I              AF05                            AF05$
+     I              AF06                            AF06$
+     I              AF07                            AF07$
+     I              AF08                            AF08$
+M004AI              AF09                            AF09$
+M004AI              AF10                            AF10$
+M009AI              AF11                            AF11$
+     I              AFXX                            AFXX$
+     I              AFYY                            AFYY$
+     I              AFZZ                            AFZZ$
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$ADMDY
+M001MI                                      187 1920$ADYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+M001MI                                      201 2080ADYYMD
+     I            DS
+     I                                        1   2 AC01
+     I                                        1   1 WAC01
+     I                                        2   2 WAC01A
+     I            DS
+     I                                        1   2 AD01
+     I                                        1   1 WAD011
+     I                                        2   2 WAD012
+     I            DS
+     I                                        1   2 AD10
+     I                                        1   1 WAD101
+     I                                        2   2 WAD102
+     I            DS
+     I                                        1   2 AF01$
+     I                                        1   1 WAF01$
+     I            DS
+     I                                        1  14 AC12
+     I                                        9  14 AC12L
+     I            DS
+     I                                        1   5 AD02
+     I                                        1   1 AD02L
+     I            DS
+     I                                        1  14 AD06
+     I                                        1  12 AD06L
+     I            DS
+B2MODI                                        1   80AD12
+B2MODI                                        1   60AD12YM
+     I*檢核程式之參數.....................................
+     ICHKPGM      DS
+     I                                        1   2 AH01
+     I                                        3  22 WPARM1
+     I                                       23  32 WPARM2
+     I                                       33  33 WCHK
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN #G01      W#G01
+     C           *LIKE     DEFN #G02      W#G02
+     C*          *LIKE     DEFN #G03      W#G03
+     C           *LIKE     DEFN AH03      WAH03
+     C           *LIKE     DEFN JL1001    WL1001
+     C           *LIKE     DEFN JL1002    WL1002
+     C           *LIKE     DEFN J1002$    W1002$
+     C           *LIKE     DEFN JL1003    WL1003
+     C           *LIKE     DEFN AD12      WAD12
+     C           *LIKE     DEFN HD01      WHD01
+     C           *LIKE     DEFN HD04      WHD04
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAA     KLIST
+     C                     KFLD           AH01
+     C                     KFLD           CHK1,I
+     C*DEREK     KEYSI     KLIST
+     C*DEREK               KFLD           AG01             *公司別
+     C*DEREK               KFLD           AG04             *發票號碼
+     C*DEREK     KEYSJ     KLIST
+     C*DEREK               KFLD           AG01             *公司別
+     C*DEREK               KFLD           AG04             *發票號碼
+     C*DEREK               KFLD           AG03             *產品代號
+     C*DEREK     KEYSD     KLIST
+     C*DEREK               KFLD           SI10             *訂單號碼
+     C*DEREK               KFLD           SJ03             *產品代號
+     C           KEYW10    KLIST
+     C                     KFLD           JL1001           *確認日期
+     C                     KFLD           JL1002           *公司別2
+     C                     KFLD           J1002$           *辦事處1
+     C                     KFLD           JL1003           *傳票別
+     C                     KFLD           JL1004           *會計科目
+     C                     KFLD           JL1005           *成本中心
+     C                     KFLD           JL1006           *對項別
+     C                     KFLD           JL1007           *相關號碼１
+     C                     KFLD           JL1008           *相關號碼２
+     C                     KFLD           JL1009           *日期
+     C                     KFLD           JL1010           *數量
+     C                     KFLD           JL1011           *其它
+M010+C           KEY10A    KLIST
+M010+C                     KFLD           JL1001           *確認日期
+M010+C                     KFLD           JL1002           *公司別2
+M010+C                     KFLD           J1002$           *辦事處1
+M010+C                     KFLD           JL1003           *傳票別
+M010+C                     KFLD           JL1004           *會計科目
+M010+C                     KFLD           JL1005           *成本中心
+M010+C                     KFLD           JL1006           *對項別
+M010+C                     KFLD           JL1007           *相關號碼１
+M010+C                     KFLD           JL1008           *相關號碼２
+M010+C                     KFLD           JL1009           *日期
+M010+C                     KFLD           JL1010           *數量
+M010+C                     KFLD           JL1011           *其它
+M010+C                     KFLD           J1003$           *借貸別
+     C           KEYW26    KLIST
+     C                     KFLD           JL2601           *作帳日期
+     C                     KFLD           JL2602           *作帳公司
+     C                     KFLD           JL2604           *收款種類
+     C                     KFLD           JL2605           *入帳帳號
+     C                     KFLD           J2602$           *作帳辦事處
+     C                     KFLD           JL2603           *對應公司
+     C                     KFLD           JL2606           *客戶代號
+     C                     KFLD           JL2608           *預收
+     C           KEY#G     KLIST
+     C                     KFLD           W#G01
+     C           KEYAF     KLIST
+     C                     KFLD           AH01             *公司別
+     C                     KFLD           AH04             *會計科目
+     C           KEYACD    KLIST
+     C                     KFLD           AC01
+     C                     KFLD           AC02
+     C                     KFLD           AC03
+     C                     KFLD           AC04
+     C                     KFLD           AC05
+     C                     KFLD           AC06
+     C                     KFLD           WAD12
+     C           KEYAC     KLIST
+     C                     KFLD           AD01
+     C                     KFLD           AD02
+     C                     KFLD           AD03
+     C                     KFLD           AD04
+     C                     KFLD           AD05
+     C                     KFLD           AD06
+     C           KEYHD     KLIST
+     C                     KFLD           WHD01            *公司
+     C                     KFLD           WHD04            *帳戶簡碼
+     C           KEYSI2    KLIST
+     C                     KFLD           AF01$            *公司別
+     C                     KFLD           AF06$            *發票號碼
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+      *INITIAL VALUE
+     C                     EXSR R0100                      *INITIAL
+     C*WRITE DATA TO FILE
+     C                     EXSR R2000
+      *傳票處理
+     C                     EXSR R4000
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*--------------------------------------------------------------*
+|    C                     Z-ADD*ZERO     W01    132
+|    C                     Z-ADD*ZERO     W02    132
+|    C                     Z-ADD0         WQTY    70
+|    C                     Z-ADD0         WCOST  132
+|    C                     Z-ADD0         WAMT   154
+|    C                     Z-ADD0         WORK   154
+|    C*DEREK               Z-ADD0         KEEP
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .計算各單別檔
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*收款主檔
+|    C                     EXSR RTNAC
+|    C*沖帳明細
+|    C                     EXSR RTNAD
+|    C*價差折讓
+|    C                     EXSR RTNAF
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAC .收款主檔
+     C*==============================================================*
+03===C           RTNAC     BEGSR
+|    C*
+|    C           *LOVAL    SETLLAC0
+|    C                     READ AC0                      45
+| 01-C           *IN45     DOWEQ'0'
+|   C*
+| 02-C           AC13      IFEQ *BLANKS
+|   C*票據／現金／匯款
+| 03-C           AC05      IFEQ '10'
+|   C           AC05      OREQ '20'
+|   C           AC05      OREQ '30'
+|    *INITIAL檔案共同欄位WFJL10PF/WFJL26PF KEY VALUES
+|   C                     EXSR RINTAC
+|   C                     Z-ADDAC08      WAMT
+|   C                     Z-ADDAC04      WAD12
+|    *WAMT計算當日未沖金額
+|   C           KEYACD    SETLLAD0L5
+|   C           KEYACD    READEAD0L5                    46
+| 04-C           *IN46     DOWEQ'0'
+|    *
+|   C                     SUB  AD08      WAMT
+|    *
+|   C           KEYACD    READEAD0L5                    46
+| 04-C                     END
+|    *
+|   C                     EXSR RTNAC1
+|   C*
+|   C                     Z-ADDWAMT      W01
+|   C                     EXSR R2C00
+|    *
+| 03-C                     END
+|    *
+|   C                     MOVEL'V'       AC13
+|   C                     UPDATAC0
+| 02-C                     END
+|   C*
+|   C                     READ AC0                      45
+     C                     Z-ADDADYYMD    ACXX
+| 01-C                     END
+|     *FOR RECORD LOCK
+|    C           *LOVAL    SETLLAC0
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RINTAC....INITIAL KEY VALUES
+     C*INITIAL檔案共同欄位WFJL10PF/WFJL26PF
+     C*==============================================================*
+04===C           RINTAC    BEGSR
+|    C*--------------------------------------------------------------*
+|    C                     Z-ADDAC04      JL1001
+|     *公司別RE/CN/WL
+| 01-C*DEREK     WAC01     IFEQ 'R'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 01-C*DEREK               END
+| 02-C*DEREK     WAC01     IFEQ 'K'
+|   C*DEREK               MOVEL'KN'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     WAC01     IFEQ 'W'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 03-C           WAC01     IFEQ 'L'
+|   C                     MOVEL'LG'      JL1002
+| 03-C                     END
+|     *
+|    C*DEREK               MOVE AC01      J1002$           辦事處
+DEREKC                     MOVE *BLANK    J1002$           辦事處
+|    C                     MOVEL'1'       JL1003
+|    C                     MOVEL*BLANKS   JL1005
+|    C                     MOVEL*BLANKS   JL1006
+|    C                     MOVEL*BLANKS   JL1007
+|    C                     MOVEL*BLANKS   JL1008
+|    C                     Z-ADD0         JL1009
+|    C                     Z-ADD0         JL1010
+|    C                     MOVEL*BLANKS   JL1011
+|    C*INITIAL檔案共同欄位WFJL26PF
+|    C                     Z-ADDAC04      JL2601
+|     *公司別R/C
+|    C                     MOVELAC01      JL2602
+|    C*DEREK               MOVE AC01      J2602$
+DEREKC                     MOVE *BLANK    J2602$
+|    C                     MOVELAC01      JL2603
+|    C                     MOVELAC05      JL2604
+| 04-C           AC05      IFEQ '20'
+|   C           AC05      OREQ '30'
+|   C                     MOVELAC12L     JL2605
+| 04*C                     ELSE
+|   C                     MOVEL*BLANKS   JL2605
+| 04-C                     END
+|    C                     MOVELAC02      JL2606
+|    C                     MOVEL'1'       JL2608
+|    C                     MOVEL'AA'      JL2609
+|     *
+|    C*--------------------------------------------------------------*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAC1... 計算沖帳主檔
+     C*==============================================================*
+05===C           RTNAC1    BEGSR
+|     *----------------------------------------------------------------
+|    C*（１）一................收款沖帳傳票
+|     *會計科目－１０應收票據，２０／３０銀行存款－乙存
+| 01-C           AC05      IFEQ '10'
+|   C                     MOVEL'1131    'JL1004
+| 01-C                     END
+| 02-C           AC05      IFEQ '20'
+|   C           AC05      OREQ '30'
+|   C                     MOVELAC12L     JL1007
+|   C*                    MOVEL'111502  'JL1004
+|   C*檢查銀行帳戶為甲存或乙存
+|   C                     MOVE AC12L     WHD04
+|   C                     MOVE JL1002    WHD01
+|   C           KEYHD     CHAINHD0                  41
+| 03-C           *IN41     IFEQ '0'
+| 04-C           HD05      IFEQ '1'
+|   C                     MOVEL'111501  'JL1004
+| 04*C                     ELSE
+|   C                     MOVEL'111502  'JL1004
+| 04-C                     END
+| 03*C                     ELSE
+|   C                     MOVEL'111502  'JL1004
+| 03-C                     END
+| 02-C                     END
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 05-C           WAMT      IFGE 0
+|   C                     Z-ADDWAMT      W01
+| 05*C                     ELSE
+|   C           WAMT      MULT -1        W02
+| 05-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C                     MOVEL*BLANKS   JL1007
+|     *----------------------------------------------------------------
+|    C*（１）二................收款沖帳傳票
+|     *會計科目－預收款
+|    C                     MOVELAC02      JL1006
+|    C                     MOVEL'2145    'JL1004
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 06-C           WAMT      IFLE 0
+|   C           WAMT      MULT -1        W01
+| 06*C                     ELSE
+|   C                     Z-ADDWAMT      W02
+| 06-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+M010-C*                    EXSR RWF10
+M010+C                     EXSR RWF10A
+|    C                     MOVEL*BLANKS   JL1006
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAD .收款明細檔
+     C*==============================================================*
+06===C           RTNAD     BEGSR
+|    C*
+|    C           *LOVAL    SETLLAD0
+|    C                     READ AD0                      45
+| 01-C           *IN45     DOWEQ'0'
+|   C*
+| 02-C           AD09      IFEQ *BLANKS
+|   C                     SETOF                     20
+|   C*GET入帳帳號
+|   C                     MOVEL*BLANKS   AC12
+|   C           KEYAC     CHAINAC0L                 40
+|    *INITIAL檔案共同欄位WFJL10PF/WFJL26PF KEY VALUES
+|   C                     EXSR RINTAD
+|   C*
+| 03-C           AD05      IFEQ '10'
+| 04-C           WAD011    IFEQ WAD101
+|   C                     EXSR RTNAD1
+|   C                     WRITEWFAD
+| 04*C                     ELSE
+|   C*DEREK               EXSR RTNAD2
+|   C*DEREK               WRITEWFAD
+| 04-C                     END
+| 03-C                     END
+|   C*
+| 05-C           AD05      IFEQ '20'
+|   C           AD05      OREQ '30'
+| 06-C           WAD011    IFEQ WAD101
+|   C                     EXSR RTNAD3
+|   C                     WRITEWFAD
+| 06*C                     ELSE
+|   C*DEREK               EXSR RTNAD4
+|   C*DEREK               WRITEWFAD
+| 06-C                     END
+| 05-C                     END
+|   C*
+| 07-C           AD05      IFEQ '41'
+| 08-C           WAD011    IFEQ WAD101
+|   C                     EXSR RTNAD5
+|   C                     WRITEWFAD
+| 08-C                     END
+| 07-C                     END
+|    *
+| 09-C           AD05      IFEQ '42'
+| 10-C           WAD011    IFEQ WAD101
+|   C                     EXSR RTNAD6
+|   C                     WRITEWFAD
+| 10-C                     END
+| 09-C                     END
+|    *
+| 11-C           AD05      IFEQ '43'
+| 12-C           WAD011    IFEQ WAD101
+|   C                     EXSR RTNAD7
+|   C                     WRITEWFAD
+| 12-C                     END
+| 11-C                     END
+|    *
+| 13-C*DEREK     AD05      IFEQ '44'
+| 14-C*DEREK     WAD011    IFEQ WAD101
+|   C*DEREK               EXSR RTNAD8
+|   C*DEREK               WRITEWFAD
+| 14-C*DEREK               END
+| 13-C*DEREK               END
+|    *
+| 15-C           AD05      IFEQ '45'
+| 16-C           WAD011    IFEQ WAD101
+|   C                     EXSR RTNAD9
+|   C                     WRITEWFAD
+| 16-C                     END
+| 15-C                     END
+|    *
+| 17-C           AD05      IFEQ '46'
+| 18-C           WAD011    IFEQ WAD101
+|   C                     EXSR RTNADA
+|   C                     WRITEWFAD
+| 18-C                     END
+| 17-C                     END
+|    *
+| 19-C*DEREK     AD05      IFEQ '47'
+| 20-C*DEREK     WAD011    IFEQ WAD101
+|   C*DEREK               EXSR RTNADJ
+|   C*DEREK               WRITEWFAD
+| 20-C*DEREK               END
+| 19-C*DEREK               END
+|    *
+| 21-C           AD05      IFEQ '50'
+| 22-C*DEREK     AD02      IFEQ 'A0001'
+|   C*DEREK     AD02      OREQ 'A0002'
+|   C*M003D     AD02      OREQ 'A0003'
+|   C*DEREK               EXSR RTNADD
+|   C*DEREK               WRITEWFAD
+| 22*C*DEREK               ELSE
+| 23-C*DEREK     AD02L     IFEQ 'B'
+| 24-C*DEREK     AD02      IFEQ 'B0000'
+|   C*DEREK               EXSR RTNADB
+| 24*C*DEREK               ELSE
+|   C*DEREK               EXSR RTNADE
+| 24-C*DEREK               END
+|   C*DEREK               WRITEWFAD
+| 23*C*DEREK               ELSE
+| 25-C           WAD011    IFEQ WAD101
+|   C                     EXSR RTNADB
+| 25*C                     ELSE
+|   C*DEREK               EXSR RTNADC
+| 25-C                     END
+|   C                     WRITEWFAD
+| 23-C*DEREK               END
+| 22-C*DEREK               END
+| 21-C                     END
+|   C*
+| 26-C*DEREK     AD05      IFEQ '80'
+| 27-C*DEREK     WAD011    IFEQ WAD101
+|   C*DEREK               EXSR RTNADF
+|   C*DEREK               WRITEWFAD
+| 27*C*DEREK               ELSE
+|   C*DEREK               EXSR RTNADG
+|   C*DEREK               WRITEWFAD
+| 27-C*DEREK               END
+| 26-C*DEREK               END
+|   C*
+| 28-C*DEREK     AD05      IFEQ '60'
+|   C*DEREK               EXSR RTNADH
+|   C*DEREK               WRITEWFAD
+| 28-C*DEREK               END
+|   C*
+| 29-C*DEREK     AD05      IFEQ '70'
+| 30-C*DEREK     WAD011    IFEQ WAD101
+|   C*DEREK               EXSR RTNADI
+|   C*DEREK               WRITEWFAD
+| 30-C*DEREK               END
+| 29-C*DEREK               END
+|   C*
+| 31-C           *IN20     IFEQ '0'
+|   C                     MOVEL'V'       AD09
+     C                     Z-ADDADYYMD    ADXX
+|   C                     UPDATAD0
+| 31-C                     END
+|    *
+| 02-C                     END
+|   C*
+|   C                     READ AD0                      45
+| 01-C                     END
+|    C           *LOVAL    SETLLAD0
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          RINTAD....INITIAL KEY VALUES
+     C*INITIAL檔案共同欄位WFJL10PF/WFJL26PF
+     C*==============================================================*
+07===C           RINTAD    BEGSR
+|    C*--------------------------------------------------------------*
+|     *分配日期
+|    C                     Z-ADDAD12      JL1001
+|     *
+|    C*DEREK               MOVE AD01      J1002$
+DEREKC                     MOVE *BLANK    J1002$
+|    C                     MOVEL'1'       JL1003
+|    C                     MOVEL*BLANKS   JL1005
+|    C                     MOVEL*BLANKS   JL1006
+|    C                     MOVEL*BLANKS   JL1007
+|    C                     MOVEL*BLANKS   JL1008
+|    C                     Z-ADD0         JL1009
+|    C                     Z-ADD0         JL1010
+|    C                     MOVEL*BLANKS   JL1011
+|    C*INITIAL檔案共同欄位WFJL26PF
+|     *公司別R/C
+|    C                     Z-ADDAD12      JL2601
+|    C*DEREK               MOVE AD10      J2602$
+DEREKC                     MOVE *BLANK    J2602$
+|    C                     MOVEL*BLANKS   JL2605
+|    C                     MOVELAD02      JL2606
+|    C                     MOVEL*BLANKS   JL2608
+|     *
+|    C*--------------------------------------------------------------*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAD1... 計算沖帳明細檔
+     C*              10... 票據     AD01=AD10
+     C*==============================================================*
+08===C           RTNAD1    BEGSR
+|     *公司
+| 01-C*DEREK     WAD011    IFEQ 'R'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 01-C*DEREK               END
+| 02-C*DEREK     WAD011    IFEQ 'K'
+|   C*DEREK               MOVEL'KN'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     WAD011    IFEQ 'W'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 03-C           WAD011    IFEQ 'L'
+|   C                     MOVEL'LG'      JL1002
+| 03-C                     END
+|     *
+|     *----------------------------------------------------------------
+|    C*（１）一................收款沖帳傳票
+|     *會計科目－應收票據／預收款
+| 04-C           AD04      IFEQ AD12
+|   C                     MOVEL'1131    'JL1004
+| 04*C                     ELSE
+|   C                     MOVEL'2145    'JL1004
+|   C                     MOVELAD02      JL1006
+| 04-C                     END
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 05-C           AD08      IFGE 0
+|   C                     Z-ADDAD08      W01
+| 05*C                     ELSE
+|   C           AD08      MULT -1        W02
+| 05-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+M010+C           JL1004    IFNE '2145'
+|    C                     EXSR RWF10
+M010+C                     ELSE
+M010+C                     EXSR RWF10A
+M010+C                     END
+|    C                     MOVEL*BLANKS   JL1006
+|     *----------------------------------------------------------------
+|    C*（１）二................收款沖帳傳票
+|     *會計科目－應收帳款－客戶／匯東／匯齡／康齡
+| 06-C*DEREK     AD02      IFEQ 'A0001'
+|   C*DEREK               MOVEL'11350201'JL1004
+| 06*C*DEREK               ELSE
+| 07-C*DEREK     AD02      IFEQ 'A0002'
+|   C*DEREK               MOVEL'11350202'JL1004
+| 07*C*DEREK               ELSE
+|   C*M003D     AD02      IFEQ 'A0003'
+|   C*M003D               MOVEL'11350203'JL1004
+|   C*M003D               ELSE
+|   C                     MOVEL'1132    'JL1004
+|   C*M003D               END
+| 07-C*DEREK               END
+| 06-C*DEREK               END
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 08-C           AD08      IFLE 0
+|   C           AD08      MULT -1        W01
+| 08*C                     ELSE
+|   C                     Z-ADDAD08      W02
+| 08-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C*****************
+|    C                     MOVELWAD011    JL2602
+|    C                     MOVE WAD012    JL2602
+| 09-C           AD04      IFEQ AD12
+|   C                     MOVELAD05      JL2604
+| 09*C                     ELSE
+|   C                     MOVEL'80'      JL2604
+| 09-C                     END
+|    C                     MOVEL*BLANKS   JL2605
+|    C                     MOVEL'BB'      JL2609
+|     *
+|    C                     MOVELAD01      JL2603
+|    C                     Z-ADDAD08      W01
+|    C                     EXSR R2C00
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAD3... 計算沖帳明細檔
+     C*              20... 現金     AD01=AD10
+     C*              30... 匯款     AD01=AD10
+     C*==============================================================*
+10===C           RTNAD3    BEGSR
+|     *公司
+| 01-C*DEREK     WAD011    IFEQ 'R'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 01-C*DEREK               END
+| 02-C*DEREK     WAD011    IFEQ 'K'
+|   C*DEREK               MOVEL'KN'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     WAD011    IFEQ 'W'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 03-C           WAD011    IFEQ 'L'
+|   C                     MOVEL'LG'      JL1002
+| 03-C                     END
+|     *
+|     *----------------------------------------------------------------
+|    C*（１）一................收款沖帳傳票
+|     *會計科目－銀行存款－乙存／預收款
+| 04-C           AD04      IFEQ AD12
+|   C*                    MOVEL'111502  'JL1004
+|   C*檢查銀行帳戶為甲存或乙存
+|   C                     MOVE AC12L     WHD04
+|   C                     MOVE JL1002    WHD01
+|   C           KEYHD     CHAINHD0                  41
+| 05-C           *IN41     IFEQ '0'
+| 06-C           HD05      IFEQ '1'
+|   C                     MOVEL'111501  'JL1004
+| 06*C                     ELSE
+|   C                     MOVEL'111502  'JL1004
+| 06-C                     END
+| 05*C                     ELSE
+|   C                     MOVEL'111502  'JL1004
+| 05-C                     END
+|   C                     MOVELAC12L     JL1007
+| 04*C                     ELSE
+|   C                     MOVEL'2145    'JL1004
+|   C                     MOVELAD02      JL1006
+| 04-C                     END
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 07-C           AD08      IFGE 0
+|   C                     Z-ADDAD08      W01
+| 07*C                     ELSE
+|   C           AD08      MULT -1        W02
+| 07-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+M010+C           JL1004    IFNE '2145'
+|    C                     EXSR RWF10
+M010+C                     ELSE
+M010+C                     EXSR RWF10A
+M010+C                     END
+|    C                     MOVEL*BLANKS   JL1006
+|    C                     MOVEL*BLANKS   JL1007
+|     *----------------------------------------------------------------
+|    C*（１）二................收款沖帳傳票
+|     *會計科目－應收帳款－客戶／匯東／匯齡／康齡
+| 08-C*DEREK     AD02      IFEQ 'A0001'
+|   C*DEREK               MOVEL'11350201'JL1004
+| 08*C*DEREK               ELSE
+| 09-C*DEREK     AD02      IFEQ 'A0002'
+|   C*DEREK               MOVEL'11350202'JL1004
+| 09*C*DEREK               ELSE
+|   C*M003D     AD02      IFEQ 'A0003'
+|   C*M003D               MOVEL'11350203'JL1004
+|   C*M003D               ELSE
+|   C                     MOVEL'1132    'JL1004
+|   C*M003D               END
+| 09-C*DEREK               END
+| 08-C*DEREK               END
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 10-C           AD08      IFLE 0
+|   C           AD08      MULT -1        W01
+| 10*C                     ELSE
+|   C                     Z-ADDAD08      W02
+| 10-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C*****************
+|    C                     MOVELWAD011    JL2602
+|    C                     MOVE WAD012    JL2602
+|    C                     MOVELAD01      JL2603
+| 11-C           AD04      IFEQ AD12
+|   C                     MOVELAD05      JL2604
+|   C                     MOVELAC12L     JL2605
+| 11*C                     ELSE
+|   C                     MOVEL'80'      JL2604
+|   C                     MOVEL*BLANKS   JL2605
+| 11-C                     END
+|    C                     MOVEL'BB'      JL2609
+|     *
+|    C                     Z-ADDAD08      W01
+|    C                     EXSR R2C00
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAD5... 計算沖帳明細檔
+     C*              41... 郵電費   AD01=AD10
+     C*==============================================================*
+12===C           RTNAD5    BEGSR
+|     *公司
+| 01-C*DEREK     WAD011    IFEQ 'R'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 01-C*DEREK               END
+| 02-C*DEREK     WAD011    IFEQ 'K'
+|   C*DEREK               MOVEL'KN'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     WAD011    IFEQ 'W'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 03-C           WAD011    IFEQ 'L'
+|   C                     MOVEL'LG'      JL1002
+| 03-C                     END
+|     *----------------------------------------------------------------
+|    C*（１）一................收款沖帳傳票
+|     *會計科目－郵電費－郵資一般
+|    C*DEREK               MOVEL'61060501'JL1004
+DEREK *會計科目－郵電費－郵資
+DEREKC                     MOVEL'610602  'JL1004
+DEREKC                     MOVEL'1001 '   JL1005
+| 04-C*DEREK     WAD102    IFEQ '1'
+|   C*DEREK               MOVEL'10500'   JL1005
+| 04-C*DEREK               END
+| 05-C*DEREK     WAD102    IFEQ '2'
+|   C*DEREK               MOVEL'20500'   JL1005
+| 05-C*DEREK               END
+| 06-C*DEREK     WAD102    IFEQ '3'
+|   C*DEREK               MOVEL'30500'   JL1005
+| 06-C*DEREK               END
+|     *日期轉換YYMMDD--->YYYYMMDD
+|    C*M001D               Z-ADDAD12      P3101I
+|    C*M001D               CALL 'P31'
+|    C*M001D               PARM           P3101I  80
+|    C*M001D               PARM '1'       P3102I  1
+|    C*M001D               PARM '1'       P3103I  1
+|    C*M001D               PARM '2'       P3104I  1
+|    C*M001D               PARM '1'       P3105I  1
+|    C*M001D               PARM           P3101O  80
+|    C*M001M               MOVE P3101O    WYMD    60
+|    C                     MOVE AD12      WYMD    60
+|    C                     MOVELWYMD      WYM     40
+|    C*DEREK               Z-ADDWYM       JL1009
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 07-C           AD08      IFGE 0
+|   C                     Z-ADDAD08      W01
+| 07*C                     ELSE
+|   C           AD08      MULT -1        W02
+| 07-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C                     MOVEL*BLANKS   JL1009
+DEREKC                     MOVEL*BLANKS   JL1005
+|     *----------------------------------------------------------------
+|    C*（１）二................收款沖帳傳票
+|     *會計科目－應收帳款－客戶
+|    C                     MOVEL'1132    'JL1004
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 08-C           AD08      IFLE 0
+|   C           AD08      MULT -1        W01
+| 08*C                     ELSE
+|   C                     Z-ADDAD08      W02
+| 08-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C*****************
+|    C                     MOVELWAD011    JL2602
+|    C                     MOVE WAD012    JL2602
+|    C                     MOVELAD01      JL2603
+|    C                     MOVELAD05      JL2604
+|    C                     MOVEL*BLANKS   JL2605
+|    C                     MOVEL'BB'      JL2609
+|     *
+|    C                     Z-ADDAD08      W01
+|    C                     EXSR R2C00
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAD6... 計算沖帳明細檔
+     C*              42... 匯費     AD01=AD10
+     C*==============================================================*
+13===C           RTNAD6    BEGSR
+|     *公司
+| 01-C*DEREK     WAD011    IFEQ 'R'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 01-C*DEREK               END
+| 02-C*DEREK     WAD011    IFEQ 'K'
+|   C*DEREK               MOVEL'KN'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     WAD011    IFEQ 'W'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 03-C           WAD011    IFEQ 'L'
+|   C                     MOVEL'LG'      JL1002
+| 03-C                     END
+|     *----------------------------------------------------------------
+|    C*（１）一................收款沖帳傳票
+|     *會計科目－郵電費－匯款
+DEREK *會計科目－手續費－匯款
+|    C                     MOVEL'612602  'JL1004
+DEREKC                     MOVEL'1001 '   JL1005
+| 04-C*DEREK     WAD102    IFEQ '1'
+|   C*DEREK               MOVEL'10500'   JL1005
+| 04-C*DEREK               END
+| 05-C*DEREK     WAD102    IFEQ '2'
+|   C*DEREK               MOVEL'20500'   JL1005
+| 05-C*DEREK               END
+| 06-C*DEREK     WAD102    IFEQ '3'
+|   C*DEREK               MOVEL'30500'   JL1005
+| 06-C*DEREK               END
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 07-C           AD08      IFGE 0
+|   C                     Z-ADDAD08      W01
+| 07*C                     ELSE
+|   C           AD08      MULT -1        W02
+| 07-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+DEREKC                     MOVEL*BLANKS   JL1005
+|     *----------------------------------------------------------------
+|    C*（１）二................收款沖帳傳票
+|     *會計科目－應收帳款－客戶
+|    C                     MOVEL'1132    'JL1004
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 08-C           AD08      IFLE 0
+|   C           AD08      MULT -1        W01
+| 08*C                     ELSE
+|   C                     Z-ADDAD08      W02
+| 08-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C*****************
+|    C                     MOVELWAD011    JL2602
+|    C                     MOVE WAD012    JL2602
+|    C                     MOVELAD01      JL2603
+|    C                     MOVELAD05      JL2604
+|    C                     MOVEL*BLANKS   JL2605
+|    C                     MOVEL'BB'      JL2609
+|     *
+|    C                     Z-ADDAD08      W01
+|    C                     EXSR R2C00
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAD7... 計算沖帳明細檔
+     C*              43... 匯費-信用狀  AD01=AD10
+     C*==============================================================*
+14===C           RTNAD7    BEGSR
+|     *公司
+| 01-C*DEREK     WAD011    IFEQ 'R'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 01-C*DEREK               END
+| 02-C*DEREK     WAD011    IFEQ 'K'
+|   C*DEREK               MOVEL'KN'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     WAD011    IFEQ 'W'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 03-C           WAD011    IFEQ 'L'
+|   C                     MOVEL'LG'      JL1002
+| 03-C                     END
+|     *----------------------------------------------------------------
+|    C*（１）一................收款沖帳傳票
+|     *會計科目－什項費－其他
+|    C*DEREK               MOVEL'613209  'JL1004
+DEREK *會計科目－手續費－信用狀
+DEREKC                     MOVEL'612601  'JL1004
+DEREKC                     MOVEL'1001 '   JL1005
+| 04-C*DEREK     WAD102    IFEQ '1'
+|   C*DEREK               MOVEL'10500'   JL1005
+| 04-C*DEREK               END
+| 05-C*DEREK     WAD102    IFEQ '2'
+|   C*DEREK               MOVEL'20500'   JL1005
+| 05-C*DEREK               END
+| 06-C*DEREK     WAD102    IFEQ '3'
+|   C*DEREK               MOVEL'30500'   JL1005
+| 06-C*DEREK               END
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 07-C           AD08      IFGE 0
+|   C                     Z-ADDAD08      W01
+| 07*C                     ELSE
+|   C           AD08      MULT -1        W02
+| 07-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+DEREKC                     MOVEL*BLANKS   JL1005
+|     *----------------------------------------------------------------
+|    C*（１）二................收款沖帳傳票
+|     *會計科目－應收帳款－客戶
+|    C                     MOVEL'1132    'JL1004
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 08-C           AD08      IFLE 0
+|   C           AD08      MULT -1        W01
+| 08*C                     ELSE
+|   C                     Z-ADDAD08      W02
+| 08-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C*****************
+|    C                     MOVELWAD011    JL2602
+|    C                     MOVE WAD012    JL2602
+|    C                     MOVELAD01      JL2603
+|    C                     MOVELAD05      JL2604
+|    C                     MOVEL*BLANKS   JL2605
+|    C                     MOVEL'BB'      JL2609
+|     *
+|    C                     Z-ADDAD08      W01
+|    C                     EXSR R2C00
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAD9... 計算沖帳明細檔
+     C*              45... 銷貨收入 AD01=AD10
+     C*==============================================================*
+16===C           RTNAD9    BEGSR
+|     *公司
+| 01-C*DEREK     WAD011    IFEQ 'R'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 01-C*DEREK               END
+| 02-C*DEREK     WAD011    IFEQ 'K'
+|   C*DEREK               MOVEL'KN'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     WAD011    IFEQ 'W'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 03-C           WAD011    IFEQ 'L'
+|   C                     MOVEL'LG'      JL1002
+| 03-C                     END
+|     *----------------------------------------------------------------
+|    C*（１）一................收款沖帳傳票
+|     *會計科目－事後折扣－客戶／匯東／匯齡／康齡
+| 04-C*DEREK     AD02      IFEQ 'A0001'
+|   C*DEREK               MOVEL'410901  'JL1004
+| 04*C*DEREK               ELSE
+| 05-C*DEREK     AD02      IFEQ 'A0002'
+|   C*DEREK               MOVEL'410902  'JL1004
+| 05*C*DEREK               ELSE
+|   C*M003D     AD02      IFEQ 'A0003'
+|   C*M003D               MOVEL'410903  'JL1004
+|   C*M003D               ELSE
+|   C*DEREK               MOVEL'410904  'JL1004
+|   C*M003D               END
+| 05-C*DEREK               END
+| 04-C*DEREK               END
+|     *會計科目－銷貨收入－客戶
+DEREKC                     MOVEL'410104  'JL1004
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 06-C           AD08      IFGE 0
+|   C                     Z-ADDAD08      W01
+| 06*C                     ELSE
+|   C           AD08      MULT -1        W02
+| 06-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|     *----------------------------------------------------------------
+|    C*（１）二................收款沖帳傳票
+|     *會計科目－應收帳款－客戶／匯東／匯齡／康齡
+| 07-C*DEREK     AD02      IFEQ 'A0001'
+|   C*DEREK               MOVEL'11350201'JL1004
+| 07*C*DEREK               ELSE
+| 08-C*DEREK     AD02      IFEQ 'A0002'
+|   C*DEREK               MOVEL'11350202'JL1004
+| 08*C*DEREK               ELSE
+|   C*M003D     AD02      IFEQ 'A0003'
+|   C*M003D               MOVEL'11350203'JL1004
+|   C*M003D               ELSE
+|   C                     MOVEL'1132    'JL1004
+|   C*M003D               END
+| 08-C*DEREK               END
+| 07-C*DEREK               END
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 09-C           AD08      IFLE 0
+|   C           AD08      MULT -1        W01
+| 09*C                     ELSE
+|   C                     Z-ADDAD08      W02
+| 09-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C*****************
+|    C                     MOVELWAD011    JL2602
+|    C                     MOVE WAD012    JL2602
+|    C                     MOVELAD01      JL2603
+|    C                     MOVELAD05      JL2604
+|    C                     MOVEL*BLANKS   JL2605
+|    C                     MOVEL'BB'      JL2609
+|     *
+|    C                     Z-ADDAD08      W01
+|    C                     EXSR R2C00
+|    C*
+16===C                     ENDSR
+     C*==============================================================*
+     C*          RTNADA... 計算沖帳明細檔
+     C*              46... 銷項稅額 AD01=AD10
+     C*==============================================================*
+17===C           RTNADA    BEGSR
+|     *公司
+| 01-C*DEREK     WAD011    IFEQ 'R'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 01-C*DEREK               END
+| 02-C*DEREK     WAD011    IFEQ 'K'
+|   C*DEREK               MOVEL'KN'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     WAD011    IFEQ 'W'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 03-C           WAD011    IFEQ 'L'
+|   C                     MOVEL'LG'      JL1002
+| 03-C                     END
+|     *----------------------------------------------------------------
+|    C*（１）一................收款沖帳傳票
+|     *會計科目－運費－其他
+|    C*DEREK               MOVEL'610509  'JL1004
+DEREK *會計科目－銷項稅額
+DEREKC                     MOVEL'2193    'JL1004
+| 04-C*DEREK     WAD102    IFEQ '1'
+|   C*DEREK               MOVEL'10500'   JL1005
+| 04-C*DEREK               END
+| 05-C*DEREK     WAD102    IFEQ '2'
+|   C*DEREK               MOVEL'20500'   JL1005
+| 05-C*DEREK               END
+| 06-C*DEREK     WAD102    IFEQ '3'
+|   C*DEREK               MOVEL'30500'   JL1005
+| 06-C*DEREK               END
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 07-C           AD08      IFGE 0
+|   C                     Z-ADDAD08      W01
+| 07*C                     ELSE
+|   C           AD08      MULT -1        W02
+| 07-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C                     MOVEL*BLANKS   JL1005
+|     *----------------------------------------------------------------
+|    C*（１）二................收款沖帳傳票
+|     *會計科目－應收帳款－客戶
+|    C                     MOVEL'1132    'JL1004
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 08-C           AD08      IFLE 0
+|   C           AD08      MULT -1        W01
+| 08*C                     ELSE
+|   C                     Z-ADDAD08      W02
+| 08-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C*****************
+|    C                     MOVELWAD011    JL2602
+|    C                     MOVE WAD012    JL2602
+|    C                     MOVELAD01      JL2603
+|    C                     MOVELAD05      JL2604
+|    C                     MOVEL*BLANKS   JL2605
+|    C                     MOVEL'BB'      JL2609
+|     *
+|    C                     Z-ADDAD08      W01
+|    C                     EXSR R2C00
+|    C*
+17===C                     ENDSR
+     C*==============================================================*
+     C*          RTNADB... 計算沖帳明細檔
+     C*              50... 銷退     AD01=AD10   <>'B' <>'A'
+     C*==============================================================*
+19===C           RTNADB    BEGSR
+|     *公司
+| 01-C*DEREK     WAD011    IFEQ 'R'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 01-C*DEREK               END
+| 02-C*DEREK     WAD011    IFEQ 'K'
+|   C*DEREK               MOVEL'KN'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     WAD011    IFEQ 'W'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 03-C           WAD011    IFEQ 'L'
+|   C                     MOVEL'LG'      JL1002
+| 03-C                     END
+|     *
+|     *----------------------------------------------------------------
+|    C*（１）一................收款沖帳傳票
+|     *會計科目－遞延銷貨退回
+|    C                     MOVEL'2150    'JL1004
+|    C                     MOVELAD02      JL1006
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 04-C           AD08      IFGE 0
+|   C                     Z-ADDAD08      W01
+| 04*C                     ELSE
+|   C           AD08      MULT -1        W02
+| 04-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C                     MOVEL*BLANKS   JL1006
+|     *----------------------------------------------------------------
+|    C*（１）二................收款沖帳傳票
+|     *會計科目－應收帳款－客戶
+|    C                     MOVEL'1132    'JL1004
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 05-C           AD08      IFLE 0
+|   C           AD08      MULT -1        W01
+| 05*C                     ELSE
+|   C                     Z-ADDAD08      W02
+| 05-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C*****************
+|    C                     MOVELWAD011    JL2602
+|    C                     MOVE WAD012    JL2602
+|    C                     MOVELAD01      JL2603
+|    C                     MOVELAD05      JL2604
+|    C                     MOVEL*BLANKS   JL2605
+|    C                     MOVEL'BB'      JL2609
+|     *
+|    C                     Z-ADDAD08      W01
+|    C                     EXSR R2C00
+|    C*
+19===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAF .價差折讓
+     C*==============================================================*
+27===C           RTNAF     BEGSR
+|    C*
+|    C           *LOVAL    SETLLARAF
+|    C                     READ ARAF                     45
+| 01-C           *IN45     DOWEQ'0'
+|   C*
+|   C                     MOVELAF02$     W#G01
+|   C                     MOVELAF05$     W#G02
+|   C           KEY#G     SETLL#G0                      42
+|   C   42                GOTO TAG#2
+|   C*
+| 02-C           AF08$     IFEQ '03'
+|   C           AF08$     OREQ '04'
+|    *INITIAL檔案共同欄位WFJL10PF/WFJL26PF KEY VALUES
+|   C                     EXSR RINTAF
+| 03-C           AF08$     IFEQ '03'
+|   C                     EXSR RTNAF1
+| 03-C                     END
+|   C*
+| 04-C           AF08$     IFEQ '04'
+|   C                     EXSR RTNAF2
+| 04-C                     END
+|   C*
+|   C                     EXSR R2E00
+| 02*C                     ELSE
+|    *未處理
+|   C*                    MOVELAF08$     W#G03
+|   C                     EXSR R2F00
+| 02-C                     END
+|   C*
+|   C           TAG#2     TAG
+|   C                     READ ARAF                     45
+| 01-C                     END
+|    C*
+27===C                     ENDSR
+     C*==============================================================*
+     C*          RINTAF....INITIAL KEY VALUES
+     C*INITIAL檔案共同欄位WFJL10PF/WFJL26PF
+     C*==============================================================*
+28===C           RINTAF    BEGSR
+|    C*--------------------------------------------------------------*
+|    C                     Z-ADDAF05$     JL1001
+|     *公司別RE/CN/WL
+| 01-C*DEREK     WAF01$    IFEQ 'R'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 01-C*DEREK               END
+| 02-C*DEREK     WAF01$    IFEQ 'K'
+|   C*DEREK               MOVEL'KN'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     WAF01$    IFEQ 'W'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 03-C           WAF01$    IFEQ 'L'
+|   C                     MOVEL'LG'      JL1002
+| 03-C                     END
+|     *
+|    C*DEREK               MOVE AF01$     J1002$           辦事處
+DEREKC                     MOVE *BLANK    J1002$           辦事處
+|    C                     MOVEL'1'       JL1003
+|    C                     MOVEL*BLANKS   JL1005
+|    C                     MOVEL*BLANKS   JL1006
+|    C                     MOVEL*BLANKS   JL1007
+|    C                     MOVEL*BLANKS   JL1008
+|    C                     Z-ADD0         JL1009
+|    C                     Z-ADD0         JL1010
+|    C                     MOVEL*BLANKS   JL1011
+|    C*INITIAL檔案共同欄位WFJL26PF
+|    C                     Z-ADDAF05$     JL2601
+|     *公司別R/C
+|    C                     MOVELAF01$     JL2602
+|    C*DEREK               MOVE AF01$     J2602$
+DEREKC                     MOVE *BLANK    J2602$
+|    C                     MOVELAF01$     JL2603
+|    C                     MOVEL'99'      JL2604
+|    C                     MOVEL*BLANKS   JL2605
+|    C                     MOVELAF03$     JL2606
+|    C                     MOVEL*BLANKS   JL2608
+|    C                     MOVELAF08$     JL2609
+|     *
+|    C*--------------------------------------------------------------*
+28===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAF1... 計算價差折讓
+     C*              03... 現金折扣
+     C*==============================================================*
+29===C           RTNAF1    BEGSR
+|     *----------------------------------------------------------------
+|    C*（１）一................收款沖帳傳票
+|     *會計科目－現金折扣
+|    C                     MOVEL'4110    'JL1004
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 01-C           AF07$     IFGE 0
+|   C                     Z-ADDAF07$     W01
+| 01*C                     ELSE
+|   C           AF07$     MULT -1        W02
+| 01-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+     C*-------------------------------------------------------------
+     C*銷項稅額 07/10/19 新增銷項稅額的部份，再將銷項稅額加到
+     C*                    貸方金額
+     C*-------------------------------------------------------------
+| 03-C           AF09$     IFNE 0
+|    *
+|   C                     MOVEL'2193    'JL1004
+|   C*
+|   C                     Z-ADD0         W01
+|   C                     Z-ADD0         W02
+| 04-C           AF09$     IFGE 0
+|   C                     Z-ADDAF09$     W01
+| 04*C                     ELSE
+|   C           AF09$     MULT -1        W02
+| 04-C                     END
+|   C*
+|   C           KEYW10    CHAINWFJL10R              41
+|   C                     EXSR RWF10
+| 03-C                     END
+|     *----------------------------------------------------------------
+|    C*（１）二................收款沖帳傳票
+|     *會計科目－應收帳款－客戶
+|    C                     MOVEL'1132    'JL1004
+|    C*
+|    C                     Z-ADD0         W01
+|    C                     Z-ADD0         W02
+| 02-C           AF07$     IFLE 0
+|   C           AF07$     MULT -1        W01
+| 02*C                     ELSE
+|   C                     Z-ADDAF07$     W02
+     C*加上銷項稅額 (沖銷額度)
+     C                     ADD  AF09$     W02
+| 02-C                     END
+|    C*
+|    C           KEYW10    CHAINWFJL10R              41
+|    C                     EXSR RWF10
+|    C*****************
+|     *
+|    C                     Z-ADDAF07$     W01
+|    C                     EXSR R2C00
+|    C*
+|    C*
+29===C                     ENDSR
+     C*==============================================================*
+     C*          RTNAF2... 計算價差折讓
+     C*              04... 訂單價格錯誤
+     C*==============================================================*
+30===C           RTNAF2    BEGSR
+|     *----------------------------------------------------------------
+|    C* M004A ................收款沖帳傳票
+|    C           KEYSI2    CHAINSI0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C           SI22      ANDEQ'D'
+|    *----------------------------------------------------------------
+|   C*（１）一................收款沖帳傳票
+|    *會計科目－事後折扣－客戶／匯東／匯齡／康齡
+| 02-C*DEREK     AF03$     IFEQ 'A0001'
+|   C*DEREK               MOVEL'410901  'JL1004
+| 02*C*DEREK               ELSE
+| 03-C*DEREK     AF03$     IFEQ 'A0002'
+|   C*DEREK               MOVEL'410902  'JL1004
+| 03*C*DEREK               ELSE
+|   C*M003D     AF03$     IFEQ 'A0003'
+|   C*M003D               MOVEL'410903  'JL1004
+|   C*M003D               ELSE
+|   C                     MOVEL'410904  'JL1004
+|   C*M003D               END
+| 03-C*DEREK               END
+| 02-C*DEREK               END
+|   C*
+|   C*
+|   C                     Z-ADD0         W01
+|   C                     Z-ADD0         W02
+| 04-C           AF07$     IFGE 0
+|   C                     Z-ADDAF07$     W01
+| 04*C                     ELSE
+|   C           AF07$     MULT -1        W02
+| 04-C                     END
+|   C*
+|   C           KEYW10    CHAINWFJL10R              41
+|   C                     EXSR RWF10
+|    *----------------------------------------------------------------
+|    *會計科目－銷項稅額
+|    *客戶／匯東／匯齡／康齡
+| 05-C           AF09$     IFNE 0
+|    *
+|   C*M008D     AF03$     IFEQ 'A0001'
+|   C* "        AF03$     OREQ 'A0002'
+|   C                     MOVEL'2193    'JL1004
+|   C*M008D               END
+|   C*
+|   C                     Z-ADD0         W01
+|   C                     Z-ADD0         W02
+| 06-C           AF09$     IFGE 0
+|   C                     Z-ADDAF09$     W01
+| 06*C                     ELSE
+|   C           AF09$     MULT -1        W02
+| 06-C                     END
+|   C*
+|   C           KEYW10    CHAINWFJL10R              41
+|   C                     EXSR RWF10
+| 05-C                     END
+|    *----------------------------------------------------------------
+|   C*（１）二................收款沖帳傳票
+|    *會計科目－應收帳款－客戶／匯東／匯齡／康齡
+| 07-C*DEREK     AF03$     IFEQ 'A0001'
+|   C*DEREK               MOVEL'113501  'JL1004
+| 07*C*DEREK               ELSE
+| 08-C*DEREK     AF03$     IFEQ 'A0002'
+|   C*DEREK               MOVEL'11350202'JL1004
+| 08*C*DEREK               ELSE
+|   C                     MOVEL'1132    'JL1004
+| 08-C*DEREK               END
+| 07-C*DEREK               END
+|   C*
+|   C                     Z-ADD0         W01
+|   C                     Z-ADD0         W02
+| 09-C           AF07$     IFLE 0
+|   C           AF07$     ADD  AF09$     WAF07  110
+|   C           WAF07     MULT -1        W01
+| 09*C                     ELSE
+|   C                     Z-ADDAF07$     W02
+|   C                     ADD  AF09$     W02
+| 09-C                     END
+|   C*
+|   C           KEYW10    CHAINWFJL10R              41
+|   C                     EXSR RWF10
+|   C*****************
+|    *
+|   C                     Z-ADDAF07$     W01
+|   C                     ADD  AF09$     W01
+|   C                     EXSR R2C00
+| 01*C                     ELSE
+|    *----------------------------------------------------------------
+|   C*（１）一................收款沖帳傳票
+|    *會計科目－事後折扣－客戶／匯東／匯齡／康齡
+| 10-C*DEREK     AF03$     IFEQ 'A0001'
+|   C*DEREK               MOVEL'410901  'JL1004
+| 10*C*DEREK               ELSE
+| 11-C*DEREK     AF03$     IFEQ 'A0002'
+|   C*DEREK               MOVEL'410902  'JL1004
+| 11*C*DEREK               ELSE
+|   C*M003D     AF03$     IFEQ 'A0003'
+|   C*M003D               MOVEL'410903  'JL1004
+|   C*M003D               ELSE
+|   C                     MOVEL'410904  'JL1004
+|   C*M003D               END
+| 11-C*DEREK               END
+| 10-C*DEREK               END
+|   C*
+|   C*
+|   C                     Z-ADD0         W01
+|   C                     Z-ADD0         W02
+| 12-C           AF07$     IFGE 0
+|   C                     Z-ADDAF07$     W01
+| 12*C                     ELSE
+|   C           AF07$     MULT -1        W02
+| 12-C                     END
+|   C*
+|   C           KEYW10    CHAINWFJL10R              41
+|   C                     EXSR RWF10
+|    *----------------------------------------------------------------
+|   C*（１）二................收款沖帳傳票
+|    *會計科目－應收帳款－客戶／匯東／匯齡／康齡
+| 13-C*DEREK     AF03$     IFEQ 'A0001'
+|   C*DEREK               MOVEL'113501  'JL1004
+| 13*C*DEREK               ELSE
+| 14-C*DEREK     AF03$     IFEQ 'A0002'
+|   C*DEREK               MOVEL'11350202'JL1004
+| 14*C*DEREK               ELSE
+|   C*M003D     AF03$     IFEQ 'A0003'
+|   C*M003D               MOVEL'113503  'JL1004
+|   C*M003D               ELSE
+|   C                     MOVEL'1132    'JL1004
+|   C*M003D               END
+| 14-C*DEREK               END
+| 13-C*DEREK               END
+|   C*
+|   C*
+|   C                     Z-ADD0         W01
+|   C                     Z-ADD0         W02
+| 15-C           AF07$     IFLE 0
+|   C           AF07$     MULT -1        W01
+| 15*C                     ELSE
+|   C                     Z-ADDAF07$     W02
+| 15-C                     END
+|   C*
+|   C           KEYW10    CHAINWFJL10R              41
+|   C                     EXSR RWF10
+|   C*****************
+|    *
+|   C                     Z-ADDAF07$     W01
+|   C                     EXSR R2C00
+| 01-C                     END
+|    C*
+|    C*
+30===C                     ENDSR
+     C*==============================================================*
+     C*          R2C00 ... 寫入暫存檔－沖帳作帳明細
+     C*==============================================================*
+31===C           R2C00     BEGSR
+|    C*
+| 01-C           W01       IFNE 0
+|   C           KEYW26    CHAINWFJL26R              41
+| 02-C           *IN41     IFEQ '1'
+|   C                     Z-ADDW01       JL2607
+|   C                     WRITEWFJL26R
+| 02*C                     ELSE
+|   C                     ADD  W01       JL2607
+|   C                     UPDATWFJL26R
+| 02-C                     END
+| 01-C                     END
+|    C*
+31===C                     ENDSR
+     C*==============================================================*
+     C*          RWF10 ... 寫入．更新傳票暫存檔WFJL10PF
+     C*==============================================================*
+32===C           RWF10     BEGSR
+|    C*
+| 01-C           *IN41     IFEQ '1'
+|   C                     Z-ADDW01       JL1012
+|   C                     Z-ADDW02       JL1013
+|    *判別借貸方
+|   C           JL1012    SUB  JL1013    WORK
+| 02-C           WORK      IFGT 0
+|   C                     MOVEL'1'       J1003$
+| 02-C                     END
+| 03-C           WORK      IFLT 0
+|   C                     MOVEL'2'       J1003$
+| 03-C                     END
+|    *金額不為０才寫入
+| 04-C           WORK      IFNE 0
+|   C                     WRITEWFJL10R
+| 04-C                     END
+|    *
+| 01*C                     ELSE
+|   C                     ADD  W01       JL1012
+|   C                     ADD  W02       JL1013
+|    *判別借貸方
+|   C           JL1012    SUB  JL1013    WORK
+| 05-C           WORK      IFGT 0
+|   C                     MOVEL'1'       J1003$
+|   C                     Z-ADDWORK      JL1012
+|   C                     Z-ADD0         JL1013
+| 05-C                     END
+| 06-C           WORK      IFLT 0
+|   C                     MOVEL'2'       J1003$
+|   C                     Z-ADD0         JL1012
+|   C           WORK      MULT -1        JL1013
+| 06-C                     END
+|    *金額為０不產生傳票
+| 07-C           WORK      IFNE 0
+|   C                     UPDATWFJL10R
+| 07*C                     ELSE
+|   C                     DELETWFJL10R
+| 07-C                     END
+| 01-C                     END
+|    C*
+32===C                     ENDSR
+M010+C*==============================================================*
+M010+C*          RWF10A ... 寫入．更新傳票暫存檔WFJL10PF (2145)
+M010+C*==============================================================*
+M010+C           RWF10A    BEGSR
+M010+C*
+M010+C           W01       SUB  W02       WORK
+M010+C                     SELEC
+M010+C           W01       WHNE 0
+M010+C                     MOVEL'1'       J1003$
+M010+C           W02       WHNE 0
+M010+C                     MOVEL'2'       J1003$
+M010+C                     ENDSL
+M010+C*
+M010+C           KEY10A    CHAINWFJL10R              41
+M010+C           *IN41     IFEQ '1'
+M010+C                     Z-ADDW01       JL1012
+M010+C                     Z-ADDW02       JL1013
+M010+C*金額不為０才寫入
+M010+C           WORK      IFNE 0
+M010+C                     WRITEWFJL10R
+M010+C                     END
+M010+C*
+M010+C                     ELSE
+M010+C                     ADD  W01       JL1012
+M010+C                     ADD  W02       JL1013
+M010+C*金額為０不產生傳票
+M010+C           WORK      IFNE 0
+M010+C                     UPDATWFJL10R
+M010+C                     END
+M010+C                     END
+M010+C*
+M010+C                     ENDSR
+     C*==============================================================*
+     C*          R2E00 ... READ FILE  =>WRITE PA#GPF
+     C*==============================================================*
+33===C           R2E00     BEGSR
+|    C*
+|    C*
+|    C                     MOVELW#G01     #G01
+|    C                     Z-ADDW#G02     #G02
+|    C                     Z-ADDADYYMD    #GXX
+|    C                     TIME           #GYY
+|    C                     MOVEL$USER     #GZZ
+|    C                     WRITE#G0
+|    C*                    WRITEWF#GR
+|    C*
+33===C                     ENDSR
+     C*==============================================================*
+     C*          R2F00 ... READ FILE  =>
+     C*==============================================================*
+34===C           R2F00     BEGSR
+|    C*
+|    C*
+34===C                     ENDSR
+     C*==============================================================*
+     C*          R4000 .產生銷售傳票
+     C*==============================================================*
+35===C           R4000     BEGSR
+|    C*
+|    C                     MOVEL*BLANKS   WL1001
+|    C                     MOVEL*BLANKS   WL1002
+|    C                     MOVEL*BLANKS   W1002$
+|    C                     MOVEL*BLANKS   WL1003
+|     *
+|    C           *LOVAL    SETLLWFJL10L
+|    C                     READ WFJL10L                  46
+| 01-C           *IN46     DOWEQ'0'
+|   C                     EXSR R4100
+|    *
+|   C                     READ WFJL10L                  46
+| 01-C                     END
+|    C*
+35===C           E4000     ENDSR
+     C*==============================================================*
+     C*          R4100 .  產生銷售傳票
+     C*==============================================================*
+36===C           R4100     BEGSR
+|    C*
+|    C* <<清除傳票檔部份欄位 >>
+|    C                     EXSR R40XX
+|     *----------------------------------------------------------------
+|     *傳票日期
+|    C                     Z-ADD*ZEROS    AH10
+|    C                     Z-ADDJL1001    AH10
+|    C*                    CALL 'P31'
+|    C*                    PARM JL1001    P310I1 100
+|    C*                    PARM '1'       P310I2  1
+|    C*                    PARM '1'       P310I3  1
+|    C*                    PARM '2'       P310I4  1
+|    C*                    PARM '1'       P310I5  1
+|    C*          AH10      PARM           P311O1  80
+|     *1994年6月前公司別不變，以後ＲＥ－＞ＲＭ，ＷＬ－＞ＷＮ
+| 01-C*DEREK     AH10      IFGE 19940601
+| 02-C*DEREK     JL1002    IFEQ 'RE'
+|   C*DEREK               MOVEL'RM'      JL1002
+| 02-C*DEREK               END
+| 03-C*DEREK     JL1002    IFEQ 'WL'
+|   C*DEREK               MOVEL'WH'      JL1002
+| 03-C*DEREK               END
+| 01-C*DEREK               END
+|    C                     MOVELJL1002    AH01
+|     *1994年6月前公司別不變，以後ＲＥ－＞ＲＭ，ＷＬ－＞ＷＮ
+|    C*
+|    C*傳票號碼
+| 04-C           JL1001    IFNE WL1001
+|   C           JL1002    ORNE WL1002
+|   C           J1002$    ORNE W1002$
+|   C           JL1003    ORNE WL1003
+|   C                     MOVEL*BLANKS   AH02
+|   C                     CALL 'GLS002'
+|   C                     PARM AH01      P002I1  2
+|   C                     PARM AH10      P002I2  80
+|   C                     PARM 'F'       P002I3  1
+|   C           AH02      PARM           P002O1  9
+|   C                     MOVELJL1001    WL1001
+|   C                     MOVELJL1002    WL1002
+|   C                     MOVELJ1002$    W1002$
+|   C                     MOVELJL1003    WL1003
+|   C                     Z-ADD0         WAH03
+| 04-C                     END
+|     *
+|    C                     MOVELJL1004    AH04
+|    C           KEYAF     CHAINGLAF                 40
+| 05-C           *IN40     IFEQ '0'
+|    *
+| 06-C           AF11      IFNE *BLANK
+|   C                     MOVELJL1005    AH05
+| 06-C                     END
+|    *
+| 07-C           AF12      IFNE *BLANK
+|   C                     MOVELJL1006    AH06
+| 07-C                     END
+|    *
+| 08-C           AF13      IFNE *BLANK
+|   C                     MOVELJL1007    AH07
+| 08-C                     END
+|    *
+| 09-C           AF14      IFNE *BLANK
+|   C                     MOVELJL1008    AH08
+| 09-C                     END
+|    *
+| 10-C           AF15      IFNE *BLANK
+|   C                     MOVELJL1009    AH09
+| 10-C                     END
+|    *
+|   C                     Z-ADDJL1012    AH12
+|   C                     Z-ADDJL1013    AH13
+|    *
+| 11-C           AF16      IFNE *BLANK
+|   C                     MOVELJL1010    AH14
+| 11-C                     END
+|    *
+| 12-C           AF17      IFNE *BLANK
+|   C                     MOVELJL1011    AH15
+| 12-C                     END
+|    *
+|   C                     MOVEL'AR'      AH17
+|   C                     MOVEL*BLANKS   AH18
+|   C                     MOVEL'V'       AH19
+|   C                     MOVEL*BLANKS   AH20
+|   C                     Z-ADD*ZEROS    AH21
+|   C                     MOVEL*BLANKS   AH22
+|   C                     Z-ADD*ZEROS    AH23
+|   C                     MOVEL*BLANKS   AH24
+|   C                     Z-ADDADYYMD    AH25
+|   C                     MOVEL$USER     AH26
+|   C                     TIME           AH97
+|   C                     Z-ADDADYYMD    AH98
+|   C                     MOVEL$USER     AH99
+|   C* <<取得會計科目資料 >>
+|   C                     EXSR R40YY
+|   C* <<寫入傳票檔 >>
+|   C                     EXSR R40ZZ
+| 05-C                     END
+|    C*
+36===C           E4A00     ENDSR
+     C*==============================================================*
+     C*          R40XX ...清除傳票檔部份欄位
+     C*==============================================================*
+37===C           R40XX     BEGSR
+|    C*
+|    C                     MOVEL*BLANKS   AH04
+|    C                     MOVEL*BLANKS   AH05
+|    C                     MOVEL*BLANKS   AH05A
+|    C                     MOVEL*BLANKS   AH06
+|    C                     MOVEL*BLANKS   AH06A
+|    C                     MOVEL*BLANKS   AH07
+|    C                     MOVEL*BLANKS   AH07A
+|    C                     MOVEL*BLANKS   AH08
+|    C                     MOVEL*BLANKS   AH08A
+|    C                     Z-ADD*ZEROS    AH09
+|    C                     MOVEL*BLANKS   AH09A
+|    C                     Z-ADD*ZEROS    AH12
+|    C                     Z-ADD*ZEROS    AH13
+|    C                     MOVEL*BLANKS   AH14
+|    C                     MOVEL*BLANKS   AH14A
+|    C                     MOVEL*BLANKS   AH15
+|    C                     MOVEL*BLANKS   AH15A
+|    C                     MOVEL*BLANKS   AH16
+|    C                     MOVEL'AR'      AH17
+|    C                     MOVEL*BLANKS   AH18
+|    C                     MOVEL'V'       AH19
+|    C                     MOVEL*BLANKS   AH20
+|    C                     Z-ADD*ZEROS    AH21
+|    C                     MOVEL*BLANKS   AH22
+|    C                     Z-ADD*ZEROS    AH23
+|    C                     MOVEL*BLANKS   AH24
+|    C                     Z-ADDADYYMD    AH25
+|    C                     MOVEL$USER     AH26
+|    C                     TIME           AH97
+|    C                     Z-ADDADYYMD    AH98
+|    C                     MOVEL$USER     AH99
+|    C*
+37===C                     ENDSR
+     C*==============================================================*
+     C*          R40YY ...取得會計科目資料
+     C*==============================================================*
+38===C           R40YY     BEGSR
+|    C*
+|    C                     MOVEA*BLANKS   CHK1
+|    C                     MOVEA*BLANKS   CHK2
+|    C                     MOVEA*BLANKS   CHK3
+|    C*<<取得會計科目各欄位名稱>>
+|    C           KEYAF     CHAINGLAF                 40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELAF11      AH05A
+|   C                     MOVELAF12      AH06A
+|   C                     MOVELAF13      AH07A
+|   C                     MOVELAF14      AH08A
+|   C                     MOVELAF15      AH09A
+|   C                     MOVELAF16      AH14A
+|   C                     MOVELAF17      AH15A
+|   C*
+|   C                     MOVELAF11      CHK1,1
+|   C                     MOVELAF12      CHK1,2
+|   C                     MOVELAF13      CHK1,3
+|   C                     MOVELAF14      CHK1,4
+|   C                     MOVELAF15      CHK1,5
+|   C                     MOVELAF16      CHK1,6
+|   C                     MOVELAF17      CHK1,7
+| 01-C                     END
+|    C* << 輸入欄位說明CHK3 >>
+|    C*
+|    C                     MOVELAH05      CHK2,1
+|    C                     MOVELAH06      CHK2,2
+|    C                     MOVELAH07      CHK2,3
+|    C                     MOVELAH08      CHK2,4
+| 02-C                     DO   4         I       10
+| 03-C           CHK2,I    IFNE *BLANKS
+|   C           KEYAA     CHAINAA0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C           AA04      ANDNE*BLANKS
+|   C*
+|   C                     MOVELCHK2,I    WPARM1
+|   C                     MOVELAA05      WPARM2
+|   C                     MOVEL'0'       WCHK
+|   C                     CALL AA04
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C           CHK3,I    PARM           DESE   20
+| 04*C                     ELSE
+|   C                     MOVELCHK2,I    CHK3,I
+| 04-C                     END
+| 03-C                     END
+| 02-C                     END
+|    C*
+| 05-C           AH09      IFNE 0
+|   C                     CALL 'P56'                      *P56(GET'/')
+|   C                     PARM AH09      P5601I  80
+|   C                     PARM           P5601O 10
+|   C                     MOVELP5601O    CHK3,5
+| 05-C                     END
+|    C*
+| 06-C           AH14      IFNE 0
+|   C                     CALL 'P55'                      *P55(GET,.)
+|   C                     PARM AH14      P5501I 185
+|   C                     PARM 2         P5502I  10
+|   C                     PARM           P5501O 24
+|   C                     MOVELP5501O    CHK3,6
+| 06-C                     END
+|    C*
+| 07-C           AH15      IFNE *BLANK
+|   C                     Z-ADD7         I
+|   C           KEYAA     CHAINAA0                  40
+| 08-C           *IN40     IFEQ '0'
+|   C           AA04      ANDNE*BLANKS
+|   C*
+|   C                     MOVELAH15      WPARM1
+|   C                     MOVELAA05      WPARM2
+|   C                     MOVEL'0'       WCHK
+|   C                     CALL AA04
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C           CHK3,7    PARM           DESE   20
+|   C*                    ELSE
+|   C                     MOVELAH15      CHK3,7
+| 08-C                     END
+| 07-C                     END
+|    C*<<摘要 >>
+| 09-C                     DO   7         K       10
+| 10-C           CHK3,K    IFNE *BLANKS
+|   C                     CALL 'GLS001'
+|   C                     PARM AH16      S001I1 80
+|   C                     PARM CHK3,K    S001I2 80
+|   C                     PARM 49        S001I3  30
+|   C           AH16      PARM           S001O1 80
+| 10-C                     END
+| 09-C                     END
+|    C*
+38===C                     ENDSR
+     C*==============================================================*
+     C*          R40ZZ ... WRITE GLAHPF
+     C*==============================================================*
+39===C           R40ZZ     BEGSR
+|    C*
+|    C                     ADD  1         WAH03
+|    C                     Z-ADDWAH03     AH03
+|    C                     WRITEAH0
+|    C*
+39===C                     ENDSR
+

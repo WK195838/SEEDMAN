@@ -1,0 +1,175 @@
+      ****************************************************************
+      *   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+      * PROGRAM NAME : SAR0852                                       *
+      * AUTHER       : JONATHAN YEH                                  *
+      * CREATE DATE  : 103/03/11                                     *
+      * SYSTEM       :                                           *
+      * SUBSYSTEM    :銷售分析系統                                 *
+      *  REMARK      :業務同仁銷售毛利報表(銷退)                 *
+      *服務單號: NOTE:1030308    WEB:1030319                       *
+      * 00A需求單號: 1030866
+      * 00A 2014/05/26 DEREK修正BUG :銷售金額有誤                *
+      ****************************************************************
+     FSOSGPF  IF  E           K        DISK
+     FSOSHPF  IF  E           K        DISK
+     FMTMDPF  IF  E           K        DISK
+     FREWF100 UF  E           K        DISK                      A
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      598 5990$LPRT
+      *業務員代碼
+     I                                      601 606 DSD03S
+     I                                      607 612 DSD03E
+     I                                      613 6180YMDS
+     I                                      619 6240YMDE
+     I                                      625 6300DSC39S
+     I                                      631 6360DSC39E
+     I                                      637 641 DSC04S
+     I                                      642 646 DSC04E
+     I                                      647 650 DSC05S
+     I                                      651 654 DSC05E
+     I                                      655 6600DSC08S
+     I                                      661 6660DSC08E
+     I                                      667 6670PRTOPT
+     I            DS
+     I                                        1   2 SC01
+     I                                        1   1 SC01L
+     I            DS
+     I                                        1   2 SG01
+     I                                        1   1 SG01L
+      *==============================================================*
+      *                    DEFINE ROUTINE
+      *==============================================================*
+     C           *LIKE     DEFN WFH01     WORK01           業務員
+     C           *LIKE     DEFN WFH02     WORK02           客戶代號
+     C           *LIKE     DEFN WFH03     WORK03           分店代號
+     C           *LIKE     DEFN WFH04     WORK04           銷售金額
+     C           *LIKE     DEFN WFH05     WORK05           銷退金額
+     C           *LIKE     DEFN WFH07     WORK06           銷貨成本1
+     C           *LIKE     DEFN WFH07     WORK07           銷貨成本2
+     C           *LIKE     DEFN WFH07     WORK08           銷貨成本3
+     C           *LIKE     DEFN WFH07     WORK09           銷貨成本4
+     C           *LIKE     DEFN WFH07     WORK10           銷貨成本5
+     C           *LIKE     DEFN WFH07     WORK11           銷貨成本6
+      *==============================================================*
+      *                    KEY LIST
+      *==============================================================*
+     C           KEYWF     KLIST
+     C                     KFLD           WFH01            業務員
+     C                     KFLD           WFH02            客戶代號
+     C                     KFLD           WFH03            分店代號
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+      *銷退
+     C                     READ SG0                      45
+  03-C           *IN45     DOWEQ'0'
+     *
+    C           SG04      CHAINMD0                  41
+  04-C           *IN41     IFEQ '0'
+     *
+     C           SG11      IFGE DSD03S
+     C           SG11      ANDLEDSD03E
+    C           SG02      SETLLSH0
+    C           SG02      READESH0                      46
+  05-C           *IN46     DOWEQ'0'
+    C                     MOVELSG11      WFH01
+    C                     MOVELSG04      WFH02
+    C                     MOVELSG05      WFH03
+ 00A+C                     EXSR RTN102
+    C           KEYWF     CHAINWF100                40
+    C                     EXSR RTN200
+     *
+    C           SG02      READESH0                      46
+  05-C                     END
+     *
+  04-C                     END
+     C                     END
+    C                     READ SG0                      45
+  03-C                     END
+     C*
+     C                     SETON                     LR
+ 00A+C*==============================================================*
+ 00A+C*          RTN102....INIT REWF100
+ 00A+C*==============================================================*
+ 00A+C           RTN102    BEGSR
+ 00A+C*
+ 00A+C                     Z-ADD0         WFH04
+ 00A+C                     Z-ADD0         WFH05
+ 00A+C                     Z-ADD0         WFH06
+ 00A+C                     Z-ADD0         WFH07
+ 00A+C*
+ 00A+C                     ENDSR
+      *==============================================================*
+      *          RTN200....WRITE OR UPDATE REWF100
+      *==============================================================*
+02===C           RTN200    BEGSR
+|     *
+|    C                     Z-ADD0         WORK05
+|    C                     Z-ADD0         WORK06
+|    C                     Z-ADD0         WORK07
+|    C                     Z-ADD0         WORK08
+|    C                     Z-ADD0         WORK09
+|    C                     Z-ADD0         WORK10
+|    C                     Z-ADD0         WORK11
+|     *
+|    C                     Z-ADDSH07      WORK05
+|     *搭贈為０
+| 01-C           SH13      IFEQ 0
+|   C                     Z-SUBSH17      WORK06
+|   C                     Z-SUBSH18      WORK07
+|   C                     Z-SUBSH19      WORK08
+| 01*C                     ELSE
+|   C*搭贈-FOB,FHI,DUTY
+|   C           SH12      ADD  SH13      QTY     50
+|   C*
+| 02-C           QTY       IFNE 0
+|   C           SH17      DIV  QTY       QTY1   114H
+|   C           SH12      MULT QTY1      QTY2   114H      *訂購-FOB
+|   C           SH17      SUB  QTY2      QTY3   114H      *搭贈-FOB
+|   C                     Z-SUBQTY3      WORK09
+|   C                     Z-SUBQTY2      WORK06
+|   C           SH18      DIV  QTY       QTY11  114H
+|   C           SH12      MULT QTY11     QTY21  114H      *訂購-FHI
+|   C           SH18      SUB  QTY21     QTY31  114H      *搭贈-FHI
+|   C                     Z-SUBQTY31     WORK10
+|   C                     Z-SUBQTY21     WORK07
+|   C           SH19      DIV  QTY       QTY12  114H
+|   C           SH12      MULT QTY12     QTY22  114H      *訂購-DUTY
+|   C           SH19      SUB  QTY22     QTY32  114H      *搭贈-DUTY
+|   C                     Z-SUBQTY32     WORK11
+|   C                     Z-SUBQTY22     WORK08
+| 02-C                     END
+| 01-C                     END
+|     *
+| 03-C           *IN40     IFEQ '0'
+|   C                     ADD  WORK05    WFH05
+|   C                     ADD  WORK06    WFH06
+|   C                     ADD  WORK07    WFH06
+|   C                     ADD  WORK08    WFH06
+|   C                     ADD  WORK09    WFH07
+|   C                     ADD  WORK10    WFH07
+|   C                     ADD  WORK11    WFH07
+|    *
+|   C                     UPDATWF100
+     C                     Z-ADD*ZERO     WFH06
+     C                     Z-ADD*ZERO     WFH07
+| 03*C                     ELSE
+|   C                     Z-ADDWORK05    WFH05
+|   C                     ADD  WORK06    WFH06
+|   C                     ADD  WORK07    WFH06
+|   C                     ADD  WORK08    WFH06
+|   C                     ADD  WORK09    WFH07
+|   C                     ADD  WORK10    WFH07
+|   C                     ADD  WORK11    WFH07
+|   C                     WRITEWF100
+     C                     Z-ADD*ZERO     WFH06
+     C                     Z-ADD*ZERO     WFH07
+|   C*
+| 03-C                     END
+02===C                     ENDSR
+     C*============================================================
+

@@ -1,0 +1,75 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM-ID   : GLR2U0                                    */
+     /*    PROGRAM NAME : 四年財務比較表                          */
+     /*    AUTHOR       :  A1087  JOYCE                             */
+     /*    CREATE DATE  :  1993.01.13                               */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       : 泛太總帳                                */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&DAI01S)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DAI01E)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DAI02S)   TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DAI02E)   TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DAR05)   TYPE(*CHAR)  LEN(1)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DAI01S)   VALUE(%SST(*LDA 510 2))
+             CHGVAR     VAR(&DAI01E)   VALUE(%SST(*LDA 512 2))
+             CHGVAR     VAR(&DAI02S)   VALUE(%SST(*LDA 514 4))
+             CHGVAR     VAR(&DAI02E)   VALUE(%SST(*LDA 518 4))
+             CHGVAR     VAR(&DAR05)    VALUE(%SST(*LDA 522 1))
+
+      /*工作檔GLWF03 */
+             CPYF       FROMFILE(GLWF03) TOFILE(QTEMP/GLWF03) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/GLWF03))
+             OVRDBF     FILE(GLWF03) TOFILE(QTEMP/GLWF03)
+      /******/
+
+             OVRDBF     FILE(GLAILF02) SHARE(*YES)
+             OPNQRYF    FILE((GLAILF02)) QRYSLT(' AI01 *EQ %RANGE("' +
+                          *CAT &DAI01S *CAT '" "' *CAT &DAI01E *CAT +
+                          '") & AI02 *EQ %RANGE(' *CAT &DAI02S *CAT +
+                          ' ' *CAT &DAI02E *CAT ')') KEYFLD(*FILE)
+
+    /*中英格式判斷*/
+             IF         COND(&DAR05 *EQ '1') THEN(DO)
+             OVRPRTF    FILE(GLR2U0P1) PAGESIZE(*N 156) CPI(12)
+                        ENDDO
+
+             IF         COND(&DAR05 *EQ '2') THEN(DO)
+             OVRPRTF    FILE(GLR2U0P1) TOFILE(GLR2U0P2) PAGESIZE(*N +
+                        156) CPI(12)
+                        ENDDO
+
+                        CALL GLR2U01
+
+             CLOF       OPNID(GLAILF02)
+             DLTOVR     FILE(*ALL)
+           /********/
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+
+             IF         COND(&DAR05 = '1' ) THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2U0P1')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             ENDDO
+           /*******/
+             IF         COND(&DAR05 = '2' ) THEN(DO)
+             CHGVAR     VAR(&P6401I) VALUE('GLR2U0P2')
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+             ENDDO
+
+
+             ENDPGM
+

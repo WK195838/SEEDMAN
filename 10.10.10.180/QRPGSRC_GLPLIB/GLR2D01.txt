@@ -1,0 +1,806 @@
+     A****************************************************************
+     A*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     A*                                                              *
+     A*    PROGRAM-ID   : GLR2D01                                    *
+     A*    PROGRAM NAME : 損益表                                   *
+     A*    AUTHOR       :  A1149    MAY                              *
+     A*    CREATE DATE  :  1992.11.27                                *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       : 泛太總帳                                 *
+     A****************************************************************
+     FPT#APF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FGLAXPF  IF  E           K        DISK
+     FGLAZPF  IF  E           K        DISK
+     FGLAILF02IF  E           K        DISK
+     FGLASLF02IF  E           K        DISK
+     F            AS0                               KRENAMEASLF02
+     FGLASLF03IF  E           K        DISK
+     F            AS0                               KRENAMEASLF03
+     FGLWF03  UF  E           K        DISK                      A
+     FGLWF04  UF  E           K        DISK                      A
+     FGLR2D0P1O   E             39     PRINTER
+     FGLR2D1P1O   E             38     PRINTER
+     E*---------------------------------------------------------------
+     E                    @@         13 13 2
+     E                    @W1    10  10  2
+     E*---------------------------------------------------------------*
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     IGLDA01      DS
+     I                                        1  16 DA01
+     I*
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* SCREEN INPUT FIELD  ++++++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAI01
+     I                                      503 508 D#A01
+     I                                      509 5110DYEAR
+     I                                      512 5130DMMS
+     I                                      514 5200DAY#E
+     I                                      521 523 DAR03
+     I* PROGRAM CALCULATION FIELD  +++++++++++++++++++++++++++++++++++
+     I                                      524 524 #B12
+     I                                      525 525 #A10
+     I                                      526 5330#YMD
+     I                                      555 5560#MME
+     I* OPEN QUERY FILE SELECT $XXXXX FIELD  +++++++++++++++++++++++++
+     I                                      534 5370$YEAR
+     I                                      538 539 $AI01S
+     I                                      540 541 $AI01E
+     I                                      542 547 $AI04S
+     I                                      548 553 $AI04E
+     I                                      554 554 $AR05
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           GLDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *LIKE     DEFN AS02      WAS02            *BREAK
+     C           *LIKE     DEFN AS02      WAR02            *KEY(10)
+     C           *LIKE     DEFN AI03      WAI03            *BREAK
+     C           *LIKE     DEFN AI03      W#AI03           *BREAK
+     C           *LIKE     DEFN AZ03      WAI04            *BREAK
+     C           *LIKE     DEFN AI10      WCASH1           *小計金額
+     C           *LIKE     DEFN AI10      WCASH2           *合計金額
+     C           *LIKE     DEFN AI10      WCASH3           *本期金額
+     C           *LIKE     DEFN AI10      WCASH4           * WF0404
+     C           *LIKE     DEFN AI10      @BASE1
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAF     KLIST
+     C                     KFLD           WAI01   2        *公司別
+     C                     KFLD           W#AI03
+     C           KEY#B     KLIST
+     C                     KFLD           DAI01            *公司別
+     C           KEYAS     KLIST
+     C                     KFLD           DAI01            *公司別
+     C                     KFLD           WAR02            *報表類別
+     C                     KFLD           DAR03            *報表代碼
+     C           KEYAX     KLIST
+     C                     KFLD           DAI01            *公司別S
+     C                     KFLD           AI01             *公司別F
+     C           KEYAZ     KLIST
+     C                     KFLD           DAI01            *公司別S
+     C                     KFLD           D#A01            *成本中心S
+     C                     KFLD           WAI04            *成本中心F
+     C           KEYAI     KLIST
+     C                     KFLD           AS06
+     C                     KFLD           $YEAR            *會計年度
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     SETON                     3938
+     C                     EXSR R0100                      .INIT-HEAD
+     C*
+     C                     EXSR R1000                      .WROK-FILE
+     C                     EXSR R2000                      .DETAIL
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ... GLR2D0P HEADING INITIAL
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C**
+| 01-C           #B12      IFEQ '1'
+|   C                     MOVELDAI01     WAI01
+| 01*C                     ELSE
+|   C****************************
+|   C*公司別屬虛擬            *
+|   C*須CHECK公司結構明細檔 *
+|   C****************************
+|   C           DAI01     CHAINAX0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELAX02      WAI01
+| 02-C                     END
+| 01-C                     END
+|    C**************
+|    C*<<公司別 >>
+|    C                     MOVEL*BLANKS   P#B16
+|    C           KEY#B     CHAIN#B0                  40
+| 03-C           *IN40     IFEQ '0'
+| 04-C           $AR05     IFEQ '1'
+|   C                     MOVEL#B16      P#B16
+| 04*C                     ELSE
+|   C                     MOVEL#B17      P#B16
+| 04-C                     END
+| 03-C                     END
+|    C**************
+|    C*<< *DTAARA >>
+|    C                     CALL 'GLS005'
+|    C                     PARM WAI01     P005I1  2
+|    C                     PARM DAY#E     P005I2  80
+|    C                     PARM 'S'       P005I3  1
+|    C                     PARM           P005O1  40
+|    C                     PARM           P005O2  20
+|    C                     PARM           P005O3  1
+|    C                     PARM           P005O4  1
+|    C*
+| 05-C           P005O4    IFNE 'Y'
+|   C                     IN   GLDA01
+| 06-C           $AR05     IFEQ '1'
+|   C                     MOVELDA01      PDA01
+| 06*C                     ELSE
+|   C                     MOVE DA01      PDA01
+| 06-C                     END
+| 05-C                     END
+|    C****************
+|    C*<<成本中心 >>
+|    C                     MOVEL*BLANKS   P#A02
+| 07-C           D#A01     IFEQ *BLANKS
+|   C                     SETOF                     31
+| 07*C                     ELSE
+|   C*
+|   C                     SETON                     31
+|   C           D#A01     CHAIN#A0                  40
+| 08-C           *IN40     IFEQ '0'
+| 09-C           $AR05     IFEQ '1'
+|   C                     MOVEL#A02      P#A02
+| 09*C                     ELSE
+|   C                     MOVEL#A03      P#A02
+| 09-C                     END
+|   C*
+| 08-C                     END
+| 07-C                     END
+|    C****************
+|    C*<<會計期間 >>
+|    C                     CALL 'GLS006'
+|    C                     PARM WAI01     P006I1  2
+|    C                     PARM P005O1    P006I2  40
+|    C                     PARM DMMS      P006I3  20
+|    C                     PARM 'F'       P006I4  1
+|    C                     PARM           P006O1  80
+|    C                     PARM           P006O2  80
+|    C                     PARM           P006O3  1
+|    C                     PARM           P006O4  1
+|    C*
+|    C           WAI01     CHAINAK0                  40
+| 10-C           *IN40     IFEQ '0'
+|   C                     CALL 'P31'
+|   C                     PARM P006O1    P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM AK11      P3104I  1
+|   C                     PARM AK09      P3105I  1
+|   C           DAY#S     PARM           P3101O  80
+| 10-C                     END
+|    C*
+|    C                     MOVEL'10'      WAR02
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... GET DATA TO WORK FILE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C**************************
+|    C* 逐筆讀取GLASLF02,    *
+|    C* 只取AS06為會計科目,*
+|    C* 存入GLWF03.          *
+|    C**************************
+|    C           KEYAS     SETLLASLF02
+|    C           KEYAS     READEASLF02                   42
+|    C*
+| 01-C           *IN42     DOWEQ'0'                        .EOF
+|   C                     EXSR R1A00                      .DETAIL
+|   C                     EXSR R1C00                      *註一
+|   C*
+|   C   40                WRITEGLWF03R
+|   C  N40                UPDATGLWF03R
+|   C*
+|   C           KEYAS     READEASLF02                   42
+| 01-C                     END
+|    C**************************
+|    C* 逐筆讀取GLASLF03,    *
+|    C* 只取AS06為@------  *
+|    C* 存入GLWF03.          *
+|    C**************************
+|    C           KEYAS     SETLLASLF03
+|    C           KEYAS     READEASLF03                   42
+|    C*
+| 02-C           *IN42     DOWEQ'0'                        .EOF
+|   C**********************
+|   C*紀錄基數@RXXXX    *
+|   C**********************
+|   C           2         SUBSTAS06:1    @AS06   2
+| 03-C           @AS06     IFEQ '@R'
+|   C           4         SUBSTAS06:3    KEY03   4
+| 03-C                     END
+|   C*
+|   C                     EXSR R1B00                      .DETAIL
+|   C                     EXSR R1C00
+|   C   40                WRITEGLWF03R
+|   C  N40                UPDATGLWF03R
+|   C*
+|   C           TAG#3     TAG
+|   C           KEYAS     READEASLF03                   42
+| 02-C                     END
+|    C**********************
+|    C*計算基數@R=@BASE1 *
+|    C**********************
+|    C           KEY03     CHAINGLWF03R              40
+| 04-C           *IN40     IFEQ '0'
+|   C                     Z-ADDWF0304    @BASE1
+|   C                     ADD  WF0305    @BASE1
+| 04-C                     END                             .*IN40
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... PRINTING MAIN PROCESS
+     C*==============================================================*
+03===C           R2000     BEGSR
+|    C************
+|    C* 損益表 *
+|    C************
+|    C           *LOVAL    SETLLGLWF03R
+|    C                     READ GLWF03R                  42
+|    C*
+| 01-C           *IN42     DOWEQ'0'                        .EOF
+|   C* FIRST RECORD
+| 02-C           *IN10     IFEQ '0'
+|   C                     SETON                     10
+| 02-C                     END
+|   C*
+| 03-C           *IN39     IFEQ '1'
+|   C                     WRITEPH01
+|   C                     SETOF                     39
+| 03-C                     END
+|   C*
+| 04-C           WF0303    IFEQ '@-      '
+|   C                     WRITEPD02
+| 04*C                     ELSE
+|   C*
+| 05-C           WF0303    IFEQ '@S      '
+|   C                     WRITEPD03
+| 05*C                     ELSE
+|   C*
+|   C                     MOVELWF0303    P0303
+|   C                     Z-ADDWF0304    P0304
+|   C                     SETOF                     3233
+|   C*************************
+|   C*  *IN29 控制P0305    *
+|   C*  的EDTWRD是否顯示 *
+|   C*************************
+|   C                     Z-ADDWF0305    P0305
+| 06-C           WF0302    IFEQ 'V'
+|   C           WF0302    OREQ 'C'
+|   C                     SETON                     29
+| 06*C                     ELSE
+|   C                     SETOF                     29
+| 06-C                     END
+|   C*
+| 07-C           P0304     IFLT *ZERO
+|   C                     SETON                     32
+| 07-C                     END
+|   C*
+| 08-C           P0305     IFLT *ZERO
+|   C                     SETON                     33
+| 08-C                     END
+|   C*
+|   C                     Z-ADD*ZERO     @BASE2 132
+|   C                     Z-ADD*ZERO     WP100   74
+|   C                     Z-ADD*ZERO     P100
+|   C                     SETOF                     3034
+|   C           WF0304    ADD  WF0305    @BASE2
+|   C*
+| 09-C           @BASE1    IFNE *ZERO
+|   C                     SETON                     30
+| 10-C           WF0304    IFNE *ZERO
+|   C           WF0304    DIV  @BASE1    WP100     H
+|   C           WP100     MULT 100       P100
+| 10-C                     END
+|   C********************
+|   C* *IN30控制P100  *
+|   C********************
+| 11-C           WF0305    IFNE *ZERO
+|   C           WF0305    DIV  @BASE1    WP100     H
+|   C           WP100     MULT 100       P100
+| 11-C                     END
+| 09-C                     END
+|   C*
+| 12-C           P100      IFLT *ZERO
+|   C                     SETON                     34
+| 12-C                     END
+|   C*
+| 13-C           WF0302    IFEQ *BLANKS
+| 14-C           P0304     IFNE *ZERO
+|   C                     WRITEPD01
+| 14-C                     END
+| 13*C                     ELSE
+| 15-C           WF0302    IFEQ 'C'
+|   C                     WRITEPD01@
+| 15*C                     ELSE
+|   C                     WRITEPD01
+| 15-C                     END
+| 13-C                     END
+|   C*
+| 05-C                     END
+| 04-C                     END
+|   C*
+|   C****************
+|   C* 科目明細表 *
+|   C****************
+|   C           WF0301    SETLLGLWF04R
+|   C           WF0301    READEGLWF04R                  43
+| 16-C           *IN43     DOWEQ'0'                        .EOF
+|   C* FIRST RECORD
+| 17-C           *IN11     IFEQ '0'
+|   C                     Z-ADD*ZERO     T0404
+|   C                     SETON                     11
+| 17-C                     END
+|   C*
+|   C**********
+|   C* 表頭 *
+|   C**********
+| 18-C           *IN38     IFEQ '1'
+|   C                     CALL 'GLS011'
+|   C                     PARM WF0303    P011I1 80
+|   C                     PARM 32        P011I2  30
+|   C                     PARM '2'       P011I3  1
+|   C           P0303     PARM           P011O1 80
+|   C*
+|   C                     WRITEPH1
+|   C                     SETOF                     38
+| 18-C                     END
+|   C*
+|   C                     MOVELWF0402    P0402
+|   C                     Z-ADDWF0404    P0404
+|   C                     Z-ADD*ZERO     P100
+|   C                     Z-ADD*ZERO     WP100
+|   C                     SETOF                     303233
+|   C*
+| 19-C           @BASE2    IFNE 0
+|   C           WF0404    DIV  @BASE2    WP100     H
+|   C           WP100     MULT 100       P100
+|   C                     SETON                     30
+| 19*C                     ELSE
+|   C                     SETOF                     30
+| 19-C                     END
+|   C*
+| 20-C           P0404     IFLT *ZERO
+|   C                     SETON                     32
+| 20-C                     END
+|   C*
+| 21-C           P100      IFLT *ZERO
+|   C                     SETON                     33
+| 21-C                     END
+|   C*
+| 22-C           WF0404    IFNE *ZERO
+|   C                     WRITEPD1
+|   C                     Z-ADD1         @TEST   10
+| 22-C                     END
+|   C*
+|   C                     ADD  WF0404    T0404
+|   C           WF0301    READEGLWF04R                  43
+| 16-C                     END
+|   C************
+|   C* GLR2D1P...
+| 23-C           @TEST     IFEQ 1                          .HAS DATA
+|   C                     EXSR R7900                       .PT1
+| 23-C                     END
+|   C                     SETOF                     11
+|   C                     Z-ADD0         @TEST   10
+|   C*************************************
+|   C                     READ GLWF03R                  42
+|   C                     SETON                         38
+| 01-C                     END
+|    C*************
+|    C* GLR2D0P....
+| 24-C           *IN10     IFEQ '1'                        .HAS DATA
+|   C                     EXSR R8900                       .LR TOTAL
+| 24*C                     ELSE                            .NO DATA
+|   C                     EXSR R8999                       .LR NO DATA
+| 24-C                     END
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R1A00 ... GLASLF02 DETAIL
+     C*==============================================================*
+04===C           R1A00     BEGSR
+|    C                     MOVEL*BLANKS   WAI03
+|    C*****************
+|    C* 年度餘額檔  *
+|    C*****************
+|    C           KEYAI     SETLLAI0
+|    C                     READ AI0                      46
+|    C                     MOVELAI03      W#AI03
+| 01-C           *IN46     DOWEQ'0'
+|   C           AI03      ANDLEAS07
+|   C                     SETON                         77
+|   C***********************
+|   C* DAI01公司別屬虛擬 *
+|   C***********************
+| 02-C           #B12      IFEQ '2'
+|   C           KEYAX     SETLLAX0                      42
+|   C  N42                GOTO TAG#1
+| 02-C                     END
+|   C*************************
+|   C* D#A01成本中心屬虛擬 *
+|   C*************************
+| 03-C           #A10      IFEQ '2'
+|   C                     MOVELAI04      WAI04
+|   C           KEYAZ     SETLLAZ0                      42
+|   C  N42                GOTO TAG#1
+| 03-C                     END
+|   C**************************
+|   C*計算＝小計金額 WCASH1 *
+|   C**************************
+| 04-C           AS08      IFEQ *BLANKS
+| 05-C           AI03      IFNE WAI03
+|   C                     Z-ADD*ZERO     P010O1 132
+|   C                     CALL 'GLS010'
+|   C                     PARM WAI01     P010I1  2
+|   C                     PARM AI03      P010I2  8
+|   C                     PARM #YMD      P010I3  80
+|   C                     PARM 'F'       P010I4  1
+|   C                     PARM D#A01     P010I5  6        *成本中心
+|   C                     PARM           P010O1 132       *未滿期金額
+|   C                     SUB  P010O1    WCASH1
+|   C                     MOVELAI03      WAI03
+| 05-C                     END
+|   C*
+|   C                     EXSR R1A10                      *註二
+|   C                     ADD  WCASH3    WCASH1           *小計金額
+|   C*
+| 04*C                     ELSE
+|   C**************************
+|   C*計算＝合計金額 WCASH2 *
+|   C**************************
+| 06-C           AI03      IFNE WAI03
+|   C                     Z-ADD*ZERO     P010O1 132
+|   C                     CALL 'GLS010'
+|   C                     PARM WAI01     P010I1  2
+|   C                     PARM AI03      P010I2  8
+|   C                     PARM #YMD      P010I3  80
+|   C                     PARM 'F'       P010I4  1
+|   C                     PARM D#A01     P010I5  6        *成本中心
+|   C                     PARM           P010O1 132
+|   C                     SUB  P010O1    WCASH2
+|   C                     MOVELAI03      WAI03
+| 06-C                     END
+|   C*
+|   C                     EXSR R1A10                      *註二
+|   C                     ADD  WCASH3    WCASH2
+| 04-C                     END
+|   C********************
+|   C* 列印科目明細表 *
+|   C********************
+| 07-C           AS09      IFEQ 'V'
+| 08-C           AI03      IFNE W#AI03
+|   C                     Z-ADD*ZERO     P010O1 132
+|   C                     CALL 'GLS010'
+|   C                     PARM WAI01     P010I1  2
+|   C                     PARM W#AI03    P010I2  8
+|   C                     PARM #YMD      P010I3  80
+|   C                     PARM 'F'       P010I4  1
+|   C                     PARM D#A01     P010I5  6        *成本中心
+|   C                     PARM           P010O1 132
+|   C                     SUB  P010O1    WF0404
+|   C                     MULT AS05      WF0404
+|   C*
+| 09-C           WF0404    IFNE *ZERO
+|   C                     WRITEGLWF04R
+| 09-C                     END
+|   C*
+|   C                     MOVELAI03      W#AI03
+|   C                     Z-ADD*ZERO     WF0404
+| 08-C                     END
+|   C                     EXSR R1A20                      *註三
+| 07-C                     END
+|   C*
+|   C           TAG#1     TAG
+|   C                     READ AI0                      46
+| 01-C                     END
+|    C*************************
+|    C*  GLASLF02 => GLAILF02 *
+|    C*  WRITE最後一筆資料  *
+|    C*************************
+| 10-C           *IN77     IFEQ '1'
+| 11-C           AS09      IFEQ 'V'
+|   C                     CALL 'GLS010'
+|   C                     PARM WAI01     P010I1  2
+|   C                     PARM W#AI03    P010I2  8
+|   C                     PARM #YMD      P010I3  80
+|   C                     PARM 'F'       P010I4  1
+|   C                     PARM D#A01     P010I5  6        *成本中心
+|   C                     PARM           P010O1 132
+|   C                     SUB  P010O1    WF0404
+|   C                     MULT AS05      WF0404
+|   C*
+| 12-C           WF0404    IFNE *ZERO
+|   C                     WRITEGLWF04R
+| 12-C                     END
+|   C*
+|   C                     Z-ADD*ZERO     WF0404
+| 11-C                     END
+|   C                     SETOF                     77
+| 10-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1B00 ... GLASLF03 DETAIL
+     C*==============================================================*
+05===C           R1B00     BEGSR
+|    C**
+|    C           2         SUBSTAS06      @AS06   2
+|    C           @AS06     LOKUP@W1                      49
+| 01-C           *IN49     IFEQ '1'                        * @0-@9
+|   C           4         SUBSTAS06:2    WF301S  4
+|   C           4         SUBSTAS07:2    WF301E  4
+|   C************
+|   C*  GLWF03  *
+|   C************
+|   C           WF301S    SETLLGLWF03R
+|   C                     READ GLWF03R                  46
+| 02-C           *IN46     DOWEQ'0'
+|   C           WF0301    ANDLEWF301E
+|   C**************************
+|   C*計算＝小計金額 WCASH1 *
+|   C**************************
+| 03-C           AS08      IFEQ *BLANKS
+|   C                     ADD  WF0304    WCASH1
+|   C                     ADD  WF0305    WCASH1
+| 03-C                     END
+|   C**************************
+|   C*計算＝合計金額 WCASH2 *
+|   C**************************
+| 04-C           AS08      IFEQ 'V'
+|   C                     ADD  WF0304    WCASH2
+|   C                     ADD  WF0305    WCASH2
+| 04-C                     END
+|   C********************
+|   C* 列印科目明細表 *
+|   C********************
+| 05-C           AS09      IFEQ 'V'
+|   C                     EXSR R1B10
+|   C*
+| 06-C           WF0404    IFNE *ZERO
+|   C                     WRITEGLWF04R
+| 06-C                     END
+|   C*
+| 05-C                     END
+|   C*
+|   C                     READ GLWF03R                  46
+| 02-C                     END
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C00 ... 新增／更新一筆至工作檔GLWF03 (註一)
+     C*                     SCREEN => FILE. GLWF03
+     C*==============================================================*
+06===C           R1C00     BEGSR
+|    C**************************
+|    C* AS06前二碼為@-.@S.@C *
+|    C*  新增一筆至GLWF03    *
+|    C**************************
+|    C           AS04      CHAINGLWF03R              40
+|    C           2         SUBSTAS06      @AS06   2
+| 01-C           @AS06     IFEQ '@S'
+|   C           @AS06     OREQ '@-'
+|   C                     MOVEL*BLANKS   WF0301
+|   C                     MOVEL*BLANKS   WF0302
+|   C                     MOVEL*BLANKS   WF0303
+|   C                     MOVELAS04      WF0301
+|   C                     MOVELAS06      WF0303
+|   C                     Z-ADD*ZERO     WF0304
+|   C                     Z-ADD*ZERO     WF0305
+|   C                     Z-ADD*ZERO     WF0306
+| 01*C                     ELSE
+|   C*
+| 02-C           @AS06     IFEQ '@C'
+|   C                     MOVEL*BLANKS   WF0301
+|   C                     MOVEL*BLANKS   WF0302
+|   C                     MOVEL*BLANKS   WF0303
+|   C                     MOVELAS04      WF0301
+|   C                     MOVEL'C'       WF0302
+|   C                     MOVELAS10      WF0303
+|   C                     Z-ADD*ZERO     WF0304
+|   C                     Z-ADD*ZERO     WF0305
+|   C                     Z-ADD*ZERO     WF0306
+|   C*******************************
+|   C* AS06前二碼不為@-.@S.@C    *
+|   C*  新增／更新一筆至GLWF03   *
+|   C*******************************
+| 02*C                     ELSE
+| 03-C           *IN40     IFEQ '0'
+|   C                     MULT AS05      WCASH1
+|   C                     MULT AS05      WCASH2
+|   C                     ADD  WCASH1    WF0304
+|   C                     ADD  WCASH2    WF0305
+| 03*C                     ELSE
+|   C*
+|   C                     MOVEL*BLANKS   WF0301
+|   C                     MOVEL*BLANKS   WF0302
+|   C                     MOVEL*BLANKS   WF0303
+|   C*
+|   C                     MOVELAS04      WF0301
+|   C                     MOVELAS08      WF0302
+|   C                     MOVELAS10      WF0303
+|   C                     MULT AS05      WCASH1
+|   C                     MULT AS05      WCASH2
+|   C                     Z-ADDWCASH1    WF0304
+|   C                     Z-ADDWCASH2    WF0305
+|   C                     Z-ADD*ZERO     WF0306
+| 03-C                     END
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C                     Z-ADD*ZERO     WCASH1           *小計金額
+|    C                     Z-ADD*ZERO     WCASH2           *合計金額
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R1A10 ... 計算本期金額（註二）
+     C*==============================================================*
+07===C           R1A10     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     WCASH3
+|    C                     Z-ADD*ZERO     WCASH4
+|    C*
+|    C                     MOVEA*ZERO     @@
+|    C                     Z-ADD*ZERO     D      132
+|    C*
+|    C                     Z-ADDAI11      @@,1
+|    C                     Z-ADDAI12      @@,2
+|    C                     Z-ADDAI13      @@,3
+|    C                     Z-ADDAI14      @@,4
+|    C                     Z-ADDAI15      @@,5
+|    C                     Z-ADDAI16      @@,6
+|    C                     Z-ADDAI17      @@,7
+|    C                     Z-ADDAI18      @@,8
+|    C                     Z-ADDAI19      @@,9
+|    C                     Z-ADDAI20      @@,10
+|    C                     Z-ADDAI21      @@,11
+|    C                     Z-ADDAI22      @@,12
+|    C                     Z-ADDAI23      @@,13
+|    C*
+| 01-C           DMMS      DO   #MME      J       20
+|   C                     ADD  @@,J      WCASH3
+| 01-C                     END
+|    C*
+|    C                     Z-ADDWCASH3    WCASH4
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1A20 ... 列印科目明細比較表
+     C*                    新增一筆資料至工作檔GLWF04 (註三)
+     C*                     SCREEN => FILE. GLWF04
+     C*==============================================================*
+08===C           R1A20     BEGSR
+|    C*
+|    C                     MOVELAS04      WF0401
+|    C*
+|    C           KEYAF     CHAINAF0                  40
+| 01-C           *IN40     IFEQ '0'
+| 02-C           $AR05     IFEQ '1'
+|   C                     MOVELAF03      WF0402
+| 02*C                     ELSE
+|   C                     MOVELAF04      WF0402
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C                     ADD  WCASH4    WF0404
+|    C                     Z-ADD*ZERO     WF0405
+|    C                     Z-ADD*ZERO     WF0406
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R1B10 ... 列印科目明細比較表
+     C*                    新增一筆資料至工作檔GLWF04 (註四)
+     C*                    SCREEN => FILE. GLWF04
+     C*==============================================================*
+09===C           R1B10     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     WF0404
+|    C                     MOVELAS04      WF0401
+|    C*
+|    C                     CALL 'GLS011'
+|    C                     PARM WF0303    P011I1 80
+|    C                     PARM 32        P011I2  30
+|    C                     PARM '1'       P011I3  1
+|    C           WF0402    PARM           P011O1 80
+|    C*
+|    C                     Z-ADDWF0304    WF0404
+|    C                     ADD  WF0305    WF0404
+|    C*
+|    C                     Z-ADD*ZERO     WF0405
+|    C                     Z-ADD*ZERO     WF0406
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R7900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+10===C           R7900     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'GLS008'
+|    C                     PARM 'GLR2D1P1'P008I1 10
+|    C                     PARM $AR05     P008I2  1
+|    C           PNAME1    PARM           P008O1198
+|    C           PNAME2    PARM           P008O2198
+|    C                     SETOF                     34
+|    C*
+| 01-C           T0404     IFLT *ZERO
+|   C                     SETON                     34
+| 01-C                     END
+|    C*
+|    C                     WRITEPT1
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+11===C           R8900     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'GLS008'
+|    C                     PARM 'GLR2D0P1'P008I1 10
+|    C                     PARM $AR05     P008I2  1
+|    C           PSIGN1    PARM           P008O1198
+|    C           PSIGN2    PARM           P008O2198
+|    C*
+|    C                     WRITEPT01
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+12===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R0100
+|    C*
+|    C                     WRITEPH01
+|    C*
+|    C                     WRITEPE01
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+** @W1
+@0@1@2@3@4@5@6@7@8@9
+

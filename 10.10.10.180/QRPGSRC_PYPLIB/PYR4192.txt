@@ -1,0 +1,167 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR4192 年度年休補發明細表                *
+     H*   AUTHER       : A1386 SHARON                                *
+     H*   CREATE DATE  : 94/01/25 SHARON                             *
+     H*   UPDATE DATE  :                                             *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR4011C                                    *
+     H*   PURPOSE      :                                             *
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPY2HJF01IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYPYPF  IF  E           K        DISK
+     FPYPD4PF IF  E           K        DISK
+     FPYSSPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR419P O   E             39     PRINTER
+     IH2JF01
+     I                                              EM041 L4
+     I                                              EM042 L3
+     I                                              EM043 L2
+     I                                              EM044 L1
+     I*
+     I           UDS
+     I                                      187 1920DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DH201
+     I                                      503 5050DH203
+     I                                      506 5090WH203
+     I                                      510 516 DEM041
+     I                                      517 523 DEM042
+     I                                      524 531 DH2021
+     I                                      532 539 DH2022
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    KEY FIELD
+     C*==============================================================*
+     C                     MOVEL'01'      KPM01   2
+     C           KEYPM     KLIST
+     C                     KFLD           KPM01
+     C                     KFLD           DH201
+     C           KEYPD     KLIST
+     C                     KFLD           DH201
+     C                     KFLD           EM05
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C           KEYPY     KLIST
+     C                     KFLD           DH201
+     C                     KFLD           H202
+     C           KEYSS     KLIST
+     C                     KFLD           CM13
+     C                     KFLD           PD403
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100
+     C*
+     CL1                   EXSR RTN891
+     CLR                   EXSR RTN892
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*-----------*
+|    C*公司名稱 *
+|    C*-----------*
+|    C           DH201     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C                     SETON                     103971
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C           KEYPM     CHAINPM0                  41
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+     C                     Z-ADD*ZERO     QPY03   70
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+     C           KEYPY     CHAINPY0                  47
+     C  N47                Z-ADDPY03      QPY03
+     C*
+  01-C           EM100     IFEQ '1'                        月薪
+    C           QPY03     DIV  PM102     WPY03     H
+  01*C                     ELSE
+  02-C           EM100     IFEQ '2'                        日薪
+    C                     Z-ADDQPY03     WPY03     H
+     C*日薪加上年休補發薪資項目設定，計算實際日薪
+     C                     Z-ADD*ZERO     COST    70
+|   C           KEYPD     SETLLPD40
+|   C           KEYPD     READEPD40                     46
+| 02-C           *IN46     DOWEQ'0'
+|   C           KEYSS     CHAINSS0                  45
+|   C  N45                ADD  SS07      COST             .BY日
+|   C           KEYPD     READEPD40                     46
+| 02-C                     END
+|   C*
+     C                     ADD  COST      WPY03
+  02-C                     END
+  01-C                     END
+     C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+|    C                     WRITEPD1
+|    C*
+|    C                     SETOF                     71
+|    C                     ADD  1         PT11
+|    C                     ADD  H206      PT12
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN891... LEVEL BREAK LR FIELD CLEAR
+     C*==============================================================*
+04===C           RTN891    BEGSR
+|    C*
+     C                     SETON                     71
+     C                     WRITEPT1
+|    C*
+|    C                     ADD  PT11      PT21
+|    C                     ADD  PT12      PT22
+|    C*
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN892... LEVEL BREAK LR
+     C*==============================================================*
+03===C           RTN892    BEGSR
+|    C*
+|    C                     WRITEPT2
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+05===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+

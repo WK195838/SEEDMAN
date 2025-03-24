@@ -1,0 +1,1178 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : GLA620                                     *
+     H*    PROGRAM NAME :資金預算資料維護                          *
+     H*    AUTHOR       : A1087  JOYCE                               *
+     H*    CREATE DATE  : 1992.12.08                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :泛太總帳                                  *
+     F****************************************************************
+     FGLA1PF  UF  E           K        DISK                      A
+     FGLA2PF  UF  E           K        DISK                      A
+     FGLA6PF  IF  E           K        DISK
+     FGLADPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FPT#APF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLA620D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E*---------------------------------------------------------------*
+     E*預算分攤各期之比率
+     E                    @W01       13  7 4
+     E*預算分攤各期之金額(FILE)
+     E                    @W02       13 13 2
+     E*預算分攤各期之金額(SCREEN)
+     E                    @W03       13 13 2
+     E*預算分攤各期之金額(SUBFILE)
+     E                    @W04       13 13 2
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      125 1270$CPY
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I            DS
+     I                                        1  91 @W01
+     I                                        1   74A6041
+     I                                        8  144A6042
+     I                                       15  214A6043
+     I                                       22  284A6044
+     I                                       29  354A6045
+     I                                       36  424A6046
+     I                                       43  494A6047
+     I                                       50  564A6048
+     I                                       57  634A6049
+     I                                       64  704A604A
+     I                                       71  774A604B
+     I                                       78  844A604C
+     I                                       85  914A604D
+     I            DS
+     I                                        1 169 @W02
+     I                                        1  132A207
+     I                                       14  262A208
+     I                                       27  392A209
+     I                                       40  522A210
+     I                                       53  652A211
+     I                                       66  782A212
+     I                                       79  912A213
+     I                                       92 1042A214
+     I                                      105 1172A215
+     I                                      118 1302A216
+     I                                      131 1432A217
+     I                                      144 1562A218
+     I                                      157 1692A219
+     I            DS
+     I                                        1 169 @W03
+     I                                        1  132DA207
+     I                                       14  262DA208
+     I                                       27  392DA209
+     I                                       40  522DA210
+     I                                       53  652DA211
+     I                                       66  782DA212
+     I                                       79  912DA213
+     I                                       92 1042DA214
+     I                                      105 1172DA215
+     I                                      118 1302DA216
+     I                                      131 1432DA217
+     I                                      144 1562DA218
+     I                                      157 1692DA219
+     I            DS
+     I                                        1 169 @W04
+     I                                        1  132SA207
+     I                                       14  262SA208
+     I                                       27  392SA209
+     I                                       40  522SA210
+     I                                       53  652SA211
+     I                                       66  782SA212
+     I                                       79  912SA213
+     I                                       92 1042SA214
+     I                                      105 1172SA215
+     I                                      118 1302SA216
+     I                                      131 1432SA217
+     I                                      144 1562SA218
+     I                                      157 1692SA219
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*
+     C           *LIKE     DEFN A102      WA102
+     C           *LIKE     DEFN A102      WA102C
+     C           *LIKE     DEFN A106      WA106
+     C*
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C           *LIKE     DEFN RRN       @LRRN            LAST REC NUM
+     C           *LIKE     DEFN RRN       @LPAGE           LAST PAGE
+     C           *LIKE     DEFN RRN       @PRRN            PROMPT USE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYA1     KLIST                           *HEAD FILE
+     C                     KFLD           DA101
+     C                     KFLD           WA102
+     C                     KFLD           DA103
+     C                     KFLD           DA104
+     C           KEYA1C    KLIST                           *COPY REC.
+     C                     KFLD           DA101C
+     C                     KFLD           WA102C
+     C                     KFLD           DA103C
+     C                     KFLD           DA104C
+     C           KEYA2     KLIST                           *DETIL FILE
+     C                     KFLD           DA101
+     C                     KFLD           WA102
+     C                     KFLD           DA103
+     C                     KFLD           DA104
+     C                     KFLD           DA205
+     C           KEYA21    KLIST                           *DETIL FILE
+     C                     KFLD           DA101
+     C                     KFLD           WA102
+     C                     KFLD           DA103
+     C                     KFLD           DA104
+     C                     KFLD           SA205
+     C           KEYAD     KLIST
+     C                     KFLD           DA101
+     C                     KFLD           DA104
+     C           KEYA6     KLIST
+     C                     KFLD           DA101
+     C                     KFLD           DA602
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DA101
+|    C                     Z-ADD*ZERO     DA102
+|    C                     Z-ADD*ZERO     DA103
+|    C                     MOVEL*BLANK    DA104
+|    C                     MOVEL*BLANK    DA101C
+|    C                     Z-ADD*ZERO     DA102C
+|    C                     Z-ADD*ZERO     DA103C
+|    C                     MOVEL*BLANK    DA104C
+|    C*--------------------------------------------------------------*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'                        *PROMPT
+|   C                     EXSR R1E00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 03-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00
+|   C                     GOTO E1000
+| 03-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 04-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+|   C                     MOVEL'SC02'    SCID
+| 04-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'GLI620'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C* CALL SUB-PROGRAM
+|    C                     CALL 'GLI620'
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C           DA101     PARM DA101     P620I1  2        公司別
+|    C           DA102     PARM DA102     P620I2  30       年度
+|    C           DA103     PARM DA103     P620I3  20       版次
+|    C           DA104     PARM DA104     P620I4  8        會計科目
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     PARM           @RTNC   2
+|    C* RETURN CODE CHECK
+| 02-C           @RTNC     IFEQ '03'                       *PF3
+|   C                     SETON                     03
+| 02-C                     END
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*
+|    C* CHK公司別
+|    C                     MOVE *BLANK    #B02
+| 02-C           DA101     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C**
+|    C* CHK 公司別須存在公司檔(PT#BPF)且類別＝１
+|    C**
+|    C           DA101     CHAIN#B0                  40
+| 03-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 03*C                     ELSE
+| 04-C           #B12      IFNE '1'
+|   C                     MOVEL'UGL0004' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6099
+| 04-C                     END
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C**
+|    C* CHK版次
+|    C**
+| 05-C           DA103     IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C**
+|    C* CHK資金代碼
+|    C**
+|    C                     MOVE *BLANK    DAD03
+| 06-C           DA104     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 06*C                     ELSE
+|   C           KEYAD     CHAINAD0                  40
+| 07-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 07*C                     ELSE
+|   C                     MOVELAD03      DAD03
+| 07-C                     END
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* CHG年度
+|    C           DA101     CHAINAK0                  40
+|    C*
+|    C*年制為１－西元年，日期格式＝１　ＹＹＭＭＤＤ
+|    C*年制為２－中國年，日期格式＝２　ＹＹＹＹＭＭＤＤ
+|    C           DA102     MULT 10000     P3101I
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM AK09      P3102I  1
+|    C                     PARM AK09      P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C                     PARM           P3101O  80
+| 08-C           P3101O    IFNE 0
+|   C           P3101O    DIV  10000     WA102
+| 08*C                     ELSE
+|   C                     Z-ADD0         WA102
+| 08-C                     END
+|    C*
+|    C           DA102C    MULT 10000     P3101I
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM AK09      P3102I  1
+|    C                     PARM AK09      P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C                     PARM           P3101O  80
+| 09-C           P3101O    IFNE 0
+|   C           P3101O    DIV  10000     WA102C
+| 09*C                     ELSE
+|   C                     Z-ADD0         WA102C
+| 09-C                     END
+|    C*
+|    C           KEYA1     CHAINA10                  40
+|    C*
+| 10-C           DOPT      IFEQ 1                          *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606162
+|   C                     SETON                     6399
+| 10-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 11-C           DOPT      IFNE 1                          *UPD,DEL,INQ
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606162
+|   C                     SETON                     6399
+| 11-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 12-C           DOPT      IFEQ 1                          *ADD
+| 13-C           DA101C    IFNE *BLANK                     *COPY
+|   C           DA102C    ORNE *ZEROS
+|   C           DA103C    ORNE *ZEROS
+|   C           DA104C    ORNE *BLANK
+|   C*
+|   C           KEYA1C    CHAINA10                  40
+| 14-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT0060' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 14-C                     END
+|   C*
+| 13-C                     END
+| 12-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* GET會計年度月數
+| 15-C           AK10      IFEQ '1'
+|   C                     Z-ADD12        MONTH   30
+|   C                     SETON                     59
+| 15*C                     ELSE
+|   C                     Z-ADD13        MONTH
+|   C                     SETOF                     59
+| 15-C                     END
+|    C*
+04===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+|    C                     SETON                     31    *IN CONTROL
+|    C                     EXSR R1CC0                      *INIT SFL
+|    C* ADD
+| 01-C           DOPT      IFEQ 1
+|   C                     SETOF                     31
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 02-C           DA101C    IFEQ *BLANK                     *NON-COPY
+|   C           DA102C    ANDEQ*ZEROS
+|   C           DA103C    ANDEQ*ZEROS
+|   C           DA104C    ANDEQ*BLANK
+|   C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C                     EXSR R1CA0                      *INIT HEAD
+|   C                     EXSR R1CD0                      *INIT DETAIL
+|   C*
+| 02*C                     ELSE
+|   C                     EXSR R1CB0                      *HEADING
+|   C                     EXSR R1CE0                      *READ DETAIL
+|   C                     EXSR R1CD0                      *INIT DETAIL
+| 02-C                     END
+| 01-C                     END
+|    C* UPD
+| 03-C           DOPT      IFEQ 2
+|   C                     SETOF                     31
+|   C                     EXSR R1CB0                      *HEADING
+|   C                     EXSR R1CE0                      *READ DETAIL
+|   C                     EXSR R1CD0                      *INIT DETAIL
+| 03-C                     END
+|    C* DEL & INQ
+| 04-C           DOPT      IFEQ 4
+|   C           DOPT      OREQ 5
+|   C                     EXSR R1CB0                      *HEADING
+|   C                     EXSR R1CE0                      *READ DETAIL
+|   C                     SETON                     53    *SFLEND
+| 04-C                     END
+|    C*SFLDSP
+| 05-C           @LRRN     IFGT 0
+|   C                     Z-ADD1         DRRN
+|   C                     SETON                     50    *SFLDSP
+| 05*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 05-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)++++++++++++++++++++++++++++++++++*
+| 06-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C           *LOVAL    SETLLA10                        *HEAD FILE
+| 06-C                     END
+|    C*
+|    C           *LOVAL    SETLLA20                        *DETIAL FILE
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1CA0 ....SFL HEAD INIT : ADD (NO COPY)
+     C*==============================================================*
+06===C           R1CA0     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << ADD : SUBFILE HEAD DATA INITAILIZE>>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C                     MOVE *BLANK    DA105
+|    C                     MOVE *BLANK    DA602
+|    C                     MOVE *BLANK    DA603
+|    C                     Z-ADD*ZERO     DBAS
+|    C                     Z-ADD*ZERO     DA106
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R1CB0 ....SFL HEAD INIT : U/D/I/A-COPY
+     C*==============================================================*
+07===C           R1CB0     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << U/D/I AND ADD-COPY : SUBFILE HEAD DATA INITAILIZE>>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C                     MOVELA105      DA105
+|    C                     MOVE *BLANK    DA602
+|    C                     MOVE *BLANK    DA603
+|    C                     Z-ADD*ZERO     DBAS
+|    C                     Z-ADDA106      DA106
+|    C                     Z-ADD0         WA106
+|    C*
+07===C                     ENDSR
+     C*=============================================================*
+     C*          R1CC0 ....SUBFILE INIT
+     C*=============================================================*
+08===C           R1CC0     BEGSR
+|    C* SFL SETTING ++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD7         @PRCD            *PGE RCD
+|    C                     Z-ADD14        @SFTOP  20       *SFL TOP LIN
+|    C                     Z-ADD20        @SFBOT  20       *SFL BOT LIN
+|    C                     Z-ADD1         @LNUM   20       *明細行數
+|    C* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD0         DRRN
+|    C                     Z-ADD0         RRN
+|    C                     Z-ADD0         @LRRN            *LAST RRN
+|    C                     Z-ADD0         @DRCD            *DSP RCD
+|    C*
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     5053  *SFLDSP,END
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R1CD0 ....SFL DATA INIT
+     C*==============================================================*
+09===C           R1CD0     BEGSR
+|    C*
+|    C                     SETOF                     54    *54 FOR BLANK LOOP
+|    C                     Z-ADD@LRRN     RRN
+|    C*
+|    C           @LRRN     DIV  @PRCD     @LPAGE
+|    C                     ADD  1         @LPAGE
+|    C           @LPAGE    MULT @PRCD     @DRCD
+|    C*
+|    C                     EXSR R1CD1                      *INIT SFLDTA
+| 01-C           RRN       DOWLT@DRCD
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+| 01-C                     END
+|    C*
+|    C                     Z-ADDRRN       @LRRN
+|    C                     Z-ADDRRN       DRRN
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R1CD1 ....SFL INIT DATA ADD
+     C*==============================================================*
+10===C           R1CD1     BEGSR
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     MOVEL*BLANK    DOP              .DEL OPT
+|    C                     MOVEL'Y'       DNEW             .NEW RECORD
+|    C*
+|    C*<<OTHER SFLSR FIELD CLEAR >>
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     MOVE *BLANK    DA205
+|    C                     MOVE *BLANK    SA205
+|    C                     MOVE *BLANK    D#A02
+|    C                     Z-ADD*ZERO     DPER1
+|    C                     Z-ADD*ZERO     DTOT
+|    C                     Z-ADD*ZERO     DA206
+|    C                     Z-ADD*ZERO     SA206
+|    C                     Z-ADD*ZERO     @W04
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R1CE0 ....DETAIL DATA TO SFL
+     C*==============================================================*
+11===C           R1CE0     BEGSR
+|    C*
+|    C                     SETON                     54    *54
+|    C*
+| 01-C           DOPT      IFEQ 1                          *ADD-COPY
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C           KEYA1C    SETLLA20
+|   C           KEYA1C    READEA20                      46
+| 01*C                     ELSE                            *U/D/I
+|   C           KEYA1     SETLLA20
+|   C           KEYA1     READEA20                      46
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 01-C                     END
+|    C*
+| 02-C           *IN46     DOWEQ'0'
+|   C                     EXSR R1CE1
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+|   C*
+| 03-C           DOPT      IFEQ 1                          *ADD-COPY
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C           KEYA1C    READEA20                      46
+| 03*C                     ELSE                            *U/D/I
+|   C           KEYA1     READEA20                      46
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 03-C                     END
+|   C*
+| 02-C                     END
+|    C*
+|    C                     Z-ADDRRN       @LRRN
+|    C*
+| 04-C           DA106     IFNE 0
+| 05-C           DA106     IFNE WA106
+|   C                     Z-ADDWA106     DA106
+| 05-C                     END
+| 04-C                     END
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R1CE1 ....DETAIL DATA TO SFL
+     C*==============================================================*
+12===C           R1CE1     BEGSR
+|    C*
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     MOVEL*BLANK    DOP
+|    C                     MOVEL*BLANK    DNEW
+| 01-C           DOPT      IFEQ 1
+|   C                     MOVEL'Y'       DNEW
+| 01-C                     END
+|    C*
+|    C* << OTHER FILE FIELD TO SFLSR >>
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     MOVELA205      DA205
+|    C                     MOVELA205      SA205
+|    C* GET名稱
+|    C                     MOVE *BLANK    D#A02
+|    C           DA205     CHAIN#A0                  40
+|    C  N40                MOVEL#A02      D#A02
+|    C*
+|    C                     Z-ADD*ZERO     DPER1
+|    C                     Z-ADD*ZERO     DTOT
+|    C                     Z-ADDA206      DA206
+|    C                     Z-ADDA206      SA206
+|    C*
+|    C                     ADD  A206      WA106
+|    C*
+|    C                     Z-ADD*ZERO     @W04
+|    C                     Z-ADD1         I       30
+| 02-C                     DO   MONTH     I
+|   C                     Z-ADD@W02,I    @W04,I
+| 02-C                     END
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+13===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*資金代碼
+| 01-C           #LIN      IFEQ 6
+|   C           #COL      ANDGE18
+|   C           #COL      ANDLE25
+|   C                     CALL 'GLI440'
+|   C                     PARM DA101     P410I1  2
+|   C           DA104     PARM DA104     P410I2  8
+|   C                     PARM           @RTNC   2
+| 01-C                     END
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+14===C           R2000     BEGSR
+|    C*
+|    C                     WRITEDSPC2
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C                     Z-ADD#DRRN     DRRN
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'                        *PROMPT
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPDATE
+|   C                     EXSR R2E00
+| 03-C                     END
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 04-C           *IN25     IFEQ '1'                        *NEXT PAGE
+| 05-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPDATE
+|   C                     EXSR R1CD0
+| 05*C                     ELSE
+|   C                     SETON                     96    *EOP
+| 05-C                     END
+|   C                     GOTO E2000
+| 04-C                     END
+|    C*
+| 06-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C* RELEAS FILE --------------------------------------------------*
+|   C           *LOVAL    SETLLA10
+|   C*---------------------------------------------------------------*
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 06-C                     END
+|    C*
+|    C                     EXSR R2B00                      *SC02 CHK
+|    C*
+| 07-C           *IN05     IFEQ '1'                        *CHECK ONLY
+|   C                     GOTO E2000
+| 07-C                     END
+|    C*
+| 08-C           *IN99     IFEQ '0'                        *CHK OK
+|   C                     EXSR R2D00                      *FILE UPD
+|   C                     MOVE 'SC01'    SCID
+| 08-C                     END
+|    C*
+14===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'SC02' CHECK
+     C*==============================================================*
+15===C           R2B00     BEGSR
+|    C*
+| 01-C           DOPT      IFLE 2
+|   C* CHECK HEADING (SFLCR) ++++++++++++++++++++++++++++++++++++++++
+|   C                     MOVEL*BLANK    DA603
+| 02-C           DA602     IFNE *BLANK
+|   C           KEYA6     CHAINA60                  40
+| 03-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 03*C                     ELSE
+|   C                     MOVELA603      DA603
+| 03-C                     END
+| 02-C                     END
+|   C   99                GOTO E2B00
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C                     Z-ADD0         DA106
+| 01-C                     END
+|    C*
+|    C* CHECK DETAIL (SFLSR)
+|    C                     SETON                     54
+|    C                     READCSFLSR                  5757
+|    C*
+| 04-C           *IN57     DOWEQ'0'
+|   C           *IN99     ANDEQ'0'
+|   C           *IN03     ANDEQ'0'
+|   C           *IN12     ANDEQ'0'
+|   C                     EXSR R2B10
+|   C                     UPDATSFLSR
+|   C*
+| 05-C           *IN99     IFEQ '1'
+|   C           *IN12     OREQ '1'
+|   C                     Z-ADDRRN       DRRN
+| 05*C                     ELSE
+|   C  N03N12             READCSFLSR                    57
+| 05-C                     END
+|   C*
+| 04-C                     END
+|    C   99                GOTO E2B00
+|    C*
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* <<CHK TOTAL ETC. (SFLCR)>>
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+15===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2B10 ....'SC02' CHECK - SFL DETAIL
+     C*==============================================================*
+16===C           R2B10     BEGSR
+|    C*
+| 01-C           DOP       IFEQ '4'
+|   C* DOPT='4' | '5'
+| 02-C           DOPT      IFGE 4
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     05
+|   C                     SETON                     6499
+| 02-C                     END
+|   C                     GOTO E2B10
+| 01-C                     END
+|    C*
+| 03-C           DOP       IFEQ '7'
+|   C* DOPT='4' | '5'
+|   C           DOPT      ANDGE4
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     05
+|   C                     SETON                     6499
+|   C                     GOTO E2B10
+| 03-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << CHECK DETAIL FIELD >>
+|    C* PS : DNEW=' ' --> 不可清除整筆SFLSR,請使用DOP作DELETE
+|    C*                   (( PROGRAM中請作CHECK ))
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 04-C           DOPT      IFLE 2
+|   C* CHK成本中心
+|   C                     MOVE *BLANK    D#A02
+| 05-C           DA205     IFNE *BLANK
+|   C           DA205     CHAIN#A0                  40
+| 06-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 06*C                     ELSE
+|   C                     MOVEL#A02      D#A02
+| 07-C           #A10      IFNE '1'
+|   C                     MOVEL'UGL0004' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6599
+| 07-C                     END
+| 06-C                     END
+| 05-C                     END
+|   C   99                GOTO E2B10
+|   C*
+|   C           DBAS      MULT DPER1     DTOT
+| 08-C           DTOT      IFNE 0
+|   C                     DIV  100       DTOT      H
+| 08-C                     END
+|   C* GET金額
+| 09-C           DPER1     IFNE *ZEROS
+|   C           DA206     ANDEQ*ZEROS
+|   C                     Z-ADDDTOT      DA206
+| 09-C                     END
+|   C**
+|   C* 新增或金額改變時，金額分配至各期
+|   C**
+|   C           KEYA6     CHAINA60                  40
+|   C*
+| 10-C           DNEW      IFEQ 'Y'
+|   C           DA206     ORNE SA206
+|   C           DOP       OREQ '7'
+|   C*
+|   C           KEYA2     CHAINA20                  40
+| 11-C           *IN40     IFEQ '0'
+|   C           DNEW      ANDEQ'Y'
+| 12-C           DA205     IFNE *BLANK
+|   C           DA206     ORNE *ZEROS
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     656799
+| 12-C                     END
+| 11-C                     END
+|   C**預算分攤
+| 13-C           *IN99     IFEQ '0'
+|   C*
+|   C* GET會計年度月數
+| 15-C           AK10      IFEQ '1'
+|   C                     Z-ADD0         SA219
+| 15-C                     END
+|   C*
+|   C                     Z-ADD0         WKTOT  132
+|   C                     XFOOT@W04      WKTOT
+|   C*
+| 16-C           DNEW      IFEQ 'Y'
+|   C           WKTOT     ANDEQ0
+|   C           DA206     ORNE SA206
+|   C           DOP       OREQ '7'
+|   C*
+| 17-C           DA602     IFEQ *BLANK
+|   C** 平均分攤
+|   C           DA206     DIV  MONTH     WTEMP  110H
+|   C                     Z-ADD1         I       30
+| 18-C                     DO   MONTH     I
+|   C                     Z-ADDWTEMP     @W04,I
+| 18-C                     END
+| 17*C                     ELSE
+|   C** 依比率
+|   C                     Z-ADD1         I       30
+| 19-C                     DO   MONTH     I
+|   C           DA206     MULT @W01,I    WTEMP1 132
+| 20-C           WTEMP1    IFNE 0
+|   C           WTEMP1    DIV  100       WTEMP     H
+|   C                     Z-ADDWTEMP     @W04,I
+| 20*C                     ELSE
+|   C                     Z-ADD0         @W04,I
+| 20-C                     END
+| 19-C                     END
+| 17-C                     END
+|   C**
+|   C                     XFOOT@W04      WTOT   132
+|   C                     Z-ADDWTOT      DA206
+|   C                     Z-ADDDA206     SA206
+| 16-C                     END
+| 13-C                     END
+| 10-C                     END
+|   C   99                GOTO E2B10
+| 04-C                     END
+|    C* 重新分攤
+| 24-C           DOP       IFEQ '7'
+|   C                     MOVE *BLANK    DOP
+|   C                     SETON                     05
+| 24-C                     END
+|    C* 月份明細
+| 03-C           DOP       IFEQ '6'
+|   C                     EXSR R3000
+|   C  N12                MOVE *BLANK    DOP
+|   C                     SETON                     05
+| 03-C                     END
+|    C* GET總金額
+|    C  N31                ADD  DA206     DA106
+|    C*
+16===C           E2B10     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+17===C           R2D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R2D10
+|   C           DOPT      CASEQ2         R2D20
+|   C           DOPT      CASEQ4         R2D30
+| 01-C                     END
+|    C*
+17===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+18===C           R2D10     BEGSR
+|    C* DETAIL
+|    C                     READCSFLSR                    57
+|    C                     Z-ADD0         WA106
+|    C*
+| 01-C           *IN57     DOWEQ'0'
+|   C*
+| 02-C           DOP       IFNE '4'
+|   C           KEYA2     CHAINA20                  40
+| 03-C           DA205     IFNE *BLANK
+|   C           DA206     ORNE *ZEROS
+|   C*
+| 04-C           *IN40     IFEQ '0'
+|   C                     SUB  A206      WA106
+| 04-C                     END
+|   C                     ADD  DA206     WA106
+|   C*
+|   C                     EXSR R2D11
+|   C   40                WRITEA20
+|   C  N40                UPDATA20
+| 03-C                     END
+| 02-C                     END
+|   C                     READCSFLSR                    57
+| 01-C                     END
+|    C* HEAD
+|    C                     EXSR R2D12
+|    C                     WRITEA10
+|    C*
+18===C                     ENDSR
+     C*==============================================================*
+     C*          R2D11 ....SCREEN FIELD TO FILE
+     C*==============================================================*
+19===C           R2D11     BEGSR
+|    C*
+|    C                     MOVE DA101     A201
+|    C                     Z-ADDWA102     A202
+|    C                     Z-ADDDA103     A203
+|    C                     MOVE DA104     A204
+|    C                     MOVE DA205     A205
+|    C                     Z-ADDDA206     A206
+|    C                     Z-ADD*ZEROS    @W02
+|    C*
+|    C                     Z-ADD1         I       30
+| 01-C                     DO   MONTH     I
+|   C                     Z-ADD@W04,I    @W02,I
+| 01-C                     END
+|    C*
+|    C                     TIME           A297
+|    C                     Z-ADD$A8YMD    A298
+|    C                     MOVE $USER     A299
+|    C*
+19===C                     ENDSR
+     C*==============================================================*
+     C*          R2D12 ....FILE PROCESS : ADD  (ADD NEW)
+     C*==============================================================*
+20===C           R2D12     BEGSR
+|    C*
+|    C                     MOVELDA101     A101
+|    C                     Z-ADDWA102     A102
+|    C                     Z-ADDDA103     A103
+|    C                     MOVELDA104     A104
+|    C                     MOVELDA105     A105
+|    C                     Z-ADDWA106     A106
+|    C*
+|    C                     TIME           A197
+|    C                     Z-ADD$A8YMD    A198
+|    C                     MOVEL$USER     A199
+|    C*
+20===C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+21===C           R2D20     BEGSR
+|    C* DETAIL
+|    C                     READCSFLSR                    57
+|    C*
+| 01-C           *IN57     DOWEQ'0'
+|   C*
+|   C                     SETON                     40
+| 02-C           DNEW      IFEQ 'Y'
+|   C           KEYA2     CHAINA20                  40
+| 02*C                     ELSE
+|   C           KEYA21    CHAINA20                  40
+| 02-C                     END
+|   C*
+| 03-C           DOP       IFEQ '4'
+|   C  N40                DELETA20
+|   C  N40                SUB  A206      WA106
+|   C*
+| 03*C                     ELSE
+| 04-C           DA205     IFNE *BLANK
+|   C           DA206     ORNE *ZEROS
+|   C*
+| 05-C           *IN40     IFEQ '0'
+|   C                     SUB  A206      WA106
+| 05-C                     END
+|   C                     ADD  DA206     WA106
+|   C*
+|   C                     EXSR R2D11
+|   C   40                WRITEA20
+|   C  N40                UPDATA20
+| 04-C                     END
+|   C*
+| 03-C                     END
+|   C*
+|   C                     READCSFLSR                    57
+| 01-C                     END
+|    C* HEAD
+|    C                     EXSR R2D12
+|    C                     UPDATA10
+|    C*
+21===C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+22===C           R2D30     BEGSR
+|    C* DETAIL
+|    C           KEYA1     SETLLA20
+|    C           KEYA1     READEA20                      46
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C                     DELETA20
+|   C           KEYA1     READEA20                      46
+| 01-C                     END
+|    C*
+|    C                     DELETA10
+|    C*
+22===C                     ENDSR
+     C*==============================================================*
+     C*          R2E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+23===C           R2E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* <<SFL HEAD FIELD>>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* 分攤比率碼全頁查詢
+| 01-C           #LIN      IFEQ 10
+|   C           #COL      ANDEQ62
+|   C                     CALL 'GLI660'
+|   C                     PARM DA101     P660I1  2
+|   C           DA602     PARM DA602     P660I2  1
+|   C                     PARM           @RTNC   2
+| 01-C                     END
+|    C* SFL DETAIL
+| 02-C           #LIN      IFLT @SFTOP
+|   C           #LIN      ANDGT@SFBOT
+|   C                     GOTO E2E00
+| 02-C                     END
+|    C* GET SFL REC
+|    C           #LIN      SUB  @SFTOP    @PRRN
+|    C           @PRRN     DIV  @LNUM     @PRRN
+|    C                     MVR            @LINE   20
+|    C*
+|    C                     ADD  1         @LINE            .明細行
+|    C                     ADD  #DRRN     @PRRN            .PROMPT RRN
+|    C           @PRRN     CHAINSFLSR                40
+|    C   40                GOTO E2E00
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << SFLSR FIELD >>
+|    C* 成本中心全頁查詢
+| 03-C           @LINE     IFEQ 1
+|   C           #COL      ANDGE7
+|   C           #COL      ANDLE12
+|   C                     CALL 'PTI140'
+|   C           DA205     PARM DA205     P140I1  6
+|   C                     PARM           @RTNC   2
+| 03-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* UPD SFL
+|    C                     SETON                     54
+|    C                     UPDATSFLSR
+|    C*
+23===C           E2E00     ENDSR
+     C*==============================================================*
+     C*          R3000 .... 'SC03' SCREEN MAIN ROUTINE
+     C*==============================================================*
+24===C           R3000     BEGSR
+|    C*
+|    C                     MOVE 'SC03'    SCID
+|    C                     EXSR R3A00
+|    C*
+| 01-C           *IN03     DOWEQ'0'
+|   C           SCID      ANDEQ'SC03'
+|   C*
+|   C                     EXFMTDSPD3
+|   C                     MOVEA*ALL'0'   *IN,60
+|   C*
+| 02-C           *IN03     IFEQ '0'
+|   C           *IN12     ANDEQ'0'
+|   C*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R3B00                      *SC03 CHK
+| 03-C                     END
+|   C*
+| 04-C           *IN99     IFEQ '0'                        *CHK OK
+|   C           *IN05     ANDEQ'0'
+|   C  N31                EXSR R3D00                      *FILE UPD
+|   C                     MOVE 'SC02'    SCID
+| 04-C                     END
+|   C*
+| 02*C                     ELSE
+|   C                     MOVE 'SC02'    SCID
+| 02-C                     END
+| 01-C                     END
+|    C*
+24===C           E3000     ENDSR
+     C*==============================================================*
+     C*          R3A00 .... 'SC03' INIT FIELD
+     C*==============================================================*
+25===C           R3A00     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     DTOT1
+|    C                     Z-ADD*ZERO     @W03
+|    C*
+|    C                     Z-ADD1         I
+| 01-C                     DO   MONTH     I
+|   C                     Z-ADD@W04,I    @W03,I
+|   C                     ADD  @W04,I    DTOT1
+| 01-C                     END
+|    C*
+25===C           E3A00     ENDSR
+     C*==============================================================*
+     C*          R3B00 .... 'SC03' CHECK
+     C*==============================================================*
+26===C           R3B00     BEGSR
+|    C*
+|    C                     Z-ADD0         DTOT1
+|    C                     Z-ADD1         I
+| 01-C                     DO   MONTH     I
+|   C                     ADD  @W03,I    DTOT1
+| 01-C                     END
+|    C*
+26===C           E3B00     ENDSR
+     C*==============================================================*
+     C*          R3D00 .... 'SC03' UPDATE FILE
+     C*==============================================================*
+27===C           R3D00     BEGSR
+|    C*
+|    C                     Z-ADD1         I       30
+| 01-C                     DO   MONTH     I
+|   C                     Z-ADD@W03,I    @W04,I
+| 01-C                     END
+|    C*
+|    C                     Z-ADDDTOT1     DA206
+|    C                     Z-ADDDTOT1     SA206
+|    C*
+27===C           E3D00     ENDSR
+     C*==============================================================*
+

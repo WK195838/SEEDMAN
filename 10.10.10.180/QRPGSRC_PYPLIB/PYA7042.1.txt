@@ -1,0 +1,147 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYA7042                                     *
+     H*   AUTHER       : A1084 CHARLES                               *
+     H*   CREATE DATE  : 79/07/17                                    *
+     H*   UPDATE DATE  : 89/03/14 A1274 EVA                          *
+     H*   UPDATE DATE  : 96/01/04 A1413 CLOUD                        *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYA7042                                     *
+     H*   PURPOSE      :                                             *
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYTDPF  IP  E           K        DISK
+     FPYTTPF  O   E           K        DISK                      A
+     FSYFAPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     I/COPY PYDDSSRC,PYTTDS01
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      507 516 $TDEV
+     I                                      517 5230DFA04F
+     I                                      524 5300DFA04T
+     I                                      531 5370DFA04N
+     I*
+     I                                      541 544 DTD02
+     I                                      545 5480WTD01
+     I*                                     549 5540WTD16
+     I                                      555 555 DSEL
+     I                                      556 556 DOPT
+     I                                      557 564 DTD17
+     I                                      565 572 DTD17E
+     I                                      573 578 TD17N
+     I*
+     I*PYDA03      DS                            512
+     I*                                      300 301 PYD033
+     I*
+     I            DS
+     I                                        1   3 CM12
+     I                                        1   1 CM121
+   YKI                                        2   3 CM122
+     I           IDS
+     I                                        1   60TTDS3W
+     I                                        3   6 TTDS4
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100
+     C*==============================================================*
+     C*   RTN010... INIT PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           DTD02     CHAINFA0                  40
+|    C*
+|    C*          *NAMVAR   DEFN           PYDA03
+|    C*                    IN   PYDA03
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... ＭＡＩＮ
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C           TD11      CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM12
+|    C*
+|    C*                    MOVELCM12      TT01             稽徵機關
+|    C                     MOVELCM121     TT01             縣市代號
+|    C                     MOVE CM122     TT02             總分處
+| 01-C           CM12      IFEQ *BLANK
+|   C                     MOVELFA02      TT01             縣市代號
+|   C                     MOVE FA03      TT02             總分處
+| 01-C                     END
+|    C*910118S KLAUS
+|    C*IF統一編號＝９７１７００００，則稽徵機關＝(A11)
+|    C*IF統一編號＝９７１７２６２７，則稽徵機關＝(B58)
+|    C*IF統一編號＝９７１７２６３２，則稽徵機關＝(E10)
+| 02-C                     SELEC
+|   C           TD17      WHEQ '97170000'
+|   C                     MOVEL'A'       TT01
+|   C                     MOVE '11'      TT02
+|   C           TD17      WHEQ '97172627'
+|   C                     MOVEL'B'       TT01
+|   C                     MOVE '58'      TT02
+|   C           TD17      WHEQ '97172632'
+|   C                     MOVEL'E'       TT01
+|   C                     MOVE '10'      TT02
+| 02-C                     END
+|    C*910118E KLAUS  96/01/04 CLOUD 廢棄
+|    C*                    MOVELTD02      TT03             媒體單位
+|    C***910116KLAUS       Z-ADDTD03      TT04
+|    C*
+|    C                     Z-ADDTD03      TT032            申報流水號
+|    C                     MOVEL'P'       TT031
+|    C*
+| 03-C           TD11      IFEQ 'YH'                       公司編碼
+|   C                     MOVE TD03      TT032            申報流水號
+|   C                     MOVEL'H'       TT031
+| 03-C                     END
+|    C*
+| 04-C           TD11      IFEQ 'YM'
+|   C                     MOVE TD03      TT032
+|   C                     MOVEL'M'       TT031
+| 04-C                     END
+|    C*** 96/01/04 CLOUD
+|    C                     MOVELTD17      TT04             統一編號
+|    C                     MOVEL*BLANK    TT05             註記
+|    C                     MOVELTD04      TT06             格式代號
+|    C                     MOVELTD05      TT07             身份證號
+|    C                     MOVELTD06      TT08             證號別
+|    C                     Z-ADDTD07      TT09             給付總額
+|    C                     Z-ADDTD08      TT10             扣繳稅額
+|    C           TD07      SUB  TD08      TT11             給付淨額
+|    C                     MOVELTD09      TT12             房屋稅籍所得
+|    C                     MOVEL'B'       TT13             軟體註記
+|    C                     MOVELTD10      TT14             錯誤註記
+|    C           WTD01     SUB  1911      TT15             所得給付年
+|    C*
+|    C                     MOVELTD13      TTDS1            所得者姓名
+|    C*
+|    C                     MOVEL*BLANK    TTDS2            所得人地址
+|    C*
+|    C                     CALL 'P65'
+|    C                     PARM TD14      P6501I 80
+|    C                     PARM 60        P6502I  30
+|    C           TTDS2     PARM           P6511O 80
+|    C                     PARM           P6512O 80
+|    C*
+|    C                     MOVEL*BLANK    TTDS3
+|    C                     Z-ADDTD20      T301
+|    C*
+|    C                     MOVEL*BLANK    TTDS4
+|    C           TD96      SUB  19110000  TTDS3W  60
+|    C*
+|    C                     WRITETT0
+|    C*
+02===C                     ENDSR
+

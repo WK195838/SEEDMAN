@@ -1,0 +1,1125 @@
+     A****************************************************************
+     A*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     A*                                                              *
+     A*    PROGRAM-ID   : PYA504                                     *
+     A*    PROGRAM NAME :薪資系統參數設定                          *
+     A*    AUTHOR       : A1413 CLOUD                                *
+     A*    CREATE DATE  : 96/04/09                                   *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       :人事薪資系統                              *
+     A****************************************************************
+     FPYPMPF  UF  E           K        DISK                      A
+     FPYA504D CF  E                    WORKSTN
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E                    WFUN    5   5  6
+     E*---------------------------------------------------------------*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      203 2080DDATE
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I*
+     I            DS
+     I                                        1   40DM201
+     I                                        3   40DM201M
+     I            DS
+     I                                        1   40DM202
+     I                                        3   40DM202M
+     I            DS
+     I                                        1   40DM205
+     I                                        3   40DM205M
+     I            DS
+     I                                        1   40DM206
+     I                                        3   40DM206M
+     I            DS
+     I                                        1   40WKHR
+     I                                        1   20WKH
+     I                                        3   40WKM
+     I*
+     I/COPY QDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPM     KLIST                           *PYPMPF
+     C                     KFLD           WPB01
+     C                     KFLD           DPM02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+    C*          SCID      CASEQ'SC03'    R3000
+    C*          SCID      CASEQ'SC04'    R4000
+    C*          SCID      CASEQ'SC05'    R5000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVEL'SC01'    SCID    4
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     MOVEL*BLANK    DPM02
+|    C                     Z-ADD1         DOPT
+|    C*
+|    C*公司別
+|    C                     MOVEL$COR      DPM02
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+      *==============================================================*
+      *          R1000 ....'SC01' SCREEN MAIN ROUTINE
+      *==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *CHECK
+|    C*
+| 02-C           *IN99     IFEQ '0'
+|   C                     EXSR R1C00                      *SCR2 INIT
+|   C                     MOVEL'SC02'    SCID             *RTN200
+| 02-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 ....SCREEN CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*公司編號
+| 02-C           DPM02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DPM02     CM001I  2         公司代號
+|    C           DPM02N    PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 03-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 04-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVE '01'      WPB01   2
+|    C           KEYPM     CHAINPM0                  40    *PYPMPF
+|    C*
+| 05-C           DOPT      IFEQ 1                          *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 06-C           DOPT      IFNE 1
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....'SC02' SCREEN INITIAL
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+|    C                     MOVE WFUN,DOPT DFUN
+|    C*
+| 01-C           DOPT      IFEQ 1
+|   C           DOPT      OREQ 2
+|   C                     SETOF                     31    *UNDERLINE
+| 01*C                     ELSE
+|   C                     SETON                     31    *PROTECT
+| 01-C                     END
+|    C*
+| 02-C           DOPT      IFEQ 1                          *ADD
+|   C                     EXSR R1C10                      *CLEAR FIELD
+| 02*C                     ELSE
+|   C                     EXSR R1C20                      *MOVE DATA
+| 02-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....CLEAR FIELD WHEN ADD
+     C*==============================================================*
+05===C           R1C10     BEGSR
+|    C*
+|    C* SCRN2 加班參數
+|    C                     Z-ADD0         DM113
+|    C                     Z-ADD0         DM114
+|    C                     Z-ADD0         DM115
+|    C                     Z-ADD0         DM116
+|    C                     Z-ADD0         DM117
+|    C                     Z-ADD0         DM118
+|    C*                    Z-ADD0         DM119
+|    C*                    Z-ADD0         DM130
+|    C*                    Z-ADD0         DM131
+|    C*                    Z-ADD0         DM132
+|    C*       計薪參數
+|    C                     Z-ADD0         DM128   30
+|    C                     Z-ADD0         DM123   30
+|    C                     Z-ADD0         DM133   30
+|    C                     Z-ADD0         DM129   30
+|    C*                    Z-ADD0         DM121
+|    C*                    Z-ADD0         DM126
+|    C*                    Z-ADD0         DM111
+|    C*                    Z-ADD0         DM112
+|    C*       特休參數
+|    C*                    Z-ADD0         DM107
+|    C*                    Z-ADD0         DM109
+|    C                     Z-ADD0         DM140   20
+|    C                     Z-ADD0         DM137   20
+|    C                     Z-ADD0         DM138   10
+|    C                     Z-ADD0         DM139   20
+|    C*       銀行轉存
+|    C*                    MOVEL*BLANK    DM401
+|    C*                    MOVEL*BLANK    DM402
+|    C*                    MOVEL*BLANK    DM411
+|    C*                    MOVEL*BLANK    DM412
+|    C*                    MOVEL*BLANK    DM413
+|    C*       系統設定
+|    C                     Z-ADD0         DM108
+|    C                     Z-ADD0         DM201
+|    C                     Z-ADD0         DM202
+|    C*                    Z-ADD0         DM203
+|    C*                    MOVEL*BLANK    DM204
+|    C                     Z-ADD0         DM205
+|    C                     Z-ADD0         DM206
+|    C*                    MOVEL*BLANK    DM207
+|    C*外勞薪資計算
+|    C                     Z-ADD0         DMB01   50
+|    C                     Z-ADD0         DMB02   50
+|    C                     Z-ADD0         DMB03   10
+|    C                     MOVEL*BLANK    DMB04   1
+|    C                     Z-ADD0         DMB05   50
+|    C                     Z-ADD0         DMB06   50
+|    C                     MOVEL*BLANK    DMB07   1
+|    C* SCRN4 基本設定
+|    C*                    Z-ADD0         DM101
+|    C*                    Z-ADD0         DM102
+|    C*                    Z-ADD0         DM103
+|    C*       假別代碼
+|    C*                    MOVE *BLANK    DM104
+|    C*                    MOVE *BLANK    DM105
+|    C*                    MOVE *BLANK    DM106
+|    C*                    MOVE *BLANK    DM110
+|    C*                    MOVE *BLANK    DM127
+|    C*                    MOVE *BLANK    DM141
+|    C*                    MOVE *BLANK    DM142
+|    C*                    MOVE *BLANK    DM143
+|    C*                    MOVE *BLANK    DM144
+|    C*                    MOVE *BLANK    DM145
+|    C*       薪資代碼
+|    C*                    MOVE *BLANK    DM301
+|    C*                    MOVE *BLANK    DM302
+|    C*                    MOVE *BLANK    DM303
+|    C*                    MOVE *BLANK    DM304
+|    C*                    MOVE *BLANK    DM305
+|    C*                    MOVE *BLANK    DM306
+|    C*                    MOVE *BLANK    DM307
+|    C*                    MOVE *BLANK    DM308
+|    C*                    MOVE *BLANK    DM310
+|    C*                    MOVE *BLANK    DM311
+|    C*                    MOVE *BLANK    DM312
+|    C*                    MOVE *BLANK    DM314
+|    C*                    MOVE *BLANK    DM317
+|    C*                    MOVE *BLANK    DM318
+|    C*                    MOVE *BLANK    DM319
+|    C*                    MOVE *BLANK    DM320
+|    C*                    MOVE *BLANK    DM321
+|    C*                    MOVE *BLANK    DM322
+|    C*                    MOVE *BLANK    DM323
+|    C*                    MOVE *BLANK    DM324
+|    C*                    MOVE *BLANK    DM325
+|    C*                    MOVE *BLANK    DM326
+|    C*                    MOVE *BLANK    DM327
+|    C*                    MOVE *BLANK    DM328
+|    C*                    MOVE *BLANK    DM329
+|    C*                    MOVE *BLANK    DM330
+|    C*                    MOVE *BLANK    DM331
+|    C*                    MOVE *BLANK    DM332
+|    C*                    MOVE *BLANK    DM334
+|    C*                    MOVE *BLANK    DM335
+|    C*                    MOVE *BLANK    DM336
+|    C*                    MOVE *BLANK    DM337
+|    C*                    MOVE *BLANK    DM338
+|    C*                    MOVE *BLANK    DM339
+|    C*                    MOVE *BLANK    DM340
+|    C*刷卡時間
+|    C*                    Z-ADD*ZERO     DM181
+|    C*                    Z-ADD*ZERO     DM182
+|    C*                    Z-ADD*ZERO     DM183
+|    C*                    Z-ADD*ZERO     DM184
+|    C*                    Z-ADD*ZERO     DM185
+|    C*                    Z-ADD*ZERO     DM186
+|    C*考勤率
+|    C*                    Z-ADD*ZERO     DM501
+|    C*                    Z-ADD*ZERO     DM502
+|    C*                    Z-ADD*ZERO     DM503
+|    C*                    Z-ADD*ZERO     DM504
+|    C*                    Z-ADD*ZERO     DM505
+|    C*                    Z-ADD*ZERO     DM506
+|    C*獎懲率
+|    C*                    Z-ADD*ZERO     DM601
+|    C*                    Z-ADD*ZERO     DM602
+|    C*                    Z-ADD*ZERO     DM603
+|    C*                    Z-ADD*ZERO     DM604
+|    C*                    Z-ADD*ZERO     DM605
+|    C*                    Z-ADD*ZERO     DM606
+|    C*考績率
+|    C*                    Z-ADD*ZERO     DM701
+|    C*                    Z-ADD*ZERO     DM702
+|    C*                    Z-ADD*ZERO     DM703
+|    C*                    Z-ADD*ZERO     DM704
+|    C*                    Z-ADD*ZERO     DM705
+|    C*
+     C* 退休金
+     C*                    MOVEL*BLANK    DM352
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C20 ....MOVE DATA TO 'SC02''SC03''SC04' SCREEN
+     C*==============================================================*
+06===C           R1C20     BEGSR
+|    C* SCRN2 加班參數
+|    C                     Z-ADDPM113     DM113
+|    C                     Z-ADDPM114     DM114
+|    C                     Z-ADDPM115     DM115
+|    C                     Z-ADDPM116     DM116
+|    C                     Z-ADDPM117     DM117
+|    C                     Z-ADDPM118     DM118
+|    C*                    Z-ADDPM119     DM119
+|    C*                    Z-ADDPM130     DM130
+|    C*                    Z-ADDPM131     DM131
+|    C*                    Z-ADDPM132     DM132
+|    C*       計薪參數
+|    C                     Z-ADDPM128     DM128
+|    C                     Z-ADDPM123     DM123
+|    C                     Z-ADDPM133     DM133
+|    C                     Z-ADDPM129     DM129
+|    C*                    Z-ADDPM121     DM121
+|    C*                    Z-ADDPM126     DM126
+|    C*                    Z-ADDPM111     DM111
+|    C*                    Z-ADDPM112     DM112
+|    C*       特休參數
+|    C*                    Z-ADDPM107     DM107
+|    C*                    Z-ADDPM109     DM109
+|    C*                    Z-ADDPM140     DM140
+|    C*                    Z-ADDPM341     DM341            特休可轉代金之比率
+|    C*                    Z-ADDPM342     DM342            外籍津貼給付之比率
+|    C                     Z-ADDPM137     DM137
+|    C                     Z-ADDPM138     DM138
+|    C                     Z-ADDPM139     DM139
+|    C*       銀行轉存
+|    C*                    MOVEL*BLANK    DM401
+|    C*                    MOVEL*BLANK    DM402
+|    C*                    MOVEL*BLANK    DM411
+|    C*                    MOVEL*BLANK    DM412
+|    C*                    MOVEL*BLANK    DM413
+|    C*       系統設定
+|    C                     Z-ADDPM108     DM108
+|    C                     Z-ADDPM201     DM201
+|    C                     Z-ADDPM202     DM202
+|    C*                    Z-ADDPM203     DM203
+|    C*                    MOVELPM204     DM204
+|    C                     Z-ADDPM205     DM205
+|    C                     Z-ADDPM206     DM206
+|    C*                    MOVELPM207     DM207
+|    C*外勞薪資計算(同系統設定)
+|    C                     Z-ADDPMB01     DMB01
+|    C                     Z-ADDPMB02     DMB02
+|    C                     Z-ADDPMB03     DMB03
+|    C                     MOVELPMB04     DMB04
+|    C                     Z-ADDPMB05     DMB05
+|    C                     Z-ADDPMB06     DMB06
+|    C                     MOVELPMB07     DMB07
+|    C* SCRN4 基本設定
+|    C*                    Z-ADDPM101     DM101
+|    C*                    Z-ADDPM102     DM102
+|    C*                    Z-ADDPM103     DM103
+|    C*       假別代碼
+|    C*                    MOVE PM104     DM104
+|    C*                    MOVE PM105     DM105
+|    C*                    MOVE PM106     DM106
+|    C*                    MOVE PM110     DM110
+|    C*                    MOVE PM127     DM127
+|    C*                    MOVE PM141     DM141
+|    C*                    MOVE PM142     DM142
+|    C*                    MOVE PM143     DM143
+|    C*                    MOVE PM144     DM144
+|    C*                    MOVE PM145     DM145
+|    C*       薪資代碼
+|    C*                    MOVE PM301     DM301
+|    C*                    MOVE PM302     DM302
+|    C*                    MOVE PM303     DM303
+|    C*                    MOVE PM304     DM304
+|    C*                    MOVE PM305     DM305
+|    C*                    MOVE PM306     DM306
+|    C*                    MOVE PM307     DM307
+|    C*                    MOVE PM308     DM308
+|    C*                    MOVE PM310     DM310
+|    C*                    MOVE PM311     DM311
+|    C*                    MOVE PM312     DM312
+|    C*                    MOVE PM313     DM313
+|    C*                    MOVE PM314     DM314
+|    C*                    MOVE PM317     DM317
+|    C*                    MOVE PM318     DM318
+|    C*                    MOVE PM319     DM319
+|    C*                    MOVE PM320     DM320
+|    C*                    MOVE PM321     DM321
+|    C*                    MOVE PM322     DM322
+|    C*                    MOVE PM323     DM323
+|    C*                    MOVE PM324     DM324
+|    C*                    MOVE PM325     DM325
+|    C*                    MOVE PM326     DM326
+|    C*                    MOVE PM327     DM327
+|    C*                    MOVE PM328     DM328
+|    C*                    MOVE PM329     DM329
+|    C*                    MOVE PM330     DM330
+|    C*                    MOVE PM331     DM331
+|    C*                    MOVE PM332     DM332
+|    C*                    MOVE PM334     DM334
+|    C*                    MOVE PM335     DM335
+|    C*                    MOVE PM336     DM336
+|    C*                    MOVE PM337     DM337
+|    C*                    MOVE PM338     DM338
+|    C*                    MOVE PM339     DM339
+|    C*                    MOVE PM340     DM340
+|    C*退休金
+|    C*                    MOVELPM352     DM352
+|    C*刷卡時間
+|    C*                    Z-ADDPM181     DM181
+|    C*                    Z-ADDPM182     DM182
+|    C*                    Z-ADDPM183     DM183
+|    C*                    Z-ADDPM184     DM184
+|    C*                    Z-ADDPM185     DM185
+|    C*                    Z-ADDPM186     DM186
+|    C*刷卡時間
+|    C*                    Z-ADDPM181     DM181
+|    C*                    Z-ADDPM182     DM182
+|    C*                    Z-ADDPM183     DM183
+|    C*                    Z-ADDPM184     DM184
+|    C*                    Z-ADDPM185     DM185
+|    C*                    Z-ADDPM186     DM186
+|    C*考勤率
+|    C*                    Z-ADDPM501     DM501
+|    C*                    Z-ADDPM502     DM502
+|    C*                    Z-ADDPM503     DM503
+|    C*                    Z-ADDPM504     DM504
+|    C*                    Z-ADDPM505     DM505
+|    C*                    Z-ADDPM506     DM506
+|    C*獎懲率
+|    C*                    Z-ADDPM601     DM601
+|    C*                    Z-ADDPM602     DM602
+|    C*                    Z-ADDPM603     DM603
+|    C*                    Z-ADDPM604     DM604
+|    C*                    Z-ADDPM605     DM605
+|    C*                    Z-ADDPM606     DM606
+|    C*考績率
+|    C*                    Z-ADDPM701     DM701
+|    C*                    Z-ADDPM702     DM702
+|    C*                    Z-ADDPM703     DM703
+|    C*                    Z-ADDPM704     DM704
+|    C*                    Z-ADDPM705     DM705
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ....'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+07===C           R2000     BEGSR
+|    C*
+|    C                     EXFMTDSPD2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'
+|   C                     MOVE 'SC01'    SCID
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*-EASON
+| 03-C*          *IN99     IFEQ '0'                        *NO ERROR
+|   C*                    MOVE 'SC03'    SCID
+| 03-C*                    END
+|    C*-EASON
+|    C*+EASON
+| 04-C           *IN99     IFEQ '0'                        *NO ERROR
+|   C                     MOVE 'SC01'    SCID
+|   C                     EXSR R5D00
+| 04-C                     END
+|    C*+EASON
+07===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R3000 ....'SC03' SCREEN MAIN ROUTINE
+     C*==============================================================*
+08===C*          R3000     BEGSR
+|    C*
+|    C*                    EXFMTDSPD3
+|    C*                    MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C*          *IN03     IFEQ '1'
+|   C*                    GOTO E3000
+| 01-C*                    END
+|    C*
+| 02-C*          *IN12     IFEQ '1'
+|   C*                    MOVE 'SC02'    SCID
+|   C*                    GOTO E3000
+| 02-C*                    END
+|    C*
+| 03-C*          DOPT      IFEQ 1                          *ADD
+|   C*          DOPT      OREQ 2                          *UPDATE
+|   C*                    EXSR R3B00                      *CHECK SC04
+| 03-C*                    END
+|    C*
+| 04-C*          *IN99     IFEQ '0'                        *NO ERROR
+|   C*                    MOVE 'SC04'    SCID
+| 04-C*                    END
+|    C*
+08===C*          E3000     ENDSR
+     C*==============================================================*
+     C*          R3B00 ....CHECK 'SC03' SCREEN
+     C*==============================================================*
+09===C*          R3B00     BEGSR
+|    C*
+|    C*CHECK 天工作時數
+| 01-C*          DM101     IFEQ 0
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6099
+| 01-C*                    END
+|    C*  99                GOTO E3B00
+|    C*
+|    C*CHECK 月工作天數
+| 02-C*          DM102     IFEQ 0
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6199
+| 02-C*                    END
+|    C*  99                GOTO E3B00
+|    C*
+|    C*CHECK 年結月份
+| 03-C*          DM103     IFLT 1
+|   C*          DM103     ORGT 12
+|   C*                    MOVEL'UPT0040' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6299
+| 03-C*                    END
+|    C*  99                GOTO E3B00
+|    C*
+|    C*
+09===C*          E3B00     ENDSR
+     C*==============================================================*
+     C*          R4000 ....'SC04' SCREEN MAIN ROUTINE
+     C*==============================================================*
+10===C*          R4000     BEGSR
+|    C*
+|    C*                    EXFMTDSPD4
+|    C*                    MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C*          *IN03     IFEQ '1'
+|   C*                    GOTO E4000
+| 01-C*                    END
+|    C*
+| 02-C*          *IN12     IFEQ '1'
+|   C*                    MOVE 'SC03'    SCID
+|   C*                    GOTO E4000
+| 02-C*                    END
+|    C*
+| 03-C*          DOPT      IFEQ 1                          *ADD
+|   C*          DOPT      OREQ 2                          *UPDATE
+|   C*                    EXSR R4B00                      *CHECK SC04
+| 03-C*                    END
+|    C*-EASON
+| 04-C*          *IN99     IFEQ '0'                        *NO ERROR
+|   C*                    MOVE 'SC05'    SCID
+| 04-C*                    END
+|    C*-EASON
+|    C*+EASON
+| 04-C*          *IN99     IFEQ '0'                        *NO ERROR
+|   C*                    MOVE 'SC01'    SCID
+|   C*                    EXSR R5D00
+| 04-C*                    END
+|    C*+EASON
+10===C*          E4000     ENDSR
+     C*==============================================================*
+     C*          R4B00 ....CHECK 'SC04' SCREEN
+     C*==============================================================*
+11===C*          R4B00     BEGSR
+|    C*CHECK 下期試算
+| 01-C*          DM201     IFEQ 0
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6099
+| 01-C*                    END
+|    C*  99                GOTO E4B00
+|    C*
+| 02-C*          DM201M    IFLT 1
+|   C*          DM201M    ORGT 12
+|   C*                    MOVEL'UPT0040' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6099
+| 02-C*                    END
+|    C*  99                GOTO E4B00
+|    C*
+|    C*CHECK 下期確認
+| 03-C*          DM202     IFEQ 0
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6199
+| 03-C*                    END
+|    C*  99                GOTO E4B00
+|    C*
+| 04-C*          DM202M    IFLT 1
+|   C*          DM202M    ORGT 12
+|   C*                    MOVEL'UPT0040' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6199
+| 04-C*                    END
+|    C*  99                GOTO E4B00
+|    C*CHECK 上期試算
+| 05-C*          DM205     IFEQ 0
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6299
+| 05-C*                    END
+|    C*  99                GOTO E4B00
+|    C*
+| 06-C*          DM205M    IFLT 1
+|   C*          DM205M    ORGT 12
+|   C*                    MOVEL'UPT0040' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6299
+| 06-C*                    END
+|    C*  99                GOTO E4B00
+|    C*
+|    C*CHECK 上期確認
+| 07-C*          DM206     IFEQ 0
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6399
+| 07-C*                    END
+|    C*  99                GOTO E4B00
+|    C*
+| 08-C*          DM206M    IFLT 1
+|   C*          DM206M    ORGT 12
+|   C*                    MOVEL'UPT0040' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6399
+| 08-C*                    END
+|    C*  99                GOTO E4B00
+|    C*CHECK 特休年度  A1274 891030
+|    C**         DM108     IFEQ 0
+|    C**                   MOVEL'UPT0040' ERRID
+|    C**                   MOVEL'PTMF'    ERRF
+|    C**                   SETON                     6499
+|    C**                   END
+|    C** 99                GOTO E4B00
+|    C*上班刷卡時間
+| 09-C*          DM181     IFGT 0
+|   C*
+|   C*                    Z-ADDDM181     WKHR
+|   C*
+| 10-C*          WKH       IFGT 23
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6599
+| 10-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 11-C*          WKM       IFGT 59
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6599
+| 11-C*                    END
+|   C*  99                GOTO E4B00
+| 09-C*                    END
+|    C*上午上班起時
+| 12-C*          DM183     IFGT 0
+|   C*
+|   C*                    Z-ADDDM183     WKHR
+|   C*
+| 13-C*          WKH       IFGT 23
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6699
+| 13-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 14-C*          WKM       IFGT 59
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6699
+| 14-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 12-C*                    END
+|    C*上午上班迄時
+| 15-C*          DM184     IFGT 0
+|   C*
+|   C*                    Z-ADDDM184     WKHR
+|   C*
+| 16-C*          WKH       IFGT 23
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6799
+| 16-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 17-C*          WKM       IFGT 59
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6799
+| 17-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 15-C*                    END
+|    C*上／下班起迄時間
+| 18-C*          DM183     IFEQ DM184
+|   C*                    MOVEL'UPY0022' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6799
+| 18-C*                    END
+|    C*  99                GOTO E4B00
+|    C*下班刷卡時間
+| 19-C*          DM182     IFGT 0
+|   C*
+|   C*                    Z-ADDDM182     WKHR
+|   C*
+| 20-C*          WKH       IFGT 23
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6899
+| 20-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 21-C*          WKM       IFGT 59
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6899
+| 21-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 19-C*                    END
+|    C*上／下班時間不可相同
+| 22-C*          DM182     IFEQ DM181
+|   C*                    MOVEL'UPY0022' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6899
+| 22-C*                    END
+|    C*  99                GOTO E4B00
+|    C*
+|    C*下午上班起時
+| 23-C*          DM185     IFGT 0
+|   C*
+|   C*                    Z-ADDDM185     WKHR
+|   C*
+| 24-C*          WKH       IFGT 23
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6999
+| 24-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 25-C*          WKM       IFGT 59
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     6999
+| 25-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 23-C*                    END
+|    C*下午下班迄時
+| 26-C*          DM186     IFGT 0
+|   C*
+|   C*                    Z-ADDDM186     WKHR
+|   C*
+| 27-C*          WKH       IFGT 23
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     7099
+| 27-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 28-C*          WKM       IFGT 59
+|   C*                    MOVEL'UPY0021' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     7099
+| 28-C*                    END
+|   C*  99                GOTO E4B00
+|   C*
+| 26-C*                    END
+|    C*
+| 29-C*          DM185     IFEQ DM186
+|   C*                    MOVEL'UPY0022' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     7099
+| 29-C*                    END
+|    C*  99                GOTO E4B00
+|    C*
+|    C*CHK上午上班時間＜＞下午上班時間
+| 30-C*          DM183     IFEQ DM185
+|   C*                    MOVEL'UPY0022' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     666999
+| 30-C*                    END
+|    C*  99                GOTO E4B00
+|    C*
+|    C*CHK上午下班時間＜＞下午下班時間
+| 31-C*          DM184     IFEQ DM186
+|   C*                    MOVEL'UPY0022' ERRID
+|   C*                    MOVEL'CEMF'    ERRF
+|   C*                    SETON                     677099
+| 31-C*                    END
+|    C*  99                GOTO E4B00
+|    C*
+11===C*          E4B00     ENDSR
+     C*==============================================================*
+     C*          R5000 ....'SC05' SCREEN MAIN ROUTINE
+     C*==============================================================*
+08===C*          R5000     BEGSR
+|    C*
+|    C*                    EXFMTDSPD5
+|    C*                    MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C*          *IN03     IFEQ '1'
+|   C*                    GOTO E5000
+| 01-C*                    END
+|    C*
+| 02-C*          *IN12     IFEQ '1'
+|   C*                    MOVE 'SC04'    SCID
+|   C*                    GOTO E5000
+| 02-C*                    END
+|    C*
+| 03-C*          DOPT      IFEQ 1                          *ADD
+|   C*          DOPT      OREQ 2                          *UPDATE
+|   C*                    EXSR R5B00                      *CHECK SC04
+| 03-C*                    END
+|    C*
+| 04-C*          *IN99     IFEQ '0'                        *NO ERROR
+|   C*                    MOVE 'SC01'    SCID
+|   C*                    EXSR R5D00
+| 04-C*                    END
+|    C*
+08===C*          E5000     ENDSR
+     C*==============================================================*
+     C*          R5B00 ....CHECK 'SC05' SCREEN
+     C*==============================================================*
+09===C*          R5B00     BEGSR
+|    C*
+|    C*CHECK 特優最高％數
+| 01-C*          DM701     IFGT 50
+| 01-C*          DM701     ORLE 20
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     7199
+| 01-C*                    END
+|    C*  99                GOTO E5B00
+|    C*
+|    C*CHECK 優等最高％數
+| 01-C*          DM702     IFGT 20
+| 01-C*          DM702     ORLE 0
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     7299
+| 01-C*                    END
+|    C*  99                GOTO E5B00
+|    C*
+|    C*CHECK 乙等最高％數
+| 01-C*          DM704     IFGT 20
+| 01-C*          DM704     ORLE 0
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     7399
+| 01-C*                    END
+|    C*  99                GOTO E5B00
+|    C*
+|    C*CHECK 丙等最高％數
+| 01-C*          DM705     IFGT 50
+| 01-C*          DM705     ORLE 20
+|   C*                    MOVEL'UPT0012' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     7499
+| 01-C*                    END
+|    C*  99                GOTO E5B00
+|    C*
+09===C*          E5B00     ENDSR
+     C*==============================================================*
+     C*          R5D00 ....FILE PROCESS
+     C*==============================================================*
+12===C           R5D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R5D10
+|   C           DOPT      CASEQ2         R5D20
+|   C           DOPT      CASEQ4         R5D30
+| 01-C                     END
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R5D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+13===C           R5D10     BEGSR
+|    C* DETAIL
+|    C                     EXSR R5D11
+|    C                     WRITEPM0
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R5D11 ....SCREEN FIELD TO FILE
+     C*==============================================================*
+14===C           R5D11     BEGSR
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C                     MOVELDPM02     PM02
+|    C                     MOVEL*BLANK    PM03
+|    C* SCRN2 加班參數
+|    C                     Z-ADDDM113     PM113
+|    C                     Z-ADDDM114     PM114
+|    C                     Z-ADDDM115     PM115
+|    C                     Z-ADDDM116     PM116
+|    C                     Z-ADDDM117     PM117
+|    C                     Z-ADDDM118     PM118
+|    C*                    Z-ADDDM119     PM119
+|    C*                    Z-ADDDM130     PM130
+|    C*                    Z-ADDDM131     PM131
+|    C*                    Z-ADDDM132     PM132
+|    C*       計薪參數
+|    C                     Z-ADDDM128     PM128
+|    C                     Z-ADDDM123     PM123
+|    C                     Z-ADDDM133     PM133
+|    C                     Z-ADDDM129     PM129
+|    C*                    Z-ADDDM121     PM121
+|    C*                    Z-ADDDM126     PM126
+|    C*                    Z-ADDDM111     PM111
+|    C*                    Z-ADDDM112     PM112
+|    C*       特休參數
+|    C*                    Z-ADDDM107     PM107
+|    C*                    Z-ADDDM109     PM109
+|    C*                    Z-ADDDM140     PM140
+|    C*                    Z-ADDDM341     PM341            特休可轉代金之比率
+|    C*                    Z-ADDDM342     PM342            外籍津貼給付之比率
+|    C                     Z-ADDDM137     PM137
+|    C                     Z-ADDDM138     PM138
+|    C                     Z-ADDDM139     PM139
+|    C*       銀行轉存
+|    C*                    MOVEL*BLANK    DM401
+|    C*                    MOVEL*BLANK    DM402
+|    C*                    MOVEL*BLANK    DM411
+|    C*                    MOVEL*BLANK    DM412
+|    C*                    MOVEL*BLANK    DM413
+|    C*       系統設定
+|    C           DM108     ADD  2000      PM108
+|    C*                    Z-ADDDM201     PM201
+     C                     CALL 'P39'
+     C                     PARM DM201     P3901I  60
+     C                     PARM '1'       P3902I  1
+     C                     PARM '1'       P3903I  1
+     C                     PARM '2'       P3904I  1
+     C                     PARM '1'       P3905I  1
+     C           PM201     PARM           P3911O  60
+|    C*                    Z-ADDDM202     PM202
+     C                     CALL 'P39'
+     C                     PARM DM202     P3901I  60
+     C                     PARM '1'       P3902I  1
+     C                     PARM '1'       P3903I  1
+     C                     PARM '2'       P3904I  1
+     C                     PARM '1'       P3905I  1
+     C           PM202     PARM           P3911O  60
+|    C*                    Z-ADDDM203     PM203
+|    C*                    MOVELDM204     PM204
+|    C*                    Z-ADDDM205     PM205
+     C                     CALL 'P39'
+     C                     PARM DM205     P3901I  60
+     C                     PARM '1'       P3902I  1
+     C                     PARM '1'       P3903I  1
+     C                     PARM '2'       P3904I  1
+     C                     PARM '1'       P3905I  1
+     C           PM205     PARM           P3911O  60
+|    C*                    Z-ADDDM206     PM206
+     C                     CALL 'P39'
+     C                     PARM DM206     P3901I  60
+     C                     PARM '1'       P3902I  1
+     C                     PARM '1'       P3903I  1
+     C                     PARM '2'       P3904I  1
+     C                     PARM '1'       P3905I  1
+     C           PM206     PARM           P3911O  60
+|    C*                    MOVELDM207     PM207
+|    C*       外勞薪資設定
+|    C                     Z-ADDDMB01     PMB01
+|    C                     Z-ADDDMB02     PMB02
+|    C                     Z-ADD0         PMB03
+|    C*                    MOVELDM204     PMB04
+|    C                     Z-ADD0         PMB05
+|    C                     Z-ADD0         PMB06
+|    C*                    MOVELDM207     PMB07
+|    C* SCRN4 基本設定
+|    C*                    Z-ADDDM101     PM101
+|    C*                    Z-ADDDM102     PM102
+|    C*                    Z-ADDDM103     PM103
+|    C*       假別代碼
+|    C*                    MOVE DM104     PM104
+|    C*                    MOVE DM105     PM105
+|    C*                    MOVE DM106     PM106
+|    C*                    MOVE DM110     PM110
+|    C*                    MOVE DM127     PM127
+|    C*                    MOVE DM141     PM141
+|    C*                    MOVE DM142     PM142
+|    C*                    MOVE DM143     PM143
+|    C*                    MOVE DM144     PM144
+|    C*                    MOVE DM145     PM145
+|    C*       薪資代碼
+|    C*                    MOVE DM301     PM301
+|    C*                    MOVE DM302     PM302
+|    C*                    MOVE DM303     PM303
+|    C*                    MOVE DM304     PM304
+|    C*                    MOVE DM305     PM305
+|    C*                    MOVE DM306     PM306
+|    C*                    MOVE DM307     PM307
+|    C*                    MOVE DM308     PM308
+|    C*                    MOVE DM310     PM310
+|    C*                    MOVE DM311     PM311
+|    C*                    MOVE DM312     PM312
+|    C*                    MOVE DM313     PM313
+|    C*                    MOVE DM314     PM314
+|    C*                    MOVE DM317     PM317
+|    C*                    MOVE DM318     PM318
+|    C*                    MOVE DM319     PM319
+|    C*                    MOVE DM320     PM320
+|    C*                    MOVE DM321     PM321
+|    C*                    MOVE DM322     PM322
+|    C*                    MOVE DM323     PM323
+|    C*                    MOVE DM324     PM324
+|    C*                    MOVE DM325     PM325
+|    C*                    MOVE DM326     PM326
+|    C*                    MOVE DM327     PM327
+|    C*                    MOVE DM328     PM328
+|    C*                    MOVE DM329     PM329
+|    C*                    MOVE DM330     PM330
+|    C*                    MOVE DM331     PM331
+|    C*                    MOVE DM332     PM332
+|    C*                    MOVE DM334     PM334
+|    C*                    MOVE DM335     PM335
+|    C*                    MOVE DM336     PM336
+|    C*                    MOVE DM337     PM337
+|    C*                    MOVE DM338     PM338
+|    C*                    MOVE DM339     PM339
+|    C*                    MOVE DM340     PM340
+|    C*
+|    C*                    Z-ADDDM181     PM181
+|    C*                    Z-ADDDM182     PM182
+|    C*                    Z-ADDDM183     PM183
+|    C*                    Z-ADDDM184     PM184
+|    C*                    Z-ADDDM185     PM185
+|    C*                    Z-ADDDM186     PM186
+|    C*考勤率
+|    C*                    Z-ADDDM501     PM501
+|    C*                    Z-ADDDM502     PM502
+|    C*                    Z-ADDDM503     PM503
+|    C*                    Z-ADDDM504     PM504
+|    C*                    Z-ADDDM505     PM505
+|    C*                    Z-ADDDM506     PM506
+|    C*獎懲率
+|    C*                    Z-ADDDM601     PM601
+|    C*                    Z-ADDDM602     PM602
+|    C*                    Z-ADDDM603     PM603
+|    C*                    Z-ADDDM604     PM604
+|    C*                    Z-ADDDM605     PM605
+|    C*                    Z-ADDDM606     PM606
+|    C*考績率
+|    C*                    Z-ADDDM701     PM701
+|    C*                    Z-ADDDM702     PM702
+|    C*                    Z-ADDDM703     PM703
+|    C*                    Z-ADDDM704     PM704
+|    C*                    Z-ADDDM705     PM705
+|    C*自提退休金
+     C*                    MOVELDM352     PM352
+|    C*
+|    C                     Z-ADD$A8YMD    PM97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     PM98
+|    C                     MOVEL$USER     PM99
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R5D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+15===C           R5D20     BEGSR
+|    C*
+|    C                     EXSR R5D11
+|    C                     UPDATPM0
+|    C*
+15===C                     ENDSR
+     C*==============================================================*
+     C*          R5D30 ....FILE PROCESS
+     C*==============================================================*
+16===C           R5D30     BEGSR
+|    C* DETAIL
+|    C                     DELETPM0
+|    C*
+16===C                     ENDSR
+     C*==============================================================*
+**
+新增修改      刪除查詢
+

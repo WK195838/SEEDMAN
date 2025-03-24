@@ -1,0 +1,402 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA3061                                    *
+     H*    PROGRAM NAME :薪資試算作業                              *
+     H*    AUTHOR       : A1413 CLOUD                                *
+     H*    CREATE DATE  : 96/03/15                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     H            Y
+     F*人事主檔
+     FPYEMPF  IP  E           K        DISK
+     F*薪資工作檔HEADING
+     FPYPWPF  UF  E           K        DISK                      A
+     F*薪資工作檔DETAIL
+     FPYWDPF  UF  E           K        DISK                      A
+     F*薪資主檔－ＨＥＡＤＩＮＧ
+     FPYPYPF  IF  E           K        DISK
+     F*薪資主檔－ＤＥＴＡＩＬ
+     F*PYPDPF  IF  E           K        DISK
+     F*薪資異動檔
+     FPYOSPF  IF  E           K        DISK
+     F*薪資結構參數檔
+     FPYSSPF  IF  E           K        DISK
+     F*人事薪資參數檔
+     FPYPMPF  IF  E           K        DISK
+     F*所得稅率參數檔
+     FPYTAPF  IF  E           K        DISK
+     F*公司主檔
+     FSYCMPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     E                    A1         99  2               .薪資項目
+     E                    A2         99  7 0             .項目金額
+     E*---------------------------------------------------------------
+     I/COPY QDDSSRC,PYPMDS01
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DPW01
+     I                                      503 5060DPW03
+     I                                      508 508 DPW04
+     I                                      511 5160WPW03
+     I                                      511 5140WPW03Y
+     I                                      515 5160WPW03M
+     I                                      601 601 DOPT
+     I*
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN WD05      #WD05
+     C           *LIKE     DEFN WD06      #WD06
+     C           *LIKE     DEFN PW18      #PW18
+     C*
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DPW01
+     C           KEYPY     KLIST
+     C                     KFLD           EM01             公司別
+     C                     KFLD           EM02             員工代號
+     C*PYPWPF
+     C           KEYPW     KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           WPW03            年月
+     C                     KFLD           DPW04            期別
+     C                     KFLD           EM02             工號
+     C*PYPDPF
+     C*          KEYPD     KLIST
+     C*                    KFLD           EM01             公司別
+     C*                    KFLD           EM02             員工代號
+     C*PYWDPF
+     C           KEYWD     KLIST
+     C                     KFLD           WD01             公司編號
+     C                     KFLD           WD03             年月
+     C                     KFLD           WD04             期別
+     C                     KFLD           WD02             員工編號
+     C                     KFLD           WD05             薪資項目
+     C*
+     C           KEYWD1    KLIST
+     C                     KFLD           WD01             公司編號
+     C                     KFLD           WD03             年月
+     C                     KFLD           WD04             期別
+     C                     KFLD           WD02             員工編號
+     C*
+     C           KEYOS     KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           WPW03            年月
+     C                     KFLD           DPW04            期別
+     C*PYSSPF
+     C           KEYSS     KLIST
+     C                     KFLD           SS18             公司編號
+     C                     KFLD           SS01             薪資項目
+     C*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     .INIT
+     C*
+    C                     EXSR RTN025                     .CLEAR PW
+    C*GET工作日數及計薪比率-- PW07,JRATE
+    C                     EXSR RTN030                     .EM DATA
+    C*
+    C           KEYPY     CHAINPY0                  40
+  02-C           *IN40     IFEQ '0'
+    C                     EXSR RTN040                     .MAIN
+  02-C                     END
+    C*
+     C*
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C*GET PAYROLL PARAMETER
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C   40                MOVE *ZERO     PM03
+|    C*
+|    C*GET PAYROLL PARAMETER
+|    C           DPW01     CHAINCM0                  40
+|    C                     MOVE CM14      DFMT
+|    C                     MOVE CM15      DTYPE
+|    C*
+|    C*TAX
+|    C           '0'       CHAINTA0                  40
+|    C*
+     C           DPW01     CHAINCM0                  40
+     C  N40                MOVELCM13      SS18
+     C   40                MOVELDPW01     SS18
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN025... CLEAR PW FIELD
+     C*==============================================================*
+03===C           RTN025    BEGSR
+|    C*
+|    C                     Z-ADD0         I1      20       .INDEX-PAY
+|    C                     MOVEL*BLANK    A1
+|    C                     MOVEL*ZERO     A2
+|    C                     Z-ADD0         WAMT    70
+|    C*
+|    C                     MOVELEM01      PW01
+|    C                     MOVELEM02      PW02
+|    C                     Z-ADDWPW03     PW03
+|    C                     MOVELDPW04     PW04
+|    C                     Z-ADD*ZERO     PW05
+|    C                     Z-ADD*ZERO     PW07
+|    C                     Z-ADD*ZERO     PW14
+|    C                     Z-ADD*ZERO     PW15
+|    C                     Z-ADD*ZERO     PW16
+|    C                     Z-ADD*ZERO     PW17
+|    C                     Z-ADD*ZERO     PW18
+|    C                     Z-ADD*ZERO     PW19
+|    C                     MOVELEM11      PW20
+|    C                     Z-ADD*ZERO     PW22
+|    C                     Z-ADD*ZERO     PW24
+|    C                     Z-ADD*ZERO     PW26
+|    C                     Z-ADD*ZERO     PW27
+|    C                     Z-ADD*ZERO     PW28
+|    C                     Z-ADD*ZERO     PW29
+|    C                     Z-ADD*ZERO     PW30
+|    C                     Z-ADD*ZERO     PW30
+|    C                     Z-ADD*ZERO     PW31
+|    C                     Z-ADD*ZERO     PW32
+|    C                     Z-ADD*ZERO     PW33
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN030... GET EMPLOYEE DATA
+     C*==============================================================*
+04===C           RTN030    BEGSR
+|    C*----------------------------------------------------------------
+|    C                     MOVELDPW01     WD01             公司編號
+|    C                     Z-ADDWPW03     WD03             年月
+|    C                     MOVELDPW04     WD04             期別
+|    C                     MOVELEM02      WD02             員工編號
+|    C                     MOVEL*BLANK    WD05             薪資項目
+|    C*----------------------------------------------------------------
+|    C*
+04===C           END030    ENDSR
+     C*==============================================================*
+     C*          RTN040... MAIN PROCESS
+     C*==============================================================*
+05===C           RTN040    BEGSR
+|    C*
+|    C*---------------------------------------
+|    C*薪資異動檔(PYOSPF) +薪資工作檔(PYWDPF)
+|    C                     EXSR RTN150
+|    C*---------------------------------------------------------------
+|    C*薪定項目: PYWDPF --> PYPWPF
+|    C                     EXSR RTN250
+|    C*---------------------------------------
+|    C*固定薪資所得稅(PW15, PM318)
+|    C*                    EXSR RTN170
+|    C*獎金所得稅(PM311)
+|    C*                    EXSR RTN175
+|    C*---------------------------------------
+|    C*
+|    C                     Z-ADD$A8YMD    PW97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     PW98
+|    C                     MOVEL$USER     PW99
+|    C*
+|    C                     Z-ADDWPW03     PW03
+|    C*                    ADD  #PW18     PW18
+|    C*
+|    C           KEYPW     CHAINPW0                  48
+| 01-C           *IN48     IFEQ '1'
+|   C                     WRITEPW0
+| 01*C                     ELSE
+|   C                     UPDATPW0
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*   RTN150... 薪資異動檔(PYOSPF) +薪資工作檔(PYWDPF)
+     C*==============================================================*
+11===C           RTN150    BEGSR
+|    C*
+|    C                     MOVEL*BLANK    WD05             薪資項目
+|    C                     Z-ADD0         WD06             項目金額
+|    C*津貼項目KEYOS = 公司別+員工代號+年月+期別+薪資項目
+|    C           KEYOS     SETLLOS0
+|    C           KEYOS     READEOS0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C                     MOVELOS05      WD05             薪資項目
+|   C           KEYWD     CHAINWD0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     ADD  OS06      WD06             項目金額
+|   C                     UPDATWD0
+| 02*C                     ELSE
+|   C                     Z-ADDOS06      WD06             項目金額
+|   C                     WRITEWD0
+| 02-C                     ENDIF
+|   C           KEYOS     READEOS0                      44
+| 01-C                     ENDDO
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*   RTN170... GET 固定薪資所得稅 & PYPWPF
+     C*==============================================================*
+12===C           RTN170    BEGSR
+|    C*
+|    C           KEYPW     CHAINPW0                  46
+| 01-C           *IN46     IFEQ '1'
+|   C           PW17      SUB  PW28      WAMT
+| 01-C                     END
+|    C*
+| 02-C           WAMT      IFLE *ZERO
+|   C                     GOTO END170
+| 02-C                     END
+|    C*
+| 03-C           EM101     IFEQ '1'
+|   C                     Z-ADDWAMT      PI1     80
+|   C                     MOVELEM34      PI2     1
+|   C                     Z-ADDEM35      PI3     20
+|   C                     CALL 'PYS306'                   .TAX
+|   C                     PARM           PI1
+|   C                     PARM           PI2
+|   C                     PARM           PI3
+|   C                     PARM           PO1     70
+|   C                     PARM           PO2     53
+| 03-C                     END
+|    C*
+|    C                     Z-ADDPO2       TAXR    53
+|    C*
+| 04-C           EM101     IFEQ '2'
+|   C                     Z-ADD0.1       PO2
+|   C           WAMT      MULT PO2       PO1       H
+| 04-C                     END
+|    C*
+| 05-C           EM101     IFEQ '3'
+|   C                     Z-ADD0.2       PO2
+|   C           WAMT      MULT PO2       PO1       H
+| 05-C                     END
+|    C*
+| 06-C           EM101     IFEQ '4'
+|   C                     Z-ADD*ZERO     PO2
+|   C                     Z-ADDEM102     PO1       H
+| 06-C                     END
+|    C*
+| 07-C           PO1       IFNE *ZERO
+|   C                     MOVEL'53'      #WD05
+|   C                     Z-ADDPO1       #WD06
+|   C                     EXSR RTN260
+| 07-C                     END
+|    C*
+|    C                     Z-ADDPO2       PW15
+|    C*
+12===C           END170    ENDSR
+     C*==============================================================*
+     C*   RTN175... 計算獎金所得稅 & PYPWPF
+     C*==============================================================*
+13===C           RTN175    BEGSR
+|    C*
+|    C           PW27      SUB  PW29      WAMT
+| 01-C           WAMT      IFLE *ZERO
+|   C                     GOTO END175
+| 01-C                     END
+|    C*
+|    C*獎金稅=非固定薪資所得X獎金稅率
+|    C*不足最低稅額不扣
+|    C           WAMT      MULT TA07      #WD06     H
+| 02-C           #WD06     IFNE *ZERO
+|   C                     MOVEL'54'      #WD05
+|   C                     EXSR RTN260
+| 02-C                     END
+|    C*
+13===C           END175    ENDSR
+     C*==============================================================*
+     C*          RTN250... 薪資項目－一
+     C*==============================================================*
+14===C           RTN250    BEGSR
+|    C*
+|    C           KEYWD1    SETLLWD0
+|    C           KEYWD1    READEWD0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C*
+|   C                     MOVELWD05      SS01             薪資代碼
+|   C           KEYSS     CHAINSS0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C*
+| 03-C           SS04      IFEQ 'B'                        .減項
+|   C*
+| 04-C           SS03      IFEQ 'N'                        .免稅
+|   C                     ADD  WD06      PW18
+| 04*C                     ELSE                            .應稅
+| 05-C           SS11      IFEQ '1'                        .固定
+|   C                     ADD  WD06      PW28
+| 05*C                     ELSE                            .非固定
+|   C                     ADD  WD06      PW29
+| 05-C                     END
+| 04-C                     END
+|   C*
+| 03*C                     ELSE                            .加項
+|   C*
+| 06-C           SS03      IFEQ 'N'                        .免稅
+|   C                     ADD  WD06      PW16
+| 06*C                     ELSE                            .應稅
+| 07-C           SS11      IFEQ '1'                        .固定
+|   C                     ADD  WD06      PW17
+| 07*C                     ELSE                            .非固定
+|   C                     ADD  WD06      PW27
+| 07-C                     END
+| 06-C                     END
+|   C*
+| 03-C                     END
+| 02-C                     END
+|   C*
+|   C           KEYWD1    READEWD0                      44
+| 01-C                     ENDDO
+|    C*
+14===C           END250    ENDSR
+     C*==============================================================*
+     C*          RTN260... 薪資項目－一
+     C*==============================================================*
+15===C           RTN260    BEGSR
+|    C*
+|    C                     MOVEL#WD05     SS01             薪資代碼
+|    C           KEYSS     CHAINSS0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+| 02-C           SS04      IFEQ 'B'                        .減項
+|   C*
+| 03-C           SS03      IFEQ 'N'                        .免稅
+|   C                     ADD  #WD06     PW18
+| 03*C                     ELSE                            .應稅
+| 04-C           SS11      IFEQ '1'                        .固定
+|   C                     ADD  #WD06     PW28
+| 04*C                     ELSE                            .非固定
+|   C                     ADD  #WD06     PW29
+| 04-C                     END
+| 03-C                     END
+|   C*
+| 02*C                     ELSE                            .加項
+|   C*
+| 05-C           SS03      IFEQ 'N'                        .免稅
+|   C                     ADD  #WD06     PW16
+| 05*C                     ELSE                            .應稅
+| 06-C           SS11      IFEQ '1'                        .固定
+|   C                     ADD  #WD06     PW17
+| 06*C                     ELSE                            .非固定
+|   C                     ADD  #WD06     PW27
+| 06-C                     END
+| 05-C                     END
+|   C*
+| 02-C                     END
+| 01-C                     END
+|    C*
+15===C           END260    ENDSR
+

@@ -1,0 +1,911 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLA410                                     *
+     H*    PROGRAM NAME : 會計科目資料維護                         *
+     H*    AUTHOR       : A1087  JOYCE                               *
+     H*    CREATE DATE  : 1992.10.27                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     F****************************************************************
+     FGLAFPF  UF  E           K        DISK                      A
+     FGLAAPF  IF  E           K        DISK
+     FGLAEPF  IF  E           K        DISK
+     FGLA3PF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLA410D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E*---------------------------------------------------------------*
+     E** FOR輸入欄位    (AF11-AF17)
+     E                    WTB1        7  2
+     E** FOR輸入欄位說明(DAA31-DAA37)
+     E                    WTB2        7 20
+     E** FOR輸入控制碼  (AF18)
+     E                    WTB3        7  1
+     E** FOR排序控制碼  (AF19)
+     E                    WTB4        5  1 0
+     E                    W01         5  1 0D
+     E** FOR小計控制碼  (AF20)
+     E                    WTB5        5  1
+     E** FOR欄位控制碼  (AF21)
+     E                    WTB6        7  1
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I*                                     211 2160DYMD
+     I*DEFINE COPY KEY
+     I            DS
+     I                                        1  10 KAFC
+     I                                        1   2 DAF01C
+     I                                        3  10 DAF02C
+     I            DS
+     I                                        1  14 WTB1
+     I                                        1   2 DAF11
+     I                                        3   4 DAF12
+     I                                        5   6 DAF13
+     I                                        7   8 DAF14
+     I                                        9  10 DAF15
+     I                                       11  12 DAF16
+     I                                       13  14 DAF17
+     I            DS
+     I                                        1 140 WTB2
+     I                                        1  20 DAA31
+     I                                       21  40 DAA32
+     I                                       41  60 DAA33
+     I                                       61  80 DAA34
+     I                                       81 100 DAA35
+     I                                      101 120 DAA36
+     I                                      121 140 DAA37
+     I            DS
+     I                                        1   7 WTB3
+     I                                        1   1 DAF181
+     I                                        2   2 DAF182
+     I                                        3   3 DAF183
+     I                                        4   4 DAF184
+     I                                        5   5 DAF185
+     I                                        6   6 DAF186
+     I                                        7   7 DAF187
+     I            DS
+     I                                        1   50WTB4
+     I                                        1   10DAF191
+     I                                        2   20DAF192
+     I                                        3   30DAF193
+     I                                        4   40DAF194
+     I                                        5   50DAF195
+     I            DS
+     I                                        1   5 WTB5
+     I                                        1   1 DAF201
+     I                                        2   2 DAF202
+     I                                        3   3 DAF203
+     I                                        4   4 DAF204
+     I                                        5   5 DAF205
+     I            DS
+     I                                        1   7 WTB6
+     I                                        1   1 DAF211
+     I                                        2   2 DAF212
+     I                                        3   3 DAF213
+     I                                        4   4 DAF214
+     I                                        5   5 DAF215
+     I                                        6   6 DAF216
+     I                                        7   7 DAF217
+     I            DS
+     I                                        1   7 WAF18
+     I                                        1   1 AF181
+     I                                        2   2 AF182
+     I                                        3   3 AF183
+     I                                        4   4 AF184
+     I                                        5   5 AF185
+     I                                        6   6 AF186
+     I                                        7   7 AF187
+     I            DS
+     I                                        1   50WAF19
+     I                                        1   10AF191
+     I                                        2   20AF192
+     I                                        3   30AF193
+     I                                        4   40AF194
+     I                                        5   50AF195
+     I            DS
+     I                                        1   5 WAF20
+     I                                        1   1 AF201
+     I                                        2   2 AF202
+     I                                        3   3 AF203
+     I                                        4   4 AF204
+     I                                        5   5 AF205
+     I            DS
+     I                                        1   7 WAF21
+     I                                        1   1 AF211
+     I                                        2   2 AF212
+     I                                        3   3 AF213
+     I                                        4   4 AF214
+     I                                        5   5 AF215
+     I                                        6   6 AF216
+     I                                        7   7 AF217
+     I            DS
+     I                                        1  32 DAF03
+     I                                        2  31 WAF03
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAF     KLIST                           *MAIN FILE
+     C                     KFLD           DAF01
+     C                     KFLD           DAF02
+     C           KEYAFC    KLIST                           *COPY REC.
+     C                     KFLD           DAF01C
+     C                     KFLD           DAF02C
+     C           KEYAA     KLIST
+     C                     KFLD           AA01
+     C                     KFLD           AA02
+     C           KEYAE     KLIST
+     C                     KFLD           DAF01
+     C                     KFLD           DAF10
+     C           KEYA3     KLIST
+     C                     KFLD           DAF01
+     C                     KFLD           DAF22
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+    C           SCID      CASEQ'SC03'    R3000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C*
+     C                     IN   PTDA01
+     C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DAF01
+|    C                     MOVEL*BLANK    DAF02
+|    C                     MOVEL*BLANK    DAF01C
+|    C                     MOVEL*BLANK    DAF02C
+|    C*--------------------------------------------------------------*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+|   C                     MOVEL'SC02'    SCID
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'GLI410'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C* CALL SUB-PROGRAM
+|    C                     CALL 'GLI410'
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C           DAF01     PARM DAF01     P410I1  2
+|    C           DAF02     PARM DAF02     P410I2  8
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     PARM           @RTNC   2
+|    C* RETURN CODE CHECK
+| 02-C           @RTNC     IFEQ '03'                       *PF3
+|   C                     SETON                     03
+| 02-C                     END
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*
+| 02-C           DAF01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DAF01     CHAIN#B0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 04*C                     ELSE
+| 05-C           #B12      IFNE '1'
+|   C                     MOVEL'UGL0004' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6099
+| 05-C                     END
+| 04-C                     END
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 06-C           DAF02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVEL#B02      D#B02
+|    C           KEYAF     CHAINAF0                  40
+|    C*
+| 07-C           DOPT      IFEQ 1                          *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606199
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 08-C           DOPT      IFNE 1                          *UPD,DEL,INQ
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606199
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 09-C           DOPT      IFEQ 1                          *ADD
+|   C           KAFC      ANDNE*BLANK                     *COPY
+|   C           KEYAFC    CHAINAF0                  40
+| 10-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT0060' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 10-C                     END
+| 09-C                     END
+|    C   99                GOTO E1B00
+|    C*
+04===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+| 01-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     SETON                     31    *CAN INPUT
+| 01*C                     ELSE                            *DEL, INQ
+|   C                     SETOF                     31    *INP PROTECT
+| 01-C                     END
+|    C*
+| 02-C           DOPT      IFEQ 1                          *ADD
+|   C           KAFC      ANDEQ*BLANK                     *NO COPY
+|   C                     EXSR R1C10
+| 02*C                     ELSE                            *U/D/I
+|   C                     EXSR R1C20
+| 02-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)----------------------------------*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C           *LOVAL    SETLLAF0
+| 03-C                     END
+|    C*---------------------------------------------------------------*
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....'SC02' FIELD INIT : ADD (NO COPY)
+     C*==============================================================*
+06===C           R1C10     BEGSR
+|    C*
+|    C                     MOVEL*BLANKS   DAF03
+|    C                     MOVEL*BLANKS   DAF04
+|    C                     MOVEL'1'       DAF05
+|    C                     MOVEL'1'       DAF06
+|    C******               MOVEL'1'       DAF07
+|    C                     MOVEL'1'       DAF08
+|    C                     MOVEL'4'       DAF09
+|    C*
+|    C                     MOVE DAF02     DAF021
+|    C                     MOVE *BLANK    WTB1
+|    C                     MOVE *BLANK    WTB2
+|    C                     MOVE *BLANK    WTB3
+|    C                     Z-ADD*ZEROS    WTB4
+|    C                     MOVE *BLANK    WTB5
+|    C                     MOVE *BLANK    WTB6
+|    C                     MOVE *BLANK    DAF10
+|    C                     MOVE *BLANK    DAE03
+|    C                     MOVE *BLANK    DAF22
+|    C                     MOVE *BLANK    DA303
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....'SC02' FIELD INIT : UPD, DEL, INQ, (ADD & COPY)
+     C*==============================================================*
+07===C           R1C20     BEGSR
+|    C*
+|    C                     MOVELAF03      DAF03
+|    C                     MOVELAF04      DAF04
+|    C                     MOVELAF05      DAF05
+|    C                     MOVELAF06      DAF06
+| 01-C****       AF07      IFLT 1
+|   C*                    MOVEL'2'       DAF07
+| 01*C*                    ELSE
+|   C*                    MOVEL'1'       DAF07
+| 01-C*****                END
+|    C                     MOVELAF08      DAF08
+|    C                     MOVELAF09      DAF09
+|    C*
+|    C                     MOVE DAF02     DAF021
+|    C                     MOVE AF11      DAF11
+|    C                     MOVE AF12      DAF12
+|    C                     MOVE AF13      DAF13
+|    C                     MOVE AF14      DAF14
+|    C                     MOVE AF15      DAF15
+|    C                     MOVE AF16      DAF16
+|    C                     MOVE AF17      DAF17
+|    C* GET輸入欄位說明
+|    C                     MOVE *BLANK    WTB2
+|    C                     MOVE AF01      AA01
+| 02-C                     DO   7         I       30
+|   C                     MOVE WTB1,I    AA02
+|   C           KEYAA     CHAINAA0                  40
+|   C  N40                MOVE AA03      WTB2,I
+| 02-C                     END
+|    C* GET輸入控制碼
+|    C                     MOVE AF18      WAF18
+|    C                     MOVE AF181     DAF181
+|    C                     MOVE AF182     DAF182
+|    C                     MOVE AF183     DAF183
+|    C                     MOVE AF184     DAF184
+|    C                     MOVE AF185     DAF185
+|    C                     MOVE AF186     DAF186
+|    C                     MOVE AF187     DAF187
+| 03-C                     DO   7         I       30
+| 04-C           WTB3,I    IFEQ 'V'
+|   C                     MOVE 'V'       WTB3,I
+| 04*C                     ELSE
+|   C                     MOVE ' '       WTB3,I
+| 04-C                     END
+| 03-C                     END
+|    C* GET排序控制碼
+|    C                     Z-ADDAF19      WAF19
+|    C                     Z-ADDAF191     DAF191
+|    C                     Z-ADDAF192     DAF192
+|    C                     Z-ADDAF193     DAF193
+|    C                     Z-ADDAF194     DAF194
+|    C                     Z-ADDAF195     DAF195
+|    C* GET小計控制碼
+|    C                     MOVE AF20      WAF20
+|    C                     MOVE AF201     DAF201
+|    C                     MOVE AF202     DAF202
+|    C                     MOVE AF203     DAF203
+|    C                     MOVE AF204     DAF204
+|    C                     MOVE AF205     DAF205
+|    C* GET輸入控制碼
+|    C*                    MOVE AF18      WTB3
+| 05-C*                    DO   7         I       30
+| 06-C*          WTB3,I    IFEQ '1'
+|   C*                    MOVE 'V'       WTB3,I
+| 06*C*                    ELSE
+|   C*                    MOVE *BLANK    WTB3,I
+| 06-C*                    END
+| 05-C*                    END
+|    C* GET排序控制碼
+|    C*                    Z-ADDAF19      WTB4
+|    C*                    MOVE AF20      WTB5
+|    C                     MOVE AF10      DAF10
+|    C                     MOVE *BLANK    DAE03
+|    C           KEYAE     CHAINAE0                  40
+|    C  N40                MOVE AE03      DAE03
+|    C                     MOVE AF22      DAF22
+|    C                     MOVE *BLANK    DA303
+|    C           KEYA3     CHAINA30                  40
+|    C  N40                MOVE A303      DA303
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+08===C           R2000     BEGSR
+|    C*
+|    C                     EXFMTDSPD2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C* RELEAS FILE --------------------------------------------------*
+|   C           *LOVAL    SETLLAF0
+|   C*---------------------------------------------------------------*
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R2B00                      *SC02 CHK
+| 03-C                     END
+|    C*
+| 04-C           *IN99     IFEQ '0'                        *CHK OK
+|   C                     MOVE 'SC03'    SCID
+| 04-C                     END
+|    C*
+08===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'SC02' CHECK
+     C*==============================================================*
+09===C           R2B00     BEGSR
+|    C*
+| 01-C           WAF03     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*
+09===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R3000 .... 'SC03' SCREEN MAIN ROUTINE
+     C*==============================================================*
+10===C           R3000     BEGSR
+|    C*
+|    C                     EXFMTDSPD3
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E3000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C                     MOVEL'SC02'    SCID
+|   C                     GOTO E3000
+| 02-C                     END
+|    C*
+| 03-C           *IN04     IFEQ '1'                        *PROMPT
+| 04-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R3E00
+| 03-C                     END
+|   C                     GOTO E3000
+| 03-C                     END
+|    C*
+| 07-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R3B00                      *SC02 CHK
+| 07-C                     END
+|    C*
+|    C*
+| 05-C           *IN05     IFEQ '1'                        *CHECK ONLY
+|   C                     GOTO E3000
+| 05-C                     END
+|    C*
+| 06-C           *IN99     IFEQ '0'                        *CHK OK
+|   C                     EXSR R3D00                      *FILE UPD
+|   C                     MOVE 'SC01'    SCID
+| 06-C                     END
+|    C*
+10===C           E3000     ENDSR
+     C*==============================================================*
+     C*          R3B00 ....'SC03' CHECK
+     C*==============================================================*
+11===C           R3B00     BEGSR
+|    C*
+|    C* CHK輸入欄位
+|    C*
+|    C                     MOVE *BLANK    WTB2
+|    C                     MOVE DAF01     AA01
+| 01-C                     DO   7         I       30
+| 02-C           WTB1,I    IFNE *BLANK
+|   C                     MOVE WTB1,I    AA02
+|   C           KEYAA     CHAINAA0                  40
+| 03-C           *IN40     IFEQ '0'
+|   C                     MOVE AA03      WTB2,I
+| 03*C                     ELSE
+|   C                     MOVE *BLANK    WTB2,I
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C           79        ADD  I         X       20
+|   C                     MOVE '1'       *IN,X
+|   C                     SETON                     99
+| 03-C                     END
+| 02-C                     END
+| 01-C  N99                END
+|    C   99                GOTO E3B00
+|    C*
+|    C* CHK輸入控制碼
+|    C*
+| 04-C                     DO   7         I       30
+| 05-C           WTB1,I    IFEQ *BLANK
+|   C           WTB3,I    ANDNE*BLANK
+|   C                     MOVEL'UPT0011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C           60        ADD  I         X       20
+|   C                     MOVE '1'       *IN,X
+|   C                     SETON                     99
+| 05-C                     END
+| 04-C  N99                END
+|    C   99                GOTO E3B00
+|    C*
+|    C* CHK排序控制碼（相對輸入欄位＝空白時，須為０）
+|    C*
+|    C                     Z-ADD0         A       20
+| 06-C                     DO   5         I       30
+| 07-C           WTB1,I    IFEQ *BLANK
+| 08-C           WTB4,I    ANDNE0
+|   C                     MOVEL'UPT0011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C           69        ADD  I         X       20
+|   C                     MOVE '1'       *IN,X
+|   C                     SETON                     99
+| 07-C                     END
+| 08*C           WTB4,I    IFNE 0
+|   C                     ADD  1         A                *≠空白數
+| 08-C                     END
+| 06-C  N99                END
+|    C   99                GOTO E3B00
+|    C*
+|    C*排序須連號
+|    C*
+|    C                     Z-ADDWTB4      W01
+| 09-C                     DO   5         I       30
+| 10-C           WTB4,I    IFEQ 0
+|   C                     ADD  1         A
+|   C                     Z-ADDA         W01,I
+| 10*C                     ELSE
+| 11-C           WTB4,I    IFGT 5
+|   C                     MOVEL'UGL0003' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C           I         ADD  69        X       20
+|   C                     MOVE '1'       *IN,X
+|   C                     SETON                     99
+| 11-C                     END
+| 10-C                     END
+| 09-C  N99                END
+|    C   99                GOTO E3B00
+|    C*
+|    C*排序不得重覆
+|    C*
+| 12-C                     DO   4         WI      20
+|   C           WI        ADD  1         WJ      20
+| 13-C           W01,WI    IFGT 0
+|   C           W01,WI    LOKUPW01,WJ                   30
+| 14-C           *IN30     IFEQ '1'
+|   C                     MOVEL'UGL0003' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+     C           WTB4,WJ   IFEQ 0
+|   C           WI        ADD  69        X       20
+     C                     ELSE
+|   C           WJ        ADD  69        X
+     C                     END
+|   C                     MOVE '1'       *IN,X
+|   C                     SETON                     99
+| 14-C                     END
+| 13-C                     END
+| 12-C  N99                END
+|    C   99                GOTO E3B00
+|    C*
+|    C* CHK小計控制碼
+|    C*
+| 15-C                     DO   5         I       30
+| 16-C           WTB4,I    IFEQ 0
+|   C           WTB5,I    ANDNE*BLANK
+|   C                     MOVEL'UPT0011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C           74        ADD  I         X       20
+|   C                     MOVE '1'       *IN,X
+|   C                     SETON                     99
+| 16-C                     END
+| 15-C  N99                END
+|    C   99                GOTO E3B00
+|    C* CHK沖帳代碼
+|    C                     MOVE *BLANK    DAE03
+| 17-C           DAF10     IFNE *BLANK
+|   C           KEYAE     CHAINAE0                  40
+| 18-C           *IN40     IFEQ '0'
+|   C                     MOVE AE03      DAE03
+| 18*C                     ELSE
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8799
+| 18-C                     END
+| 17-C                     END
+|    C   99                GOTO E3B00
+|    C* CHK分類帳碼
+|    C                     MOVE *BLANK    DA303
+| 19-C           DAF22     IFNE *BLANK
+|   C           KEYA3     CHAINA30                  40
+| 20-C           *IN40     IFEQ '0'
+|   C                     MOVE A303      DA303
+| 20*C                     ELSE
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     8899
+| 20-C                     END
+| 19-C                     END
+|    C   99                GOTO E3B00
+|    C*
+11===C           E3B00     ENDSR
+     C*==============================================================*
+     C*          R3D00 ....FILE PROCESS
+     C*==============================================================*
+12===C           R3D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R3D10
+|   C           DOPT      CASEQ2         R3D20
+|   C           DOPT      CASEQ4         R3D30
+| 01-C                     END
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R3D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+13===C           R3D10     BEGSR
+|    C*
+|    C                     EXSR R3D11
+|    C                     WRITEAF0
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R3D11 ....SCREEN FIELD TO FILE
+     C*==============================================================*
+14===C           R3D11     BEGSR
+|    C*
+|    C                     MOVELDAF01     AF01
+|    C                     MOVELDAF02     AF02
+|    C                     MOVELDAF03     AF03
+|    C                     MOVELDAF04     AF04
+|    C                     MOVELDAF05     AF05
+|    C                     MOVELDAF06     AF06
+| 01-C***        DAF07     IFEQ '1'
+|   C*                    Z-ADD1         AF07
+| 01*C*                    ELSE
+|   C*                    Z-SUB1         AF07
+| 01-C******               END
+|    C                     MOVELDAF08     AF08
+|    C                     MOVELDAF09     AF09
+|    C                     MOVELDAF10     AF10
+|    C                     MOVELDAF11     AF11
+|    C                     MOVELDAF12     AF12
+|    C                     MOVELDAF13     AF13
+|    C                     MOVELDAF14     AF14
+|    C                     MOVELDAF15     AF15
+|    C                     MOVELDAF16     AF16
+|    C                     MOVELDAF17     AF17
+|    C* GET輸入控制碼
+| 02-C                     DO   7         I       30
+| 03-C           WTB3,I    IFEQ 'V'
+|   C                     MOVE 'V'       WTB3,I
+| 03*C                     ELSE
+|   C                     MOVE ' '       WTB3,I
+| 03-C                     END
+| 02-C                     END
+|    C                     MOVE DAF181    AF181
+|    C                     MOVE DAF182    AF182
+|    C                     MOVE DAF183    AF183
+|    C                     MOVE DAF184    AF184
+|    C                     MOVE DAF185    AF185
+|    C                     MOVE DAF186    AF186
+|    C                     MOVE DAF187    AF187
+|    C                     MOVE WAF18     AF18
+|    C                     Z-ADDDAF191    AF191
+|    C                     Z-ADDDAF192    AF192
+|    C                     Z-ADDDAF193    AF193
+|    C                     Z-ADDDAF194    AF194
+|    C                     Z-ADDDAF195    AF195
+|    C                     Z-ADDWAF19     AF19
+|    C                     MOVE DAF201    AF201
+|    C                     MOVE DAF202    AF202
+|    C                     MOVE DAF203    AF203
+|    C                     MOVE DAF204    AF204
+|    C                     MOVE DAF205    AF205
+|    C                     MOVE WAF20     AF20
+|    C* GET欄位控制碼
+| 04-C                     DO   7         I       30
+| 05-C           WTB1,I    IFEQ *BLANK
+|   C                     MOVE '0'       WTB6,I
+| 05*C                     ELSE
+|   C                     MOVE '1'       WTB6,I
+| 05-C                     END
+| 04-C                     END
+|    C                     MOVE DAF211    AF211
+|    C                     MOVE DAF212    AF212
+|    C                     MOVE DAF213    AF213
+|    C                     MOVE DAF214    AF214
+|    C                     MOVE DAF215    AF215
+|    C                     MOVE DAF216    AF216
+|    C                     MOVE DAF217    AF217
+|    C                     MOVE WAF21     AF21
+|    C                     MOVELDAF22     AF22
+|    C*
+|    C                     TIME           AF97
+|    C                     Z-ADD$A8YMD    AF98
+|    C                     MOVEL$USER     AF99
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R3D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+15===C           R3D20     BEGSR
+|    C*
+|    C                     EXSR R3D11
+|    C                     UPDATAF0
+|    C*
+15===C                     ENDSR
+     C*==============================================================*
+     C*          R3D30 ....FILE PROCESS
+     C*==============================================================*
+16===C           R3D30     BEGSR
+|    C*
+|    C                     DELETAF0
+|    C*
+16===C                     ENDSR
+     C*==============================================================*
+     C*          R3E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+17===C           R3E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*輸入欄位１
+| 01-C           #LIN      IFEQ 10
+|   C           #COL      ANDGE26
+|   C           #COL      ANDLE27
+|   C                     CALL 'GLI420'
+|   C                     PARM DAF01     P420I1  2
+|   C           DAF11     PARM DAF11     P420I2  2
+|   C                     PARM           @RTNC   2
+| 01-C                     END
+|    C*輸入欄位２
+| 02-C           #LIN      IFEQ 11
+|   C           #COL      ANDGE26
+|   C           #COL      ANDLE27
+|   C                     CALL 'GLI420'
+|   C                     PARM DAF01     P420I1  2
+|   C           DAF12     PARM DAF12     P420I2  2
+|   C                     PARM           @RTNC   2
+| 02-C                     END
+|    C*輸入欄位３
+| 03-C           #LIN      IFEQ 12
+|   C           #COL      ANDGE26
+|   C           #COL      ANDLE27
+|   C                     CALL 'GLI420'
+|   C                     PARM DAF01     P420I1  2
+|   C           DAF13     PARM DAF13     P420I2  2
+|   C                     PARM           @RTNC   2
+| 03-C                     END
+|    C*輸入欄位４
+| 04-C           #LIN      IFEQ 13
+|   C           #COL      ANDGE26
+|   C           #COL      ANDLE27
+|   C                     CALL 'GLI420'
+|   C                     PARM DAF01     P420I1  2
+|   C           DAF14     PARM DAF14     P420I2  2
+|   C                     PARM           @RTNC   2
+| 04-C                     END
+|    C*輸入欄位５
+| 05-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE26
+|   C           #COL      ANDLE27
+|   C                     CALL 'GLI420'
+|   C                     PARM DAF01     P420I1  2
+|   C           DAF15     PARM DAF15     P420I2  2
+|   C                     PARM           @RTNC   2
+| 05-C                     END
+|    C*輸入欄位６
+| 06-C           #LIN      IFEQ 15
+|   C           #COL      ANDGE26
+|   C           #COL      ANDLE27
+|   C                     CALL 'GLI420'
+|   C                     PARM DAF01     P420I1  2
+|   C           DAF16     PARM DAF16     P420I2  2
+|   C                     PARM           @RTNC   2
+| 06-C                     END
+|    C*輸入欄位７
+| 07-C           #LIN      IFEQ 16
+|   C           #COL      ANDGE26
+|   C           #COL      ANDLE27
+|   C                     CALL 'GLI420'
+|   C                     PARM DAF01     P420I1  2
+|   C           DAF17     PARM DAF17     P420I2  2
+|   C                     PARM           @RTNC   2
+| 07-C                     END
+|    C*沖帳代碼
+| 08-C           #LIN      IFEQ 18
+|   C           #COL      ANDGE26
+|   C           #COL      ANDLE27
+|   C                     CALL 'GLI430'
+|   C                     PARM DAF01     P430I1  2
+|   C           DAF10     PARM DAF10     P430I2  2
+|   C                     PARM           @RTNC   2
+| 08-C                     END
+|    C*分類帳碼
+| 09-C           #LIN      IFEQ 19
+|   C           #COL      ANDGE26
+|   C           #COL      ANDLE27
+|   C                     CALL 'GLI450'
+|   C                     PARM DAF01     P450I1  2
+|   C           DAF22     PARM DAF22     P450I2  1
+|   C                     PARM           @RTNC   2
+| 09-C                     END
+|    C*
+17===C                     ENDSR
+

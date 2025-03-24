@@ -1,0 +1,679 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLR2O0                                     *
+     H*    PROGRAM NAME : 沖帳明細表－總額法明細                   *
+     H*    AUTHOR       : A1087  JOYCE                               *
+     H*    CREATE DATE  : 1992.12.01                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     H****************************************************************
+     FGLWF09  IP  E           K        DISK
+     FGLWF07  IF  E           K        DISK                      A
+     FGLWF08  IF  E           K        DISK                      A
+     FPT#BPF  IF  E           K        DISK
+     FGLAAPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLAEPF  IF  E           K        DISK
+     FGLR2O0P O   E             38     PRINTER
+     FGLR2O1P O   E             39     PRINTER
+     E*
+     E*欄位名稱
+     E                    W01         5 20
+     E*欄位代碼
+     E                    W02         5  2
+     E*檢核程式
+     E                    W03         5 10
+     E*欄位內容
+     E                    W04         5 20
+     E*欄位內容說明
+     E                    W05         5 20
+     E*小計碼－螢幕
+     E                    W07         5  1
+     E*傳入參數名稱
+     E                    W08         7 10
+     E*排序
+     E                    W09         5  1 0
+     E                    W091        5  1 0D            *SORT
+     E*輸入欄位之控制碼
+     E                    W10         7  1
+     E*小計碼－ＢＹ排序
+     E                    W11         5  1
+     I*
+     IGLWF09R
+     I                                              WF0901L7
+     I                                              WF0902L6
+     I                                              WF0903L5
+     I                                              WF0904L4
+     I                                              WF0905L3
+     I                                              WF0906L2
+     I                                              WF0907L1
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     IGLDA01      DS
+     I                                        1  16 WTEXT
+     I                                        1   8 WDA01
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAL01
+     I                                      503 510 DAL02S
+     I                                      511 518 DAL02E
+     I                                      519 5250DAK12
+     I                                      526 5330DAK12F
+     I                                      526 5290DYY
+     I                                      530 5310DMM
+     I                                      526 5310DYM
+     I                                      534 534 DOP
+     I*檢核程式之參數
+     ICHKPGM      DS
+     I                                        1   2 WAK01
+     I                                        3  22 WPARM1
+     I                                       23  32 WPARM2
+     I                                       33  33 WCHK
+     I            DS
+     I                                        1 100 W01
+     I                                        1  20 PAA031
+     I                                       21  40 PAA032
+     I                                       41  60 PAA033
+     I                                       61  80 PAA034
+     I                                       81 100 PAA035
+     I            DS
+     I                                        1 100 W04
+     I                                        1  20 WF0902
+     I                                       21  40 WF0903
+     I                                       41  60 WF0904
+     I                                       61  80 WF0905
+     I                                       81 100 WF0906
+     I            DS
+     I                                        1 100 W05
+     I                                        1  20 PF0902
+     I                                       21  40 PF0903
+     I                                       41  60 PF0904
+     I                                       61  80 PF0905
+     I                                       81 100 PF0906
+     I            DS
+     I                                        1   50W09
+     I                                        1   10A
+     I                                        2   20B
+     I                                        3   30C
+     I                                        4   40D
+     I                                        5   50E
+     I            DS
+     I                                        1   7 W10
+     I                                        1   7 AF18
+     I            DS
+     I                                        1   5 W07
+     I                                        1   1 DL1
+     I                                        2   2 DL2
+     I                                        3   3 DL3
+     I                                        4   4 DL4
+     I                                        5   5 DL5
+     I            DS
+     I                                        1   50WAF19
+     I                                        1   10AF191
+     I                                        2   20AF192
+     I                                        3   30AF193
+     I                                        4   40AF194
+     I                                        5   50AF195
+     I            DS
+     I                                        1   5 WAF20
+     I                                        1   1 AF201
+     I                                        2   2 AF202
+     I                                        3   3 AF203
+     I                                        4   4 AF204
+     I                                        5   5 AF205
+     I            DS
+     I                                        1   80WYMD
+     I                                        1   40WYY
+     I                                        5   60WMM
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           GLDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAA     KLIST
+     C                     KFLD           DAL01
+     C                     KFLD           W02,WI
+     C           KEYAF     KLIST
+     C                     KFLD           DAL01
+     C                     KFLD           AF02
+     C           KEYAE     KLIST
+     C                     KFLD           DAL01
+     C                     KFLD           AF10
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C   L7                EXSR R1A00                      .WRITE PH1
+     C   L1                EXSR R1B00
+     C                     EXSR R2000                      .DETAIL
+     C*
+     CL1 10                EXSR R8100
+     CL2 10                EXSR R8200
+     CL3 10                EXSR R8300
+     CL4 10                EXSR R8400
+     CL5 10                EXSR R8500
+     CL6 10                EXSR R8600
+     CLR 10                EXSR R8900
+     C*
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C                     Z-ADD1         PPAGE
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C*
+|    C                     MOVE DAL01     WAK01
+|    C* GET表頭公司別
+|    C           DAL01     CHAIN#B0                  40
+|    C   40                MOVEL*BLANK    #B16
+|    C**
+|    C* CALL 'GLS005' GET 本期結帳碼
+|    C**
+|    C                     CALL 'GLS005'
+|    C                     PARM DAL01     P005I1  2
+|    C                     PARM DAK12     P005I2  80
+|    C                     PARM 'S'       P005I3  1
+|    C                     PARM           P005O1  40
+|    C                     PARM           P005O2  20
+|    C                     PARM           P005O3  1
+|    C                     PARM           P005O4  1
+|    C                     MOVE *BLANK    PTYPE
+| 01-C           P005O4    IFNE 'Y'
+|   C                     SETON                     30
+|   C                     IN   GLDA01
+|   C                     MOVE WDA01     PTYPE
+| 01-C                     END
+|    C*
+     C                     MOVELP005O1    WPER    60
+     C                     MOVE P005O2    WPER
+     C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1A00 ... WRITE PH1
+     C*==============================================================*
+02===C           R1A00     BEGSR
+|    C*
+|    C* GET 會計名稱
+|    C                     MOVE WF0901    AF02
+|    C           KEYAF     CHAINAF0                  40
+|    C   40                MOVEL*BLANK    AF03
+|    C*
+|    C* GET 會計科目目錄頁次
+|    C*
+|    C                     MOVE WF0901    WF0701
+|    C                     Z-ADDPPAGE     WF0702
+| 01-C           AF06      IFEQ '1'
+|   C                     WRITEGLWF07R                    *借方科目
+| 01*C                     ELSE
+|   C                     WRITEGLWF08R                    *貸方科目
+| 01-C                     END
+|    C*
+|    C           KEYAE     CHAINAE0                  40
+|    C*
+|    C                     Z-ADDAE04      WAF19
+|    C                     Z-ADDAF191     A
+|    C                     Z-ADDAF192     B
+|    C                     Z-ADDAF193     C
+|    C                     Z-ADDAF194     D
+|    C                     Z-ADDAF195     E
+|    C*
+|    C                     Z-ADDW09       W091
+|    C                     SORTAW091
+|    C                     Z-ADDW091,1    W01S    30
+|    C                     EXSR R1C10
+|    C* GET小計控制碼
+|    C                     MOVE AE05      WAF20
+|    C                     MOVE AF201     DL1
+|    C                     MOVE AF202     DL2
+|    C                     MOVE AF203     DL3
+|    C                     MOVE AF204     DL4
+|    C                     MOVE AF205     DL5
+|    C*
+|    C                     MOVEA*BLANKS   W11
+| 02-C                     DO   5         I       30
+|   C                     Z-ADDW09,I     J       30
+|   C                     MOVE W07,I     W11,J
+| 02-C                     END
+|    C*
+|    C* GET  HEADING
+|    C                     MOVEA*BLANKS   W02
+|    C           AF191     IFNE *ZERO
+|    C                     MOVE AF11      W02,A
+     C                     END
+|    C           AF192     IFNE *ZERO
+|    C                     MOVE AF12      W02,B
+     C                     END
+|    C           AF193     IFNE *ZERO
+|    C                     MOVE AF13      W02,C
+     C                     END
+|    C           AF194     IFNE *ZERO
+|    C                     MOVE AF14      W02,D
+     C                     END
+|    C           AF195     IFNE *ZERO
+|    C                     MOVE AF15      W02,E
+     C                     END
+|    C                     MOVEA*BLANKS   W01
+|    C                     MOVE '0'       WCHK
+|    C*
+| 03-C                     DO   5         WI      10
+|   C* KEYAA=DAH01+W02,WI
+| 04-C           W02,WI    IFNE *BLANKS
+|   C           KEYAA     CHAINAA0                  40
+|   C                     MOVE AA03      W01,WI
+|   C                     MOVE AA04      W03,WI
+|   C                     MOVE AA05      W08,WI
+| 04-C                     END
+| 03-C                     END
+|    C*
+|    C                     SETON                     39
+|    C                     SETON                     313233
+|    C                     SETON                     343536
+|    C*
+|    C*CLEAR TOTAL FIELD
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT14
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C                     Z-ADD*ZERO     PT24
+|    C                     Z-ADD*ZERO     PT31
+|    C                     Z-ADD*ZERO     PT32
+|    C                     Z-ADD*ZERO     PT33
+|    C                     Z-ADD*ZERO     PT34
+|    C                     Z-ADD*ZERO     PT41
+|    C                     Z-ADD*ZERO     PT42
+|    C                     Z-ADD*ZERO     PT43
+|    C                     Z-ADD*ZERO     PT44
+|    C                     Z-ADD*ZERO     PT51
+|    C                     Z-ADD*ZERO     PT52
+|    C                     Z-ADD*ZERO     PT53
+|    C                     Z-ADD*ZERO     PT54
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R1B00 ... LEVEL BREAK 1
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C                     SETON                     36
+|    C                     Z-ADDWF0908    PWF03
+|    C                     ADD  WF0908    PT11
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....GET 排序控制碼
+     C*==============================================================*
+04===C           R1C10     BEGSR
+|    C*
+| 01-C           W01S      IFLT 5
+|   C                     SETON                     58
+|   C                     Z-ADD0         I       30
+| 02-C           *IN58     DOWEQ'1'
+|   C                     ADD  1         I
+| 03-C           W09,I     IFEQ 0
+|   C           W10,I     ANDEQ'V'
+|   C                     ADD  1         W01S
+|   C                     Z-ADDW01S      W09,I
+| 03-C                     END
+| 04-C           W01S      IFGE 5
+|   C           I         ORGE 5
+|   C                     SETOF                     58
+| 04-C                     END
+| 02-C                     END
+|   C*
+| 05-C           W01S      IFLT 5
+|   C                     SETON                     58
+|   C                     Z-ADD0         I       30
+| 06-C           *IN58     DOWEQ'1'
+|   C                     ADD  1         I
+| 07-C           W09,I     IFEQ 0
+|   C           W02,I     ANDNE*BLANK
+|   C                     ADD  1         W01S
+|   C                     Z-ADDW01S      W09,I
+| 07-C                     END
+| 08-C           W01S      IFGE 5
+|   C           I         ORGE 5
+|   C                     SETOF                     58
+| 08-C                     END
+| 06-C                     END
+| 05-C                     END
+|   C*
+| 09-C           W01S      IFLT 5
+|   C                     SETON                     58
+|   C                     Z-ADD0         I       30
+| 10-C           *IN58     DOWEQ'1'
+|   C                     ADD  1         I
+| 11-C           W09,I     IFEQ 0
+|   C                     ADD  1         W01S
+|   C                     Z-ADDW01S      W09,I
+| 11-C                     END
+| 12-C           W01S      IFGE 5
+|   C           I         ORGE 5
+|   C                     SETOF                     58
+| 12-C                     END
+| 10-C                     END
+| 09-C                     END
+| 01-C                     END
+|    C*
+04===CSR                   ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+05===C           R2000     BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+| 02-C           PPAGE     IFGT 1
+|   C                     WRITEPE2
+| 02-C                     END
+|   C                     WRITEPH1
+|   C                     ADD  1         PPAGE
+|   C                     SETOF                     3739
+|   C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|   C                     SETON                     313233
+|   C                     SETON                     343536
+| 01*C                     ELSE
+|   C*
+| 03-C           *IN37     IFEQ '1'
+|   C                     WRITEPE1
+| 03-C                     END
+|   C                     SETOF                     37
+| 01-C                     END
+|    C*
+| 04-C           WF0909    IFEQ 0
+|   C           WF0909    ORGE WPER
+|   C                     EXSR R2A00
+|   C                     WRITEPD1
+|   C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|   C                     SETOF                     313233
+|   C                     SETOF                     343536
+|   C* ACCUMULATE TOTAL
+|   C                     ADD  PWF01     PT12
+|   C                     ADD  PWF02     PT13
+| 04-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R2A00 ....GET 欄位說明
+     C*==============================================================*
+06===C           R2A00     BEGSR
+|    C*
+| 01-C                     DO   5         WI
+| 02-C           W03,WI    IFEQ *BLANKS
+|   C           W04,WI    OREQ *BLANKS
+|   C                     MOVE W04,WI    W05,WI
+| 02*C                     ELSE
+|   C                     MOVE W04,WI    WPARM1
+|   C                     MOVE W08,WI    WPARM2
+|   C                     CALL W03,WI
+|   C                     PARM           CHKPGM
+|   C                     PARM           TORN    1
+|   C           W05,WI    PARM           DESC   20
+| 02-C                     END
+| 01-C                     END
+|    C*
+| 03-C           WF0910    IFEQ *BLANK
+|   C                     Z-ADDWF0911    PWF01
+|   C                     Z-ADD0         PWF02
+| 03*C                     ELSE
+|   C                     Z-ADDWF0912    WYMD
+| 04-C           WYY       IFEQ DYY
+|   C           WMM       ANDEQDMM
+|   C                     Z-ADD0         PWF01
+|   C                     Z-ADDWF0911    PWF02
+| 04*C                     ELSE
+|   C                     Z-ADDWF0911    PWF01
+|   C                     Z-ADD0         PWF02
+| 04-C                     END
+| 03-C                     END
+|    C                     SUB  PWF01     PWF03
+|    C                     SUB  PWF02     PWF03
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+07===C           R8100     BEGSR
+|    C*
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R8200 ... LEVEL BREAK 2
+     C*==============================================================*
+08===C           R8200     BEGSR
+|    C*
+| 01-C           W11,5     IFNE *BLANKS
+|   C*
+|   C           PT11      SUB  PT12      PT14
+|   C                     SUB  PT13      PT14
+|   C*
+|   C                     WRITEPT1
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     35
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  PT11      PT21
+|    C                     ADD  PT12      PT22
+|    C                     ADD  PT13      PT23
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R8300 ... LEVEL BREAK 3
+     C*==============================================================*
+09===C           R8300     BEGSR
+|    C*
+| 01-C           W11,4     IFNE *BLANKS
+|   C*
+|   C           PT21      SUB  PT22      PT24
+|   C                     SUB  PT23      PT24
+|   C*
+|   C                     WRITEPT2
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     3435
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  PT21      PT31
+|    C                     ADD  PT22      PT32
+|    C                     ADD  PT23      PT33
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R8400 ... LEVEL BREAK 4
+     C*==============================================================*
+10===C           R8400     BEGSR
+|    C*
+| 01-C           W11,3     IFNE *BLANKS
+|   C*
+|   C           PT31      SUB  PT32      PT34
+|   C                     SUB  PT33      PT34
+|   C*
+|   C                     WRITEPT3
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     333435
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  PT31      PT41
+|    C                     ADD  PT32      PT42
+|    C                     ADD  PT33      PT43
+|    C                     Z-ADD*ZERO     PT31
+|    C                     Z-ADD*ZERO     PT32
+|    C                     Z-ADD*ZERO     PT33
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R8500 ... LEVEL BREAK 5
+     C*==============================================================*
+11===C           R8500     BEGSR
+|    C*
+| 01-C           W11,2     IFNE *BLANKS
+|   C*
+|   C           PT41      SUB  PT42      PT44
+|   C                     SUB  PT43      PT44
+|   C*
+|   C                     WRITEPT4
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     32
+|    C                     SETON                     333435
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  PT41      PT51
+|    C                     ADD  PT42      PT52
+|    C                     ADD  PT43      PT53
+|    C                     Z-ADD*ZERO     PT41
+|    C                     Z-ADD*ZERO     PT42
+|    C                     Z-ADD*ZERO     PT43
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R8600 ... LEVEL BREAK 6
+     C*==============================================================*
+12===C           R8600     BEGSR
+|    C*
+| 01-C           W11,1     IFNE *BLANKS
+|   C*
+|   C           PT51      SUB  PT52      PT54
+|   C                     SUB  PT53      PT54
+|   C*
+|   C                     WRITEPT5
+|   C                     SETON                     37
+| 01-C                     END
+|    C*
+|    C                     SETON                     3132
+|    C                     SETON                     333435
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD*ZERO     PT51
+|    C                     Z-ADD*ZERO     PT52
+|    C                     Z-ADD*ZERO     PT53
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+13===C           R8900     BEGSR
+|    C*
+|    C                     WRITEPE2
+|    C                     EXSR R9000
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+14===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R1000
+|    C                     SETOF                     10
+|    C                     EXSR R9000
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R9000 ... 目　錄
+     C*==============================================================*
+15===C           R9000     BEGSR
+|    C*
+|    C                     WRITEPH01
+| 01-C           *IN10     IFEQ '1'
+|   C                     EXSR R9100
+|   C                     WRITEPE01
+| 01*C                     ELSE
+|   C                     WRITEPE09
+| 01-C                     END
+|    C*
+15===C                     ENDSR
+     C*==============================================================*
+     C*          R9100 ... GET 目　錄 DATA
+     C*==============================================================*
+16===C           R9100     BEGSR
+|    C*
+|    C           *LOVAL    SETLLGLWF07R
+|    C           *LOVAL    SETLLGLWF08R
+|    C                     SETOF                     4647
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C           *IN47     OREQ '0'
+|   C*
+| 02-C           *IN38     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     38
+| 02-C                     END
+|   C*借
+|   C                     READ GLWF07R                  46
+| 03-C           *IN46     IFEQ '0'
+|   C                     MOVE WF0701    PAH041
+|   C                     Z-ADDWF0702    PPAGE1
+|   C* GET 會計名稱
+|   C                     MOVE WF0701    AF02
+|   C           KEYAF     CHAINAF0                  40
+|   C  N40                MOVELAF03      PAF031
+|   C   40                MOVE *BLANK    PAF031
+| 03*C                     ELSE
+|   C                     MOVE *BLANK    PAH041
+|   C                     MOVE *BLANK    PAF031
+|   C                     Z-ADD0         PPAGE1
+| 03-C                     END
+|   C*貸
+|   C                     READ GLWF08R                  47
+| 04-C           *IN47     IFEQ '0'
+|   C                     MOVE WF0701    PAH042
+|   C                     Z-ADDWF0702    PPAGE2
+|   C* GET 會計名稱
+|   C                     MOVE WF0701    AF02
+|   C           KEYAF     CHAINAF0                  40
+|   C  N40                MOVELAF03      PAF032
+|   C   40                MOVE *BLANK    PAF032
+| 04*C                     ELSE
+|   C                     MOVE *BLANK    PAH042
+|   C                     MOVE *BLANK    PAF032
+|   C                     Z-ADD0         PPAGE2
+| 04-C                     END
+|   C*
+|   C  N46
+|   CORN47                WRITEPD01
+|   C*
+| 01-C                     END
+|    C*
+16===C                     ENDSR
+

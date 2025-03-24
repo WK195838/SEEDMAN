@@ -1,0 +1,382 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA512                                     *
+     H*    PROGRAM NAME :部門基本資料建立                          *
+     H*    AUTHOR       : A1232 ERIC                                 *
+     H*    CREATE DATE  : 85/12/26                                   *
+     H*    UPDATE DATE  : 90/08/06 A1274 EVA                         *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYDPPF  UF  E           K        DISK                      A
+     FSYCMPF  IF  E           K        DISK
+     FPYA512D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E                    WFUN    5   5  6
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      203 2080DDATE
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      152 161 $USERN
+     I                                      173 174 $COR
+     I                                      201 2080$A8YMD
+     I*
+     I            DS
+     I                                        1   7 DDP01
+     I                                        1   1 KDP011
+     I                                        2   2 KDP012
+     I                                        3   3 KDP013
+     I                                        4   7 KDP014
+     I*
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*PYDPPF
+     C           KEYDP     KLIST                           *PYDPPF
+     C                     KFLD           KDP011
+     C                     KFLD           KDP012
+     C                     KFLD           KDP013
+     C                     KFLD           KDP014
+     C*SYCMPF
+     C           KEYCM     KLIST                           *SYCMPF
+     C                     KFLD           DDP09
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N99                EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVE *BLANK    DDP01
+|    C*
+|    C                     MOVE *BLANK    DDP02
+|    C                     MOVE *BLANK    DDP08
+|    C                     MOVE *BLANK    DDP09
+|    C                     MOVE *BLANK    DP09N
+|    C*-------------------------------------------------------------**
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+|   C                     MOVEL'SC02'    SCID
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'PYI512'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* CALL SUB-PROGRAM
+|    C                     CALL 'PYI512'
+|    C           DDP01     PARM DDP01     I512I1  7
+|    C                     PARM           @RTNC   2
+|    C* RETURN CODE CHECK
+| 02-C           @RTNC     IFEQ '03'                       *PF3
+|   C                     SETON                     03
+| 02-C                     END
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C*------------------------------------------------------------***
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*------------------------------------------------------------***
+|    C*部門代碼
+| 02-C           DDP01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C           KEYDP     CHAINDP0                  40    *NF
+|    C*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+|   C                     UNLCKPYDPPF
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 04-C           DOPT      IFNE 1                          *UPD,DEL,INQ
+|   C           *IN40     ANDEQ'1'
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+04===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+|    C*作業 DFUN
+|    C                     MOVELWFUN,DOPT DFUN
+|    C*
+| 01-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     SETON                     31    *CAN INPUT
+| 01*C                     ELSE                            *DEL, INQ
+|   C                     SETOF                     31    *INP PROTECT
+| 01-C                     END
+|    C*
+| 02-C           DOPT      IFEQ 1                          *ADD
+|   C                     EXSR R1C10
+| 02*C                     ELSE
+|   C                     EXSR R1C20                      *U/D/I
+| 02-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)----------------------------------*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C           *LOVAL    SETLLDP0
+| 03-C                     END
+|    C*---------------------------------------------------------------*
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....'SC02' FIELD INIT : ADD (NO COPY)
+     C*==============================================================*
+06===C           R1C10     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    DDP02
+|    C                     MOVEL*BLANK    DDP08
+|    C                     MOVEL*BLANK    DDP09
+|    C                     MOVEL*BLANK    DP09N
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....'SC02' FIELD INIT : UPD, DEL, INQ, (ADD & COPY)
+     C*==============================================================*
+07===C           R1C20     BEGSR
+|    C*
+|    C                     MOVELDP02      DDP02
+|    C                     MOVELDP08      DDP08
+|    C                     MOVELDP09      DDP09
+|    C*
+|    C                     MOVEL*BLANK    DP09N
+| 01-C           DDP09     IFNE *BLANK
+|   C           KEYCM     CHAINCM0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELCM02      DP09N     P
+| 02-C                     END
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+08===C           R2000     BEGSR
+|    C*
+|    C                     EXFMTDSPD2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C* RELEAS FILE --------------------------------------------------*
+|   C           *LOVAL    SETLLDP0
+|   C*---------------------------------------------------------------*
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R2B00                      *SC02 CHK
+| 03-C                     END
+|    C*
+| 04-C           *IN99     IFEQ '0'                        *CHK OK
+|   C                     EXSR R2D00                      *FILE UPD
+|   C                     MOVE 'SC01'    SCID
+| 04-C                     END
+|    C*
+08===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'SC02' CHECK
+     C*==============================================================*
+09===C           R2B00     BEGSR
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*部門簡稱
+| 01-C           DDP02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*-------------------------------------------------------------***
+|    C*部門名稱
+| 02-C           DDP08     IFEQ *BLANK
+|   C                     MOVELDDP02     DDP08
+| 02-C                     END
+|    C*-------------------------------------------------------------***
+|    C*稅籍歸屬公司
+| 03-C           DDP09     IFNE *BLANK
+|   C*
+|   C           KEYCM     CHAINCM0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C                     MOVELCM02      DP09N     P
+| 04*C                     ELSE
+|   C                     MOVEL*BLANK    DP09N
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 04-C                     END
+|   C   99                GOTO E2B00
+|   C*
+| 03-C                     END
+|    C*-------------------------------------------------------------***
+|    C*
+09===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+10===C           R2D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R2D10
+|   C           DOPT      CASEQ2         R2D20
+|   C           DOPT      CASEQ4         R2D30
+| 01-C                     END
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+11===C           R2D10     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     WRITEDP0
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R2D11 ....SCREEN FIELD TO FILE
+     C*==============================================================*
+12===C           R2D11     BEGSR
+|    C*
+|    C                     MOVELKDP011    DP011
+|    C                     MOVELKDP012    DP012
+|    C                     MOVELKDP013    DP013
+|    C                     MOVELKDP014    DP014
+|    C                     MOVELDDP02     DP02
+|    C                     Z-ADD*ZERO     DP03
+|    C                     MOVEL*BLANK    DP04
+|    C                     Z-ADD*ZERO     DP05
+|    C                     Z-ADD*ZERO     DP06
+|    C                     MOVEL*BLANK    DP07
+|    C                     MOVELDDP08     DP08
+|    C                     MOVELDDP09     DP09
+|    C                     Z-ADD$A8YMD    DP97
+|    C                     TIME           DP98
+|    C                     MOVEL$USER     DP99
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+13===C           R2D20     BEGSR
+|    C*
+|    C                     EXSR R2D11
+|    C                     UPDATDP0
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+14===C           R2D30     BEGSR
+|    C*
+|    C                     DELETDP0
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+**
+新增修改      刪除查詢
+

@@ -1,0 +1,419 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR4033                                     *
+     H*   AUTHER       : A1138 DAVID.                                *
+     H*   CREATE DATE  : 81/03/13                                    *
+     H*   UPDATE DATE  : 90/04/02 A1274 EVA                          *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR4031C                                    *
+     H*   PURPOSE      :                                             *
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYLTJF02IP  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     F*YTXPF  IF  E           K        DISK
+     FPYR403P O   E             39     PRINTER
+     I*---------------------------------------------------------------
+     ILTJF02
+     I                                              EM041 L4
+     I                                              EM042 L3
+     I                                              EM043 L2
+     I                                              EM044 L1
+     I*
+     I           UDS
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I                                      201 2080SYSDTE
+     I                                      201 2040SYSYY
+     I                                      205 2060SYSMM
+     I*
+     I                                      501 502 DLT01
+     I*                                     503 5040DLT03
+     I                                      603 609 DEM04S
+     I                                      610 616 DEM04E
+     I                                      531 538 DLT02S
+     I                                      539 546 DLT02E
+     I                                      526 5290WLT03
+     I                                      600 6020DLT03
+     I*
+     I            DS
+     I                                        1   80EM13
+     I                                        1   40EM13YY
+     I                                        5   60EM13MM
+     I            DS
+     I                                        1   80WTYMD
+     I                                        1   40WTY
+     I                                        5   60WTM
+     I                                        1   60WTYM
+     I                                        7   80WTD
+     I*
+     I            DS
+     I                                        1   80WFYMD
+     I                                        1   40WFY
+     I                                        5   60WFM
+     I                                        1   60WFYM
+     I                                        5   60WFD
+     I/COPY PYDDSSRC,PYPMDS01
+     I*COPY PYRPGSRC,PYC04I
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*---------------------------------------------------------------
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           DP014
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DLT01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*-----------*
+     C*部門名稱 *
+     C*-----------*
+  01-C           *INL2     IFEQ '1'
+    C                     MOVEL*BLANKS   DP014
+    C           KEYDP     CHAINDP0                  40
+    C   40                MOVEL*BLANK    DP02
+    C*                    MOVELDP02      PDP02H
+    C*                    SETON                     39
+  01-C                     END
+     C*
+  02-C           *INL1     IFEQ '1'
+    C                     SETON                     31
+  02*C                     ELSE
+    C                     SETOF                     31
+  02-C                     END
+     C*
+     C                     EXSR RTN100
+     C*
+     C*L1 10                EXSR RTN810
+     C*L2 10                EXSR RTN820
+     C*L3 10                EXSR RTN830
+     C*L4 10                EXSR RTN840
+     CLR 10                EXSR RTN890
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|     *
+|    C*-----------*
+|    C*公司名稱 *
+|    C*-----------*
+|    C           DLT01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C                     MOVELCM14      DFMT
+|    C                     MOVELCM15      DTYPE
+|    C*年度
+|    C                     Z-ADDDLT03     PLT03
+|    C*
+|    C*:------------------------------------------------:*
+|    C*: GET PAYROLL PARAMETER (PM03); & SST PM03 BY DS :*
+|    C*:------------------------------------------------:*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|     *
+|    C*:--------------------------:*
+|    C*:找出該年最後一日(WTYMD) :*
+|    C*:--------------------------:*
+|    C                     Z-ADDWLT03     WTY              * YEAR
+|    C                     Z-ADDPM103     WTM              * MONTH
+|    C*
+|    C*CALL P22            Z-ADDWTYM      P2201I  40
+|    C                     CALL 'P34'
+|    C                     PARM WTYM      P3401I  60
+|    C                     PARM DFMT      P3403O  1
+|    C                     PARM DTYPE     P3404O  1
+|    C                     PARM           P3411O  1
+|    C                     PARM           P3412O  20
+|    C                     Z-ADDP3412O    WTD              * DAY
+|     *
+|    C*:------------------------:*
+|    C*:找出該年第一日(WFYMD) :*
+|    C*:------------------------:*
+|    C                     Z-ADDWTYMD     WFYMD
+|    C                     SUB  1         WFY
+|    C                     ADD  1         WFM
+| 01-C           WFM       IFGT 12
+|   C                     ADD  1         WFY
+|   C                     SUB  12        WFM
+| 01-C                     END
+|    C*
+|    C                     Z-ADD01        WFD
+|    C*
+|    C                     SETON                     1039
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C                     EXSR RTN811
+|    C                     EXSR RTN821
+|    C                     EXSR RTN831
+|    C                     EXSR RTN841
+|    C                     EXSR RTN891
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|     *
+|    C*:----------------:*
+|    C*: CHAIN部門名稱:*
+|    C*:----------------:*
+|    C                     MOVELEM044     DP014
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+|    C                     MOVELEM02      LT02
+|    C*
+|    C*CHG JADI  WTYMD     SUB  010000    #C04I1  80
+|    C*CHG JADI            EXSR #C0400
+     C*
+|    C*CHG SHARON
+     C*年資計算至畫面設定年度月底
+     C                     Z-ADDPLT03     PLT03Y  40
+     C                     ADD  1911      PLT03Y
+|    C           12        SUB  EM13MM    CHKM    20
+| 01-C           CHKM      IFGE 0
+|   C                     Z-ADDCHKM      #C04M
+|   C           PLT03Y    SUB  EM13YY    #C04Y
+| 01*C                     ELSE
+|   C           CHKM      ADD  12        #C04M
+|   C           PLT03Y    SUB  EM13YY    #C04Y
+|   C                     SUB  1         #C04Y
+| 01-C                     END
+|    C*:----------------:*
+|    C*:除數使不等於零:*
+|    C*:----------------:*
+| 02-C           PM101     IFEQ 0
+|   C                     Z-ADD8         PM101
+| 02-C                     END
+|     * COUNTING *
+|    C                     Z-ADDLT10      E48L04
+|    C           LT10      MULT PM101     HE48    40       本應休時
+|     *
+|    C           LT13      MULT PM101     HE52    40
+|    C                     ADD  LT14      HE52             去轉休時
+|    C           HE52      DIV  PM101     E52L07
+|    C                     MVR            E53L08
+|     *
+|    C           LT11      MULT PM101     HE49    40
+|    C                     ADD  LT12      HE49             本已休時
+|    C           HE49      DIV  PM101     E49L05
+|    C                     MVR            E50L06
+|     *
+|    C           HE48      ADD  HE52      HEMLT   40
+|    C                     SUB  HE49      HEMLT            應＋轉－已
+|    C           HEMLT     DIV  PM101     PEMLTL
+|    C                     MVR            PEMLTR
+|     *
+| 03-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 03-C                     END
+|    C*
+|    C                     WRITEPD1
+|    C*
+|    C                     ADD  LT10      HT1001  70
+|    C                     ADD  HE52      HT1102  70
+|    C                     ADD  HE49      HT1202  70
+|    C                     ADD  HEMLT     HT1302  70
+|    C*
+|    C                     ADD  LT10      HT5001  70
+|    C                     ADD  HE52      HT5102  70
+|    C                     ADD  HE49      HT5202  70
+|    C                     ADD  HEMLT     HT5302  70
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK 1
+     C*==============================================================*
+03===C           RTN810    BEGSR
+|    C*
+|    C                     Z-ADDHT1001    T1001
+|    C           HT1102    DIV  PM101     T1101
+|    C                     MVR            T1102
+|    C           HT1202    DIV  PM101     T1201
+|    C                     MVR            T1202
+|    C           HT1302    DIV  PM101     T1301
+|    C                     MVR            T1302
+|    C*
+|    C                     WRITEPT1
+|    C*
+|    C                     ADD  HT1001    HT2001  70
+|    C                     ADD  HT1102    HT2102  70
+|    C                     ADD  HT1202    HT2202  70
+|    C                     ADD  HT1302    HT2302  70
+|    C*
+|    C                     EXSR RTN811
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN811... LEVEL BREAK 1 FIELD CLEAR
+     C*==============================================================*
+04===C           RTN811    BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     HT1001
+|    C                     Z-ADD*ZERO     HT1102
+|    C                     Z-ADD*ZERO     HT1202
+|    C                     Z-ADD*ZERO     HT1302
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN820... LEVEL BREAK 2
+     C*==============================================================*
+05===C           RTN820    BEGSR
+|    C*
+|    C                     Z-ADDHT2001    T2001
+|    C           HT2102    DIV  PM101     T2101
+|    C                     MVR            T2102
+|    C           HT2202    DIV  PM101     T2201
+|    C                     MVR            T2202
+|    C           HT2302    DIV  PM101     T2301
+|    C                     MVR            T2302
+|    C*
+|    C                     WRITEPT2
+|    C*
+|    C                     ADD  HT2001    HT3001  70
+|    C                     ADD  HT2102    HT3102  70
+|    C                     ADD  HT2202    HT3202  70
+|    C                     ADD  HT2302    HT3302  70
+|    C*
+|    C                     EXSR RTN821
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTN821... LEVEL BREAK 2 FIELD CLEAR
+     C*==============================================================*
+06===C           RTN821    BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     HT2001
+|    C                     Z-ADD*ZERO     HT2102
+|    C                     Z-ADD*ZERO     HT2202
+|    C                     Z-ADD*ZERO     HT2302
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          RTN830... LEVEL BREAK 3
+     C*==============================================================*
+07===C           RTN830    BEGSR
+|    C*
+|    C                     Z-ADDHT3001    T3001
+|    C           HT3102    DIV  PM101     T3101
+|    C                     MVR            T3102
+|    C           HT3202    DIV  PM101     T3201
+|    C                     MVR            T3202
+|    C           HT3302    DIV  PM101     T3301
+|    C                     MVR            T3302
+|    C*
+|    C                     WRITEPT3
+|    C*
+|    C                     ADD  HT3001    HT4001  70
+|    C                     ADD  HT3102    HT4102  70
+|    C                     ADD  HT3202    HT4202  70
+|    C                     ADD  HT3302    HT4302  70
+|    C*
+|    C                     EXSR RTN831
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          RTN831... LEVEL BREAK 3 FIELD CLEAR
+     C*==============================================================*
+08===C           RTN831    BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     HT3001
+|    C                     Z-ADD*ZERO     HT3102
+|    C                     Z-ADD*ZERO     HT3202
+|    C                     Z-ADD*ZERO     HT3302
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          RTN840... LEVEL BREAK 4
+     C*==============================================================*
+09===C           RTN840    BEGSR
+|    C*
+|    C                     Z-ADDHT4001    T4001
+|    C           HT4102    DIV  PM101     T4101
+|    C                     MVR            T4102
+|    C           HT4202    DIV  PM101     T4201
+|    C                     MVR            T4202
+|    C           HT4302    DIV  PM101     T4301
+|    C                     MVR            T4302
+|    C*
+|    C                     WRITEPT4
+|    C*
+|    C                     ADD  HT4001    HT5001  70
+|    C                     ADD  HT4102    HT5102  70
+|    C                     ADD  HT4202    HT5202  70
+|    C                     ADD  HT4302    HT5302  70
+|    C*
+|    C                     EXSR RTN841
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          RTN841... LEVEL BREAK 4 FIELD CLEAR
+     C*==============================================================*
+10===C           RTN841    BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     HT4001
+|    C                     Z-ADD*ZERO     HT4102
+|    C                     Z-ADD*ZERO     HT4202
+|    C                     Z-ADD*ZERO     HT4302
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR
+     C*==============================================================*
+11===C           RTN890    BEGSR
+|    C*
+|    C                     Z-ADDHT5001    T5001
+|    C           HT5102    DIV  PM101     T5101
+|    C                     MVR            T5102
+|    C           HT5202    DIV  PM101     T5201
+|    C                     MVR            T5202
+|    C           HT5302    DIV  PM101     T5301
+|    C                     MVR            T5302
+|    C*
+|    C                     WRITEPT5
+|    C*
+|    C                     EXSR RTN891
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          RTN891... LEVEL BREAK LR FIELD CLEAR
+     C*==============================================================*
+12===C           RTN891    BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     HT5001
+|    C                     Z-ADD*ZERO     HT5102
+|    C                     Z-ADD*ZERO     HT5202
+|    C                     Z-ADD*ZERO     HT5302
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+13===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+13===C                     ENDSR
+     C*
+     C*COPY PYRPGSRC,PYC04
+

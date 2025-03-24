@@ -1,0 +1,190 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM NAME : GLS0091                                    *
+     H*    AUTHOR       : SHARON                                     *
+     H*    CREATE DATE  : 105/06/17                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H*    REMARK       :                                            *
+     F****************************************************************
+     FGLAXPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLAILF03IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     F*==============================================================*
+     E                    ARR        14 13 2
+     I            DS
+     I                                        1 182 ARR
+     I                                        1  132AI10
+     I                                       14  262AI11
+     I                                       27  392AI12
+     I                                       40  522AI13
+     I                                       53  652AI14
+     I                                       66  782AI15
+     I                                       79  912AI16
+     I                                       92 1042AI17
+     I                                      105 1172AI18
+     I                                      118 1302AI19
+     I                                      131 1432AI20
+     I                                      144 1562AI21
+     I                                      157 1692AI22
+     I                                      170 1822AI23
+     C*==============================================================*
+     C*                    PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM           P009I1  2        *公司別
+     C                     PARM           P009I2  8        *會計科目
+     C                     PARM           P009I3  40       *年度
+     C                     PARM           P009I4  1        *日期型態
+     C                     PARM           P009I5 20        *成本中心
+     C                     PARM           P009I6 20        *對象別
+     C                     PARM           P009I7 20        *相關號碼1
+     C                     PARM           P009I8 20        *相關號碼2
+     C                     PARM           P009I9  80       *日期
+     C                     PARM           P009O1 132       *上期金額
+     C*
+     C           *LIKE     DEFN AI03      WAI03
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYAF     KLIST
+     C                     KFLD           P009I1           *公司別
+     C                     KFLD           P009I2           *會計科目
+     C           KEYSG     KLIST
+     C                     KFLD           WAI03            *會計科目
+     C                     KFLD           AK13             *年度
+     C           KEYAI     KLIST
+     C                     KFLD           WAI03            *會計科目
+     C           KEYAK     KLIST
+     C                     KFLD           P009I1           *公司別
+     C           KEYAX     KLIST
+     C                     KFLD           P009I1           *公司別
+     C                     KFLD           AI01             *公司別
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*上期金額************************************
+     C                     Z-ADD0         P009O1
+     C***********************************************
+     C           KEYAF     CHAINAF0                  40
+     C   40                GOTO @END
+     C***********************************
+     C*ＡＦ０５為虛帳戶時**************
+     C***********************************
+  01-C           AF05      IFNE '1'
+  01-C           AF08      ORNE '1'
+    C                     GOTO @END
+  01-C                     END
+     C*-----------------------------------------
+     C*轉換日期格式----- P009I3-->WYEAR
+     C*-----------------------------------------
+     C           KEYAK     CHAINAK0                  40
+     C   40                GOTO @END
+     C*-------------------------------------------------
+  02-C           P009I4    IFEQ 'S'
+    C           P009I3    MULT 10000     W01     80
+    C                     CALL 'P31'
+    C                     PARM W01       P3101I  80
+    C                     PARM AK09      P3102I  1
+    C                     PARM AK09      P3103I  1
+    C                     PARM '2'       P3104I  1
+    C                     PARM '1'       P3105I  1
+    C                     PARM           P3101O  80
+    C           P3101O    DIV  10000     WYEAR   40
+  02*C                     ELSE
+    C                     Z-ADDP009I3    WYEAR   40
+  02-C                     END
+     C**********************************
+     C*求上期金額　 P009O1           *
+     C**********************************
+     C           WYEAR     SUB  1         W02     40
+  03-C           AK13      IFEQ 0
+    C           AK13      ORGE W02
+    C                     GOTO @END
+  03-C                     END
+     C********************
+     C*讀取年度餘額檔***
+     C********************
+     C                     MOVE P009I2    WAI03
+     C                     EXSR R1000
+     C*
+     C           P009I2    IFEQ AK04
+     C                     MOVE AK05      WAI03
+     C                     EXSR R1000
+     C                     END
+     C*
+     C           @END      TAG
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R1000 ....INITIAL VALUE
+     C*==============================================================*
+     C           R1000     BEGSR
+     C*
+     C           KEYSG     SETGTAI0
+     C           KEYAI     READEAI0                      44
+  04-C           *IN44     DOWEQ'0'
+    C           AI02      ANDLTWYEAR
+    C*******************
+    C*若不存在PT#BPF *
+    C*******************
+    C           KEYAK     CHAIN#B0                  40
+    C   40                GOTO @END
+    C*
+    C                     SETOF                     60
+  05-C           P009I5    IFNE *BLANK
+    C           P009I5    ANDNEAI04
+    C                     SETON                     60
+  05-C                     END
+    C*
+  06-C           P009I6    IFNE *BLANK
+    C           P009I6    ANDNEAI05
+    C                     SETON                     60
+  06-C                     END
+    C*
+  07-C           P009I7    IFNE *BLANK
+    C           P009I7    ANDNEAI06
+    C                     SETON                     60
+  07-C                     END
+    C*
+  08-C           P009I8    IFNE *BLANK
+    C           P009I8    ANDNEAI07
+    C                     SETON                     60
+  08-C                     END
+    C*
+  09-C           P009I9    IFNE 0
+    C           P009I9    ANDNEAI08
+    C                     SETON                     60
+  09-C                     END
+    C*
+  10-C           *IN60     IFEQ '0'
+    C*----------------------------------------------------------------
+    C*公司別屬虛擬時，須存在於－公司結構檔GLAXPF
+    C*----------------------------------------------------------------
+  11-C           #B12      IFEQ '2'
+    C           KEYAX     CHAINAX0                  40
+  12-C           *IN40     IFEQ '0'
+    C*上期金額之計算．．．
+  13-C           1         DO   14        X       20
+    C                     ADD  ARR,X     P009O1           *上期金額
+  13-C                     END  1
+    C*
+  12-C                     END
+  11*C                     ELSE
+  14-C           AI01      IFEQ P009I1
+    C*上期金額之計算．．．
+  15-C           1         DO   14        X
+    C                     ADD  ARR,X     P009O1           *上期金額
+  15-C                     END  1
+    C*
+  14-C                     END
+  11-C                     END
+  10-C                     ENDIF
+    C*
+    C           KEYAI     READEAI0                      44
+  04-C                     END
+     C*
+     C                     ENDSR
+

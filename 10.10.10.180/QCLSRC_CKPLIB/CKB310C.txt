@@ -1,0 +1,56 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM ID   : CKB310                                    */
+     /*    PROGRAM NAME :產生會計傳票　　                         */
+     /*    AUTHOR       : A1149   HUANG.SHU-MEI                     */
+     /*    CREATE DATE  : 1993.05.13                                */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       : 票據系統                                */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&IN03)   TYPE(*LGL)  LEN(1)
+             DCL        VAR(&IN10)   TYPE(*LGL)  LEN(1)
+             DCL        VAR(&HA02) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&HA15) TYPE(*CHAR) LEN(8)
+
+ /******* CALL 'RPG1'=CHECK SCREEN *****/
+
+ START:      CALL       PGM(CKB3101) PARM(&IN03 &IN10)
+             IF         COND(&IN03) THEN(DO)
+             CHGVAR     VAR(%SST(*LDA 501 18)) VALUE(' ')
+             RETURN
+             ENDDO
+
+ /******* OPEN QUERY FILE *****/
+
+             CHGVAR     VAR(&HA02) VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&HA15) VALUE(%SST(*LDA 503 8))
+
+             OVRDBF     FILE(CKHAPF) SHARE(*YES)
+             OPNQRYF    FILE((CKHAPF)) QRYSLT(' ha02 *eq "' *cat +
+                          &ha02 *cat '" & ha17 *eq "4" & ha18 +
+                          *eq " " &  ha15C *LE "' *cat &ha15 +
+                          *cat '" ') KEYFLD((HA02) (HA15) (HA01) +
+                          (HA03)) MAPFLD((HA15C HA15 *CHAR 8))
+
+ /******* CRTPF CKB310F *****/
+
+             CPYF       FROMFILE(CKB310F) TOFILE(QTEMP/CKB310F) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/CKB310F))
+             OVRDBF     FILE(CKB310F) TOFILE(QTEMP/CKB310F)
+
+             CALL       PGM(CKB3102)
+             CALL       PGM(CKB3103)
+
+             CLOF       OPNID(CKHAPF)
+             DLTOVR     FILE(*ALL)
+      /* 產生存款傳票 */
+             CALL       PGM(CKB310C1)
+
+             GOTO       START
+
+             ENDPGM
+

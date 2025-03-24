@@ -1,0 +1,80 @@
+     /***************************************************************/
+     /*   人頭馬匯東洋酒股份有限公司－版權所有      TEL:5042266   */
+     /*                                                             */
+     /*    AUTHOR       : CAROL                                     */
+     /*    CREATE DATE  : 06/06/21                                  */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : PIR049C                                   */
+     /*    SYSTEM       :人頭馬匯東                               */
+     /*    SUBSYSTEM    :盤點系統                                 */
+     /*    REMARK       :年終庫存品牌彙總表　　　                 */
+     /*-------------------------------------------------------------*/
+     /*MODIFICATION                                                 */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&$EVR)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)   TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTID) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6601I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6602I) TYPE(*DEC)  LEN(1 0)
+             DCL        VAR(&P6603I) TYPE(*DEC)  LEN(3 0)
+             DCL        VAR(&P6604I) TYPE(*DEC)  LEN(2 0)
+
+             DCL        VAR(&COMP)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DIX11)   TYPE(*CHAR) LEN(4)
+             DCL        VAR(&YMD8S)  TYPE(*CHAR) LEN(6)
+             DCL        VAR(&DIX01S)  TYPE(*CHAR) LEN(9)
+             DCL        VAR(&DIX01E)  TYPE(*CHAR) LEN(9)
+             DCL        VAR(&IX01MS)  TYPE(*CHAR) LEN(2)
+             DCL        VAR(&IX01ME)  TYPE(*CHAR) LEN(2)
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             CHGVAR     VAR(&YMD8S)  VALUE(%SST(*LDA 850 6))
+             CHGVAR     VAR(&COMP)   VALUE(%SST(*LDA 650 1))
+             CHGVAR     VAR(&DIX11)   VALUE(%SST(*LDA 640 4))
+             CHGVAR     VAR(&DIX01S)  VALUE(%SST(*LDA 615 9))
+             CHGVAR     VAR(&DIX01E)  VALUE(%SST(*LDA 624 9))
+             CHGVAR     VAR(&IX01MS)  VALUE(%SST(*LDA 651 2))
+             CHGVAR     VAR(&IX01ME)  VALUE(%SST(*LDA 655 2))
+             CHGVAR     VAR(&LIB)   VALUE('REFLIB')
+             CHGVAR     VAR(&FILE)  VALUE('PIR049PF')
+
+             CLRPFM     FILE(*LIBL/PIR049PF)
+
+             OVRPRTF    FILE(PIR049P) PAGESIZE(*N 198) CPI(15) +
+                        USRDTA('年庫品牌')
+             IF         COND(&COMP *EQ 'R') THEN(DO)
+             OVRDBF     FILE(IMIXLF05) SHARE(*YES)
+             OPNQRYF    FILE((IMIXLF05)) QRYSLT('IX11 *EQ ' *CAT +
+                          &YMD8S *CAT ' & IX01 *EQ %RANGE("' *CAT +
+                          &DIX01S *CAT '" "' *CAT &DIX01E *CAT '") +
+                          & IX01C *EQ %RANGE("' *CAT &IX01MS *CAT '" +
+                          "' *CAT &IX01ME *CAT '") ') KEYFLD((IX01C))
+
+             OVRDBF     FILE(IMI1LF03) SHARE(*YES)
+             OPNQRYF    FILE((IMI1LF03)) OPTION(*ALL) QRYSLT('IX11 +
+                          *EQ ' *CAT &YMD8S *CAT ' & IX01 *EQ +
+                          %RANGE("' *CAT &DIX01S *CAT '" "' *CAT +
+                          &DIX01E *CAT '")  ') KEYFLD((*FILE))
+
+             CALL       PIR0491
+             CLOF       OPNID(IMIXLF05)
+             CLOF       OPNID(IMI1LF03)
+             ENDDO
+             DLTOVR     FILE(*ALL)
+
+             /*將PIR049PF轉換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             RTVDTAARA  DTAARA(*LDA (162 1)) RTNVAR(&$EVR)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (598 2)) RTNVAR(&$PRTID)
+
+             CHGVAR     VAR(&P6601I) VALUE('PIR049P')
+             CHGVAR     VAR(&P6602I) VALUE(&$EVR)
+             CHGVAR     VAR(&P6603I) VALUE(&$CPY)
+             CHGVAR     VAR(&P6604I) VALUE(&$PRTID)
+             CALL       PGM(P66) PARM(&P6601I &P6602I &P6603I &P6604I)
+ ENDSR:      ENDPGM
+

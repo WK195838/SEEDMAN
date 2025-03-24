@@ -1,0 +1,169 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA419                                     *
+     H*    PROGRAM NAME :年休補發結算作業                          *
+     H*    AUTHOR       : A1386.                                     *
+     H*    CREATE DATE  : 94/01/20                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYPBLF02IF  E           K        DISK
+     FPYA419D CF  E                    WORKSTN
+     I*------------------------------------------------------------***
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      203 2060$A8YM
+     I                                      211 2160DDATE
+     I*
+     I                                      501 502 DEM01
+     I                                      503 5050DYY
+     I                                      506 5090WYY
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C                     MOVEL'01'      KPB04   2        .年終獎金
+     C           KEYPB     KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           WYT
+     C                     KFLD           KPB04
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INI. RTN.
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C                     EXSR RTN100                     *MAIN
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL ROUTINE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   *NAMVAR
+|    C*------------------------------------------------------------***
+|    C                     Z-ADD*ZERO     DYY
+|    C*------------------------------------------------------------***
+|    C*
+|    C                     MOVEL$COR      DEM01
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100.... MAIN ROUTINE
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     SETON                     97
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO END100
+| 01-C                     END
+|    C*
+|    C                     EXSR RTN110                     *CHK SCREEN1
+|    C*
+| 02-C           *IN13     IFEQ '1'
+|   C                     EXSR RTN120                     *PROCESS
+| 02-C                     END
+|    C*
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          RTN110....CHECK SCREEN1
+     C*==============================================================*
+03===C           RTN110    BEGSR
+|    C* << CHACK 公司別NOT *BLANK >>
+| 01-C           DEM01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DEM01     CM001I  2         公司代號
+|    C           CM02      PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 02-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 02-C                     END
+|    C   99                GOTO END110
+|    C*
+| 03-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|   C                     CALL 'P82'
+|   C                     PARM DYY       P8201I  40
+|   C                     PARM DFMT      P8202I  1
+|   C                     PARM DTYPE     P8203I  1
+|   C                     PARM '2'       P8204I  1
+|   C                     PARM '1'       P8205I  1
+|   C           WYY       PARM           P8211O  40
+|    C*
+     C           WYY       ADD  2         WYT     40
+|    C*
+| 05-C           KEYPB     SETLLPB0
+| 05-C           KEYPB     READEPB0                      48
+     C           *IN48     IFEQ '0'
+     C           PB96      ANDNE*ZERO
+|   C                     SETON                     606162
+|   C                     SETON                     99
+|   C                     MOVEL'UMI0510' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+| 05-C                     END
+|    C   99                GOTO END110
+|    C*
+03===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN120.... PROCESS
+     C*==============================================================*
+04===C           RTN120    BEGSR
+|    C*
+|    C                     SETON                     96
+|    C                     WRITEDSPC1
+|    C*
+|    C                     OUT  *NAMVAR
+|    C*
+|   C                     CALL 'PYA419C'
+|    C*
+|    C                     SETON                     93
+|    C                     SETOF                     96
+|    C*
+04===C                     ENDSR
+

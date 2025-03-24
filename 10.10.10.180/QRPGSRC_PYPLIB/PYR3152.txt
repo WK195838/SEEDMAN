@@ -1,0 +1,359 @@
+     H***************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   *
+     H*                                                             *
+     H*    PROGRAM ID   : PYR3152                                   *
+     H*    PROGRAM NAME :薪資加班請假記錄表列印                   *
+     H*    AUTHOR       : A1226 PETER                               *
+     H*    CREATE DATE  : 85/12/14                                  *
+     H*    UPDATE DATE  :                                           *
+     H*    SYSTEM       : 人事薪資系統                            *
+     H***************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYLCPF  IF  E           K        DISK
+     FPYOVLF01IF  E           K        DISK
+     FPYLVLF02IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR315P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    H1         16  1
+     E                    H2         16  6
+     E                    D1         16  5 2
+     IEM0
+     I                                              EM041 L1
+     I                                              EM042 L1
+     I                                              EM043 L1
+     I                                              EM044 L1
+     I*
+     I           UDS
+     I                                      187 1920DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I                                      623 629 DEM041
+     I                                      630 636 DEM042
+     I                                      531 538 DEM021
+     I                                      539 546 DEM022
+     I                                      601 6050DOV96
+     I            DS
+     I                                        1  96 H2
+     I                                        1   6 PH11
+     I                                        7  12 PH12
+     I                                       13  18 PH13
+     I                                       19  24 PH14
+     I                                       25  30 PH15
+     I                                       31  36 PH16
+     I                                       37  42 PH17
+     I                                       43  48 PH18
+     I                                       49  54 PH19
+     I                                       55  60 PH1A
+     I                                       61  66 PH1B
+     I                                       67  72 PH1C
+     I                                       73  78 PH1D
+     I                                       79  84 PH1E
+     I                                       85  90 PH1F
+     I                                       91  96 PH1G
+     I*
+     I            DS
+     I                                        1  80 D1
+     I                                        1   52PD16
+     I                                        6  102PD17
+     I                                       11  152PD18
+     I                                       16  202PD19
+     I                                       21  252PD1A
+     I                                       26  302PD1B
+     I                                       31  352PD1C
+     I                                       36  402PD1D
+     I                                       41  452PD1E
+     I                                       46  502PD1F
+     I                                       51  552PD1G
+     I                                       56  602PD1H
+     I                                       61  652PD1I
+     I                                       66  702PD1J
+     I                                       71  752PD1K
+     I                                       76  802PD1L
+     I*
+     I            DS
+     I                                        1   80DOV961
+     I                                        1   60W96Y1
+     I                                        7   80W96D1
+     I*
+     I            DS
+     I                                        1   80DOV962
+     I                                        1   60W96Y2
+     I                                        7   80W96D2
+     I*
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPM     KLIST                           *PYPMPF
+     C                     KFLD           PM01
+     C                     KFLD           DEM01
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           DP014
+     C           KEYOV1    KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WOV96
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C*+ LEVEL BREAK INIT PROCESS +++++++++++++++++++++++++++++++++++
+     C   L1                EXSR R7100
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     EXSR R2000
+     C*
+     C*+ LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++
+     CL1 10                EXSR R8100
+     CLR 10                EXSR R8900
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C                     MOVE CM14      DFMT
+|    C                     MOVE CM15      DTYPE
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C   40                Z-ADD8         PM101
+|    C*HEADING假別
+|    C                     Z-ADD0         WI      20
+|    C*
+|    C           *LOVAL    SETLLLC0
+|    C                     READ LC0                      40
+| 01-C           *IN40     DOWEQ'0'
+|   C           WI        ANDLT16
+|   C                     ADD  1         WI
+|   C                     MOVELLC01      H1,WI
+|   C                     MOVELLC02      H2,WI
+|   C                     READ LC0                      40
+| 01-C                     END
+|    C*月份起迄日
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DOV96     P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '1'       P3904I  1
+|    C                     PARM '2'       P3905I  1
+|    C                     PARM           P3911O  60
+|    C                     Z-ADDP3911O    WOV96   60
+|    C*
+|    C                     CALL 'P34'
+|    C                     PARM WOV96     P3401I  60
+|    C                     PARM DFMT      P3403I  1
+|    C                     PARM DTYPE     P3404I  1
+|    C                     PARM           P3411O  1
+|    C                     PARM           P3412O  20
+|    C                     Z-ADDWOV96     W96Y1
+|    C                     Z-ADDWOV96     W96Y2
+|    C                     Z-ADD1         W96D1
+|    C                     Z-ADDP3412O    W96D2
+|    C*
+|    C                     Z-ADD*ZERO     PD11
+|    C                     Z-ADD*ZERO     PD12
+|    C                     Z-ADD*ZERO     PD13
+|    C                     Z-ADD*ZERO     PD14
+|    C                     Z-ADD*ZERO     PD15
+|    C                     MOVEL*ZERO     D1
+|    C                     EXSR R8101
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL COMPUTE
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+| 01-C           EM13      IFGT DOV962
+|   C                     GOTO E2000                      到職＞迄
+| 01-C                     END
+|    C*
+| 02-C           EM11      IFEQ 'Y'                        已離職
+|   C           EM11      OREQ '*'
+| 03-C           EM19      IFLT DOV961
+|   C                     GOTO E2000                      離職＜起
+| 03-C                     END
+| 02-C                     END
+|    C*-------------------------------------------------------------
+|    C*加班統計
+|    C           KEYOV1    SETLLOV0
+|    C           KEYOV1    READEOV0                      40
+| 04-C           *IN40     DOWEQ'0'
+|   C                     ADD  OV07      PD12
+|   C                     ADD  OV08      PD13
+|   C                     ADD  OV09      PD14
+|   C                     ADD  OV10      PD14
+|   C                     ADD  OV11      PD14
+|   C           KEYOV1    READEOV0                      40
+| 04-C                     END
+|    C*
+|    C*請假統計
+|    C           KEYOV1    SETLLLV0
+|    C           KEYOV1    READELV0                      40
+| 05-C           *IN40     DOWEQ'0'
+|   C*
+|   C           LV09      MULT PM101     WD1     62
+|   C                     ADD  LV08      WD1
+|   C*
+|   C                     Z-ADD1         WI
+|   C           LV04      LOKUPH1,WI                    41
+|   C   41                ADD  WD1       D1,WI
+|   C*
+|   C           KEYOV1    READELV0                      40
+| 05-C                     END
+|    C*-------------------------------------------------------------
+|    C*DETAIL LINE PRINT
+|    C                     MOVELEM044     DP014
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+|    C                     Z-ADDPD12      PD11
+|    C                     ADD  PD13      PD11
+|    C                     ADD  PD14      PD11
+|    C                     XFOOTD1        PD15
+|    C*
+| 06-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 06-C                     END
+|    C*
+|    C                     WRITEPD1
+|    C*
+|    C                     ADD  PD11      PT11
+|    C                     ADD  PD12      PT12
+|    C                     ADD  PD13      PT13
+|    C                     ADD  PD14      PT14
+|    C                     ADD  PD15      PT15
+|    C                     ADD  PD16      PT16
+|    C                     ADD  PD17      PT17
+|    C                     ADD  PD18      PT18
+|    C                     ADD  PD19      PT19
+|    C                     ADD  PD1A      PT1A
+|    C                     ADD  PD1B      PT1B
+|    C                     ADD  PD1C      PT1C
+|    C                     ADD  PD1D      PT1D
+|    C                     ADD  PD1E      PT1E
+|    C                     ADD  PD1F      PT1F
+|    C                     ADD  PD1G      PT1G
+|    C                     ADD  PD1H      PT1H
+|    C                     ADD  PD1I      PT1I
+|    C                     ADD  PD1J      PT1J
+|    C                     ADD  PD1K      PT1K
+|    C                     ADD  PD1L      PT1L
+|    C                     ADD  1         PT1Z    40       人數
+|    C*
+|    C                     Z-ADD*ZERO     PD11
+|    C                     Z-ADD*ZERO     PD12
+|    C                     Z-ADD*ZERO     PD13
+|    C                     Z-ADD*ZERO     PD14
+|    C                     Z-ADD*ZERO     PD15
+|    C                     MOVEL*ZERO     D1
+|    C*
+02===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+03===C           R7100     BEGSR
+|    C*
+|    C*                    MOVEL*BLANK    DP014
+|    C*          KEYDP     CHAINDP0                  40
+|    C*  40                MOVEL*BLANK    DP02
+|    C*                    MOVELDP02      PDP02H
+|    C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|    C                     SETON                     31
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << IF THIS KEY BREAK SKIP PAGE THEN SETON >>-------------------
+|    C                     SETON                     39
+|    C*----------------------------------------------------------------
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+04===C           R8100     BEGSR
+|    C*
+|    C*          PT1Z      IFEQ *ZERO
+|    C*                    GOTO E8100
+|    C*                    END
+|    C*
+|    C                     WRITEPT1
+|    C*
+|    C                     EXSR R8101
+|    C*
+04===C           E8100     ENDSR
+     C*==============================================================*
+     C*          R8101 ... LEVEL BREAK 1 FIELD CLEAR
+     C*==============================================================*
+05===C           R8101     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT14
+|    C                     Z-ADD*ZERO     PT15
+|    C                     Z-ADD*ZERO     PT16
+|    C                     Z-ADD*ZERO     PT17
+|    C                     Z-ADD*ZERO     PT18
+|    C                     Z-ADD*ZERO     PT19
+|    C                     Z-ADD*ZERO     PT1A
+|    C                     Z-ADD*ZERO     PT1B
+|    C                     Z-ADD*ZERO     PT1C
+|    C                     Z-ADD*ZERO     PT1D
+|    C                     Z-ADD*ZERO     PT1E
+|    C                     Z-ADD*ZERO     PT1F
+|    C                     Z-ADD*ZERO     PT1G
+|    C                     Z-ADD*ZERO     PT1H
+|    C                     Z-ADD*ZERO     PT1I
+|    C                     Z-ADD*ZERO     PT1J
+|    C                     Z-ADD*ZERO     PT1K
+|    C                     Z-ADD*ZERO     PT1L
+|    C                     Z-ADD*ZERO     PT1Z    40
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR
+     C*==============================================================*
+06===C           R8900     BEGSR
+|    C*
+|    C*                    WRITEPE1
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+07===C           R8999     BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR R1000
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+

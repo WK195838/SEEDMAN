@@ -1,0 +1,512 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR2232                                    *
+     H*    PROGRAM NAME :員工出缺勤月份總表　                      *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 1999/08/04                                 *
+     H*    UPDATE DATE  : 2000/01/29 A1274 EVA                       *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYPHPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYOSPF  IF  E           K        DISK
+     FPYHDPF  IF  E           K        DISK
+     FPYLAPF  IF  E           K        DISK
+     FPYLVPF  IF  E           K        DISK
+     FPYLUPF  IF  E           K        DISK
+     FPYOVPF  IF  E           K        DISK
+     FPYR223WFO   E                    DISK
+     E*---------------------------------------------------------------*
+     E                    WRR        12  7 0             *金額(WF)
+     E*---------------------------------------------------------------*
+     I*PYEMPF
+     IEM0
+     I                                              EM02  L1
+     I                                              EM01  L2
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      211 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I*公司
+     I                                      501 502 DOV01
+     I*部門
+     I                                      609 615 DEM041
+     I                                      616 622 DEM042
+     I*員工編號
+     I                                      513 520 DOV021
+     I                                      521 528 DOV022
+     I*出勤月份(YYMM) IN CHINESE
+     I                                      529 5320DOV031
+     I*月份(YYYYMM) IN ENGLISH
+     I                                      537 5420WOV031
+     I*積假處理月份(YYMM) IN CHINESE
+     I                                      549 5520DYM
+     I*月份(YYYYMM) IN ENGLISH
+     I                                      553 5580WDYM
+     I                                      553 5560WDYY
+     I                                      557 5580WDMM
+     I                                      601 6080DYMD
+     I*-------------------------------------------------------------***
+     I            DS
+     I                                        1   80WYMD
+     I                                        1   60WYM
+     I                                        1   40WYY
+     I                                        5   60WMM
+     I                                        7   80WDD
+     I            DS
+     I                                        1   80QYMD
+     I                                        1   60QYM
+     I                                        1   40QYY
+     I                                        5   60QMM
+     I                                        7   80QDD
+     I            DS
+     I                                        1   7 KEM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I            DS
+     I                                        1   80LA03
+     I                                        1   60LA03YM
+     I                                        7   80LA03D
+     I            DS
+     I                                        1   80LV03
+     I                                        1   60LV03YM
+     I                                        7   80LV03D
+     I            DS
+     I                                        1   80OV03
+     I                                        1   60OV03YM
+     I                                        7   80OV03D
+     I            DS
+     I                                        1  840WRR
+     I                                        1   70W2314
+     I                                        8  140W2315
+     I                                       15  210W2316
+     I                                       22  280W2317
+     I                                       29  350W2318
+     I                                       36  420W2319
+     I                                       43  490W2320
+     I                                       50  560W2321
+     I                                       57  630W2322
+     I                                       64  700W2323
+     I                                       71  770W2324
+     I                                       78  840W2325
+     I            DS
+     I                                        1   60LU034
+     I                                        1   40LU03
+     I                                        5   60LU04
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*PYPHPF 薪資歷史檔
+     C                     MOVEL'1'       KPH04   1 P
+     C           KEYPH     KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C                     KFLD           WYM
+     C                     KFLD           KPH04
+     C*PYDPPF 部門基本資料檔
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*PYLAPF 考勤主檔
+     C           KEYLA1    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C           KEYLA2    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C                     KFLD           WYMD             *異常日期
+     C*PYLVPF 請假主檔
+     C           KEYLV1    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C           KEYLV2    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C                     KFLD           WYMD             *假別
+     C*PYLUPF 加班轉休歷史檔
+     C                     Z-ADD*ZERO     KMM     20       *MONTH
+     C           KEYLU1    KLIST
+     C                     KFLD           W2301            *COMPANY
+     C                     KFLD           W2304            *EMP.NO.
+     C                     KFLD           WDYY             *YEAR YYYY
+     C                     KFLD           AAA              *MONTH
+     C           KEYLU2    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C*
+     C*PYOVPF 加班主檔
+     C           KEYOV1    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C           KEYOV2    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C                     KFLD           WYMD             *加班日期
+     C*PYHDPF 薪資歷史檔DETAIL
+     C                     MOVEL'1'       KHD04   1 P
+     C           KEYHD1    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C           KEYHD2    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C                     KFLD           WYM
+     C                     KFLD           KHD04            *期別
+     C*PYOSPF 薪資異動檔
+     C                     MOVEL'1'       KOS04   1 P
+     C           KEYOS1    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C                     MOVEL'06'      KOS05   2 P
+     C           KEYOS2    KLIST
+     C                     KFLD           W2301
+     C                     KFLD           W2304
+     C                     KFLD           WYM
+     C                     KFLD           KOS04            *期別
+     C                     KFLD           KOS05            *薪資項目
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      .DETAIL
+     CL1 10                EXSR R8100                      .L1
+     CL2 10                EXSR R8200                      .L2
+     C*==============================================================*
+     C*          R0100 ... INITIAL WORK FILE FIELD
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    W2301
+|    C                     MOVEL*BLANK    W2302
+|    C                     MOVEL*BLANK    W2303
+|    C                     MOVEL*BLANK    W2304
+|    C                     MOVEL*BLANK    W2305
+|    C                     Z-ADD*ZERO     W2306
+|    C                     Z-ADD*ZERO     W2308
+|    C                     Z-ADD*ZERO     W2309
+|    C                     Z-ADD*ZERO     W2310
+|    C                     Z-ADD*ZERO     W2311
+|    C                     Z-ADD*ZERO     W2312
+|    C                     Z-ADD*ZERO     W2313
+|    C                     Z-ADD*ZERO     W2314
+|    C                     Z-ADD*ZERO     W2315
+|    C                     Z-ADD*ZERO     W2316
+|    C                     Z-ADD*ZERO     W2317
+|    C                     Z-ADD*ZERO     W2318
+|    C                     Z-ADD*ZERO     W2319
+|    C                     Z-ADD*ZERO     W2320
+|    C                     Z-ADD*ZERO     W2321
+|    C                     Z-ADD*ZERO     W2322
+|    C                     Z-ADD*ZERO     W2323
+|    C                     Z-ADD*ZERO     W2324
+|    C                     Z-ADD*ZERO     W2325
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ... SELECTION
+     C*==============================================================*
+02===C           R0200     BEGSR
+|    C*
+|    C                     SELEC
+|    C           KEY05     WHEQ '53'
+|    C                     ADD  KEY06     WRR,1            遲到
+|    C           KEY05     WHEQ '52'
+|    C                     ADD  KEY06     WRR,2            事假
+|    C           KEY05     WHEQ '63'
+|    C                     ADD  KEY06     WRR,3            病假
+|    C*          KEY05     WHEQ '09'
+|    C*                    ADD  KEY06     WRR,4            伙食津貼
+|    C           KEY05     WHEQ '05'
+|    C                     ADD  KEY06     WRR,5            應稅加班
+|    C           KEY05     WHEQ '08'
+|    C                     ADD  KEY06     WRR,5            免稅加班
+|    C           KEY05     WHEQ '06'
+|    C                     ADD  KEY06     WRR,6            大夜津貼
+|    C           KEY05     WHEQ '13'
+|    C                     ADD  KEY06     WRR,7            車馬津貼
+|    C           KEY05     WHEQ '14'
+|    C                     ADD  KEY06     WRR,8            服務津貼
+|    C           KEY05     WHEQ '55'
+|    C                     ADD  KEY06     WRR,9            宿舍租費
+|    C           KEY05     WHEQ '04'
+|    C                     ADD  KEY06     WRR,10           上月調整
+|    C           KEY05     WHEQ '07'
+|    C                     ADD  KEY06     WRR,11           各類獎金
+|    C           KEY05     WHEQ '03'
+|    C                     ADD  KEY06     WRR,12           其他加項
+| ERRC                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+03===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*INIT. PYR223WF FIELD
+|    C                     EXSR R0100
+|    C*YYYYMM00
+|    C                     Z-ADDWOV031    WYM
+|    C                     Z-ADD00        WDD
+|    C                     Z-ADDDYMD      QYMD
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+04===C           R2000     BEGSR
+|    C*
+|    C*員工篩選：除一般員工外．當月離職員工也包含在內
+| 01-C           EM19      IFNE *ZERO
+|   C           EM19      ANDLTQYMD
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+|    C*公司　部門　員工編號　員工姓名
+|    C                     MOVELEM01      W2301
+|    C                     MOVELKEM04     W2302
+|    C                     MOVELEM02      W2304
+|    C                     MOVELEM03      W2305
+|    C*
+|    C*部門名稱
+|    C           KEYDP     CHAINDP0                  40
+|    C  N40                MOVELDP02      W2303
+|    C   40                MOVEL*BLANK    W2303
+|    C*
+|    C*出勤年份　出勤月份
+|    C           WYM       SUB  191100    W2306
+|    C*
+|    C*是否存在薪資歷史檔 (PYPHPF)
+|    C           KEYPH     CHAINPH0                  40
+| 02-C*          *IN40     IFEQ '1'
+|   C*                    GOTO E2000
+| 02-C*                    END
+|    C*
+|    C*遲到次數：含早退次數
+|    C                     EXSR R2001                      .PYLAPF
+|    C*
+|    C*事假及病假時數：LV04='I' 'S'
+|    C                     EXSR R2002                      .PYLVPF
+|    C*
+|    C*積假時數：補休時數－已休時數 (由積假處理年月作累計)
+|    C                     EXSR R2003                      .PYLUPF
+|    C*
+|    C*加班時數：計薪OV21,OV23,OV24,OV25
+|    C                     EXSR R2004                      .PYOVPF
+|    C*
+|    C*薪資項目各項金額
+|    C                     EXSR R2005                      .PYHDPF
+|    C*
+|    C*大夜津貼次數計算：OS05='06'
+|    C                     EXSR R2006                      .PYOSPF
+|    C*
+|    C                     WRITEW223
+|    C*
+04===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2001 ... DETAIL 1
+     C*==============================================================*
+05===C           R2001     BEGSR
+|    C*
+|    C                     Z-ADD0         K2308   50
+|    C*遲到次數
+|    C           KEYLA2    SETLLLA0
+|    C           KEYLA1    READELA0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C*
+| 02-C           LA03YM    IFNE WYM
+|   C                     LEAVE
+| 02-C                     END
+|   C*
+|   C           LA04      ADD  LA05      K2308
+|   C                     ADD  K2308     W2308
+|   C*
+|   C           KEYLA1    READELA0                      44
+| 01-C                     END
+|    C*
+05===C           E2001     ENDSR
+     C*==============================================================*
+     C*          R2002 ... DETAIL 2
+     C*==============================================================*
+06===C           R2002     BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     K2309A  51
+|    C                     Z-ADD*ZERO     K2309B  51
+|    C                     Z-ADD*ZERO     K2310A  51
+|    C                     Z-ADD*ZERO     K2310B  51
+|    C*事假及病假時數
+|    C           KEYLV2    SETLLLV0
+|    C           KEYLV1    READELV0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C*
+|   C                     Z-ADD*ZERO     K2309A  51
+|   C                     Z-ADD*ZERO     K2309B  51
+|   C                     Z-ADD*ZERO     K2310A  51
+|   C                     Z-ADD*ZERO     K2310B  51
+|   C*
+| 02-C           LV03YM    IFNE WYM                        .起始日期
+|   C                     LEAVE
+| 02-C                     END
+|   C*
+| 03-C           LV04      IFEQ 'I'                        .事假
+|   C           LV09      MULT 8         K2309A
+|   C           LV08      ADD  K2309A    K2309B
+| 03-C                     END
+|   C*
+| 04-C           LV04      IFEQ 'S'                        .病假
+|   C           LV09      MULT 8         K2310A
+|   C           LV08      ADD  K2310A    K2310B
+| 04-C                     END
+|   C*
+|   C                     ADD  K2309B    W2309
+|   C                     ADD  K2310B    W2310
+|   C*
+|   C           KEYLV1    READELV0                      44
+| 01-C                     END
+|    C*
+06===C           E2002     ENDSR
+     C*==============================================================*
+     C*          R2003 ... DETAIL 3
+     C*==============================================================*
+07===C           R2003     BEGSR
+|    C*積假時數
+|    C                     Z-ADD*ZERO     KLU05   51
+|    C                     Z-ADD*ZERO     KLU06   51
+|    C                     Z-ADD*ZERO     AAA     20
+|    C*
+|    C*積假處理年月＋１才為起始計算年月
+| 01-C           WDMM      IFEQ 12
+|   C                     ADD  1         WDYY
+|   C                     Z-ADD1         AAA
+| 01*C                     ELSE
+|   C           WDMM      ADD  1         AAA
+| 01-C                     END
+|    C*
+|    C           KEYLU1    SETLLLU0
+|    C           KEYLU2    READELU0                      44
+| 02-C           *IN44     DOWEQ'0'
+|   C*
+| 03-C           LU034     IFGT WYM                        *月份
+|   C                     LEAVE
+| 03-C                     END
+|   C*
+|   C                     ADD  LU05      KLU05
+|   C                     ADD  LU06      KLU06
+|   C*
+|   C           KEYLU2    READELU0                      44
+| 02-C                     END
+|    C*
+|    C           KLU05     SUB  KLU06     W2311
+|    C*
+07===C           E2003     ENDSR
+     C*==============================================================*
+     C*          R2004 ... DETAIL 4
+     C*==============================================================*
+08===C           R2004     BEGSR
+|    C*
+|    C*加班時數-為計薪時數且不含轉休時數
+|    C*
+|    C           KEYOV2    SETLLOV0
+|    C           KEYOV1    READEOV0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C*
+| 02-C           OV03YM    IFNE WYM
+|   C                     LEAVE
+| 02-C                     END
+|   C*
+|   C                     ADD  OV21      W2312
+|   C                     ADD  OV23      W2312
+|   C                     ADD  OV24      W2312
+|   C                     ADD  OV25      W2312
+|   C*
+|   C           KEYOV1    READEOV0                      44
+| 01-C                     END
+|    C*
+08===C           E2004     ENDSR
+     C*==============================================================*
+     C*          R2005 ... DETAIL 5
+     C*==============================================================*
+09===C           R2005     BEGSR
+|    C*
+|    C*薪資固定項金額
+|    C           KEYHD2    SETLLHD0
+|    C           KEYHD1    READEHD0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C*
+| 02-C           HD03      IFNE WYM
+|   C                     LEAVE
+| 02-C                     END
+|   C*
+|   C                     MOVEL*BLANK    KEY05   2
+|   C                     Z-ADD*ZERO     KEY06   70
+|   C                     MOVELHD05      KEY05
+|   C                     Z-ADDHD06      KEY06
+|   C*
+|   C                     EXSR R0200
+|   C*
+|   C           KEYHD1    READEHD0                      44
+| 01-C                     END
+|    C*
+09===C           E2005     ENDSR
+     C*==============================================================*
+     C*          R2006 ... DETAIL 6
+     C*==============================================================*
+10===C           R2006     BEGSR
+|    C*薪資異動項金額
+|    C           KEYOS2    SETLLOS0
+|    C           KEYOS2    READEOS0                      44
+| 01-C           *IN44     IFEQ '0'
+|   C*
+| 02-C           OS03      IFNE WYM
+|   C                     GOTO E2006
+| 02-C                     END
+|   C*
+|   C                     Z-ADDOS07      W2313
+|   C*
+|   C           KEYOS2    READEOS0                      44
+| 01-C                     END
+|    C*
+10===C           E2006     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK L1
+     C*==============================================================*
+11===C           R8100     BEGSR
+|    C*
+|    C                     EXSR R0100                      .清空欄位
+|    C                     Z-ADDDYMD      QYMD
+|    C*
+11===C                     ENDSR
+     C*==============================================================
+     C*          R8200 ... LEVEL BREAK L2
+     C*==============================================================
+12===C           R8200     BEGSR
+|    C*
+|    C                     EXSR R0100                      .清空欄
+|    C*
+12===C                     ENDSR
+

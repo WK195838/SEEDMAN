@@ -1,0 +1,197 @@
+      ****************************************************************
+      * PROGRAM NAME : ARR094                                        *
+      * AUTHER       : YVONNE                                        *
+      * CREATE DATE  : 111/10/14                                     *
+      * UPDATE DATE  :                                               *
+      * SYSTEM       :茂世進銷存系統                               *
+      * SUBSYSTEM    :應收系統                                     *
+      * REMARK       :發票資料－依客戶(EXCEL)                      *
+     /*=============================================================*/
+     FARR094D CF  E                    WORKSTN
+     F                                              KINFDS DSPFDS
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      135 135 $ADD
+     I*客戶代號
+     I                                      601 605 DSI08S
+     I                                      606 610 DSI08E
+     I*發票日期
+     I                                      615 6200DSI21S
+     I                                      621 6260DSI21E
+     I*
+     I                                      630 6370YMDS
+     I                                      640 6470YMDE
+     I*
+     I* FOR F4 HELP -- GET CURSOR POSITION
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+      *==============================================================*
+      *          IDENTIFY A PARAMETER LIST
+      *==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN98     PARM *IN98     IN98    1
+     C           *IN97     PARM *IN97     IN97    1
+      *==============================================================*
+      *                    KLIST
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+     C  N97N98             EXSR RTN010                     .INIT SCREEN
+  01-C           *IN03     DOUEQ'1'
+    C           *IN99     OREQ '0'
+    C                     EXFMTDSPD1
+    C                     MOVEA*ALL'0'   *IN,60
+  02-C           *IN03     IFEQ '0'
+  03-C           *IN04     IFEQ '1'
+    C**********************
+    C*  F4 PROMPT PROCESS *
+    C**********************
+    C                     EXSR RTNF4
+  03*C                     ELSE
+    C                     EXSR RTN100                     .CHECK      ?
+  03-C                     END
+  02-C                     END
+  01-C                     END
+     C*
+     C                     EXSR OUTLDA
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+      *===============================================================*
+      *          RTN010....INIT SCREEN
+      *===============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   LDA
+|    C                     Z-ADD2         $EVR
+|    C                     MOVE *BLANK    DSI08S
+|    C                     MOVE *BLANK    DSI08E
+|    C                     Z-ADD0         DSI21S
+|    C                     Z-ADD0         DSI21E
+|    C                     Z-ADD0         YMDS
+|    C                     Z-ADD0         YMDE
+|    C                     Z-ADD0         W6      60
+|    C                     MOVEL'SCR001'  APPSCR  6
+|    C*
+01===C                     ENDSR
+      *===============================================================*
+      *          RTN100....CHECK SCREEN
+      *===============================================================*
+02===C           RTN100    BEGSR
+|    C*
+| 01-C           DSI08S    IFEQ *BLANK
+|   C                     SETON                     649599
+| 01-C                     END
+|    C   99                GOTO END100
+|    C*
+| 02-C           DSI08E    IFEQ *BLANK
+|   C                     SETON                     659599
+| 02-C                     END
+|    C   99                GOTO END100
+|    C*
+| 03-C           DSI08S    IFGT DSI08E
+|   C                     SETON                     649099
+| 03-C                     END
+|    C   99                GOTO END100
+|    C*
+|    C*發票日期要輸入
+| 04-C           DSI21S    IFEQ 0
+|   C           DSI21E    OREQ 0
+|   C                     SETON                     6667
+|   C                     SETON                     9599
+| 04*C                     ELSE
+|   C*(CHECK DATE)-日期
+|   C                     CALL 'P09'
+|   C                     PARM DSI21S    P0901I  60
+|   C                     PARM           P0901O  1
+| 05-C           P0901O    IFEQ 'N'
+|   C                     SETON                     669399
+| 05-C                     END
+|   C   99                GOTO END100
+|   C*
+|   C                     CALL 'P09'
+|   C                     PARM DSI21E    P0901I  60
+|   C                     PARM           P0901O  1
+| 06-C           P0901O    IFEQ 'N'
+|   C                     SETON                     679399
+| 06-C                     END
+|   C   99                GOTO END100
+|   C*
+|   C*日期轉換
+|   C                     CALL 'RES001'
+|   C                     PARM 'MDY'     S001I1  3
+|   C                     PARM DSI21S    S001I2  60
+|   C           W6        PARM           S001O1  60
+|   C                     MOVE W6        HB2@F6  6
+|   C                     EXSR HB@68L                     + CENTURY 6->8 LEFT
+|   C                     MOVE HB2@T8    YMDS
+|   C*
+|   C                     CALL 'RES001'
+|   C                     PARM 'MDY'     S001I1  3
+|   C                     PARM DSI21E    S001I2  60
+|   C           W6        PARM           S001O1  60
+|   C                     MOVE W6        HB2@F6  6
+|   C                     EXSR HB@68L                     + CENTURY 6->8 LEFT
+|   C                     MOVE HB2@T8    YMDE
+|   C**
+| 07-C           YMDS      IFGT YMDE
+|   C                     SETON                     6667
+|   C                     SETON                     9399
+| 07-C                     END
+|   C   99                GOTO END100
+| 04-C                     END
+|    C   99                GOTO END100
+|    C*
+02===C           END100    ENDSR
+      *===============================================================*
+      *          RTNF4 ....F4 HELP
+      *===============================================================*
+03===C           RTNF4     BEGSR
+|    C*
+|    C                     SETON                     99
+|    C********************
+|    C*  GET ROW,COL     *
+|    C********************
+|    C           #CSR      DIV  256       D#ROW            *ROW
+|    C                     MVR            D#COL            *COL
+|    C** 游標位置即為(D#ROW,D#COL)
+| 01-C           APPSCR    IFEQ 'SCR001'
+|   C*
+|   C*客戶代號
+| 02-C           D#ROW     IFEQ 8
+| 03-C           D#COL     IFGE 34
+|   C           D#COL     ANDLE38
+|   C                     CALL 'WDS003'
+|   C                     PARM           DS01O1  9
+|   C                     MOVELDS01O1    DSI08S    P
+|   C                     GOTO ENDF4
+| 03-C                     END
+| 02-C                     END
+|   C*
+| 04-C           D#ROW     IFEQ 8
+| 05-C           D#COL     IFGE 45
+|   C           D#COL     ANDLE49
+|   C                     CALL 'WDS003'
+|   C                     PARM           DS01O1  9
+|   C                     MOVELDS01O1    DSI08E    P
+|   C                     GOTO ENDF4
+| 05-C                     END
+| 04-C                     END
+|   C*
+| 01-C                     END
+|    C*
+03===C           ENDF4     ENDSR
+      *===============================================================*
+      *          OUTLDA....OUT LDA
+      *===============================================================*
+04===C           OUTLDA    BEGSR
+|    C*
+|    C                     OUT  *NAMVAR
+|    C*
+04===C           ENDLDA    ENDSR
+     C/COPY HBP2CVTR
+

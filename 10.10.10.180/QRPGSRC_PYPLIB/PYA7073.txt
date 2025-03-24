@@ -1,0 +1,151 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA7073                                    *
+     H*    PROGRAM NAME :薪資媒體轉存作業　　　                    *
+     H*    AUTHOR       : A1084 CHARLES                              *
+     H*    CREATE DATE  : 79/07/17                                   *
+     H*    UPDATE DATE  : 89/03/30 A1274 EVA                         *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYBTPF  IP  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYB2PF  O   E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I*
+     I/COPY PYDDSSRC,PYB2DS01
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I*
+     I                                      501 502 DBT01
+     I                                      503 505 DBT061
+     I                                      506 509 DBT062
+     I                                      510 521 DBT09
+     I                                      522 522 DBT03
+     I                                      571 5760WBT04
+     I                                      527 5280DBT05
+     I                                      529 530 DPB041
+     I                                      531 532 DPB042
+     I                                      533 533 DOPT
+     I                                      534 5350DPY07
+     I                                      536 545 DM406
+     I                                      546 5540TCNT
+     I                                      555 5661TAMT
+     I                                      567 567 DPY09
+     I*
+     I            DS
+     I                                        1   80W2105
+     I                                        1   60BT04
+     I                                        7   80BT05
+     I*
+     I            DS
+     I                                        1  12 BT07
+     I                                        1   2 BT071
+     I                                        3   8 BT072
+     I                                        9  10 BT073
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYCM     KLIST
+     C                     KFLD           DBT01
+     C           KEYEM     KLIST
+     C                     KFLD           DBT01
+     C                     KFLD           BT02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     . HEAD
+     C                     EXSR RTN020                     . DETAIL
+     CLR                   EXSR RTN030                     . END
+     C*==============================================================*
+     C*          RTN010 .. INIT PROCESS  : HEADING RECORD
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*HEAD RECORD
+|    C                     MOVEL'1'       B2101     P      區別碼　
+|    C                     MOVEL'    '    B2102A    P      企業編號
+|    C                     MOVELDBT062    B2102B    P      受理分行
+|    C                     MOVEL'CCB     'B2103     P      收件單位
+|    C                     MOVEL'251'     B2104     P      轉帳類別
+|    C                     Z-ADD*ZERO     B2105            　　　　　
+|    C           W2105     SUB  19110000  B2105            撥帳日期
+|    C                     MOVEL'1'       B2106     P      性質別　
+|    C                     MOVEL*BLANK    B2107     P      空白欄
+|    C*
+|    C                     MOVEL*BLANK    B201
+|    C                     MOVELB2HR      B201
+|    C                     WRITEB20
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN020 .. MAIN PROCESS  : DETAIL RECORDS
+     C*==============================================================*
+02===C           RTN020    BEGSR
+|    C*DETAIL RECORDS
+|    C                     MOVEL'2'       B2201     P      區別碼　
+|    C                     MOVEL'    '    B2202A    P      企業編號
+|    C                     MOVELDBT062    B2202B    P      受理分行
+|    C                     MOVEL'CCB     'B2203     P      收件單位
+|    C                     MOVEL'251'     B2204     P      轉帳類別
+|    C*
+|    C                     Z-ADD*ZERO     B2205            　　　　　
+|    C           W2105     SUB  19110000  B2205            撥帳日期
+|    C*
+|    C                     MOVELBT062     B2206A    P      受款人分行
+|    C                     MOVELBT071     B2206B    P      存款科目
+|    C                     MOVELBT072     B2206C    P      帳號
+|    C                     MOVELBT073     B2206D    P      支號
+|    C                     Z-ADDBT08      B2207            交易金額
+|    C*
+|    C                     MOVEL*BLANK    B2208
+|    C           KEYCM     CHAINCM0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELCM04      B2208     P      統一編號
+| 01-C                     END
+|    C*
+|    C                     MOVEL'99'      B2209     P      狀況代號
+|    C                     MOVEL*BLANK    B2210     P      資料區
+|    C*
+|    C                     MOVEL*BLANK    B2211
+|    C           KEYEM     CHAINEM0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELEM31      B2211     P      身份証號
+| 02-C                     END
+|    C*
+|    C                     MOVEL*BLANK    B2212            備用　　
+|    C                     MOVEL*BLANK    B2213            檢查碼　
+|    C                     MOVEL*BLANK    B2214            空白欄
+|    C*
+|    C                     MOVEL*BLANK    B201
+|    C                     MOVELB2DR      B201
+|    C                     WRITEB20
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN030 .. FINAL PROCESS : END RECORD
+     C*==============================================================*
+03===C           RTN030    BEGSR
+|    C*END RECORD
+|    C                     MOVEL'3'       B2301     P      區別碼　
+|    C                     MOVEL'    '    B2302A    P      企業編號
+|    C                     MOVELDBT062    B2302B    P      受理分行
+|    C                     MOVEL'CCB     'B2303     P      收件單位
+|    C                     MOVEL'251'     B2304     P      轉帳類別
+|    C                     Z-ADD*ZERO     B2305            　　　　　
+|    C           W2105     SUB  19110000  B2305            撥帳日期
+|    C                     Z-ADDTAMT      B2306            總金額　
+|    C                     Z-ADDTCNT      B2307            總筆數
+|    C                     MOVEL*BLANK    B2308            空白欄
+|    C                     MOVEL*BLANK    B2309            空白欄
+|    C*
+|    C                     MOVEL*BLANK    B201
+|    C                     MOVELB2ER      B201
+|    C                     WRITEB20
+|    C*
+03===C                     ENDSR
+

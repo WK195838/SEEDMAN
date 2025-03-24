@@ -1,0 +1,75 @@
+    /***************************************************************/
+    /***************************************************************/
+     PGM
+             DCL        VAR(&$EVR) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&DSE04) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DSE05) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DSE24S) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&DSE24E) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&YMDS) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YMDE) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             CHGVAR     VAR(&LIB)   VALUE('QTEMP')
+             CHGVAR     VAR(&FILE)  VALUE('SOR170F')
+
+  /*寄賣客戶產品異動表EXCEL*/
+             DLTF       FILE(QTEMP/SOR170F)
+             MONMSG     MSGID(CPF2105)
+
+             CPYF       FROMFILE(SOR170F) TOFILE(QTEMP/SOR170F) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM +
+                          FILE(QTEMP/SOR170F))
+             CLRPFM     FILE(QTEMP/SOR170F)
+
+             OVRDBF     FILE(SOR170F) TOFILE(QTEMP/SOR170F) +
+                          SHARE(*YES)
+
+             CPYF       FROMFILE(SOR170W) TOFILE(QTEMP/SOR170W) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/SOR170W))
+
+             OVRDBF     FILE(SOR170W) TOFILE(QTEMP/SOR170W) SHARE(*YES)
+
+             CHGVAR     VAR(&DSE04) VALUE(%SST(*LDA 601 5))
+             CHGVAR     VAR(&DSE05) VALUE(%SST(*LDA 610 4))
+             CHGVAR     VAR(&DSE24S) VALUE(%SST(*LDA 660 6))
+             CHGVAR     VAR(&DSE24E) VALUE(%SST(*LDA 670 6))
+             CHGVAR     VAR(&YMDS) VALUE(%SST(*LDA 680 8))
+             CHGVAR     VAR(&YMDE) VALUE(%SST(*LDA 690 8))
+
+             OVRDBF     FILE(SOSEPF) SHARE(*YES)
+             OVRDBF     FILE(SOSNPF) SHARE(*YES)
+             OPNQRYF    FILE((SOSEPF)) QRYSLT(' SE03 *EQ "D3" & +
+                          MSE24 *EQ %RANGE("' *CAT &YMDS *CAT +
+                          '" "' *CAT &YMDE *CAT '") &  SE09 +
+                          *EQ "V" & SE36 *NE "T" & SE04 *EQ "' +
+                          *CAT &DSE04 *CAT '" & SE05 *EQ "' *CAT +
+                          &DSE05 *CAT '"') KEYFLD((SE04) (SE05) +
+                          (SE06)) MAPFLD((MSE24 SE24 *CHAR 8))
+
+             CALL       PGM(SOR1702)
+
+             OPNQRYF    FILE((SOSNPF)) QRYSLT(' MSN02 *EQ "R2" & +
+                          MSN06 *EQ %RANGE("' *CAT &YMDS *CAT '" +
+                          "' *CAT &YMDE *CAT '") & SN10 *NE " " +
+                          & SN03 *EQ "' *CAT &DSE04 *CAT +
+                          '" & SN11 *EQ "' *CAT &DSE05 *CAT '"') +
+                          KEYFLD((SN03) (SN11) (SN06)) +
+                          MAPFLD((MSN06 SN06 *CHAR 8) (MSN02 '%SST(+
+                          SN02 3 2)' *CHAR 2))
+
+             CALL       PGM(SOR1703)
+
+             CALL       PGM(SOR170C2)
+             CLOF       OPNID(SOSEPF)
+             CLOF       OPNID(SOSNPF)
+             DLTOVR     FILE(*ALL)
+
+             /*將SOR170F轉換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

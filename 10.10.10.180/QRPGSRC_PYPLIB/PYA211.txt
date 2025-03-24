@@ -1,0 +1,291 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA211D                                    *
+     H*    PROGRAM NAME :刷卡資料異常批次處理                      *
+     H*    AUTHOR       : A1226 PETER                                *
+     H*    CREATE DATE  : 97/01/20                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYT6PF  IF  E           K        DISK
+     FPYA211D CF  E                    WORKSTN
+     I*
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DT602
+     I                                      503 5090DT601F
+     I                                      510 5160DT601T
+     I                                      517 5230T601D
+     I                                      524 5310WT601F
+     I                                      532 5390WT601T
+     I                                      540 5470WT601D
+     I*
+     I           IDS
+     I                                        1   80WYMD
+     I                                        1   60WYM
+     I                                        7   80WDD
+     I                                        1   80KYMD
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*          *LIKE     DEFN $A8YMD    FDATE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*          KEYT6     KLIST                           *PYEMPF
+     C*                    KFLD           DT602
+     C*                    KFLD           DT601
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C                     EXSR R0100                      *INI. RTN.
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C*
+    C           *HIVAL    SETGTT60
+    C                     READPT60                      46
+    C*
+  02-C           *IN46     IFEQ '0'
+    C                     CALL 'P31'
+    C                     PARM T601      P3101I  80
+    C                     PARM '2'       P3102I  1
+    C                     PARM '1'       P3103I  1
+    C                     PARM $PFMT     P3104I  1
+    C                     PARM $PTYPE    P3105I  1
+    C           T601D     PARM           P3101O  80
+  02*C                     ELSE
+    C                     Z-ADD0         T601D
+  02-C                     END
+    C*
+    C                     EXSR R1000                      *MAIN
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL ROUTINE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   LDA
+|    C                     IN   PTDA01
+|    C*
+|    C                     Z-ADD$A8YMD    WYMD
+|    C*
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*公司別
+|    C                     MOVEL$COR      DT602
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*刷卡日期
+|    C                     Z-ADD0         DT601F
+|    C                     Z-ADD0         DT601T
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 .... MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     97
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00
+|    C*
+| 02-C           *IN13     IFEQ '1'
+|   C           *IN99     ANDEQ'0'
+|   C                     EXSR R1C00                      *PROCESS
+| 02-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... DATA CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*公司別
+| 01-C           DT602     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DT602     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 02-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 03-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*刷卡日期　
+|    C*
+|    C*刷卡日期起值
+| 04-C           DT601F    IFEQ 0
+|   C                     Z-ADD1         WDD
+|   C                     Z-ADDKYMD      WT601F
+|   C*
+|   C                     CALL 'P31'
+|   C                     PARM WT601F    P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM DFMT      P3104I  1
+|   C                     PARM DTYPE     P3105I  1
+|   C           DT601F    PARM           P3101O  80
+|   C*
+| 04*C                     ELSE
+|   C*驗證日期
+|   C                     CALL 'P30'
+|   C                     PARM DT601F    P3001I  80
+|   C                     PARM DFMT      P3002I  1
+|   C                     PARM DTYPE     P3003I  1
+|   C                     PARM           P3011O  1
+| 05-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 05-C                     END
+|   C   99                GOTO E1B00
+|   C*
+|   C                     CALL 'P31'
+|   C                     PARM DT601F    P3101I  80
+|   C                     PARM DFMT      P3102I  1
+|   C                     PARM DTYPE     P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           WT601F    PARM           P3101O  80
+| 04-C                     END
+|    C*
+|    C*刷卡處理日期不可大於系統日期
+| 06-C           WT601F    IFGT $A8YMD
+|   C                     MOVEL'UPT0120' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*刷卡日期迄值
+| 07-C           DT601T    IFEQ 0
+|   C                     Z-ADD$A8YMD    WT601T
+|   C*
+|   C                     CALL 'P31'
+|   C                     PARM WT601T    P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM DFMT      P3104I  1
+|   C                     PARM DTYPE     P3105I  1
+|   C           DT601T    PARM           P3101O  80
+|   C*
+| 07*C                     ELSE
+|   C*驗證日期
+|   C                     CALL 'P30'
+|   C                     PARM DT601T    P3001I  80
+|   C                     PARM DFMT      P3002I  1
+|   C                     PARM DTYPE     P3003I  1
+|   C                     PARM           P3011O  1
+| 08-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 08-C                     END
+|   C   99                GOTO E1B00
+|   C*
+|   C                     CALL 'P31'
+|   C                     PARM DT601T    P3101I  80
+|   C                     PARM DFMT      P3102I  1
+|   C                     PARM DTYPE     P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           WT601T    PARM           P3101O  80
+|   C*
+| 07-C                     END
+|    C*
+|    C*刷卡處理日期起值不可大於迄值
+| 09-C           WT601F    IFGT WT601T
+|   C                     MOVEL'UPT1011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     616299
+| 09-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*
+|    C*刷卡處理日期不可大於系統日期
+| 10-C           WT601T    IFGT $A8YMD
+|   C                     MOVEL'UPT0120' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 10-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*CHECK執行之日期資料不可是巳作異常確認之資料
+|    C           DT601F    IFLE T601D
+|    C           WT601F    CHAINT60                  40
+|    C           *IN40     IFEQ '0'
+|    C           T696      ANDNE0
+|    C                     MOVEL'UMI0690' ERRID
+|    C                     MOVEL'CEMF'    ERRF
+|    C                     SETON                     6199
+|    C                     END
+|    C   99                GOTO E1B00
+|    C                     END
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 .... PROCESS
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+|    C                     SETON                     28
+|    C                     WRITEDSPC1
+|    C*
+|    C                     OUT  LDA
+|    C                     CALL 'PYA211C'
+|    C*
+|    C                     MOVEL'UPT2142' ERRID
+|    C                     MOVEL'PTMF'    ERRF
+|    C                     SETON                     99
+|    C                     SETOF                     28
+|    C*
+04===C                     ENDSR
+

@@ -1,0 +1,294 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : GLA1401                                    *
+     H*    PROGRAM NAME : 取消核准　　　　                         *
+     H*    AUTHOR       : A1152  ANGY                                *
+     H*    CREATE DATE  : 1992.11.09                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     F****************************************************************
+     FGLAHLF01UF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FS#SUPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FGLA1501DCF  E                    WORKSTN
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      152 161 $USERN
+     I                                      575 576 WAH01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN AH01      AH01W
+     C           *LIKE     DEFN AH02      AH02W
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAH     KLIST                           *SETGT AH0
+     C                     KFLD           AH01W
+     C                     KFLD           AH02W
+     C           KEYAH1    KLIST                           *SETGT AH0
+     C                     KFLD           DAH01
+     C                     KFLD           DAH02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C           *IN12     ANDEQ'0'
+    C           *IN13     ANDEQ'0'
+    C                     EXSR R1000                      *SCR PROCESS
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+     C                     IN   PTDA01
+     C*
+|    C* INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*
+     C           WAH01     CHAINAK0                  40
+|    C*--------------------------------------------------------------*
+|    C                     EXSR R1A00                      .SFL INIT
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C*                    SETOF                     51
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C           *LOVAL    SETLLAH0
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 03-C           *IN13     IFEQ '1'                        *PREVIOUS
+|   C                     EXSR R1C00
+|   C           *LOVAL    SETLLAH0
+|   C                     GOTO E1000
+| 03-C                     END
+|    C*
+|    C*
+|    C                     EXSR R1D00                      *SUB PRO
+|    C*
+02===C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C                     Z-ADD1         DRRN
+|    C                     Z-ADD0         RRN
+|    C*
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     5053  *SFLDSP,END
+|    C*
+|    C                     EXSR R1A20                      *SFL HEAD
+|    C* <<SFL INITIAITAL DATA ADD>>
+     C*** UPDATE BY GRACE AT 94/06/20 ***
+|    C***                  MOVEL'6'       DOPT
+     C*** END AT 94/06/20 ***
+|    C*
+|    C                     EXSR R1A10                      *ADD SFL DTA
+|    C*
+|    C*
+| 01-C           RRN       IFGT 0
+|   C                     SETON                     50    *SFLDSP
+| 01*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+04===C           R1A10     BEGSR
+|    C*
+|    C*
+|    C*          DAH01     SETLLAH0
+|    C                     READ AH0                      46
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C                     MOVELAH01      AH01W
+|   C                     MOVELAH02      AH02W
+|   C                     EXSR R1A11                      *WRITE SFL
+|   C           KEYAH     SETGTAH0
+|   C                     READ AH0                      46
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*=============================================================*
+     C*          R1A11 .... WRITE SUBFILE DATA
+     C*=============================================================*
+05===C           R1A11     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << SUBFILE DATA VALUE SET >>
+|    C           AH26      CHAINS#SUPF               40
+|    C  N40                MOVELSU02      DSU02
+|    C                     MOVELAH02      DAH02
+     C*
+     C           AH25      IFEQ 0
+     C                     Z-ADD0         DAH25
+     C                     ELSE
+     C                     CALL 'P31'
+     C                     PARM AH25      P3101I  80
+     C                     PARM '2'       P3102I
+     C                     PARM '1'       P3103I
+     C                     PARM AK11      P3104I
+     C                     PARM AK09      P3105I
+     C           DAH25     PARM           P3111O  80
+     C                     END
+     C*
+     C           AH10      IFEQ 0
+     C                     Z-ADD0         DAH10
+     C                     ELSE
+     C                     CALL 'P31'
+     C                     PARM AH10      P3101I  80
+     C                     PARM '2'       P3102I
+     C                     PARM '1'       P3103I
+     C                     PARM AK11      P3104I
+     C                     PARM AK09      P3105I
+     C           DAH10     PARM           P3111O  80
+     C                     END
+     C*
+     C           AH21      IFEQ 0
+     C                     Z-ADD0         DAH21
+     C                     ELSE
+     C                     CALL 'P31'
+     C                     PARM AH21      P3101I  80
+     C                     PARM '2'       P3102I
+     C                     PARM '1'       P3103I
+     C                     PARM AK11      P3104I
+     C                     PARM AK09      P3105I
+     C           DAH21     PARM           P3111O  80
+     C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  1         RRN
+|    C                     SETON                     3154
+|    C                     WRITESFLSR
+|    C*
+05===C                     ENDSR
+     C*=============================================================*
+     C*          R1A20 .... SFL HEADING (SFL CONTROL DATA PREPARE)
+     C*=============================================================*
+06===C           R1A20     BEGSR
+|    C*
+|    C                     MOVELWAH01     DAH01
+|    C                     MOVEL*BLANK    D#B02
+|    C           DAH01     CHAIN#B0                  40
+|    C  N40                MOVEL#B02      D#B02
+06===C                     ENDSR
+     C*=============================================================*
+     C*          R1C00 ....UPADTE GLAHLF01 (*ALL)
+     C*=============================================================*
+07===C           R1C00     BEGSR
+|    C*
+|    C           DAH01     SETLLAH0
+|    C                     READ AH0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C*
+|   C                     MOVEL*BLANK    AH19
+|   C                     TIME           AH97
+|   C                     Z-ADD$A8YMD    AH98
+|   C                     MOVEL$USER     AH99
+|   C                     UPDATAH0
+|   C                     READ AH0                      44
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+     C*=============================================================*
+     C*          R1D00 ....UPADTE GLAHLF01 & CALL SUB PRO
+     C*=============================================================*
+08===C           R1D00     BEGSR
+|    C*
+|    C                     READCSFLSR                  4242
+|    C*
+| 01-C           *IN42     DOWEQ'0'
+|   C                     SETON                     54
+| 02-C           DOPT      IFEQ '6'
+|   C                     MOVEL*BLANK    DOPT
+|   C                     SETOF                     31
+|   C                     UPDATSFLSR
+|   C           KEYAH1    SETLLAH0
+|   C           KEYAH1    READEAH0                      44
+| 03-C           *IN44     DOWEQ'0'
+|   C                     MOVEL*BLANK    AH19
+|   C                     TIME           AH97
+|   C                     Z-ADD$A8YMD    AH98
+|   C                     MOVEL$USER     AH99
+|   C                     UPDATAH0
+|   C           KEYAH1    READEAH0                      44
+| 03-C                     END
+| 02-C                     END
+|   C*
+| 04-C           DOPT      IFEQ '5'
+|   C                     CALL 'GLI1F0'
+|   C                     PARM DAH01     P1F0I1  2
+|   C                     PARM DAH02     P1F0I2  9
+|   C           @RTNC     PARM           @RTNC   2
+     C*** UPDATE BY GRACE AT 94/06/20 ***
+|    C***                  MOVEL'6'       DOPT
+     C*** END AT 94/06/20 ***
+|   C                     SETON                     31
+|   C                     UPDATSFLSR
+| 05-C           @RTNC     IFEQ '03'
+|   C                     MOVEL'1'       *IN03
+|   C           *LOVAL    SETLLAH0
+|   C                     GOTO E1D00
+| 05-C                     END
+| 06-C           @RTNC     IFEQ '12'
+|   C           *LOVAL    SETLLAH0
+|   C                     GOTO E1D00
+| 06-C                     END
+| 04-C                     END
+|   C*
+|   C*
+|   C                     READCSFLSR                    42
+| 01-C                     END
+|    C                     SETOF                     54
+|    C*
+08===C           E1D00     ENDSR
+     C*=============================================================*
+

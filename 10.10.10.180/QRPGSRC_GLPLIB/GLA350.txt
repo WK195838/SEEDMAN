@@ -1,0 +1,305 @@
+     A****************************************************************
+     A*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     A*                                                              *
+     A*    PROGRAM-ID   : GLA350                                     *
+     A*    PROGRAM NAME :報表格式設定                              *
+     A*    AUTHOR       : A1149  MAY                                 *
+     A*    CREATE DATE  : 1992.10.29                                 *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       : 泛太總帳                                 *
+     A****************************************************************
+     FGLARPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FGLA350D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I*DEFINE COPY KEY
+     I            DS
+     I                                        1   7 KARC
+     I                                        1   2 DAR01C
+     I                                        3   4 DAR02C
+     I                                        5   7 DAR03C
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAR     KLIST                           *MAIN FILE
+     C                     KFLD           DAR01
+     C                     KFLD           DAR02
+     C                     KFLD           DAR03
+     C           KEYARC    KLIST                           *COPY REC.
+     C                     KFLD           DAR01C
+     C                     KFLD           DAR02C
+     C                     KFLD           DAR03C
+     C           KEY#Y     KLIST                           *MAIN FILE
+     C                     KFLD           D#Y01  10
+     C                     KFLD           D#Y02  10
+     C           KEY#B     KLIST                           *MAIN FILE
+     C                     KFLD           DAR01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      ANDEQ'SC01'
+     C                     EXSR R1000
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C*
+     C                     IN   PTDA01
+     C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DAR01
+|    C                     MOVEL*BLANK    DAR02
+|    C                     MOVEL*BLANK    DAR03
+|    C                     MOVEL*BLANK    DAR01C
+|    C                     MOVEL*BLANK    DAR02C
+|    C                     MOVEL*BLANK    DAR03C
+|    C*--------------------------------------------------------------*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+     C                     Z-ADD0         #LIN
+     C                     Z-ADD0         #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'                        *PROMPT
+|   C                     EXSR R1E00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 02-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'GLI350'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C* CALL SUB-PROGRAM
+|    C                     CALL 'GLI350'
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C           DAR01     PARM DAR01     P350I1  2
+|    C           DAR02     PARM DAR02     P350I2  2
+|    C           DAR03     PARM DAR03     P350I3  3
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     PARM           @RTNC   2
+|    C* RETURN CODE CHECK
+| 02-C           @RTNC     IFEQ '03'                       *PF3
+|   C                     SETON                     03
+| 02-C                     END
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+| 02-C           DAR01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02*C                     ELSE
+|   C           KEY#B     CHAIN#B0                  40
+| 03-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 03-C                     END
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*<< CHECK DAR02 >>
+|    C                     MOVEL*BLANKS   D#Y01
+|    C                     MOVEL*BLANKS   D#Y02
+| 04-C           DAR02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 04*C                     ELSE
+|   C*
+|   C                     MOVEL'AR02'    D#Y01
+|   C                     MOVELDAR02     D#Y02
+|   C           KEY#Y     CHAIN#Y0                  40
+| 05-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 05-C                     END
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*<< CHECK DAR03  >>
+| 06-C           DAR03     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*<< KEYAR >>
+|    C           KEYAR     CHAINAR0                  40
+|    C*
+| 07-C           DOPT      IFEQ 1                          *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606162
+|   C                     SETON                     99
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 08-C           DOPT      IFNE 1                          *UPD,DEL,INQ
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606162
+|   C                     SETON                     99
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*<< KEYARC >>
+|   C                     MOVELDAR02     DAR02C
+| 09-C           DOPT      IFEQ 1                          *ADD
+| 10-C           DAR01C    IFNE *BLANKS
+|   C           DAR03C    ORNE *BLANKS
+|   C           KEYARC    CHAINAR0                  40
+|   C*
+| 11-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT0060' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 11-C                     END
+| 10-C                     END
+| 09-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*
+04===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....POST-ENTER
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+|    C                     MOVEL*BLANKS   D#Y01
+|    C                     MOVEL*BLANKS   D#Y02
+|    C                     MOVEL'AR02A'   D#Y01
+|    C                     MOVELDAR02     D#Y02
+|    C           KEY#Y     CHAIN#Y0                  40
+|    C                     CALL #Y03
+|    C           DAR01     PARM DAR01     P350I1  2
+|    C           DAR02     PARM DAR02     P350I2  2
+|    C           DAR03     PARM DAR03     P350I3  3
+|    C           DOPT      PARM DOPT      P350I4  10
+|    C           DAR01C    PARM DAR01C    P350I5  2
+|    C           DAR02C    PARM           P350I6  2
+|    C           DAR03C    PARM DAR03C    P350I7  3
+|    C                     PARM           @RTNC   2
+|    C* RETURN CODE CHECK
+| 01-C           @RTNC     IFEQ '03'                       *PF3
+|   C                     SETON                     03
+| 01-C                     END
+|    C*
+05===C           E1C00     ENDSR
+     C*
+     C*==============================================================*
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+13===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*報表代碼
+| 01-C           #LIN      IFEQ 5
+|   C           #COL      ANDGE16
+|   C           #COL      ANDLE17
+|   C                     CALL 'PTI121'
+|   C                     PARM 'AR02'    P121I1 10
+|   C           DAR02     PARM DAR02     P121O1 10
+| 01-C                     END
+|    C*
+13===C                     ENDSR
+

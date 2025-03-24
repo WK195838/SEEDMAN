@@ -1,0 +1,141 @@
+     FGAR103D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN10     PARM *IN10     IN10    1
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C   10                EXSR R0200                      *INIT MSG.
+     C  N10                EXSR R0100                      *INIT VALUE
+     C*
+     C                     MOVEL*BLANK    @PRT    1        *PRINT
+     C           *IN03     DOUEQ'1'
+     C           @PRT      OREQ 'Y'
+     C                     EXSR R1000                      *SCRN
+     C                     END
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+     C*==============================================================*
+     C*          R0100 ....SCREEN INIT VALUE SET
+     C*==============================================================*
+     CSR         R0100     BEGSR
+     C*
+     C                     SETON                     1027
+     C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ....INITIAL VALUE
+     C*==============================================================*
+     CSR         R0200     BEGSR
+     C*
+     C                     SETON                     2799  報表格式MESSAGE
+     C*
+     C           $PENV     IFEQ '0'                        INQUIRY
+     C                     MOVEL'UPT2142' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C*
+     C           $PENV     IFEQ '1'                        ON-LINE
+     C                     MOVEL'UPT2140' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C*
+     C           $PENV     IFEQ '2'                        BATCH
+     C                     MOVEL'UPT2110' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C*
+     C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+     C           R1000     BEGSR
+     C*
+     C                     EXFMTDSPD1
+     C                     MOVEA*ALL'0'   *IN,60
+     C                     Z-ADD*ZERO     #LIN
+     C                     Z-ADD*ZERO     #COL
+     C*
+     C           *IN03     IFEQ '1'
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN04     IFEQ '1'
+     C                     EXSR R1E00                      .PROMPT
+     C                     GOTO E1000
+     C                     END
+     C*
+     C*
+     C           *IN14     IFEQ '1'
+     C           *IN99     ANDEQ*ZERO
+     C                     SETOF                     27
+     C                     SETON                     28    .執行中
+     C                     WRITEDSPD1
+     C                     SETOF                     28
+     C*
+     C                     OUT  LDA
+     C                     MOVEL'Y'       @PRT
+     C                     END
+     C*
+     C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+     C           R1E00     BEGSR
+     C*
+     C           #CSR      DIV  256       #LIN             *LINE
+     C                     MVR            #COL             *COLUMN
+     C*印表機
+     C           #LIN      IFEQ 17
+     C           #COL      ANDGE39
+     C           #COL      ANDLE40
+     C                     CALL 'P64I'
+     C           $PRTCD    PARM $PRTCD    P64II1  2
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+

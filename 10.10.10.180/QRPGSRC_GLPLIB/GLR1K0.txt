@@ -1,0 +1,279 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME : GLR1K0                                     *
+     H*    PROCSEDURE   : GLR1K0                                     *
+     H*    AUTHOR       : A1150                                      *
+     H*    CREATE DATE  : 81/11/19                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :泛太總帳                                  *
+     H*    REMARK       :單張傳票列印－副程式                      *
+     H****************************************************************
+     FGLAHLF01IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FS#SUPF  IF  E           K        DISK
+     FGLR1K0P O   E             39     PRINTER
+     E*----------------------------------------------------------------
+     E                    ARR1        6 20
+     IAH0         01
+     I*
+     I           UDS
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I            DS
+     I                                        1 146 PARM
+     I                                        1  20 PARM1
+     I                                       21  21 PLUS1
+     I                                       22  41 PARM2
+     I                                       42  42 PLUS2
+     I                                       43  62 PARM3
+     I                                       63  63 PLUS3
+     I                                       64  83 PARM4
+     I                                       84  84 PLUS4
+     I                                       85 104 PARM5
+     I                                      105 105 PLUS5
+     I                                      106 125 PARM6
+     C*==============================================================*
+     C*                  *ENTRY LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM           P1K0I1  2        *公司別
+     C                     PARM           P1K0I2  9        *傳票號碼
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN AH03      WAH03
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY#B     KLIST
+     C                     KFLD           P1K0I1
+     C           KEYAF     KLIST
+     C                     KFLD           P1K0I1
+     C                     KFLD           AH04
+     C           KEYAH     KLIST
+     C                     KFLD           P1K0I1
+     C                     KFLD           P1K0I2
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C           *IN10     IFEQ '0'
+     C                     EXSR RTN010                     計算總頁數
+     C                     SETON                     10
+     C                     END
+     C*
+     C                     EXSR RTN100
+     C*
+     C                     WRITEPE2
+     C                     MOVEL*BLANKS   SU02
+     C           AH26      CHAINS#SUPF               40
+     C                     WRITEPE3
+     C*
+     C*列表選擇--
+     C                     CALL 'P64'
+     C                     PARM 'GLR1K0P' P640I1 10
+     C                     PARM '1'       P640I2  1
+     C                     PARM $CPY      P640I3  30
+     C                     PARM $PRTCD    P640I4  2
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INIT
+     C*==============================================================*
+     C           RTN010    BEGSR
+     C*
+     C           KEY#B     CHAIN#B0                  40
+     C           *IN40     IFEQ '1'
+     C                     MOVE *BLANKS   #B16
+     C                     END
+     C*計算總頁數----
+     C           KEYAH     SETGTAH0
+     C                     READPAH0                      47
+     C           AH03      ADD  7         WAH03
+     C           WAH03     DIV  8         TOTPAG
+     C                     Z-ADD1         PAG
+     C*
+     C           AH20      IFEQ 'V'
+     C                     MOVE '作廢'  DDLT
+     C                     ELSE
+     C                     MOVE *BLANKS   DDLT
+     C                     END
+     C*
+     C           KEY#B     CHAINAK0                  40
+     C*製票日期格式轉換F->S
+     C                     CALL 'P31'
+     C                     PARM AH25      P310I1  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM AK11      P3104I  1
+     C                     PARM AK09      P3105I  1
+     C           PAH25     PARM           P3101O  80
+     C*
+     C*表頭日期格式轉換F->中國年／月／日
+     C                     CALL 'P31'
+     C                     PARM AH10      P310I1  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM '2'       P3104I  1
+     C                     PARM '2'       P3105I  1
+     C           PAH10     PARM           P3101O  80
+     C*
+     C                     SETOF                     2122
+     C                     MOVELAH01      WAH01   1
+     C*+ 96/04/04 EASON 修改為 KSR
+     C           WAH01     IFEQ 'K'
+     C                     SETON                     21
+     C                     ELSE
+     C           WAH01     IFEQ 'S'
+     C                     SETON                     22
+     C                     ELSE
+     C           WAH01     IFEQ 'R'
+     C                     SETON                     23
+     C                     END
+     C                     END
+     C                     END
+      *
+     C                     WRITEPH1
+     C                     WRITEPH2
+     C*
+     C                     Z-ADD0         WNUM    10
+     C                     Z-ADD0         PAH12T
+     C                     Z-ADD0         PAH13T
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*                    RTN100
+     C*==============================================================*
+     C           RTN100    BEGSR
+     C*GET 資料
+     C           KEYAH     SETLLAH0
+     C           KEYAH     READEAH0                      44
+     C           *IN44     DOWEQ'0'
+     C*
+     C*已列印滿一頁
+     C           WNUM      IFEQ 8
+     C                     EXSR RTN800
+     C                     END
+     C*
+     C           KEYAF     CHAINAF0                  40
+     C           *IN40     IFEQ '1'
+     C                     MOVE *BLANKS   PAF03D
+     C                     MOVE *BLANKS   PAF03C
+     C                     ELSE
+     C           AH12      IFNE 0
+     C                     MOVELAF03      PAF03D
+     C                     SETON                     30
+     C                     ELSE
+     C                     MOVE AF03      PAF03C
+     C                     SETOF                     30
+     C                     END
+     C                     END
+     C*
+     C*相關欄位壓縮--------------------------------------------------
+     C                     Z-ADD0         I       10
+     C                     MOVEL*BLANKS   PARM
+     C                     MOVEL*BLANKS   ARR1
+     C           AH05      IFNE *BLANKS
+     C                     ADD  1         I
+     C                     MOVELAH05      ARR1,I
+     C                     END
+     C           AH06      IFNE *BLANKS
+     C                     ADD  1         I
+     C                     MOVELAH06      ARR1,I
+     C                     END
+     C           AH07      IFNE *BLANKS
+     C                     ADD  1         I
+     C                     MOVELAH07      ARR1,I
+     C                     END
+     C           AH08      IFNE *BLANKS
+     C                     ADD  1         I
+     C                     MOVELAH08      ARR1,I
+     C                     END
+     C           AH09      IFNE 0
+     C                     Z-ADDAH09      WORK    40
+     C                     ADD  1         I
+     C                     MOVELWORK      ARR1,I
+     C                     END
+     C           AH15      IFNE *BLANKS
+     C                     ADD  1         I
+     C                     MOVELAH15      ARR1,I
+     C                     END
+      *
+     C           ARR1,1    IFNE *BLANKS
+     C                     MOVELARR1,1    PARM1
+     C                     END
+     C           ARR1,2    IFNE *BLANKS
+     C                     MOVELARR1,2    PARM2
+     C                     MOVEL'+'       PLUS1
+     C                     END
+     C           ARR1,3    IFNE *BLANKS
+     C                     MOVELARR1,3    PARM3
+     C                     MOVEL'+'       PLUS2
+     C                     END
+     C           ARR1,4    IFNE *BLANKS
+     C                     MOVELARR1,4    PARM4
+     C                     MOVEL'+'       PLUS3
+     C                     END
+     C           ARR1,5    IFNE *BLANKS
+     C                     MOVELARR1,5    PARM5
+     C                     MOVEL'+'       PLUS4
+     C                     END
+     C           ARR1,6    IFNE *BLANKS
+     C                     MOVELARR1,6    PARM6
+     C                     MOVEL'+'       PLUS5
+     C                     END
+      *
+     C                     MOVEL*BLANKS   R0101O
+     C                     CALL 'R01'
+     C                     PARM PARM      R0101I146
+     C                     PARM           R0101O146
+     C                     MOVELR0101O    PTXT
+     C*相關欄位壓縮--------------------------------------------------
+     C*
+     C           KEYAF     CHAINAF0                  40
+     C           *IN40     IFEQ '1'
+     C                     MOVE *BLANKS   PAF03D
+     C                     MOVE *BLANKS   PAF03C
+     C                     ELSE
+     C           AH12      IFNE 0
+     C                     MOVELAF03      PAF03D
+     C                     SETON                     30
+     C                     ELSE
+     C                     MOVE AF03      PAF03C
+     C                     SETOF                     30
+     C                     END
+     C                     END
+     C*
+     C                     MOVEL*BLANKS   DAH04
+     C           AH12      IFNE 0
+     C                     MOVELAH04      DAH04
+     C                     ELSE
+     C                     MOVE AH04      DAH04
+     C                     END
+     C                     ADD  1         WNUM
+     C                     WRITEPD1
+     C                     ADD  AH12      PAH12T
+     C                     ADD  AH13      PAH13T
+     C*
+     C           KEYAH     READEAH0                      44
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*                    RTN800
+     C*==============================================================*
+     C           RTN800    BEGSR
+     C*
+     C                     WRITEPE1
+     C                     MOVEL*BLANKS   SU02
+     C           AH26      CHAINS#SUPF               40
+     C                     WRITEPE3
+     C                     ADD  1         PAG
+     C                     WRITEPH1
+     C                     WRITEPH2
+     C                     Z-ADD0         WNUM
+     C*
+     C                     ENDSR
+

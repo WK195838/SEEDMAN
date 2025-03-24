@@ -1,0 +1,222 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR4022                                     *
+     H*   AUTHER       : A1137 JOHNSON LO.                           *
+     H*   CREATE DATE  : 81/03/12                                    *
+     H*   UPDATE DATE  : 90/05/14 A1274 EVA                          *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR4021C                                    *
+     H*   PURPOSE      :                                             *
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYPBJF01IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYSSPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR402P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    ARA     5   5 14
+     E                    TXT     1   1 14
+     E                    AMT        36  7 0
+     E                    ARR        36  2
+     E*---------------------------------------------------------------
+      *
+     IPBJF01
+     I                                              EM041 L2
+     I                                              EM042 L2
+     I                                              EM043 L2
+     I                                              EM044 L2
+     I                                              PB02  L2
+     I                                              PB04  L1
+     IPYDA04      DS
+     I                                        1  44 FLD05
+     IPYDA05      DS
+     I                                        1  44 FLD06
+     IPYDA06      DS
+     I                                        1  44 FLD07
+     I*
+     ILDA        UDS
+     I                                      187 1920DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DPB01
+     I                                      503 5050DPB051
+     I                                      517 518 DPB041
+     I                                      519 520 DPB042
+     I                                      603 609 DEM041
+     I                                      610 616 DEM042
+     I                                      531 535 DPB021
+     I                                      536 540 DPB022
+     I                                      547 5500WPB051
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN SS18      WSS18
+     C           *NAMVAR   DEFN           PYDA04
+     C           *NAMVAR   DEFN           PYDA05
+     C           *NAMVAR   DEFN           PYDA06
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYSS     KLIST
+     C                     KFLD           CM13
+     C                     KFLD           WSS18
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+  01-C           *IN10     IFEQ '0'
+    C                     EXSR RTN010                     WRITEPH1
+  01*C                     ELSE
+  02-C           *INL2     IFEQ '1'
+    C                     EXSR RTN010
+  02-C                     END
+  01-C                     END
+     C*
+     C                     EXSR RTN100                     *DETAIL
+     C*
+     CL1 10                EXSR RTNL1
+     CL2 10                EXSR RTNL2
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL ROUTINE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C*公司
+|    C           DPB01     CHAINCM0                  40    *SYCMPF
+|    C*部門
+|    C           KEYDP     CHAINDP0                  40    *PYDPPF
+|    C   40                MOVE *BLANK    DP02
+|    C*
+|    C*發放日期以民國年表示
+|    C**                   CALL 'P31'
+|    C**                   PARM WPB051    P3101I  80
+|    C**                   PARM '2'       P3102I  1
+|    C**                   PARM '1'       P3103I  1
+|    C**                   PARM '2'       P3104I  1
+|    C**                   PARM '2'       P3105I  1
+|    C**         PB051     PARM           P3111O  80
+|    C*
+|    C                     WRITEPH1
+|    C*應付
+|    C                     MOVEL*BLANK    ARR
+|    C                     Z-ADD0         AMT
+|     *應扣
+|    C                     MOVEL*BLANK    ARR3
+|    C                     Z-ADD0         AMT3
+|    C*
+|    C                     Z-ADD1         I       20
+|    C*
+|    C                     SETON                     10
+|    C                     MOVEL'Y'       $DATA
+|     *
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... GET DATA & WRITE RECORD
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*應付
+|    C                     MOVELPB04      ARR,I
+|    C                     ADD  PB06      AMT,I
+|     *應扣
+|    C                     ADD  PB08      AMT3
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTNL1 ... L1 ON
+     C*==============================================================*
+03===C           RTNL1     BEGSR
+|     *
+|    C                     ADD  1         I
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTNL2 ... WRITE PRINT RECORD
+     C*==============================================================*
+04===C           RTNL2     BEGSR
+|     *應扣
+|    C                     Z-ADDAMT3      PSUB
+| 01-C           AMT3      IFNE 0
+|   C                     MOVELTXT,1     ARR3
+| 01-C                     END
+|     *
+|    C                     Z-ADD1         I
+| 02-C           ARR,I     DOWNE*BLANK
+|   C           I         ANDLE16
+|   C           I         ADD  16        J       20
+|    *
+|   C                     MOVELARR,I     WSS18
+|   C           KEYSS     CHAINSS0                  40
+| 03-C**         *IN40     IFEQ '0'
+|   C**                   MOVELSS02      ARR1
+|   C                     MOVEL*BLANK    ARR1
+  01-C           WSS18     IFEQ '01'
+    C                     MOVEAARA,1     ARR1
+  01-C                     END
+  01-C           WSS18     IFEQ '02'
+    C                     MOVEAARA,2     ARR1
+  01-C                     END
+  01-C           WSS18     IFEQ '03'
+    C                     MOVEAARA,3     ARR1
+  01-C                     END
+  01-C           WSS18     IFEQ '04'
+    C                     MOVEAARA,4     ARR1
+  01-C                     END
+| 03-C**                   END
+|   C                     MOVELARR,J     WSS18
+|   C           KEYSS     CHAINSS0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C                     MOVELSS02      ARR2
+| 04-C                     END
+|    *
+|   C                     Z-ADDAMT,I     AMT1
+|   C                     Z-ADDAMT,J     AMT2
+|   C                     WRITEPD1
+|   C                     ADD  AMT1      PADD
+|   C                     ADD  AMT2      PADD
+|   C                     MOVEL*BLANK    ARR1
+|   C                     Z-ADD0         AMT1
+|   C                     MOVEL*BLANK    ARR2
+|   C                     Z-ADD0         AMT2
+|   C                     MOVEL*BLANK    ARR3
+|   C                     Z-ADD0         AMT3
+|   C                     ADD  1         I
+| 02-C                     END
+|     *
+     C                     Z-ADDPB06F     PELS
+     C           PADD      SUB  PSUB      QQ      70
+     C           QQ        ADD  PELS      PTOT
+|    C                     WRITEPE1
+|    C                     Z-ADD0         PADD
+|    C                     Z-ADD0         PSUB
+|    C                     Z-ADD0         PELS
+|    C                     Z-ADD0         PTOT
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+05===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+**
+年終獎金　　夏季獎金　　紅利　　　　其他
+**
+獎金稅額
+

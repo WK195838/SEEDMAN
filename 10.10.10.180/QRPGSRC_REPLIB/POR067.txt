@@ -1,0 +1,176 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H* PROGRAM NAME : POR067                                        *
+     H* AUTHER       : DEREK                                         *
+     H* CREATE DATE  : 104/07/31                                     *
+     H* UPDATE DATE  :                                               *
+     H* SYSTEM       :人頭馬匯東                                   *
+     H* SUBSYSTEM    :採購系統                                     *
+     H* REMARK       :進貨金額及交際費用報表                       *
+     H*===============================================================
+     H* MODI CODE |   DATE   | DESCRIPTION
+     H*---------------------------------------------------------------
+     H*===============================================================
+     FPOR067D CF  E                    WORKSTN
+     F                                              KINFDS DSPFDS
+     I*
+     ISDS        SDS
+     I                                     *PROGRAM APPPGM
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      598 5990$PRTID
+     I                                      601 602 DCOMPS
+     I                                      603 604 DCOMPE
+     I                                      605 6060DYEAR
+     I                                      607 6120DDATES
+     I                                      607 6080DSMM
+     I                                      609 6100DSDD
+     I                                      611 6120DSYY
+     I                                      613 6180DDATEE
+     I                                      613 6140DEMM
+     I                                      615 6160DEDD
+     I                                      617 6180DEYY
+     I                                      619 6260FDATES
+     I                                      627 6340FDATEE
+     I* FOR F4 HELP -- GET CURSOR POSITION
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN98     PARM *IN98     IN98    1
+     C           *IN97     PARM *IN97     IN97    1
+     C*==============================================================*
+     C*                    DEFINE
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N97N98             EXSR RTN010                     .INIT SCREEN
+  01-C           *IN03     DOUEQ'1'
+    C           *IN99     OREQ '0'
+    C                     EXFMTDSPD1
+    C                     MOVEA*ALL'0'   *IN,60
+    C                     Z-ADD0         D#ROW
+    C                     Z-ADD0         D#COL
+  02-C           *IN03     IFEQ '0'
+  03-C           *IN04     IFEQ '1'
+    C**********************
+    C*  F4 PROMPT PROCESS *
+    C**********************
+    C                     EXSR RTNF4
+  03*C                     ELSE
+    C                     EXSR RTN100                     .CHECK      ?
+  03-C                     END
+  02-C                     END
+  01-C                     END
+     C*
+     C                     EXSR OUTLDA
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+      *===============================================================*
+      *          RTN010....INIT SCREEN
+      *===============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   LDA
+|    C                     Z-ADD2         $EVR
+|    C                     MOVEL$USER     AUT     3
+|    C           AUT       IFNE 'D91'
+|    C           AUT       ANDNE'REP'
+|    C                     SETON                     31
+|    C                     END
+|    C                     MOVEL*BLANK    DCOMPS
+|    C                     MOVEL*BLANK    DCOMPE
+|    C                     Z-ADD0         DYEAR
+|    C                     Z-ADD0         DDATES
+|    C                     Z-ADD0         DDATEE
+|    C                     Z-ADD0         FDATES
+|    C                     Z-ADD0         FDATEE
+|    C                     Z-ADD0         W6      60
+|    C                     MOVEL'SCR001'  APPSCR  6
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*          RTN100....CHECK SCREEN
+     C*===============================================================*
+02===C           RTN100    BEGSR
+|    C*公司
+| 01-C           DCOMPS    IFEQ *BLANKS
+|   C                     MOVEL*LOVAL    DCOMPS
+| 01-C                     END
+|    C*
+| 02-C           DCOMPE    IFEQ *BLANKS
+|   C                     MOVEL*HIVAL    DCOMPE
+| 02-C                     END
+|    C*
+| 03-C           DCOMPS    IFGT DCOMPE
+|   C                     SETON                     6061
+|   C                     SETON                     9399
+| 03-C                     END
+|    C   99                GOTO END100
+|    C*
+|    C*日期
+|    C                     Z-ADDDYEAR     DSYY
+|    C                     Z-ADD4         DSMM
+|    C                     Z-ADD1         DSDD
+|    C           1         ADD  DYEAR     DEYY
+|    C                     Z-ADD3         DEMM
+|    C                     Z-ADD31        DEDD
+|    C*日期轉換
+|    C                     CALL 'RES001'
+|    C                     PARM 'MDY'     S001I1  3
+|    C                     PARM DDATES    S001I2  60
+|    C           W6        PARM           S001O1  60
+|    C                     MOVE W6        HB2@F6  6
+|    C                     EXSR HB@68L
+|    C                     MOVE HB2@T8    FDATES
+|    C*
+|    C                     CALL 'RES001'
+|    C                     PARM 'MDY'     S001I1  3
+|    C                     PARM DDATEE    S001I2  60
+|    C           W6        PARM           S001O1  60
+|    C                     MOVE W6        HB2@F6  6
+|    C                     EXSR HB@68L
+|    C                     MOVE HB2@T8    FDATEE
+|    C*
+02===C           END100    ENDSR
+     C*===============================================================*
+     C*          RTNF4 ....F4 HELP
+     C*===============================================================*
+03===C           RTNF4     BEGSR
+|    C*
+|    C                     SETON                     99
+|    C********************
+|    C*  GET ROW,COL     *
+|    C********************
+|    C           #CSR      DIV  256       D#ROW            *ROW
+|    C                     MVR            D#COL            *COL
+|    C** 游標位置即為(D#ROW,D#COL)
+| 01-C           APPSCR    IFEQ 'SCR001'
+|   C*
+|   C*
+| 01-C                     END
+|    C*
+03===C           ENDF4     ENDSR
+      *===============================================================*
+      *          OUTLDA....OUT LDA
+      *===============================================================*
+04===C           OUTLDA    BEGSR
+|    C*
+|    C                     OUT  *NAMVAR
+|    C*
+04===C           ENDLDA    ENDSR
+M001AC/COPY HBP2CVTR
+

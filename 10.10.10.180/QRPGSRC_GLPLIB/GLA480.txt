@@ -1,0 +1,326 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLA480                                     *
+     H*    PROGRAM NAME :欄位名稱資料拷貝                          *
+     H*    AUTHOR       : A1152 ANGY                                 *
+     H*    CREATE DATE  : 81/10/30                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     F****************************************************************
+     FGLAAPF  UF  E           K        DISK                      A
+     FPT#BPF  IF  E           K        DISK
+     FGLA480D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E*                   @A01        5  1               作業權利
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I*WORK LOCAL DATA AREA
+     I                                      501 502 WAA02F
+     I                                      503 504 WAA02T
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*
+     C           *LIKE     DEFN AA01      WAA01
+     C           *LIKE     DEFN AA02      WAA02
+     C           *LIKE     DEFN AA03      WAA03
+     C           *LIKE     DEFN AA04      WAA04
+     C           *LIKE     DEFN AA05      WAA05
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAAF    KLIST                           *SETLL AA0
+     C                     KFLD           DAA01F
+     C                     KFLD           WAA02F
+     C           KEYWAA    KLIST                           *NEXT REC SETLL
+     C                     KFLD           WAA01
+     C                     KFLD           WAA02
+     C           KEYAAT    KLIST                           *CHAIN AA0
+     C                     KFLD           DAA01T
+     C                     KFLD           AA02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C*
+     C                     IN   PTDA01
+     C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*
+     C* SC01 FIELD INITIALIZE *--------------------------------------*
+     C*                    Z-ADD$C8YMD    DATE
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DAA01F
+|    C                     MOVEL*BLANK    DAA02F
+|    C                     MOVEL*BLANK    DAA02T
+|    C                     MOVEL*BLANK    DAA01T
+|    C*--------------------------------------------------------------*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *拷貝選擇
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*
+     C           DAA01F    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 03-C                     END
+|    C   99                GOTO E1B00
+     C*
+     C           DAA01F    CHAIN#B0                  40
+     C           *IN40     IFEQ '1'
+     C           #B12      ORNE '1'
+|   C                     MOVEL'UGL0004' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6099
+| 03-C                     END
+|    C   99                GOTO E1B00
+     C*
+     C           DAA02F    IFEQ *BLANK
+     C                     MOVEL*LOVAL    WAA02F
+     C                     ELSE
+     C                     MOVELDAA02F    WAA02F
+     C                     END
+     C*
+     C           DAA02T    IFEQ *BLANK
+     C                     MOVE *ALL'9'   DAA02T
+     C                     MOVEL*HIVAL    WAA02T
+     C                     ELSE
+     C                     MOVELDAA02T    WAA02T
+     C                     END
+     C*
+|    C           WAA02F    IFGT WAA02T
+|   C                     MOVEL'UPT0042' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 03-C                     END
+|    C   99                GOTO E1B00
+     C*
+     C           DAA01T    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 03-C                     END
+|    C   99                GOTO E1B00
+     C*
+     C           DAA01T    CHAIN#B0                  40
+     C           *IN40     IFEQ '1'
+     C           #B12      ORNE '1'
+|   C                     MOVEL'UGL0004' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6299
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+04===C           E1B00     ENDSR
+     C*
+     C*==============================================================*
+     C*          R1C00 ....拷貝選擇
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+| 01-C           *IN14     IFEQ '1'                        拷貝作業
+     C*
+|   C           DOPT      CASEQ1         R1C10
+|   C           DOPT      CASEQ2         R1C20
+| 01*C           DOPT      CASEQ3         R1C30
+|   C                     END
+     C*
+|   C                     MOVEL'UPT2142' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+     C*
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....不存在WRITE,存在　放棄拷貝
+     C*==============================================================*
+06===C           R1C10     BEGSR
+|    C*
+     C           KEYAAF    SETLLAA0
+     C                     READ AA0                      46
+     C           *IN46     DOWEQ'0'
+     C           AA02      ANDLEWAA02T
+     C*
+     C                     EXSR R1C11                      .KEEP DATA
+     C*<至公司別是否存在>
+|    C           KEYAAT    CHAINAA0                  40
+|    C           *IN40     IFEQ '1'
+|    C                     EXSR R1D00                      拷貝
+     C                     WRITEAA0
+     C                     END
+     C*<從自公司別NEXT REC FIND>
+     C           KEYWAA    SETGTAA0
+     C                     READ AA0                      46
+     C           AA01      IFNE WAA01
+     C                     GOTO E1C10
+     C                     END
+     C*
+     C                     END
+|    C*
+06===C           E1C10     ENDSR
+     C*==============================================================*
+     C*          R1C11 ....KEEP DATA
+     C*==============================================================*
+06===C           R1C11     BEGSR
+|    C*
+|    C                     MOVELAA01      WAA01
+|    C                     MOVELAA02      WAA02
+|    C                     MOVELAA03      WAA03
+|    C                     MOVELAA04      WAA04
+|    C                     MOVELAA05      WAA05
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....不存在WRITE,存在　覆蓋－無須確認
+     C*==============================================================*
+07===C           R1C20     BEGSR
+|    C*
+     C           KEYAAF    SETLLAA0
+     C                     READ AA0                      46
+     C           *IN46     DOWEQ'0'
+     C           AA02      ANDLEWAA02T
+     C*
+     C                     EXSR R1C11                      .KEEP DATA
+     C*<至公司別是否存在>
+|    C           KEYAAT    CHAINAA0                  40
+|    C           *IN40     IFEQ '1'
+|    C                     EXSR R1D00                      拷貝
+     C                     WRITEAA0
+     C                     ELSE
+     C                     EXSR R1D00                      拷貝
+     C                     UPDATAA0
+     C                     END
+     C*<從自公司別NEXT REC FIND>
+     C           KEYWAA    SETGTAA0
+     C                     READ AA0                      46
+     C           AA01      IFNE WAA01
+     C                     GOTO E1C20
+     C                     END
+     C*
+     C                     END
+     C*
+07===C           E1C20     ENDSR
+     C*==============================================================*
+     C*  R1C30 ....不存在WRITE,存在　覆蓋－逐筆確認
+     C*==============================================================*
+07===C           R1C30     BEGSR
+|    C*
+     C           KEYAAF    SETLLAA0
+     C                     READ AA0                      46
+     C           *IN46     DOWEQ'0'
+     C           AA02      ANDLEWAA02T
+     C*
+     C                     EXSR R1C11                      .KEEP DATA
+     C*<至公司別是否存在>
+|    C           KEYAAT    CHAINAA0                  40
+|    C           *IN40     IFEQ '1'
+     C                     EXSR R1D00                      拷貝
+     C                     WRITEAA0
+     C                     ELSE
+     C                     EXSR R1C31                      逐筆確認
+     C                     END
+     C*<從自公司別NEXT REC FIND>
+     C           KEYWAA    SETGTAA0
+     C                     READ AA0                      46
+     C           AA01      IFNE WAA01
+     C                     GOTO E1C30
+     C                     END
+     C*
+     C                     END
+     C*
+07===C           E1C30     ENDSR
+     C*==============================================================*
+     C*          R1C31 ....逐筆確認是否拷貝PROCESS
+     C*==============================================================*
+12===C           R1C31     BEGSR
+|    C*
+     C                     MOVEL' '       COVE
+     C                     MOVELAA02      DAA02
+     C                     MOVELAA03      DAA03
+|    C                     EXFMTDSPD2
+     C           COVE      IFEQ 'Y'
+     C                     EXSR R1D00                      拷貝
+     C                     UPDATAA0
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1D00 ....拷貝PROCESS
+     C*==============================================================*
+12===C           R1D00     BEGSR
+|    C*
+|    C                     MOVELDAA01T    AA01
+|    C                     MOVELWAA02     AA02
+|    C                     MOVELWAA03     AA03
+|    C                     MOVELWAA04     AA04
+|    C                     MOVELWAA05     AA05
+|    C                     TIME           AA97
+|    C                     Z-ADD$A8YMD    AA98
+|    C                     MOVEL$USER     AA99
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+

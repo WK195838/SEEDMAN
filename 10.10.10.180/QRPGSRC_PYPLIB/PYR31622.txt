@@ -1,0 +1,364 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR31621                                   *
+     H*    PROGRAM NAME :薪資彙總列印－地點（確認）                *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 90/05/03                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYPHJF05IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYSSLF03IF  E           K        DISK
+     FPYHDPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR316P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    WTAB    1   2 10
+     E                    A1         48  2
+     E                    A2         48 14
+     E                    SS0X        8 14
+     E                    T10X        8  8 0
+     E                    T50X        8  8 0
+     E                    T1         48 10 0
+     E                    T5         48 10 0
+     E*---------------------------------------------------------------
+     IPHJF05
+     I                                              EM130 L1
+     ILDA        UDS
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I                                      503 507 DEM041
+     I                                      508 512 DEM042
+     I                                      531 538 DEM021
+     I                                      539 546 DEM022
+     I                                      547 5520WDYM
+     I                                      601 6050DYM
+     I                                      604 6050DMM
+     I                                      527 527 DOP
+     I                                      528 528 DPW04
+     I            DS
+     I                                        1 112 SS0X
+     I                                        1  14 SS021
+     I                                       15  28 SS022
+     I                                       29  42 SS023
+     I                                       43  56 SS024
+     I                                       57  70 SS025
+     I                                       71  84 SS026
+     I                                       85  98 SS027
+     I                                       99 112 SS028
+     I            DS
+     I                                        1  640T10X
+     I                                        1   80T1061
+     I                                        9  160T1062
+     I                                       17  240T1063
+     I                                       25  320T1064
+     I                                       33  400T1065
+     I                                       41  480T1066
+     I                                       49  560T1067
+     I                                       57  640T1068
+     I            DS
+     I                                        1  640T50X
+     I                                        1   80T5061
+     I                                        9  160T5062
+     I                                       17  240T5063
+     I                                       25  320T5064
+     I                                       33  400T5065
+     I                                       41  480T5066
+     I                                       49  560T5067
+     I                                       57  640T5068
+     I            DS
+     I                                        1   7 WDP01
+     I                                        1   1 WDP011
+     I                                        2   2 WDP012
+     I                                        3   3 WDP013
+     I                                        4   7 WDP014
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN SS09      WSS09
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYDP     KLIST                           *SYAAPF
+     C                     KFLD           WDP011
+     C                     KFLD           WDP012
+     C                     KFLD           WDP013
+     C                     KFLD           WDP014
+     C           KEYHD     KLIST                           *SYAAPF
+     C                     KFLD           PH01
+     C                     KFLD           PH02
+     C                     KFLD           PH03
+     C                     KFLD           PH04
+     C*
+     C                     MOVEL'1'       WSS09
+     C           KEYSS     KLIST
+     C                     KFLD           WSS09            薪資項目
+     C                     KFLD           CM13             薪資組別
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN300
+     C*
+     CL1 10                EXSR RTN810
+     CLR 10                EXSR RTN890
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   *NAMVAR
+|    C                     MOVELDPW04     N       10
+|    C                     MOVELWTAB,N    DPW04C
+|    C*確認
+|    C                     SETON                     20
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C*
+|    C                     SETON                     1039
+|    C                     SETOF                     21
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C                     Z-ADD*ZERO     T105
+|    C                     Z-ADD*ZERO     T505
+|    C                     Z-ADD0         T1
+|    C                     Z-ADD0         T5
+|    C                     MOVEL*BLANKS   A1
+|    C                     MOVEL*BLANKS   A2
+|    C                     Z-ADD*ZERO     T1CUNT
+|    C                     Z-ADD*ZERO     T5CUNT
+|    C*薪資項目
+|    C                     Z-ADD0         I       20
+|    C*
+|    C           KEYSS     SETLLSS0
+|    C           KEYSS     READESS0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C**         I         ANDLT48
+|   C**                   ADD  1         I
+|   C*
+| 02-C           DPW04     IFEQ '2'
+|   C                     Z-ADDSS15      WI      20
+| 02*C                     ELSE
+|   C                     Z-ADDSS12      WI
+| 02-C                     END
+|   C*
+| 03-C           WI        IFNE *ZERO
+|   C                     MOVELSS01      A1,WI
+|   C                     MOVELSS02      A2,WI
+| 03-C                     END
+|   C*
+| 04-C           WI        IFGT I
+|   C                     Z-ADDWI        I
+| 04-C                     END
+|   C*
+|   C           KEYSS     READESS0                      46
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200... WRITE HEADING
+     C*==============================================================*
+02===C           RTN200    BEGSR
+|    C*
+|    C                     MOVEL*BLANKS   SS0X
+|    C                     Z-ADD0         J       20
+|    C                     Z-ADD0         L       20
+| 01-C           L         DOWLT8
+|   C                     ADD  1         J
+|   C                     ADD  1         L
+|   C                     MOVELA2,J      SS0X,L
+| 01-C                     END
+|    C                     WRITEPH1
+|    C*
+| 02-C           J         DOWLTI
+|   C                     MOVEL*BLANKS   SS0X
+|   C                     Z-ADD0         L
+| 03-C           L         DOWLT8
+|   C                     ADD  1         J
+|   C                     ADD  1         L
+|   C                     MOVELA2,J      SS0X,L
+| 03-C                     END
+|   C                     WRITEPH2
+| 02-C                     END
+|    C                     WRITEPH4
+|    C                     WRITEPH3
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN300... WRITE DETAIL
+     C*==============================================================*
+03===C           RTN300    BEGSR
+|    C*
+|    C           KEYHD     SETLLHD0
+|    C           KEYHD     READEHD0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C                     Z-ADD1         Y       20
+|   C           HD05      LOKUPA1,Y                     40
+| 02-C           *IN40     IFEQ '1'
+|   C                     ADD  HD06      T1,Y
+| 02-C                     END
+|   C*
+|   C           KEYHD     READEHD0                      46
+| 01-C                     END
+|    C*
+|    C                     ADD  PH05      T105
+|    C                     ADD  PH17      T117
+|    C                     ADD  PH27      T127
+|    C                     ADD  PH16      T116
+|    C                     ADD  PH17      T1ADD
+|    C                     ADD  PH27      T1ADD
+|    C                     ADD  PH16      T1ADD
+|    C*
+|    C                     ADD  PH28      T128
+|    C                     ADD  PH29      T129
+|    C                     ADD  PH18      T118
+|    C*
+|    C                     ADD  1         T1CUNT
+|    C                     ADD  1         T5CUNT
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK 1
+     C*==============================================================*
+04===C           RTN810    BEGSR
+|    C*
+|    C                     MOVEL*BLANK    WDP01
+|    C                     MOVELEM130     WDP01     P
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C                     SETOF                     31
+|    C*
+|    C                     Z-ADD0         T10X
+|    C                     Z-ADD0         X       20
+| 01-C           X         DOWLT8
+|   C                     ADD  1         X
+|   C                     Z-ADDT1,X      T10X,X
+| 01-C                     END
+|    C*
+| 02-C           *IN39     IFEQ '1'
+|   C                     EXSR RTN200
+|   C                     SETOF                     39
+| 02-C                     END
+|    C                     WRITEPT111
+|    C                     SETON                     31
+|    C*
+| 03-C           X         DOWLTI
+|   C                     Z-ADD0         T10X
+|   C                     Z-ADD0         K       20
+| 04-C           K         DOWLT8
+|   C                     ADD  1         X
+|   C                     ADD  1         K
+|   C                     Z-ADDT1,X      T10X,K
+| 04-C                     END
+|   C*
+| 05-C           *IN39     IFEQ '1'
+|   C                     EXSR RTN200
+|   C                     SETOF                     39
+| 05-C                     END
+|   C*
+|   C                     WRITEPT111
+| 03-C                     END
+|    C*
+|    C           T1ADD     SUB  T128      T1TOT
+|    C                     SUB  T129      T1TOT
+|    C                     SUB  T118      T1TOT
+|    C*
+|    C                     WRITEPT113
+|    C                     ADD  T105      T505
+|    C                     ADD  T117      T517
+|    C                     ADD  T127      T527
+|    C                     ADD  T116      T516
+|    C                     ADD  T1ADD     T5ADD
+|    C*
+|    C                     ADD  T128      T528
+|    C                     ADD  T129      T529
+|    C                     ADD  T118      T518
+|    C                     ADD  T1TOT     T5TOT
+|    C                     Z-ADD0         T105
+|    C                     Z-ADD0         T117
+|    C                     Z-ADD0         T127
+|    C                     Z-ADD0         T116
+|    C                     Z-ADD0         T1ADD
+|    C*
+|    C                     Z-ADD0         T128
+|    C                     Z-ADD0         T129
+|    C                     Z-ADD0         T118
+|    C                     Z-ADD0         T1TOT
+|    C*
+|    C                     Z-ADD0         X       20
+| 06-C           X         DOWLTI
+|   C                     ADD  1         X
+|   C                     ADD  T1,X      T5,X
+| 06-C                     END
+|    C*
+|    C                     Z-ADD0         T1
+|    C                     Z-ADD0         T1CUNT
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR
+     C*==============================================================*
+05===C           RTN890    BEGSR
+|    C*
+|    C                     SETOF                     35
+|    C                     Z-ADD0         X       20
+|    C                     Z-ADD0         T50X
+| 01-C           X         DOWLT8
+|   C                     ADD  1         X
+|   C                     Z-ADDT5,X      T50X,X
+| 01-C                     END
+|    C*
+| 02-C           *IN39     IFEQ '1'
+|   C                     EXSR RTN200
+|   C                     SETOF                     39
+| 02-C                     END
+|    C                     WRITEPT511
+|    C                     SETON                     35
+|    C*
+| 03-C           X         DOWLTI
+|   C                     Z-ADD0         T50X
+|   C                     Z-ADD0         K
+| 04-C           K         DOWLT8
+|   C                     ADD  1         X
+|   C                     ADD  1         K
+|   C                     Z-ADDT5,X      T50X,K
+| 04-C                     END
+|   C*
+| 05-C           *IN39     IFEQ '1'
+|   C                     EXSR RTN200
+|   C                     SETOF                     39
+| 05-C                     END
+|   C                     WRITEPT511
+| 03-C                     END
+|    C*
+|    C                     WRITEPT513
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+06===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+**
+下期薪資
+上期薪資
+

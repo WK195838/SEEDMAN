@@ -1,0 +1,332 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME :票據開票全頁查詢                          *
+     H*    AUTHOR       : A1062                                      *
+     H*    CREATE DATE  : 93/04/08                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     F****************************************************************
+     FCKHFLF06IF  E           K        DISK
+     FCKHBLF01IF  E           K        DISK
+     FPT#XPF  IF  E           K        DISK
+     FPA#APF  IF  E           K        DISK
+     FCKI1E0D CF  E                    WORKSTN
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E*                   AEF     2   2  1               *0/E,0/F
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I*DEFIND STRAT KEY
+     I            DS
+     I                                        1  13 @KAO
+     I            DS
+     I                                        1  13 @KAN
+     I                                        1   2 DHF02
+     I                                        3   90DHF06
+     I                                       10  130DHF71
+     I/COPY QRPGSRC,PT#XDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C           *LIKE     DEFN #X01      W#X01
+     C           *LIKE     DEFN #X02      W#X02
+     C           *LIKE     DEFN #A01      W#A01
+     C           *LIKE     DEFN #A02      W#A02
+     C           *LIKE     DEFN HF02      P000I1            公司別
+     C           *LIKE     DEFN HF06      P000I2            開票日期
+     C           *LIKE     DEFN HF71      P000I3            開票序號
+     C           *LIKE     DEFN HF06      WHF06
+     C*
+     C           *LIKE     DEFN HF02      #B001I
+     C           *LIKE     DEFN HF02      #D001I
+     C           *LIKE     DEFN HF04      #D002I
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           DHF02     PARM           P000I1            公司別
+     C           DHF06     PARM           P000I2            開票日期
+     C           DHF71     PARM           P000I3            開票序號
+     C                     PARM           @RTNC   2          FUN KEY
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHF     KLIST                           *STR KEY
+     C                     KFLD           DHF02
+     C                     KFLD           WHF06
+     C                     KFLD           DHF71
+     C           KEY#X     KLIST
+     C                     KFLD           W#X01
+     C                     KFLD           DHF02
+     C           KEY#A     KLIST
+     C                     KFLD           W#A01            *'HA05'
+     C                     KFLD           W#A02            *HF05
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+     C           @RTNC     DOWEQ*BLANK
+     C                     EXSR R1000                      *SCR PROCESS
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C                     IN   PTDA01
+     C*
+     C* INIT VALUE SET *---------------------------------------------*
+     C                     MOVEL*BLANK    @RTNC
+     C                     Z-ADD13        @PRCD            .PAGE SIZE
+     C           P000I2    IFEQ 0
+     C                     Z-ADD123190    DHF06
+     C                     ELSE
+     C                     Z-ADDP000I2    DHF06
+     C                     END
+     C*
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATE     PARM           P3101O  80
+     C*公司檔
+     C*                    MOVEL$COR      DHF02
+     C                     CALL 'CKS#B0'
+     C                     PARM DHF02     #B001I
+     C           DHF02N    PARM           #B002O 16
+     C                     PARM           #B003O 34
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C*開票日期
+     C                     MOVEL'CK'      W#X01
+     C           KEY#X     CHAIN#X0                  40
+     C*                    CALL 'P31'
+     C*                    PARM $A8YMD    P3101I  80
+     C*                    PARM '2'       P3102I  1
+     C*                    PARM '1'       P3103I  1
+     C*                    PARM $PFMT     P3104I  1
+     C*                    PARM $PTYPE    P3105I  1
+     C*          DHF06     PARM           P3101O  80
+     C*
+     C                     Z-ADD*ZERO     DHF71
+     C*--------------------------------------------------------------*
+     C                     EXSR R1A00                      .SFL INIT
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+     C           R1000     BEGSR
+     C*
+     C                     WRITEDSPC1
+     C                     EXFMTSFLCR
+     C                     MOVEA*ALL'0'   *IN,60
+     C*
+     C           *IN03     IFEQ '1'                        *END
+     C                     MOVEL'03'      @RTNC
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN12     IFEQ '1'                        *PREVIOUS
+     C                     MOVEL'12'      @RTNC
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN25     IFEQ '1'                        *NEXT PAGE
+     C                     EXSR R1N00
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           @KAO      IFNE @KAN                       *START KEY
+     C                     EXSR R1A00                      *SFL INIT
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           RRN       IFGT 0
+     C                     EXSR R1C00                      *OPTION
+     C                     END
+     C*
+     C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+     C           R1A00     BEGSR
+     C*
+     C                     Z-ADD0         DRRN
+     C                     Z-ADD0         RRN
+     C                     Z-ADD0         @DRCD            *DSP RCD
+     C                     MOVEL'N'       @BOTOM  1        *BOTTOM
+     C*
+     C                     SETON                     52    *SFLCLR
+     C                     WRITESFLCR
+     C                     SETOF                     52
+     C*
+     C                     SETON                     51    *SFLDSPCTL
+     C                     SETOF                     50    *SFLDSP
+     C*
+     C                     EXSR R1A20                      *SFL HEAD
+     C* <<SFL INITIAITAL DATA ADD>>
+     C                     MOVEL@KAN      @KAO             *KEY SAVE
+     C*
+     C                     CALL 'P31'
+     C                     PARM DHF06     P3101I  80
+     C                     PARM #X101     P3102I  1
+     C                     PARM #X102     P3103I  1
+     C                     PARM '2'       P3104I  1
+     C                     PARM '1'       P3105I  1
+     C           WHF06     PARM           P3101O  80
+     C           KEYHF     SETLLHF0
+     C                     EXSR R1A10                      *ADD SFL DTA
+     C*
+     C           RRN       IFGT 0
+     C                     SETON                     50    *SFLDSP
+     C                     ELSE
+     C                     SETON                     99    *NO DTA
+     C                     MOVEL'UPT2050' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+     C           R1A10     BEGSR
+     C*
+     C                     ADD  @PRCD     @DRCD
+     C           RRN       DOWLT@DRCD
+     C*
+     C           DHF02     READEHF0                      44
+     C*
+     C           *IN44     IFEQ '0'
+     C                     EXSR R1A11                      *WRITE SFL
+     C                     ELSE                            *EOF
+     C                     Z-ADDRRN       @DRCD
+     C                     MOVE 'Y'       @BOTOM
+     C                     SETON                     96
+     C                     END
+     C*
+     C                     END
+     C*
+     C                     Z-ADDRRN       DRRN
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1A11 .... WRITE SUBFILE DATA
+     C*=============================================================*
+     C           R1A11     BEGSR
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* << SUBFILE DATA VALUE SET >>
+     C                     CALL 'P31'                      *開票日
+     C                     PARM HF06      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           HF06N     PARM           P3101O  80
+     C*
+     C                     CALL 'P31'                      *到期日
+     C                     PARM HF07      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           HF07N     PARM           P3101O  80
+     C*廠商
+     C*
+     C                     MOVELHF77      #D003O 80
+     C                     CALL 'P65'
+     C                     PARM #D003O    P6501I 80
+     C                     PARM 10        P6502I  30
+     C           HF04N     PARM           P6511O 80
+     C                     PARM           P6512O 80
+     C*
+     C*銀行名稱
+     C                     MOVEL*BLANK    HB02
+     C  N40      HF08      CHAINHB0                  40
+     C*票類
+     C                     MOVEL'HA05'    W#A01
+     C                     MOVELHF05      W#A02
+     C                     MOVEL*BLANK    HF05N
+     C           KEY#A     CHAIN#A0                  40
+     C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #A03      P6501I 80
+|   C                     PARM 6         P6502I  30
+|   C           HF05N     PARM           P6511O 80
+|   C                     PARM           P6512O 80
+     C*                    MOVE AEF,2     HF05N
+     C                     END
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     ADD  1         RRN
+     C                     WRITESFLSR
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1A20 .... SFL HEADING (SFL CONTROL DATA PREPARE)
+     C*=============================================================*
+     C           R1A20     BEGSR
+     C*
+     C*公司檔
+     C                     CALL 'CKS#B0'
+     C                     PARM DHF02     #B001I
+     C           DHF02N    PARM           #B002O 16
+     C                     PARM           #B003O 34
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1C00 ....挑選資料
+     C*=============================================================*
+     C           R1C00     BEGSR
+     C*
+     C                     READCSFLSR                    57
+     C           *IN57     DOWEQ'0'
+     C*
+     C           DOPT      IFNE *BLANK
+     C* <<SET OUTPUT PARM>>++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVELHF02      P000I1
+     C                     Z-ADDHF06N     P000I2
+     C                     Z-ADDHF71      P000I3
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL'00'      @RTNC
+     C                     SETON                     57
+     C                     END
+     C*
+     C  N57                READCSFLSR                    57
+     C                     END
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1N00 ....ROLLUP MAIN ROUTINE
+     C*=============================================================*
+     C           R1N00     BEGSR
+     C*
+     C           @BOTOM    IFEQ 'Y'                        *EOF
+     C                     SETON                         96*LST PAG
+     C                     Z-ADDRRN       DRRN
+     C                     ELSE
+     C                     EXSR R1A10                      *ADD SFL DTA
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+

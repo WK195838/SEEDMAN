@@ -1,0 +1,133 @@
+     A****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYH2001                                    *
+     H*    PROGRAM NAME :產生月提繳工資                            *
+     H*    AUTHOR       :                                            *
+     H*    CREATE DATE  : 94/05/17                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    UPDATE AUTHOR: MAX PENG 95/05/17                          *
+     H****************************************************************
+     FPYH4PF  UP  E           K        DISK
+     FPYH8PF  IF  E           K        DISK
+     FPYH5PF  UF  E           K        DISK                      A
+     FPYHDLF03IF  E           K        DISK
+     FPYH7LF02IF  E           K        DISK
+     I*================================================================
+     I           UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      201 2060$A8YM
+     I                                      201 2040$A8Y
+     I                                      211 2160DDATE
+     I                                      201 2040DSYY
+     I*
+     I                                      601 602 UD01
+     I                                      603 6080UDBYM
+     I                                      609 6140UDEYM
+     I                                      615 6220UDDATE
+     I*
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYH8     KLIST
+     C                     KFLD           H801             公司編號
+     C                     KFLD           H802             薪資項目
+     C           KEYH8E    KLIST
+     C                     KFLD           H801             公司編號
+     C           KEYH7     KLIST
+     C                     KFLD           H702             下限
+     C           KEYHD     KLIST
+     C                     KFLD           HD01             公司編號
+     C                     KFLD           HD02             員工編號
+     C                     KFLD           HD04             期別
+     C                     KFLD           HD05             薪資項目
+     C                     KFLD           HD03             年月
+     C           KEYHDE    KLIST
+     C                     KFLD           HD01             公司編號
+     C                     KFLD           HD02             員工編號
+     C                     KFLD           HD04             期別
+     C                     KFLD           HD05             薪資項目
+     C           KEYH5     KLIST
+     C                     KFLD           H501             公司編號
+     C                     KFLD           H502             員工編號
+     C                     KFLD           H503             異動日期
+     C                     KFLD           H504             異動別
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*計算月提繳工資
+     C                     Z-ADD0         TPAMT   80
+     C                     Z-ADD0         MAX     20
+     C                     MOVE H401      H801
+     C                     MOVE *BLANKS   H802
+     C           KEYH8     SETLLPYH8PF
+     C           LOOP      TAG
+     C           KEYH8E    READEPYH8PF                   33
+     C   33                GOTO NEXT
+     C*
+     C                     Z-ADD0         CONT    20
+     C                     MOVE H801      HD01
+     C                     MOVE H402      HD02
+     C                     MOVE '1'       HD04
+     C                     MOVE H802      HD05
+     C                     Z-ADDUDBYM     HD03
+     C           KEYHD     SETLLPYHDLF03
+     C           LOOP1     TAG
+     C           KEYHDE    READEPYHDLF03                 40
+     C   40                GOTO LOOP
+     C           HD03      IFGT UDEYM
+     C                     GOTO LOOP
+     C                     END
+     C                     ADD  1         CONT
+     C           CONT      IFGT MAX
+     C                     Z-ADDCONT      MAX
+     C                     END
+     C                     ADD  HD06      TPAMT
+     C                     GOTO LOOP1
+     C*
+     C           NEXT      TAG
+     C           TPAMT     IFGT 0
+     C           TPAMT     DIV  MAX       H702      H
+     C           KEYH7     SETGTPYH7LF02
+     C                     READPPYH7LF02                 31
+     C           H409      IFNE H704
+     C                     Z-ADDH704      H409
+     C*
+     C                     Z-ADDH407      D7      32
+     C                     Z-ADDH408      D8      32
+     C*
+     C                     Z-ADD$A8YMD    H497
+     C                     TIME           H498
+     C                     MOVEL$USER     H499
+     C                     UPDATH40
+     C*產生退休金提撥異動檔
+     C                     MOVE H401      H501
+     C                     MOVE H402      H502
+     C                     Z-ADDUDDATE    H503
+     C           UDDATE    IFGT 20050801
+     C                     MOVE '2'       H504
+     C                     ELSE
+     C                     MOVE '1'       H504
+     C                     END
+     C           KEYH5     CHAINPYH5PF               40
+     C                     MOVE 'AA'      H514
+     C                     Z-ADDD7        H505               @自提率
+     C                     Z-ADDD8        H507               @企提率
+     C                     Z-ADDH704      H506               @月提繳
+     C                     Z-ADD$A8YMD    H597
+     C                     TIME           H598
+     C                     MOVEL$USER     H599
+     C   40                WRITEH50
+     C  N40                UPDATH50
+     C                     END
+     C                     END
+

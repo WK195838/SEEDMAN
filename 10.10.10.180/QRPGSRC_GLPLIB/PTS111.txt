@@ -1,0 +1,191 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME : PTS111                                     *
+     H*    AUTHOR       : A1034  STEPHANIE                           *
+     H*    CREATE DATE  : 79/07/05                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H*    SUBSYSTEM    :                                            *
+     H*    REMARK       :代碼規則資料全頁查詢(WINDOW)              *
+     F****************************************************************
+     FPT#YPF  IF  E           K        DISK
+     FPT#ZPF  IF  E           K        DISK
+     FPTS000D CF  E                    WORKSTN
+     E*
+     E* OP CODE
+     E                    W01         6  1
+     E* COMBINED BY 代碼內容X(10) 代碼說明X(13)
+     E                    W02         6 23
+     I*
+     IWOP0        DS
+@    I                                        1   6 W01
+     I                                        1   1 D1011
+     I                                        2   2 D1021
+     I                                        3   3 D1031
+     I                                        4   4 D1041
+     I                                        5   5 D1051
+     I                                        6   6 D1061
+     IWD0         DS
+@    I                                        1 138 W02
+     I                                        1  23 D1012
+     I                                       24  46 D1022
+     I                                       47  69 D1032
+     I                                       70  92 D1042
+     I                                       93 115 D1052
+     I                                      116 138 D1062
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM           S111I1 10        代碼欄位
+     C                     PARM           S111O1 10        代碼內容
+     C*==============================================================*
+     C*                    KEY LIST FOR NMPF
+     C*==============================================================*
+     C           KEY#AT    KLIST                           *KEY TOP
+     C                     KFLD           W#A01T 10
+     C                     KFLD           W#A02T 10
+     C*
+     C           KEY#AB    KLIST                           *KEY BOTTOM
+     C                     KFLD           W#A01B 10
+     C                     KFLD           W#A02B 10
+     C*==============================================================*
+     C*          MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INIT
+     C*
+     C           KEY#AB    SETLL#Y0                        *1 SETLL
+     C                     EXSR RTN100                     *1 READ NEXT
+     C*
+     C           *IN03     DOWEQ'0'
+     C*
+@    C                     EXFMTDSPC1
+     C*
+     C           *IN25     IFEQ '1'                        *ROLLUP
+     C           *IN97     ANDEQ'0'                        *LAST PAGE
+     C           KEY#AB    SETGT#Y0                        *AFTER 1 SETLL
+     C                     EXSR RTN100                     *READ NEXT
+     C                     END
+     C*
+     C           *IN26     IFEQ '1'                        *ROLLDOWN
+     C           *IN98     ANDEQ'0'                        *FIRST PAGE
+     C           KEY#AT    SETLL#Y0
+     C                     EXSR RTN200                     *READ PREV
+     C                     END
+     C*
+     C           *IN25     IFEQ '0'
+     C           *IN26     ANDEQ'0'
+     C                     EXSR RTN300
+     C                     SETON                     03
+     C                     END
+     C*
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL
+     C*==============================================================*
+     C           RTN010    BEGSR
+     C* GET 代碼名稱
+     C           S111I1    CHAINPT#ZPF               40
+     C   40                MOVE *BLANKS   #Z02
+     C*
+     C                     MOVE S111I1    W#A01T
+     C                     MOVE *BLANKS   W#A02T
+     C                     MOVE S111I1    W#A01B
+     C                     MOVE *BLANKS   W#A02B
+     C                     ENDSR
+     C*==============================================================*
+     C*          RTN100....READ NEXT
+     C*==============================================================*
+     CSR         RTN100    BEGSR
+     C*
+@    C                     MOVEA*BLANKS   W01
+@    C                     MOVEA*BLANKS   W02
+     C                     Z-ADD0         WI      10
+     C   25                SETOF                     98
+     C*
+     C           S111I1    READE#Y0                      97
+     C  N97                EXSR RTN810                     *GET KEY TOP
+     C*
+@    C                     DO   6         WI
+     C*
+     C           *IN97     IFEQ '0'
+@    C                     MOVEL#Y03      W#A03  13
+@    C                     MOVEL#Y02      W02,WI
+     C                     MOVE W#A03     W02,WI
+     C                     EXSR RTN820                     *GET KEY BOT
+     C                     ELSE
+@    C           WI        ADD  60        WO      20
+     C                     MOVEA*ALL'1'   *IN,WO
+     C                     SETOF                     9998
+@    C                     Z-ADD6         WI
+     C                     END
+     C*
+     C           S111I1    READE#Y0                      97
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          RTN200....READ PREVIOUS
+     C*==============================================================*
+     CSR         RTN200    BEGSR
+     C*
+     C                     MOVEA*ALL'0'   *IN,60
+@    C                     MOVEA*BLANKS   W01
+@    C                     MOVEA*BLANKS   W02
+     C                     Z-ADD7         WI
+     C*
+     C           S111I1    REDPE#Y0                      98*READ EQ DIV
+     C                     EXSR RTN820                     *GET KEY BOTTOM
+     C*
+     C                     DO   6                          *SFL FULL
+     C*
+     C           *IN98     IFEQ '1'                        *READP EOF
+     C                     MOVE W#A01T    W#A01B           *KEY BOTTOM
+     C                     MOVE W#A02T    W#A02B           *KEY BOTTOM
+     C           KEY#AB    SETLL#Y0
+     C                     EXSR RTN100                     *READ NEXT
+     C                     GOTO END200
+     C                     END
+     C*
+     C                     SUB  1         WI
+     C                     MOVEL#Y03      W#A03  13
+     C                     MOVEL#Y02      W02,WI
+     C                     MOVE W#A03     W02,WI
+     C                     EXSR RTN810                     *GET KEY TOP
+     C*
+     C           S111I1    REDPE#Y0                      98*READ EQ DIV
+     C                     END
+     C*
+     C           END200    ENDSR
+     C*==============================================================*
+     C*          RTN300....
+     C*==============================================================*
+     CSR         RTN300    BEGSR
+     C*
+     C                     Z-ADD1         WJ      10
+     C           '1'       LOKUPW01,WJ                   30
+     C           *IN30     IFEQ '1'
+     C                     MOVELW02,WJ    S111O1
+     C                     ELSE
+     C                     MOVE *BLANKS   S111O1
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          RTN810....READ NEXT CLEAR & INIT
+     C*==============================================================*
+     CSR         RTN810    BEGSR
+     C                     MOVE #Y01      W#A01T           *KEY TOP
+     C                     MOVE #Y02      W#A02T           *KEY TOP
+     C                     ENDSR
+     C*==============================================================*
+     C*          RTN820....READ PREV CLEAR & INIT
+     C*==============================================================*
+     CSR         RTN820    BEGSR
+     C                     MOVE #Y01      W#A01B           *KEY BOTTOM
+     C                     MOVE #Y02      W#A02B           *KEY
+     C                     ENDSR
+

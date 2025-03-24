@@ -1,0 +1,1015 @@
+     A****************************************************************
+     A*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     A*--------------------------------------------------------------*
+     A*    PROGRAM ID   : KIP015                                     *
+     A*    AUTHOR       : JONATHAN                                   *
+     A*    DATE WRITTEN : 103/12/25                                  *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       : VIP維護                                  *
+     A*    SUBSYSTEM    :                                            *
+     A*    PROCEDURE    :                                          *
+     A*    REMARK       :                                            *
+     A****************************************************************
+     FKIP015D CF  E                    WORKSTN
+     F                                              KINFDS DSPFDS
+     F                                        RRN1  KSFILE SFLSR1
+     F*                                       RRN2  KSFILE SFLSR2
+     FW1VPPF  UF  E           K        DISK                      A
+     FPA#APF  IF  E           K        DISK
+     A****************************************************************
+     E*: FUNCTION DATA :
+     E                    WFUN    5   5  6
+     E*: A/U/D/I AUT
+     E                    WA01        5  1
+     E*
+     E                    CHK       999 20
+     E                    @W02        1 30               E-MAILCHECK
+     A****************************************************************
+     I*
+     I           SDS
+     I                                     *PROGRAM PGMNAM
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      152 161 $USERN
+     I                                      111 1160$CHYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      139 139 $RMK01
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      201 2080DATE
+     I                                      598 5990$LPRT
+     I                                      501 505 $WRHUS
+     I                                      513 513 $WRHTY
+     I*
+     I            DS
+     I                                        1   1 DOPT1
+     I                                        1   10WNUM
+     I* FOR F4 HELP -- GET CURSOR POSITION
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I            DS
+     I                                        1  15 TVP02
+     I                                        1   3 VP02H
+     I                                        1   2 VP02H2
+     I            DS
+     I                                        1  10 D#AL9
+     I                                        1   1 D#910
+     I                                        2   5 D#911
+     I                                        6  10 D#912
+     I            DS
+     I                                        1  10 D#AL92
+     I                                        1   1 D#920
+     I                                        2   5 D#921
+     I                                        6  10 D#922
+     I            DS
+     I                                        1   4 DVP04
+     I                                        1   2 TVP041
+     I                                        3   4 TVP042
+     I            DS
+     I                                        1  10 CHKUSR
+     I                                        1   1 CHUSRH
+     I                                        2  10 CHUSRD
+     I**
+      *==============================================================*
+      *                    DEFINE ROUTINE
+      *==============================================================*
+      *
+      *
+     C                     Z-ADD0         HRRN1   40
+     C                     Z-ADD0         W6      60
+     C*
+     C                     MOVE *BLANKS   APPSCR  6
+     C                     MOVEL$USER     CHKUSR
+     C*
+     C                     MOVE *BLANK    WQUERY  1
+     C                     MOVEL'STORAGE' #A01S   8
+     C*          *LIKE     DEFN DBDEP     OBGN1            專櫃代號
+     C           *LIKE     DEFN DBCEL     OBGN2            客戶電話
+     C           *LIKE     DEFN DBCEL2    OBGN21           分機號碼
+     C*          *LIKE     DEFN DBNME     OBGN3            客戶姓名
+      *
+     C*
+      *==============================================================*
+      *                    KLIST
+      *==============================================================*
+      *
+     C           KEYSET    KLIST
+     C                     KFLD           DBCEL
+     C                     KFLD           DBCEL2
+     C           KEYTP2    KLIST
+     C                     KFLD           TVP02
+     C                     KFLD           DVP021
+     C           KEYVP2    KLIST
+     C                     KFLD           VP02
+     C                     KFLD           VP021
+     C           KEYDP2    KLIST
+     C                     KFLD           DVP02
+     C                     KFLD           DVP021
+     C           KEYPA     KLIST
+     C                     KFLD           #A01S
+     C                     KFLD           TVP01
+     C           KEYCA2    KLIST
+     C                     KFLD           VP02
+     C                     KFLD           VP021
+     C           KEYSE2    KLIST
+     C                     KFLD           VIPCE
+     C                     KFLD           VIPCE2
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+     C                     EXSR RTN010                     *INIT ENVIRMENT
+     C                     EXSR RTN191                     *INIT SFL
+      *
+     C                     EXSR RTN192                     *READ NEXT PAGE
+     C                     EXSR RTN195                     *EXFMT
+     C*
+  01-C           *IN03     DOWEQ'0'                        *03    OFF
+    C*
+  02-C           *IN06     CASEQ'1'       RTN110
+    C           *IN25     CASEQ'1'       RTN192
+    C                     CAS            RTN170
+  02-C                     END
+    C  N03                EXSR RTN195
+    C*
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL VALUE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*將權限寫入，一開始呼叫程式便會將權限寫入LDA
+|    C                     MOVE $ADD      WA01,1
+|    C                     MOVE $UPD      WA01,2
+|    C                     MOVE $DLT      WA01,4
+|    C                     MOVE $INQ      WA01,5
+|    C                     MOVE 'SCR000'  APPSCR
+|    C*
+|    C                     Z-ADD0         WDATE   80
+|    C                     Z-ADD0         TDATE   80
+|    C*
+|    C*
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN110....F6(ADD)
+      *==============================================================*
+02===C           RTN110    BEGSR
+|    C*
+|    C                     MOVE '1'       DOPT1
+| 01-C           WA01,WNUM IFNE 'Y'                         WNUM = DOPT
+|   C                     SETON                       99
+|   C                     MOVEL'ERR9999' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 01*C                     ELSE
+|   C                     EXSR RTN11B
+|   C  N99                EXSR RTN200
+| 02-C           DRRN1     IFGT 0
+|   C           DRRN1     SUB  1         HRRN1
+| 02-C                     END
+|   C                     EXSR RTN191
+|   C                     EXSR RTN192
+| 01-C                     END
+|    C                     SETOF                     12
+|    C*
+02===C                     ENDSR
+      *==============================================================*
+      *          RTN11B....ENTER
+      *==============================================================*
+03===C           RTN11B    BEGSR
+|     *
+| 01-C*          DBGN1     IFEQ *BLANK
+|   C*                    SETON                     99
+|   C*                    MOVEL'ERR0017' ERRID
+|   C*                    MOVEL'SCMF'    ERRF
+| 01-C*                    END
+|    C*  99                GOTO END110
+|     *
+| 02-C*          DBGN1     IFNE *BLANK
+|   C*          KEYPA     CHAIN#A0                  40
+| 03-C*          *IN40     IFEQ '1'
+|   C*                    SETON                     99
+|   C*                    MOVEL'ERR0018' ERRID
+|   C*                    MOVEL'SCMF'    ERRF
+| 03-C*                    END
+| 02-C*                    END
+|    C   99                GOTO END110
+|     *
+|    C*          KEYPA     CHAIN#A0                  40
+|    C* N40                MOVEL#A03      S#B03
+|    C*  40                MOVEL*BLANK    S#B03
+|     *
+03===C           END110    ENDSR
+      *==============================================================*
+      *          RTN170....ENTER
+      *==============================================================*
+04===C           RTN170    BEGSR
+|    C*
+| 01-C*          DBDEP     IFNE OBGN1
+|   C           DBCEL     IFNE OBGN2
+|   C           DBCEL2    ORNE OBGN21
+|   C*          DBNME     ORNE OBGN3
+|   C                     Z-ADD0         HRRN1
+|    *新增畫面秀出文字功能
+|   C                     EXSR RTN190
+|   C                     EXSR RTN191
+|   C                     EXSR RTN192
+|   C*                    MOVELDBDEP     OBGN1
+|   C                     MOVELDBCEL     OBGN2
+|   C                     MOVELDBCEL2    OBGN21
+|   C*                    MOVELDBNME     OBGN3
+| 01*C                     ELSE
+|   C                     EXSR RTN171
+| 02-C           *IN99     IFEQ '0'
+|   C                     Z-ADDRRN1      HRRN1
+|   C                     EXSR RTN191
+|   C                     EXSR RTN192
+| 02-C                     ENDIF
+| 01-C                     ENDIF
+|    C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN171...讀取畫面上DOPT1是否有輸入
+      *==============================================================*
+05===C           RTN171    BEGSR
+|    C*
+|    C                     SETON                     54
+|    C*
+|    C                     READCSFLSR1                 5757*NF
+| 01-C           *IN57     DOWEQ'0'                        *40 LOOP
+|   C*
+|   C                     SETOF                     60    *DOP *IND
+| 02-C           *IN99     IFEQ '0'
+|   C*
+| 03-C           DOPT1     IFNE *BLANK
+|   C                     EXSR RTN180                     *CHK
+| 04-C           *IN99     IFEQ '0'
+|   C           *IN12     ANDEQ'0'
+|   C                     Z-ADDRRN1      DRRN1
+|   C                     EXSR RTN200
+| 04-C                     END
+| 03-C                     END
+| 02-C                     END                             *IN99
+|   C*
+|   C           RRN1      CHAINSFLSR1               40
+|   C  N99                MOVE *BLANKS   DOPT1
+|   C                     UPDATSFLSR1
+|   C                     READCSFLSR1                 5757*NF
+|   C*
+| 01-C                     END                             *40 END
+| 05-C           *IN99     IFEQ '0'
+|   C                     SETOF                     5412
+| 05-C                     END
+|    C*
+05===C                     ENDSR
+      *==============================================================*
+      *          RTN180....第一層畫面的檢查
+      *==============================================================*
+06===CSR         RTN180    BEGSR
+|    C* CHK AUT *
+|    C*權限判斷在主畫面呼叫時，便會去判斷權限，目前不放在程式裡
+|    C*          WA01,WNUM IFNE 'Y'                         WNUM = DOPT
+|    C*                    SETON                     609099
+|    C*                    Z-ADDRRN1      DRRN1
+|    C*                    END
+|    C*  99                GOTO END180
+|    C*
+| 01-C*          DOPT1     IFEQ '2'
+|   C*          DOPT1     OREQ '4'
+| 02-C*          CA09      IFEQ 'A'
+|   C*                    SETON                     9960
+|   C*                    MOVEL'ERR0061' ERRID
+|   C*                    MOVEL'SCMF'    ERRF
+|   C*                    Z-ADDRRN1      DRRN1
+| 02-C*                    END
+| 01-C*                    END
+|    C*  99                GOTO END180
+|     *
+06===C           END180    ENDSR
+      *==============================================================*
+      *          RTN190....CHECK 'SC01' SCREEN
+      *==============================================================*
+07===CSR         RTN190    BEGSR
+|    C*
+|    C*          DBGN1     CHAIN#B0                  40
+|    C* N40                MOVEL#B03      S#B03
+|    C*  40                MOVEL*BLANK    S#B03
+|    C*
+07===C                     ENDSR
+      *=========================================================*
+      *          RTN191...第一層SFL INITIAL                  *
+      *=========================================================*
+08===C           RTN191    BEGSR
+|    C*
+|    C                     MOVE *BLANKS   DOPT1
+|    C                     Z-ADD0         DRRN1
+|    C                     Z-ADD0         RRN1
+|    C                     Z-ADD0         WRRN1   40
+|    C                     Z-ADD10        WPRCD1  30
+|    C                     Z-ADD0         DSPRC1  40
+|    C           HRRN1     DIV  WPRCD1    DSPRC1
+|    C                     MULT WPRCD1    DSPRC1
+|    C                     MOVE 'N'       WBOTM1  1        判斷BOTTOM
+|    C                     SETOF                     53
+|    C                     SETON                     5254
+|    C                     WRITESFLCR1
+|    C                     SETOF                     52
+|    C           KEYSET    SETLLVP0
+|    C*
+08===C                     ENDSR
+      *=========================================================*
+      *          RTN192 .. ROLLUP MAIN ROUTINE
+      *=========================================================*
+09===C           RTN192    BEGSR
+|    C*
+| 01-C           WBOTM1    IFEQ 'Y'
+|   C                     SETON                     99    *LST PAG
+|   C                     MOVEL'MSG0001' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+|   C                     Z-ADDRRN1      DRRN1
+| 01*C                     ELSE
+|   C                     EXSR RTN193
+| 01-C                     END
+|    C*
+09===C                     ENDSR
+      *=========================================================*
+      *          RTN193 .. ADD SUBFILE DATA
+      *=========================================================*
+10===C           RTN193    BEGSR
+|    C*
+|    C                     MOVE *BLANKS   DOPT1
+|    C                     SETOF                     5354
+|    C                     Z-ADDWRRN1     RRN1
+|    C                     ADD  WPRCD1    DSPRC1
+|    C*          *LOVAL    SETLLVP0
+| 01-C           RRN1      DOWLTDSPRC1
+|    *去判斷畫面上欄位如有沒有輸入，就將所有資料秀出
+|   C                     READ VP0                      46
+|   C*
+| 02-C           *IN46     IFEQ '0'
+|    * 判斷專櫃
+|    C           CHUSRH    IFEQ 'B'
+|    C           VP01      IFNE CHKUSR
+     C                     GOTO RDNXT
+     C                     END
+     C                     END
+     C*
+|   C                     MOVELVP01      VIPDP            專櫃代號
+|   C                     MOVELVP02      VIPCE            電話號碼
+|   C                     MOVELVP021     VIPCE2           分機號碼
+|   C                     MOVELVP03      VIPNM            姓名
+|    *
+|   C                     ADD  1         RRN1
+|   C                     WRITESFLSR1
+| 02*C                     ELSE
+|   C                     Z-ADDRRN1      DSPRC1
+|   C                     MOVE 'Y'       WBOTM1
+|    *資料結束
+|   C                     SETON                     53
+| 02-C                     ENDIF
+     C           RDNXT     TAG
+|   C*
+| 01-C                     ENDDO
+|     *在此做資料的預讀，再將KEY值帶回
+|     *主要修改翻頁上的BUG
+|    C                     READ VP0                      46
+|    C           KEYCA2    SETLLVP0
+|    C*
+| 03-C           *IN46     IFEQ '1'
+|   C                     SETON                     53
+|   C                     Z-ADDRRN1      DSPRC1
+|   C                     MOVE 'Y'       WBOTM1
+| 03-C                     ENDIF
+|    C*將畫面上最後一筆資料KEEP住
+|    C                     Z-ADDRRN1      DRRN1      50
+|    C                     Z-ADDRRN1      WRRN1
+|    C*
+10===C                     ENDSR
+      *==============================================================*
+      *          RTN195... EXFMT SFL                                 *
+      *==============================================================*
+11===C           RTN195    BEGSR
+|    C*
+| 01-C           RRN1      IFLE *ZEROS
+| 02-C*          DBGN1     IFNE *BLANK
+|   C                     SETON                     99    *LST PAG
+|   C                     MOVEL'MSG0003' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 02-C*                    END
+| 01*C                     ELSE
+|   C                     SETON                     50
+| 01-C                     END
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR1
+|    C                     SETOF                     5051
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD0         D#ROW
+|    C                     Z-ADD0         D#COL
+|    C                     MOVEL*BLANK    ERRID
+|    C                     MOVEL*BLANK    ERRF
+|    C*
+11===C                     ENDSR
+      *==============================================================*
+      *          RTN200....'SC02' SCREEN MAIN ROUTINE
+      *==============================================================*
+12===C           RTN200    BEGSR
+|    C*特別為明細維護新增
+|    C                     MOVE 'SCR002'  APPSCR
+|    C                     MOVE WFUN,WNUM DFUN
+|     *
+| 01-C           DOPT1     CASEQ'1'       RTN210           *ADD
+|   C           DOPT1     CASEQ'2'       RTN220           *UPD
+|   C           DOPT1     CASEQ'4'       RTN230           *DEL
+|   C           DOPT1     CASEQ'5'       RTN240           *INQ
+| 01-C                     END
+|    C*
+|    C           *LOVAL    SETLLVP0
+|    C*
+12===C                     ENDSR
+      *==============================================================*
+      *          RTN210....ADD DATA
+      *==============================================================*
+13===C           RTN210    BEGSR
+|    C*
+|    C                     SETOF                     29
+|    C                     SETON                     303132*ADD MSG
+|    C                     SETON                     35    *ADD MSG
+|    C                     EXSR RTN251                     *CLR FIELD
+|    C*首次建檔人員在此新增
+|    C*
+| 01-C           *IN03     DOWEQ'0'                        *CTL LOOP
+|   C           *IN12     ANDEQ'0'
+|   C           APPSCR    ANDEQ'SCR002'
+|    C                     MOVE '新增'  DFUN
+|   C                     EXFMTDSPD2
+|   C                     MOVEA*ALL'0'   *IN,60
+|   C                     Z-ADD0         D#ROW
+|   C                     Z-ADD0         D#COL
+|   C                     MOVEL*BLANK    ERRID
+|   C                     MOVEL*BLANK    ERRF
+|   C*
+| 02-C           *IN03     IFEQ '0'
+|   C           *IN12     ANDEQ'0'
+|   C*
+| 03-C           *IN04     CASEQ'1'       RTNF4
+|   C*          *IN05     CASEQ'1'       RTN260
+|   C                     CAS            RTN280
+| 03-C                     END
+|   C*
+| 04-C           *IN99     IFEQ '0'
+|   C           KEYDP2    CHAINVP0                  40
+| 05-C           *IN40     IFEQ '1'
+|   C*          *IN09     ANDEQ'1'
+|   C                     MOVELDVP01     VP01             專櫃代號
+|   C                     MOVELDVP02     VP02             電話
+|   C                     MOVELDVP021    VP021            分機
+|   C                     MOVELDVP03     VP03             姓名
+|    C                     MOVELDVP041    VP041
+|    C                     MOVELDVP042    VP042
+|   C*                    MOVELDVP04     VP04             出生月日
+|   C                     MOVELDVP05     VP05             性別
+|   C                     MOVELDVP06     VP06             地址
+|   C                     MOVELDVP07     VP07             統一編號
+|   C                     MOVELDVP08     VP08             EMAIL
+|   C                     MOVELDVP09     VP09             活動通知
+|    C           DVP09     IFEQ 'Y'
+|   C                     MOVELDVP10     VP10             手機簡訊
+|   C                     MOVELDVP11     VP11             DM通知
+|   C                     MOVELDVP12     VP12             EMAIL通知
+|   C                     MOVELDVP13     VP13             EMAIL通知
+     C                     ELSE
+|   C                     MOVEL*BLANK    VP10             手機簡訊
+|   C                     MOVEL*BLANK    VP11             DM通知
+|   C                     MOVEL*BLANK    VP12             EMAIL通知
+|   C                     MOVEL*BLANK    VP13             電話通知
+     C                     END
+|   C                     MOVELDVP14     VP14             有效客戶
+     C*
+|   C                     WRITEVP0
+|   C                     MOVEL*BLANK    DVP01            專櫃代號
+|   C                     MOVEL*BLANK    DVP02            電話
+|   C                     MOVEL*BLANK    DVP021           分機
+|   C                     MOVEL*BLANK    DVP03            姓名
+|   C                     Z-ADD*ZERO     DVP041           出生月
+|   C                     Z-ADD*ZERO     DVP042           出生日
+|   C                     MOVEL*BLANK    DVP05            性別
+|   C                     MOVEL*BLANK    DVP06            地址
+|   C                     MOVEL*BLANK    DVP07            統一編號
+|   C                     MOVEL*BLANK    DVP08            EMAIL
+|   C                     MOVEL*BLANK    DVP09            活動通知
+|   C                     MOVEL*BLANK    DVP10            手機簡訊
+|   C                     MOVEL*BLANK    DVP11            DM通知
+|   C                     MOVEL*BLANK    DVP12            EMAIL通知
+|   C                     MOVEL*BLANK    DVP13            電話通知
+|   C                     MOVEL*BLANK    DVP14            有效客戶
+|   C                     MOVE 'SCR001'  APPSCR
+| 05-C                     END
+| 04-C                     END
+|   C*
+| 02*C                     ELSE
+|   C                     EXSR RTN280
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+13===C                     ENDSR
+      *==============================================================*
+      *          RTN220....UPD DATA
+      *==============================================================*
+14===C           RTN220    BEGSR
+|    C*
+|    C                     SETOF                     29
+|    C           KEYSE2    CHAINVP0                  40
+|    C                     EXSR RTN252                     *FIEL->SCRN
+| 01-C           *IN03     DOWEQ'0'
+|   C           *IN12     ANDEQ'0'
+|   C           APPSCR    ANDEQ'SCR002'
+|    C                     MOVE '修改'  DFUN
+|   C*
+|   C                     SETOF                     3032
+|   C                     SETON                     31    *CAN INPUT
+|   C                     SETOF                     35    *ADD MSG
+|   C                     EXFMTDSPD2
+|   C                     MOVEA*ALL'0'   *IN,60
+|   C                     Z-ADD0         D#ROW
+|   C                     Z-ADD0         D#COL
+|   C                     MOVEL*BLANK    ERRID
+|   C                     MOVEL*BLANK    ERRF
+|   C*
+| 02-C           *IN03     IFEQ '0'
+| 03-C           *IN12     IFEQ '0'
+|   C*
+| 04-C           *IN04     CASEQ'1'       RTNF4
+|   C*          *IN05     CASEQ'1'       RTN260
+|   C                     CAS            RTN280
+| 04-C                     END
+|   C*
+| 05-C           *IN99     IFEQ '0'
+|   C           KEYDP2    CHAINVP0                  40
+| 06-C           *IN40     IFEQ '0'
+|   C*          *IN09     ANDEQ'1'
+|   C                     MOVELDVP03     VP03
+|    C                     MOVELDVP041    VP041
+|    C                     MOVELDVP042    VP042
+|   C*                    MOVELDVP04     VP04
+|   C                     MOVELDVP05     VP05
+|   C                     MOVELDVP06     VP06
+|   C                     MOVELDVP07     VP07
+|   C                     MOVELDVP08     VP08
+|   C                     MOVELDVP09     VP09
+|    C           DVP09     IFEQ 'Y'
+|   C                     MOVELDVP10     VP10
+|   C                     MOVELDVP11     VP11
+|   C                     MOVELDVP12     VP12
+|   C                     MOVELDVP13     VP13
+     C                     ELSE
+|   C                     MOVEL*BLANK    VP10
+|   C                     MOVEL*BLANK    VP11
+|   C                     MOVEL*BLANK    VP12
+|   C                     MOVEL*BLANK    VP13
+     C                     END
+     C*
+|   C                     MOVELDVP14     VP14
+|   C*                    MOVELPGMNAM    AAWW      P      異動程式
+|   C*                    Z-ADD$A8YMD    AAXX             異動日期
+|   C*                    TIME           AAYY             異動時間
+|   C*                    MOVEL$USER     AAZZ      P      異動者　
+|   C                     UPDATVP0
+|   C                     MOVE 'SCR001'  APPSCR
+| 06-C                     END
+| 05-C                     END
+|   C*
+| 03*C                     ELSE
+|   C                     EXSR RTN280
+| 03-C                     END
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+14===C                     ENDSR
+      *==============================================================*
+      *          RTN230....DEL DATA
+      *==============================================================*
+15===C           RTN230    BEGSR
+|    C*
+|    C                     SETON                     29
+|    C           KEYSE2    CHAINVP0                  40
+|    C*          *LOVAL    SETLLVP0
+|    C                     EXSR RTN252                     *FIEL->SCRN
+|    C                     SETOF                     303132*NO INPUT
+| 01-C           *IN03     DOWEQ'0'                        *CTL LOOP
+|   C           *IN12     ANDEQ'0'
+|   C           APPSCR    ANDEQ'SCR002'
+|    C                     MOVE '刪除'  DFUN
+|   C*
+|   C                     EXFMTDSPD2
+|   C                     MOVEA*ALL'0'   *IN,60
+|   C                     Z-ADD0         D#ROW
+|   C                     Z-ADD0         D#COL
+| 02-C           *IN03     IFEQ '0'
+| 03-C           *IN12     IFEQ '0'
+|   C                     EXSR RTN280
+| 04-C           *IN99     IFEQ '0'
+|   C                     CALL 'WDS000'
+|   C                     PARM 'N'       DLTFLG  1
+| 05-C           DLTFLG    IFEQ 'Y'
+|   C           KEYDP2    CHAINVP0                  40
+|   C  N40                DELETVP0
+| 05-C                     END
+| 04-C                     END
+|   C                     MOVE 'SCR001'  APPSCR
+| 03*C                     ELSE
+|   C                     MOVE 'SCR001'  APPSCR
+| 03-C                     END
+|   C*
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+15===C                     ENDSR
+      *==============================================================*
+      *          RTN240....INQ DATA
+      *==============================================================*
+16===C           RTN240    BEGSR
+|    C*
+|    C                     SETON                     29
+|    C           KEYSE2    CHAINVP0                  40
+|    C                     EXSR RTN252                     *FIEL->SCRN
+|    C                     SETOF                     3031  *NO INPUT
+| 01-C           *IN03     DOWEQ'0'                        *CTL LOOP
+|   C           *IN12     ANDEQ'0'
+|   C           APPSCR    ANDEQ'SCR002'
+|    C                     MOVE '查詢'  DFUN
+|   C*
+|   C                     EXFMTDSPD2
+|   C                     MOVEA*ALL'0'   *IN,60
+|   C                     Z-ADD0         D#ROW
+|   C                     Z-ADD0         D#COL
+|   C*
+| 02-C           *IN03     IFEQ '0'
+| 03-C           *IN12     IFEQ '0'
+|   C                     MOVE 'SCR001'  APPSCR
+| 03*C                     ELSE
+|   C                     MOVE 'SCR001'  APPSCR
+| 03-C                     END
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+16===C                     ENDSR
+      *==============================================================*
+      *          RTN251....CLEAR SCREEN DATA
+      *==============================================================*
+17===CSR         RTN251    BEGSR
+|    C*
+|    C                     MOVEL*BLANK    DVP01            專櫃代號
+|    C                     MOVEL*BLANK    D#B03
+|    C                     MOVEL*BLANK    DVP02            連絡電話
+|    C                     MOVEL*BLANK    DVP021           分機
+|    C                     MOVEL*BLANK    DVP03            客戶姓名
+|    C                     Z-ADD01        DVP041           出生日期
+|    C                     Z-ADD01        DVP042           出生日期
+|    C                     MOVEL'M'       DVP05            性別
+|    C                     MOVEL*BLANK    DVP06            地址
+|    C                     MOVEL*BLANK    DVP07            統一編號
+|    C                     MOVEL*BLANK    DVP08            E-MAIL
+|    C                     MOVEL*BLANK    DVP09            活動通知
+|    C                     MOVEL*BLANK    DVP10            手機簡訊
+|    C                     MOVEL*BLANK    DVP11            DM通知
+|    C                     MOVEL*BLANK    DVP12            EM通知
+|    C                     MOVEL'0'       D#920
+|    C                     MOVEL'90000'   D#921
+|    C                     MOVEL'00000'   D#922
+|    C                     MOVEL'0'       D#910
+|    C                     MOVEL'99999'   D#911
+|    C                     MOVEL'99999'   D#912
+|    C*
+17===CSR                   ENDSR
+      *==============================================================*
+      *          RTN252....MOVE DATA TO SCREEN
+      *==============================================================*
+18===CSR         RTN252    BEGSR
+|    C*
+|    C                     MOVELVP01      DVP01            專櫃代號
+|    C                     MOVELDVP01     TVP01  10        專櫃代號
+|    C           KEYPA     CHAIN#A0                  40    專櫃名稱
+|    C  N40                MOVEL#A03      D#B03
+|    C   40                MOVEL*BLANK    D#B03
+|    C*
+|    C                     MOVELVP02      DVP02            連絡電話
+|    C                     MOVELVP021     DVP021           分機
+|    C                     MOVELVP03      DVP03            客戶姓名
+|    C                     MOVELVP041     DVP041           出生月日
+|    C                     MOVELVP042     DVP042           出生月日
+|    C                     MOVELVP05      DVP05            性別
+|    C                     MOVELVP06      DVP06            地址
+|    C                     MOVELVP07      DVP07            統一編號
+|    C                     MOVELVP08      DVP08            EMAIL
+|    C                     MOVELVP09      DVP09            活動通知
+|    C                     MOVELVP10      DVP10            手機簡訊
+|    C                     MOVELVP11      DVP11            DM通知
+|    C                     MOVELVP12      DVP12            EMAIL通知
+|    C                     MOVELVP13      DVP13            電話通知
+|    C                     MOVELVP14      DVP14            有效客戶
+|    C                     MOVEL'0'       D#920
+|    C                     MOVEL'89999'   D#921
+|    C                     MOVEL'99999'   D#922
+|    C                     MOVEL'0'       D#910
+|    C                     MOVEL'99999'   D#911
+|    C                     MOVEL'99999'   D#912
+|    C*
+18===CSR                   ENDSR
+      *==============================================================*
+      *          RTN260....F5 -- 參考資料
+      *==============================================================*
+19===CSR         RTN260    BEGSR
+|    C*
+|    C                     EXSR RTN280
+|    C********************
+|    C*  GET ROW,COL     *
+|    C********************
+| 01-C           *IN99     IFEQ '0'
+|   C           #CSR      DIV  256       D#ROW            *ROW
+|   C                     MVR            D#COL            *COL
+| 01-C                     END
+|    C                     SETON                     99
+|    C*
+19===C                     ENDSR
+      *==============================================================*
+      *          RTN280....CHECK 'SC02' SCREEN
+      *==============================================================*
+20===CSR         RTN280    BEGSR
+|    C*專櫃檢核-空白
+| 00 C           DVP01     IFEQ *BLANK
+|   C                     SETON                     9961
+|   C                     MOVEL'ERR0001' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 00-C                     END
+|    C   99                GOTO END280
+|    C*專櫃檢核-存在
+| 00 C           DVP01     IFNE *BLANK
+|    C                     MOVELDVP01     TVP01  10        專櫃代號
+|    C           KEYPA     CHAIN#A0                  40
+|    C           *IN40     IFEQ '1'
+|   C                     SETON                     9961
+|   C                     MOVEL'ERR0001' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+|    C                     END
+| 00-C                     END
+|    C   99                GOTO END280
+|     *電話不可空白
+| 01-C           DVP02     IFEQ *BLANK
+|   C                     SETON                     9962
+|   C                     MOVEL'ERR0001' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO END280
+|     *資料已存在不可重複新增
+|    C                     MOVELDVP02     TVP02
+|    C           KEYTP2    CHAINVP0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C           DOPT1     ANDEQ'1'
+|   C                     SETON                     9962
+|   C                     MOVEL'ERR0003' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 02-C                     END
+|    C   99                GOTO END280
+|     *資料不存在不可更新
+|    C           KEYTP2    CHAINVP0                  41
+| 03-C           *IN41     IFEQ '1'
+|   C           DOPT1     ANDEQ'2'
+|   C                     SETON                     9962
+|   C                     MOVEL'ERR0002' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 03-C                     END
+|    C   99                GOTO END280
+|     *電話輸入不可為數字與空白以外的文字
+|    C           '01234567'CAT  '89 '     TEMP04 12
+|    C           TEMP04    CHECKDVP02:1   TEMP05  30     98
+|    C           TEMP04    CHECKDVP021:1  TEMP06  30     97
+| 04-C           *IN98     IFEQ '1'
+|    C           *IN97     OREQ '1'
+|   C                     SETON                     9962
+|   C                     MOVEL'ERR0162' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 04-C                     END
+|    C   99                GOTO END280
+|     *電話區碼判斷
+| 05-C           VP02H     IFLT '021'
+|   C           VP02H     ORGT '099'
+|   C                     SETON                     9962
+|   C                     MOVEL'ERR0162' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 05-C                     END
+|    C   99                GOTO END280
+|     *手機輸入長度不能超過10位
+| 06-C           VP02H2    IFEQ '09'
+     C*手機號碼無分機
+|    C           DVP021    IFNE *BLANK
+     C                     SETON                     9962
+|   C                     MOVEL'ERR0164' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+|   C   99                GOTO END280
+     C                     END
+|    *向右
+|   C           ' '       SCAN DVP02     X       20
+|   C           16        SUB  X         Y       10
+|   C                     CAT  DVP02:Y   RESET  15 P
+|   C                     MOVE RESET     TEMP01 150P
+|   C                     MOVELD#AL92    TEMP02 100
+|   C                     MOVELD#AL9     TEMP03 100
+| 07-C           TEMP01    IFLE TEMP02
+|   C           TEMP01    ORGT TEMP03
+|   C                     SETON                     9962
+|   C                     MOVEL'ERR0162' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 07-C                     END
+|   C                     MOVEL*BLANK    RESET
+|   C   99                GOTO END280
+| 06-C                     END
+|    C*生日檢核-月份
+|    C           DVP041    IFLT 1
+|    C           DVP041    ORGT 12
+|    C                     SETON                     9964
+|    C                     MOVEL'ERR0005' ERRID
+|    C                     MOVEL'SCMF'    ERRF
+|    C                     GOTO END280
+|    C                     END
+|    C*生日檢核-日期(大月)
+|    C           DVP041    IFEQ 1
+|    C           DVP041    OREQ 3
+|    C           DVP041    OREQ 5
+|    C           DVP041    OREQ 7
+|    C           DVP041    OREQ 8
+|    C           DVP041    OREQ 10
+|    C           DVP041    OREQ 12
+|    C           DVP042    IFLT 1
+|    C           DVP042    ORGT 31
+|    C                     SETON                     9964
+|    C                     MOVEL'ERR0005' ERRID
+|    C                     MOVEL'SCMF'    ERRF
+|    C                     END
+|    C   99                GOTO END280
+|    C                     END
+|    C*生日檢核-日期(小月)
+|    C           DVP041    IFEQ 4
+|    C           DVP041    OREQ 6
+|    C           DVP041    OREQ 9
+|    C           DVP041    OREQ 11
+|    C           DVP042    IFLT 1
+|    C           DVP042    ORGT 30
+|    C                     SETON                     9964
+|    C                     MOVEL'ERR0005' ERRID
+|    C                     MOVEL'SCMF'    ERRF
+|    C                     END
+|    C   99                GOTO END280
+|    C                     END
+|    C*生日檢核-日期(2月)
+|    C           DVP041    IFEQ 2
+|    C           DVP042    IFLT 1
+|    C           DVP042    ORGT 29
+|    C                     SETON                     9964
+|    C                     MOVEL'ERR0005' ERRID
+|    C                     MOVEL'SCMF'    ERRF
+|    C                     END
+|    C   99                GOTO END280
+|    C                     END
+|    C*性別
+|    C           DVP05     IFNE *BLANK
+|    C           'MF'      CHECKDVP05:1   TEMPSE  10     98
+| 08-C           *IN98     IFEQ '1'
+|   C                     SETON                     9965
+|   C                     MOVEL'ERR0005' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 08-C                     END
+|    C   99                GOTO END280
+|    C                     END
+|    C*E-MAIL
+|    C           DVP08     IFNE *BLANK
+|    C                     MOVELDVP08     @W02,1    P
+|    C           '@'       SCAN @W02,1    TEST    20     40
+|    C           '.'       SCAN @W02,1    TEST    20     41
+|    C           *IN40     IFEQ '0'
+|    C           *IN41     OREQ '0'
+|    C                     SETON                     6899
+|    C                     MOVEL'ERR0005' ERRID
+|    C                     MOVEL'SCMF'    ERRF
+|    C                     END
+|    C   99                GOTO END280
+|    C                     END
+|    C*活動通知-空白
+|    C           DVP09     IFEQ *BLANK
+|    C                     SETON                     6999
+|    C                     MOVEL'ERR0001' ERRID
+|    C                     MOVEL'SCMF'    ERRF
+|    C                     END
+|    C   99                GOTO END280
+|    C*活動通知-內容
+|    C           DVP09     IFEQ 'Y'
+|    C           DVP10     ANDEQ' '
+|    C           DVP11     ANDEQ' '
+|    C           DVP12     ANDEQ' '
+|    C           DVP13     ANDEQ' '
+|    C                     SETON                     997071
+|    C                     SETON                     72
+|    C                     MOVEL'ERR0001' ERRID
+|    C                     MOVEL'SCMF'    ERRF
+|    C                     END
+|    C   99                GOTO END280
+|    C*通知方式-內容
+|    C           DVP09     IFEQ 'Y'
+|    C           'V '      CHECKDVP10:1   TDVP10  10     95
+|    C           'V '      CHECKDVP11:1   TDVP11  10     96
+|    C           'V '      CHECKDVP12:1   TDVP12  10     97
+|    C           'V '      CHECKDVP13:1   TDVP13  10     98
+| 08-C           *IN95     IFEQ '1'
+| 08-C           *IN96     OREQ '1'
+| 08-C           *IN97     OREQ '1'
+| 08-C           *IN98     OREQ '1'
+|   C                     SETON                     997071
+|   C                     SETON                     72
+|   C                     MOVEL'ERR0005' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+| 08-C                     END
+|    C   99                GOTO END280
+|    C                     END
+|    C*有效客戶
+|    C           'AB'      CHECKDVP14:1   TDVP14  10     98
+| 08-C           *IN98     IFEQ '1'
+|   C                     SETON                     9973
+|   C                     MOVEL'ERR0005' ERRID
+|   C                     MOVEL'SCMF'    ERRF
+|    C                     END
+|    C   99                GOTO END280
+|     *
+20===CSR         END280    ENDSR
+     C*==============================================================*
+      *          RTNF4 ....F4 HELP
+      *===============================================================*
+21===C           RTNF4     BEGSR
+|    C*
+|    C                     SETON                     99
+|    C*
+|    C********************
+|    C*  GET ROW,COL     *
+|    C********************
+|    C           #CSR      DIV  256       D#ROW            *ROW
+|    C                     MVR            D#COL            *COL
+|    C** 游標位置即為(D#ROW,D#COL)
+|    C*
+|    C********************
+|    C*  FOR  SCR002     *
+|    C********************
+|     *
+|    C*          APPSCR    IFEQ 'SCR002'
+|    C**
+|    C*          DOPT1     IFEQ '1'
+|    C**
+|    C*          D#ROW     IFEQ 9
+|    C*          D#COL     ANDGE16
+|    C*          D#COL     ANDLE20
+|    C*                    CALL 'SWD007'
+|    C*                    PARM DCA01     PARMO1  2
+|    C*                    PARM DCA02     PARMO2  2
+|    C*          DCA03     PARM DCA03     PARMO3  5
+|    C*
+|    C*                    END
+|    C*                    END
+|    C** SCR002
+|    C*                    END
+|    C*
+21===C           ENDF4     ENDSR
+     C*==============================================================*
+     C*          RTN990....AUT CHK (CALL SUBPGM)
+     C*==============================================================*
+22===C           RTN990    BEGSR
+|    C*
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM           S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     9099
+| 01-C                     END
+|    C*
+22===C                     ENDSR
+     C*==============================================================*
+     C*          ERRSR ....DATA LOCK ROUTINE
+     C*==============================================================*
+     C*          ERRSR     BEGSR
+     C*
+     C*                    CALL 'P50'
+     C*          DMSG      PARM           P5001O 78
+     C*                    SETON                     8099
+     C*
+     C*                    ENDSR'*DETC'
+     C/COPY HBP2CVTR
+**
+新增修改      刪除查詢
+

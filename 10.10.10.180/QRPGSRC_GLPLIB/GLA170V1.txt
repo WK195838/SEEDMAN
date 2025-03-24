@@ -1,0 +1,322 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : GLA170                                     *
+     H*    PROGRAM NAME : 過帳作業                                 *
+     H*    AUTHOR       : A1087  JOYCE                               *
+     H*    CREATE DATE  : 1992.11.06                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     H****************************************************************
+     FGLAKPF  IF  E           K        DISK
+     FGLA5PF  IF  E           K        DISK
+     FGLA170D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I*                                     211 2160DYMD
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAH01
+     I                                      503 5090DAH10
+     I                                      510 511 DAH17
+     I                                      512 5190DAH10F
+     I                                      520 521 DAH17F
+     I                                      522 523 DAH17T
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYA5     KLIST
+     C                     KFLD           DAH01
+     C                     KFLD           DAH17
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT VALUE
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C                     EXSR R1000
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....SCREEN INIT VALUE SET
+     C*==============================================================*
+01===CSR         R0100     BEGSR
+|    C*
+|    C                     SETON                     27
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C                     MOVEL*BLANK    DAH01
+|    C                     Z-ADD0         DAH10
+|    C                     MOVEL*BLANK    DAH17
+|    C                     Z-ADD0         DAK12
+|    C                     Z-ADD0         DAH10F
+|    C                     MOVEL*BLANK    DAH17F
+|    C                     MOVEL*BLANK    DAH17T
+|    C                     Z-ADD1         $CPY
+|    C                     MOVE '00'      $PRTCD
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+01===C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+|   C                     EXSR R1E00                      .PROMPT
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 03-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00
+|   C                     GOTO E1000
+| 03-C                     END
+|    C*
+|    C                     EXSR R1B00                      .CHECK      ?
+|    C*
+| 04-C           *IN14     IFEQ '1'
+|   C           *IN99     ANDEQ'0'
+|   C                     SETOF                     27
+|   C                     SETON                     28    .執行中
+|   C                     WRITEDSPD1
+|   C                     SETOF                     28
+|   C*
+|   C                     OUT  LDA
+|   C                     CALL 'GLA1701C'
+|   C                     SETON                     27
+|   C* 作業完成
+|   C                     MOVEL'UPT2142' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 04-C                     END
+|00A+C*DEALLOCATE GLAHPF
+|00A+C                     CALL 'GLA1702C'
+|00A+C                     PARM *BLANK    P1701   1        ' '-DEALLOCATE
+|00A+C                     PARM *BLANK    P1702   1
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'GLI1B0'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C* CALL SUB-PROGRAM
+|    C                     CALL 'GLI1B0'
+|    C*
+03===C           E1A00     ENDSR
+     C*===============================================================*
+     C*          R1B00  ...CHECK DATA FROM SCREEN KEY-IN
+     C*===============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C                     Z-ADD0         DAK12
+|    C*
+|    C* CHK公司別
+|    C*
+| 01-C           DAH01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           DAH01     CHAINAK0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02*C                     ELSE
+| 03-C           AK15      IFNE *BLANK
+|   C                     MOVEL'UGL0013' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6099
+| 03-C                     END
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* GET已過帳日期
+|    C*
+| 04-C           DAH17     IFEQ *BLANK
+|   C                     Z-ADDAK12      P3101I
+| 04*C                     ELSE
+|   C           KEYA5     CHAINA50                  40
+|   C  N40                Z-ADDA503      P3101I
+|   C   40                Z-ADD0         P3101I
+| 04-C                     END
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C           DAK12     PARM           P3101O  80
+|    C*
+|    C* CHK傳票日期
+|    C*
+| 05-C           DAH10     IFEQ 0
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 05*C                     ELSE
+|   C                     CALL 'P30'
+|   C                     PARM DAH10     P3001I  80
+|   C                     PARM AK11      P3002I  1
+|   C                     PARM AK09      P3003I  1
+|   C                     PARM           P3001O  1
+| 06-C           P3001O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 06-C                     END
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* CHK會計期間資料是否建立
+|    C*
+|    C                     Z-ADD0         P005O1
+|    C                     Z-ADD0         P005O2
+|    C*
+|    C                     CALL 'GLS005'
+|    C                     PARM DAH01     P005I1  2
+|    C                     PARM DAH10     P005I2  80
+|    C                     PARM 'S'       P005I3  1
+|    C                     PARM           P005O1  40
+|    C                     PARM           P005O2  20
+|    C                     PARM           P005O3  1
+|    C                     PARM           P005O4  1
+| 07-C           P005O1    IFEQ 0
+|   C           P005O2    OREQ 0
+|   C                     MOVEL'UGL0029' ERRID
+|   C                     MOVEL'GLMF'    ERRF
+|   C                     SETON                     6199
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C* CHK FUN AUT
+| 08-C           $ADD      IFNE 'Y'
+|   C           $UPD      ORNE 'Y'
+|   C           $DLT      ORNE 'Y'
+|   C           $INQ      ORNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* GET傳票日期
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DAH10     P3101I  80
+|    C                     PARM AK11      P3102I  1
+|    C                     PARM AK09      P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           DAH10F    PARM           P3101O  80
+|    C*
+|    C* GET傳票來源
+|    C*
+| 09-C           DAH17     IFEQ *BLANK
+|   C                     MOVE *LOVAL    DAH17F
+|   C                     MOVE *HIVAL    DAH17T
+| 09*C                     ELSE
+|   C                     MOVE DAH17     DAH17F
+|   C                     MOVE DAH17     DAH17T
+| 09-C                     END
+|00A+C*ALLOCATE GLAHPF
+|00A+C                     CALL 'GLA1702C'
+|00A+C                     PARM '1'       P1701   1        '1'-ALLOCATE
+|00A+C                     PARM *BLANK    P1702   1
+|00A+C           P1702     IFNE *BLANK
+|00A+C                     MOVEL'LCK0001' ERRID
+|00A+C                     MOVEL'GLMF'    ERRF
+|00A+C                     SETON                     6099
+|00A+C                     END
+|00A+C   99                GOTO E1B00
+|    C*
+04===CSR         E1B00     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+05===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*傳票來源
+| 01-C           #LIN      IFEQ 9
+|   C           #COL      ANDGE40
+|   C           #COL      ANDLE41
+|   C                     CALL 'GLS004'
+|   C                     PARM DAH01     P004I1  2
+|   C           DAH17     PARM DAH17     P004O1  2
+| 01-C                     END
+|    C*印表機
+| 02-C           #LIN      IFEQ 17
+|   C           #COL      ANDGE39
+|   C           #COL      ANDLE40
+|   C                     CALL 'P64I'
+|   C           $PRTCD    PARM $PRTCD    P64II1  2
+| 02-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+

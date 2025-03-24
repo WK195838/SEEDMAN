@@ -1,0 +1,1052 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA110                                     *
+     H*    PROGRAM NAME :全民健保資料建立                          *
+     H*    AUTHOR       : A1413 CLOUD                                *
+     H*    CREATE DATE  : 2006/05/08                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     H*備註: 2006/03/13 JENNIFER 將PTI121->PTIZ21                *
+     H****************************************************************
+     FPYE8PF  UF  E           K        DISK                      A
+     FPYE1PF  UF  E           K        DISK                      A
+     FPYE2PF  IF  E           K        DISK
+     FPYE3LF01IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     F*SYCMPF  IF  E           K        DISK
+     FPYE9PF  IF  E           K        DISK
+     F*PT#YPF  IF  E           K        DISK
+     FPYA110D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E                    @AR1       99 10
+     E                    WFUN    5   5  6
+     E*---------------------------------------------------------------*
+     I/COPY QDDSSRC,PYPMDS01
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      203 2080DDATE
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I           IDS
+     I                                        1   60DE803
+     I                                        1   40DE803M
+     I*          IDS
+     I*                                       1 105 DATE2
+     I*                                       1  14 E206
+     I*                                      15  24 E207
+     I*                                      25  320E208
+     I*                                      33  33 E209
+     I*                                      34  34 E211
+     I*                                      35  35 E205
+     I*                                      36  430E203
+     I*                                      44 105 E212
+     I*          IDS
+     I*                                       1 105 DSPE2
+     I*                                       1  14 DE206
+     I*                                      15  24 DE207
+     I*                                      25  320DE208T
+     I*                                      33  33 DE209
+     I*                                      34  34 DE211
+     I*                                      35  35 DE205
+     I*                                      36  430DE203T
+     I*                                      44 105 DE212
+    C*==============================================================*
+    C*                    DEFN
+    C*==============================================================*
+    C*
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C           *LIKE     DEFN RRN       @LRRN            LAST REC NUM
+     C           *LIKE     DEFN RRN       @LPAGE           LAST PAGE
+     C           *LIKE     DEFN RRN       @PRRN            PROMPT USE
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C           *LIKE     DEFN E208      WE208
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYE8     KLIST                           *HEAD FILE
+     C                     KFLD           E801             公司編號
+     C                     KFLD           E802             員工編號
+     C                     KFLD           E803             生效日期
+     C*
+     C           KEYE81    KLIST                           *HEAD FILE
+     C                     KFLD           E801             公司編號
+     C                     KFLD           E802             員工編號
+     C*
+     C           KEYE2     KLIST                           *HEAD FILE
+     C                     KFLD           E201             公司編號
+     C                     KFLD           E202             員工編號
+     C*
+     C           KEYE21    KLIST                           *HEAD FILE
+     C                     KFLD           E201             公司編號
+     C                     KFLD           E202             員工編號
+     C                     KFLD           E203             生效日期
+     C*
+     C           KEYE3     KLIST                           *HEAD FILE
+     C                     KFLD           DE805            投保金額
+     C*
+     C           KEYPM     KLIST                           *PYE8PF
+     C                     KFLD           PM01             '01'
+     C                     KFLD           PM02
+     C*
+     C           KEYEM     KLIST                           *DETIL FILE
+     C                     KFLD           DE801
+     C                     KFLD           DE802
+     C*
+     C*          KEY#Y     KLIST                           *DETIL FILE
+     C*                    KFLD           W#Y01  10
+     C*                    KFLD           W#Y02  10
+     C*
+     C           KEYSF     KLIST                           *SFL讀E8
+     C                     KFLD           DE801
+     C                     KFLD           DE802
+     C                     KFLD           DE207
+     C*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C                     MOVEL*BLANK    @RTNC
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C*--------------------------------------------------------------*
+|    C*
+|    C                     MOVEL*BLANK    DE802
+|    C                     Z-ADDDDATE     DE803
+|    C                     MOVEL$COR      DE801
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|   C                     SETON                     32
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     MOVEL'03'      @RTNC
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *END
+|   C                     MOVEL'12'      @RTNC
+|   C                     SETON                     03
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 03-C           *IN04     IFEQ '1'                        *PROMPT
+|   C                     EXSR R1E00
+|   C                     GOTO E1000
+| 03-C                     END
+|    C*
+| 04-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00
+|   C                     GOTO E1000
+| 04-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 05-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+|   C                     MOVEL'SC02'    SCID
+| 05-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'PYI110'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C* CALL SUB-PROGRAM
+|    C                     CALL 'PYI110'
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C           DE801     PARM DE801     P370I1  2
+|    C           DE802     PARM DE802     P370I2  8
+|    C           DE803     PARM DE803     P370I3  60
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     PARM           @RTNC   2
+|    C* RETURN CODE CHECK
+| 02-C           @RTNC     IFEQ '03'                       *PF3
+|   C                     SETON                     03
+| 02-C                     END
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+04===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*員工編號DPY02
+| 01-C           #LIN      IFEQ 5
+|   C           #COL      ANDGE13
+|   C           #COL      ANDLE17
+|   C                     CALL 'PYI101'
+|   C                     PARM DE801     P101I1  2         公司別
+|   C           DE802     PARM DE802     P101I2  8         員工　
+|   C*                    PARM           P101I3 10         員工　
+|   C                     PARM           @RTNC   2          FUN KEY
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+05===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C* << CHACK 公司別NOT *BLANK >>
+| 02-C           DE801     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DE801     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 03-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 04-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*                    Z-ADD0         E803
+|    C*
+|    C*                    MOVEL*BLANK    CM02
+|    C*          DE801     CHAINSYCMPF               40
+|    C*
+|    C*---------------------------------------------------------------*
+|    C*<<員工編號>>
+| 05-C           DE802     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     MOVEL*BLANK    EM03
+|    C           KEYEM     CHAINPYEMPF               40
+| 06-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606199
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*部門別
+|    C                     CALL 'PYSCM1'
+|    C                     PARM EM01      CM101I  2         公司代號
+|    C                     PARM EM04      CM102I  7         部門代號
+|    C                     PARM           CM103O 14         部門名稱
+|    C                     PARM           CM199O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 07-C           CM199O    IFEQ 'N'
+|   C                     SETON                     6199
+|   C                     MOVEL'US#0098' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 08-C           CM199O    IFEQ *BLANK
+|   C                     SETON                     606199
+|   C                     MOVEL'US#1111' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*<<生效日期不能為零且需符合日期格式>>
+| 09-C           DE803     IFEQ 0
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 09*C                     ELSE
+|   C                     CALL 'P30'
+|   C                     PARM DE803     P3001I  80
+|   C                     PARM '1'       P3002I  1
+|   C                     PARM '1'       P3003I  1
+|   C                     PARM           P3011O  1
+| 10-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 10-C                     END
+| 09-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     Z-ADDDE803     P3101I
+|    C                     CALL 'P31'
+|    C                     PARM           P3101I  80
+|    C                     PARM '1'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    WE803   80       日期轉西元
+|    C*---------------------------------------------------------------
+     C*轉換年月
+|   C                     CALL 'P38'
+|   C                     PARM DE803M    P3801I  60
+|   C                     PARM '1'       P3802I  1
+|   C                     PARM '1'       P3803I  1
+|   C                     PARM           P3801O  60
+|   C                     PARM           P3811O  1
+|    C*<<新增、刪除、修改: 生效日期年月必需大於薪資確認年月>>
+|    C*<<PM206 :下期薪資確認日期年月>>
+| 11-C           DOPT      IFNE 5
+|   C                     MOVEL'01'      PM01
+|   C                     MOVELDE801     PM02
+|   C           KEYPM     CHAINPM0                  40
+| 12-C           P3801O    IFLE PM206
+|   C                     MOVEL'UPT0039' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 12-C                     ENDIF
+| 11-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*<<新增>>
+|    C*<<健保記錄檔如有資料，生效日期必需大於最近一筆健保記錄>>
+| 13-C           DOPT      IFEQ 1
+|   C                     MOVELDE801     E801
+|   C                     MOVELDE802     E802
+|   C           KEYE81    SETGTE80                  43
+|   C           KEYE81    REDPEE80                      44
+| 14-C           *IN44     IFEQ '0'
+| 15-C           WE803     IFLE E803
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 15-C                     ENDIF
+| 14-C                     ENDIF
+| 13-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*<<修改、刪除>>
+|    C*<<勞保記錄檔必需有資料,生效日期必需等於最近一筆勞保記錄>>
+| 16-C           DOPT      IFEQ 2
+|   C           DOPT      OREQ 4
+|   C*
+|   C                     MOVELDE801     E801
+|   C                     MOVELDE802     E802
+|   C           KEYE81    SETGTE80                  43
+|   C           KEYE81    REDPEE80                      44
+| 17-C           *IN44     IFEQ '1'                        無資料
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     617099
+| 17*C                     ELSE                            有資料
+| 18-C           WE803     IFNE E803
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 18-C                     ENDIF
+|   C*
+| 17-C                     ENDIF
+|   C*
+| 16-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*<<查詢>>
+|    C*<<勞保記錄檔必需有資料>>
+| 19-C           DOPT      IFEQ 5
+|   C                     MOVELDE801     E801
+|   C                     MOVELDE802     E802
+|   C                     Z-ADDWE803     E803
+|   C           KEYE8     CHAINE80                  40
+| 20-C           *IN40     IFEQ '1'                        無資料
+|   C                     MOVEL'UPT5006' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 20-C                     ENDIF
+|   C*
+| 19-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*
+05===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+06===C           R1C00     BEGSR
+|    C*
+|    C                     MOVELWFUN,DOPT DFUN             *作業說明
+|    C                     SETOF                     3132  *IN CONTROL
+|    C*
+|    C                     EXSR R1CC0                      *INIT SFL
+|    C*
+|    C* ADD
+|    C           DOPT      IFEQ 1
+|    C                     SETON                     31
+|    C*                    EXSR R1CB0                      *INIT HEAD
+|    C*                    EXSR R1CE0                      *INIT DETAIL
+|    C*                    EXSR R1CD0                      *INIT DETAIL
+|    C                     END
+|    C* UPD
+|    C           DOPT      IFEQ 2
+|    C                     SETON                     31
+|    C*                    EXSR R1CB0                      *HEADING
+|    C*                    EXSR R1CE0                      *READ DETAIL
+|    C*                    EXSR R1CD0                      *INIT DETAIL
+|    C                     END
+|    C* DEL & INQ
+|    C*          DOPT      IFEQ 4
+|    C*          DOPT      OREQ 5
+|    C                     EXSR R1CB0                      *HEADING
+|    C                     EXSR R1CE0                      *READ DETAIL
+|    C                     SETON                     53    *SFLEND
+|    C*                    END
+|    C*SFLDSP
+| 01-C           @LRRN     IFGT 0
+|   C                     Z-ADD1         DRRN
+|   C                     SETON                     50    *SFLDSP
+| 01*C*                    ELSE
+|   C*                    SETON                     99    *NO DTA
+|   C*                    MOVEL'UPT2050' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)++++++++++++++++++++++++++++++++++*
+| 02-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C           *LOVAL    SETLLE80                        *HEAD FILE
+|   C           *LOVAL    SETLLE20                        *HEAD FILE
+| 02-C                     END
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R1CA0 ....SFL HEAD INIT : ADD (NO COPY)
+     C*==============================================================*
+07===C           R1CA0     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << ADD : SUBFILE HEAD DATA INITAILIZE>>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1CB0 ....SFL HEAD INIT : U/D/I/A-COPY
+     C*==============================================================*
+08===C           R1CB0     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << U/D/I AND ADD-COPY : SUBFILE HEAD DATA INITAILIZE>>
+|    C                     MOVELDE801     E801
+|    C                     MOVELDE802     E802
+|    C*轉換日期
+|    C                     CALL 'P31'
+|    C                     PARM DE803     P3101I  80
+|    C                     PARM '1'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           E803      PARM           P3111O  80
+|    C           KEYE8     CHAINE80                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELE804      DE804            異動類別
+|   C                     Z-ADDE805      DE805            投保金額
+|   C                     Z-ADDE806      DE806            投保人數
+|   C                     MOVELE808      DE808            補助碼
+| 01*C                     ELSE
+|   C                     MOVEL'2'       DE804            異動類別
+|   C                     Z-ADD15840     DE805            投保金額
+|   C                     Z-ADD1         DE806            投保人數
+|   C                     MOVEL*BLANK    DE808            補助碼
+| 01-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+08===C                     ENDSR
+     C*=============================================================*
+     C*          R1CC0 ....SUBFILE INIT
+     C*=============================================================*
+09===C           R1CC0     BEGSR
+|    C* SFL SETTING ++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD10        @PRCD            *PGE RCD
+|    C                     Z-ADD11        @SFTOP  20       *SFL TOP LIN
+|    C                     Z-ADD20        @SFBOT  20       *SFL BOT LIN
+|    C                     Z-ADD1         @LNUM   20       *明細行數
+|    C* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD0         DRRN
+|    C                     Z-ADD0         RRN
+|    C                     Z-ADD0         @LRRN            *LAST RRN
+|    C                     Z-ADD0         @DRCD            *DSP RCD
+|    C*
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     5053  *SFLDSP,END
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R1CD0 ....SFL DATA INIT
+     C*==============================================================*
+10===C           R1CD0     BEGSR
+|    C*
+|    C                     SETOF                     54    *54 FOR BLANK LOOP
+|    C                     Z-ADD@LRRN     RRN
+|    C*
+|    C           @LRRN     DIV  @PRCD     @LPAGE
+|    C                     ADD  1         @LPAGE
+|    C           @LPAGE    MULT @PRCD     @DRCD
+|    C*
+|    C                     EXSR R1CD1                      *INIT SFLDTA
+| 01-C           RRN       DOWLT@DRCD
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+| 01-C                     END
+|    C*
+|    C                     Z-ADDRRN       @LRRN
+|    C                     Z-ADDRRN       DRRN
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R1CD1 ....SFL INIT DATA ADD
+     C*==============================================================*
+11===C           R1CD1     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    DE205
+|    C                     MOVEL*BLANK    DE206
+|    C                     MOVEL*BLANK    DE207
+|    C                     Z-ADD0         DE208
+|    C                     Z-ADD0         DE203
+|    C                     MOVEL*BLANK    DE209
+|    C                     MOVEL*BLANK    DE211
+|    C                     MOVEL*BLANK    DE212
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R1CE0 ....DETAIL DATA TO SFL
+     C*==============================================================*
+12===C           R1CE0     BEGSR
+|    C*
+|    C                     SETON                     54
+|    C*
+|    C                     MOVELDE801     E201
+|    C                     MOVELDE802     E202
+|    C                     CALL 'P31'
+|    C                     PARM DE803     P3101I  80
+|    C                     PARM '1'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           E203      PARM           P3111O  80
+|    C           KEYE21    SETGTE20
+|    C           KEYE2     REDPEE20                      45
+|    C*
+| 01-C           *IN45     DOWEQ'0'
+|   C                     EXSR R1CE1
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+|   C           KEYE2     REDPEE20                      45
+|   C*
+| 01-C                     END
+|    C*
+|    C           RRN       ADD  1         DE806            人數
+|    C                     Z-ADDRRN       @LRRN
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R1CE1 ....DETAIL DATA TO SFL
+     C*==============================================================*
+13===C           R1CE1     BEGSR
+|    C*
+|    C                     MOVELE206      DE206
+|    C                     MOVELE207      DE207
+|    C                     Z-ADDE208      DE208
+|    C                     MOVELE209      DE209
+|    C                     MOVELE211      DE211
+|    C                     MOVELE205      DE205
+|    C                     MOVELE212      DE212
+|    C*
+|    C                     Z-ADDE203      DE203
+|    C*
+|    C*                    MOVEL*BLANK    DE209N
+|    C*                    MOVEL'RELATION'W#Y01     P
+|    C*                    MOVELDE209     W#Y02     P
+|    C*          KEY#Y     CHAIN#Y0                  40
+|    C*          *IN40     IFEQ '0'
+|    C*                    MOVEL#Y03      DE209N
+|    C*                    END
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+14===C           R2000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C                     Z-ADD#DRRN     DRRN
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN05     IFEQ '1'
+|   C                     CALL 'PYI1101'
+|   C                     PARM           P121I1  20
+|   C           DE805     PARM DE805     P121O1  70
+|    C                     PARM           @RTNC   2
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'                        *PROMPT
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPDATE
+|   C                     EXSR R2E00
+| 03-C                     END
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 04-C           *IN25     IFEQ '1'                        *NEXT PAGE
+| 05-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPDATE
+|   C                     EXSR R1CD0
+| 05*C                     ELSE
+|   C                     SETON                     96    *EOP
+| 05-C                     END
+|   C                     GOTO E2000
+| 04-C                     END
+|    C*
+| 06-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C* RELEAS FILE --------------------------------------------------*
+|   C           *LOVAL    SETLLE20
+|   C*---------------------------------------------------------------*
+|   C                     SETON                     32                0
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 06-C                     END
+|    C*
+| 07-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R2B00                      *SC02 CHK
+| 07-C                     END
+|    C*
+| 08-C           *IN99     IFEQ '0'                        *CHK OK
+| 08-C           *IN13     ANDEQ'1'                        *CHK OK
+|   C                     MOVE 'SC01'    SCID
+|   C                     EXSR R2D00                      *FILE UPD
+| 08-C                     END
+|    C*
+14===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'SC02' CHECK
+     C*==============================================================*
+15===C           R2B00     BEGSR
+|    C*----------------------------------------------------------------
+|    C*新增
+| 01-C           DOPT      IFEQ 1
+|   C                     MOVELDE801     E801
+|   C                     MOVELDE802     E802
+|   C           KEYE81    SETGTE80
+|   C           KEYE81    REDPEE80                      45
+| 01-C                     ENDIF
+|    C*修改
+| 02-C           DOPT      IFEQ 2
+|   C                     MOVELDE801     E801
+|   C                     MOVELDE802     E802
+|   C           KEYE81    SETGTE80
+|   C*-EASON    KEYE81    REDPEE80                      45
+|   C           KEYE81    REDPEE80                      45
+| 02-C                     ENDIF
+|    C*----------------------------------------------------------------
+| 03-C           *IN45     IFEQ '1'                        沒有資料
+|   C*<<該員工沒有記錄時,異動類別必需是1健保投保>>
+| 04-C           DE804     IFNE '1'
+|   C                     MOVEL'CPF5223' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7299
+| 04-C                     ENDIF
+| 03*C                     ELSE                            有資料
+|   C*<<該員工有記錄時,前一筆為退保記錄的話只可使用1健保投保>>
+| 05-C           E804      IFEQ '3'                        為退保
+| 06-C           DE804     IFNE '1'
+|   C                     MOVEL'CPF5223' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7299
+| 06-C                     ENDIF
+| 05*C                     ELSE                             不為退保
+|   C*<<新增、修改的記錄前一筆不為退保記錄,
+|   C*  始可使用2、健保調整、3、健保退保>>
+| 07-C           DE804     IFEQ '1'
+|   C                     MOVEL'CPF5223' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7299
+| 07-C                     ENDIF
+|   C*
+| 05-C                     ENDIF
+|   C*
+| 03-C                     ENDIF
+|    C   99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C*<<投保薪資不可為零>>
+| 08-C           DE805     IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7199
+|   C*<<健保保投保級數參照檔>>
+| 08*C                     ELSE
+|   C           KEYE3     CHAINE30                  40
+| 09-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7199
+| 09-C                     END
+| 08-C                     END
+|    C   99                GOTO E2B00
+|    C*----------------------------------------------------------------
+|    C*<< 補助碼 >>
+| 10-C           DE808     IFNE *BLANK
+|   C*                    MOVEL'INSR'    W#Y01     P
+|   C*                    MOVELDE808     W#Y02     P
+|   C           DE808     CHAINE90                  40
+| 11-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     7399
+| 11-C                     END
+|   C   99                GOTO E2B00
+| 10-C                     END
+|    C*
+15===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+16===C           R2D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R2D10
+|   C           DOPT      CASEQ2         R2D20
+|   C           DOPT      CASEQ4         R2D30
+| 01-C                     END
+|    C*
+16===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+17===C           R2D10     BEGSR
+|    C*寫員工歷史檔PYE8PF <<<<<
+|    C                     MOVELDE801     E801
+|    C                     MOVELDE802     E802
+|    C                     CALL 'P31'
+|    C                     PARM DE803     P3101I  80
+|    C                     PARM '1'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           E803      PARM           P3111O  80
+|    C           KEYE8     CHAINE80                  40
+|    C*
+|    C                     MOVELDE804     E804
+|    C                     Z-ADDDE805     E805
+|    C                     Z-ADDDE806     E806
+|    C*
+| 01-C           DE804     IFNE '3'
+|   C                     MOVEL*BLANK    E807             停保註記
+| 01*C                     ELSE
+|   C                     MOVEL'Y'       E807             停保註記
+| 01-C                     END
+|    C*
+|    C                     MOVELDE808     E808
+|    C                     Z-ADD$A8YMD    E897
+|    C                     TIME           E898
+|    C                     MOVEL$USER     E899
+|    C*
+|    C   40                WRITEE80
+|    C*寫員工歷史檔PYE8PF >>>>>
+|    C*---------------------------------------------------------------
+|    C*寫員工檔PYE1PF <<<<<
+|    C           KEYE81    CHAINE10                  40
+|    C*
+|    C                     MOVELDE801     E101
+|    C                     MOVELDE802     E102
+|    C                     CALL 'P31'
+|    C                     PARM DE803     P3101I  80
+|    C                     PARM '1'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           E103      PARM           P3111O  80
+|    C                     MOVELDE804     E104
+|    C                     Z-ADDDE805     E105
+|    C                     Z-ADDDE806     E106
+|    C*
+| 02-C           DE804     IFNE '3'
+|   C                     MOVEL*BLANK    E107             停保註記
+| 02*C                     ELSE
+|   C                     MOVEL'Y'       E107             停保註記
+| 02-C                     END
+|    C*
+|    C                     MOVELDE808     E108
+|    C                     Z-ADD$A8YMD    E197
+|    C                     TIME           E198
+|    C                     MOVEL$USER     E199
+|    C*
+|    C   40                WRITEE10
+|    C  N40                UPDATE10
+|    C*寫員工檔PYE1PF >>>>>
+|    C*
+17===C           E2D10     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPT
+     C*==============================================================*
+18===C           R2D20     BEGSR
+|    C*更新員工歷史檔PYE8PF <<<<<
+|    C                     MOVELDE801     E801
+|    C                     MOVELDE802     E802
+|    C                     CALL 'P31'
+|    C                     PARM DE803     P3101I  80
+|    C                     PARM '1'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           E803      PARM           P3111O  80
+|    C           KEYE8     CHAINE80                  40
+|    C*
+|    C                     MOVELDE804     E804
+|    C                     Z-ADDDE805     E805
+|    C                     Z-ADDDE806     E806
+|    C*
+| 01-C           DE804     IFNE '3'
+|   C                     MOVEL*BLANK    E807             停保註記
+| 01*C                     ELSE
+|   C                     MOVEL'Y'       E807             停保註記
+| 01-C                     END
+|    C*
+|    C                     MOVELDE808     E808
+|    C                     Z-ADD$A8YMD    E897
+|    C                     TIME           E898
+|    C                     MOVEL$USER     E899
+|    C*
+|    C  N40                UPDATE80
+|    C*更新員工歷史檔PYE8PF >>>>>
+|    C*---------------------------------------------------------------
+|    C*更新員工檔PYE1PF <<<<<
+|    C           KEYE81    CHAINE10                  40
+|    C*
+|    C                     MOVELDE801     E101
+|    C                     MOVELDE802     E102
+|    C                     CALL 'P31'
+|    C                     PARM DE803     P3101I  80
+|    C                     PARM '1'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           E103      PARM           P3111O  80
+|    C                     MOVELDE804     E104
+|    C                     Z-ADDDE805     E105
+|    C                     Z-ADDDE806     E106
+|    C*
+| 02-C           DE804     IFNE '3'
+|   C                     MOVEL*BLANK    E107             停保註記
+| 02*C                     ELSE
+|   C                     MOVEL'Y'       E107             停保註記
+| 02-C                     END
+|    C*
+|    C                     MOVELDE808     E108
+|    C                     Z-ADD$A8YMD    E197
+|    C                     TIME           E198
+|    C                     MOVEL$USER     E199
+|    C*
+|    C  N40                UPDATE10
+|    C*更新員工檔PYE1PF >>>>>
+|    C*
+18===C           E2D20     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS : DEL
+     C*==============================================================*
+19===C           R2D30     BEGSR
+|    C*
+|    C*刪除員工歷史檔PYE8PF <<<<<
+|    C           KEYE8     CHAINE80                  40
+|    C  N40                DELETE80
+|    C*刪除員工歷史檔PYE8PF >>>>>
+|    C*---------------------------------------------------------------
+|    C*刪除員工檔PYE1PF <<<<<
+|    C           KEYE81    SETGTE80
+|    C           KEYE81    REDPEE80                      45
+| 01-C           *IN45     IFEQ '1'                        無資料
+|   C           KEYE81    CHAINE10                  40
+|   C  N40                DELETE10
+| 01*C                     ELSE                            有資料
+|   C           KEYE81    CHAINE10                  40
+|   C*
+|   C                     MOVELE801      E101
+|   C                     MOVELE802      E102
+|   C                     Z-ADDE803      E103
+|   C                     MOVELE804      E104
+|   C                     Z-ADDE805      E105
+|   C                     Z-ADDE806      E106
+|   C*
+| 02-C           E804      IFNE '3'
+|   C                     MOVEL*BLANK    E107             停保註記
+| 02*C                     ELSE
+|   C                     MOVEL'Y'       E107             停保註記
+| 02-C                     END
+|   C*
+|   C                     MOVELE808      E108
+|   C                     Z-ADD$A8YMD    E197
+|   C                     TIME           E198
+|   C                     MOVEL$USER     E199
+|   C*
+|   C  N40                UPDATE10
+| 01-C                     ENDIF
+|    C*刪除員工檔PYE1PF >>>>>
+|    C*
+19===C                     ENDSR
+     C*==============================================================*
+     C*          R2E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+20===C           R2E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*
+| 01-C           #LIN      IFEQ 6
+|   C           #COL      ANDEQ52
+|   C                     CALL 'TRW006'
+|   C           DE808     PARM DE808     P120O1  1
+| 01-C                     END
+|    C*
+| 02-C*          #LIN      IFLT @SFTOP
+|   C*          #LIN      ANDGT@SFBOT
+|   C*                    GOTO E2E00
+| 02-C*                    END
+|    C* GET SFL REC
+|    C*          #LIN      SUB  @SFTOP    @PRRN
+|    C*          @PRRN     DIV  @LNUM     @PRRN
+|    C*                    MVR            @LINE   20
+|    C*
+|    C*                    ADD  1         @LINE            .明細行
+|    C*                    ADD  #DRRN     @PRRN            .PROMPT RRN
+|    C*          @PRRN     CHAINSFLSR                40
+|    C*  40                GOTO E2E00
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << SFLSR FIELD >>
+| 03-C*          @LINE     IFEQ 1
+|   C*          #COL      ANDGE48
+|   C*          #COL      ANDLE48
+|   C*                    MOVEL*BLANK    P120I1
+|   C*                    MOVEL*BLANK    P120O1
+|   C*                    CALL 'PTI121'
+|   C*                    CALL 'PTIZ21'
+|   C*                    PARM 'INSR'    P120I1 10
+|   C*          DE211     PARM DE211     P120O1 10
+| 03-C*                    END
+|    C*
+| 04-C*          @LINE     IFEQ 1
+|   C*          #COL      ANDGE41
+|   C*          #COL      ANDLE41
+|   C*                    MOVEL*BLANK    P120I1
+|   C*                    MOVEL*BLANK    P120O1
+|   C*                    CALL 'PTI121'
+|   C*                    CALL 'PTIZ21'
+|   C*                    PARM 'RELATION'P120I1 10
+|   C*          DE209     PARM DE209     P120O1 10
+| 04-C*                    END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* UPD SFL
+|    C*                    SETON                     54
+|    C*                    UPDATSFLSR
+|    C*
+20===C           E2E00     ENDSR
+     C*==============================================================*
+**
+新增修改      刪除查詢
+

@@ -1,0 +1,322 @@
+     FGLAILF01IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FMTMALF02IF  E           K        DISK
+     FAPUXLF01IF  E           K        DISK
+     FNPNAPF  IF  E           K        DISK
+     FNPNBPF  IF  E           K        DISK
+     FNPNCLF01IF  E           K        DISK
+     FNPNDLF01UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     E*實績
+     E                    @W01       13 13 2
+     E*預算
+     E                    @W02       13 13 2
+     E*餘額
+     E                    @W03       13 13 2
+     E*---------------------------------------------------------------*
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     IGLDA01      DS
+     I                                        1  16 DA01
+     I*
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I* SCREEN INPUT FIELD  ++++++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAI01
+     I                                      509 5110DYEAR
+     I                                      512 5130DMM
+     I* OPEN QUERY FILE SELECT $XXXXX FIELD  +++++++++++++++++++++++++
+     I                                      534 5370$YEAR
+     I            DS
+     I                                        1 169 @W01
+     I                                        1  132ND06A
+     I                                       14  262ND07A
+     I                                       27  392ND08A
+     I                                       40  522ND09A
+     I                                       53  652ND10A
+     I                                       66  782ND11A
+     I                                       79  912ND12A
+     I                                       92 1042ND13A
+     I                                      105 1172ND14A
+     I                                      118 1302ND15A
+     I                                      131 1432ND16A
+     I                                      144 1562ND17A
+     I                                      157 1692ND18A
+     I            DS
+     I                                        1 169 @W02
+     I                                        1  132ND06B
+     I                                       14  262ND07B
+     I                                       27  392ND08B
+     I                                       40  522ND09B
+     I                                       53  652ND10B
+     I                                       66  782ND11B
+     I                                       79  912ND12B
+     I                                       92 1042ND13B
+     I                                      105 1172ND14B
+     I                                      118 1302ND15B
+     I                                      131 1432ND16B
+     I                                      144 1562ND17B
+     I                                      157 1692ND18B
+     I            DS
+     I                                        1 169 @W03
+     I                                        1  132AI11
+     I                                       14  262AI12
+     I                                       27  392AI13
+     I                                       40  522AI14
+     I                                       53  652AI15
+     I                                       66  782AI16
+     I                                       79  912AI17
+     I                                       92 1042AI18
+     I                                      105 1172AI19
+     I                                      118 1302AI20
+     I                                      131 1432AI21
+     I                                      144 1562AI22
+     I                                      157 1692AI23
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           GLDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *LIKE     DEFN ND03      WND03
+     C           *LIKE     DEFN ND04      WND04
+     C           *LIKE     DEFN ND05      WND05
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYND1    KLIST
+     C                     KFLD           DAI01
+     C                     KFLD           $YEAR
+     C           KEYND2    KLIST
+     C                     KFLD           DAI01
+     C                     KFLD           $YEAR
+     C                     KFLD           WND04
+     C                     KFLD           WND05
+     C           KEYND3    KLIST
+     C                     KFLD           DAI01
+     C                     KFLD           $YEAR
+     C                     KFLD           WND04
+     C                     KFLD           WND05
+     C                     KFLD           WND03
+     C           KEYNB     KLIST
+     C                     KFLD           DAI01
+     C                     KFLD           AI03
+     C           KEYUX     KLIST
+     C                     KFLD           DAI01
+     C                     KFLD           WUX02   8
+     C           KEYNA     KLIST
+     C                     KFLD           $YEAR
+      *A&P CODE
+     C                     KFLD           WND05
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100
+     C*清除實績期數，ＦＯＲ重新計算
+     C                     Z-ADDDMM       I       20
+     C           KEYND1    SETLLND0
+     C           KEYND1    READEND0                      46
+  01-C           *IN46     DOWEQ'0'
+    C                     Z-ADD0         @W01,I
+    C                     UPDATND0
+    C           KEYND1    READEND0                      46
+  01-C                     END
+     C*總帳餘額轉至實績
+     C           *LOVAL    SETLLAI0
+     C                     READ AI0                      46
+  02-C           *IN46     DOWEQ'0'
+  03-C           @W03,I    IFNE 0
+  04-C           AI04A     IFEQ '36'
+    C           AI05A     OREQ '36'
+    C           AI06A     OREQ '36'
+    C           AI07A     OREQ '36'
+    C           AI08A     OREQ '36'
+    C           AI06A     OREQ '17'                       *APUXLF01
+      *判斷需存在會計科目NB
+    C           KEYNB     SETLLNB0                      40
+  05-C           *IN40     IFEQ '1'
+      *判斷需存在A&P檔NA
+  06-C           AI04A     IFEQ '36'
+    C                     MOVELAI04      WND05
+  06-C                     END
+  07-C           AI05A     IFEQ '36'
+    C                     MOVELAI05      WND05
+  07-C                     END
+  08-C           AI06A     IFEQ '36'
+    C                     MOVELAI06      WND05
+  08-C                     END
+  09-C           AI07A     IFEQ '36'
+    C                     MOVELAI07      WND05
+  09-C                     END
+  10-C           AI08A     IFEQ '36'
+    C                     MOVELAI08      WND05
+  10-C                     END
+     C*CHAIN APUXLF01
+     C           AI06A     IFEQ '17'
+     C                     MOVELAI06      WUX02
+     C           KEYUX     CHAINUX0                  41
+     C           *IN41     IFEQ '0'
+     C                     MOVELUX08      WND05
+     C                     END
+     C                     END
+    C           KEYNA     SETLLNA0                      40
+  11-C           *IN40     IFEQ '1'
+      *PROCESS FILE
+    C                     EXSR R1000
+  11-C                     END
+  05-C                     END
+  04-C                     END
+  03-C                     END
+    C                     READ AI0                      46
+  02-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ... NPB021P HEADING INITIAL
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C           DAI01     CHAINAK0                  40
+|    C* GET會計年度月數
+| 12-C           AK10      IFEQ '1'
+|   C                     Z-ADD12        MONTH   30
+|   C                     SETON                     59
+| 12*C                     ELSE
+|   C                     Z-ADD13        MONTH
+|   C                     SETOF                     59
+| 12-C                     END
+|    C*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ... GET DATA TO WORK FILE
+     C*==============================================================*
+02===C           R1000     BEGSR
+      *GET品牌
+|    C                     MOVEL*BLANK    WND04
+| 01-C           AI04A     IFEQ '03'
+|   C                     MOVELAI04      WND04
+| 01-C                     END
+| 02-C           AI05A     IFEQ '03'
+|   C                     MOVELAI05      WND04
+| 02-C                     END
+| 03-C           AI06A     IFEQ '03'
+|   C                     MOVELAI06      WND04
+| 03-C                     END
+| 04-C           AI07A     IFEQ '03'
+|   C                     MOVELAI07      WND04
+| 04-C                     END
+| 05-C           AI08A     IFEQ '03'
+|   C                     MOVELAI08      WND04
+| 05-C                     END
+      *
+| 06-C           AI04A     IFEQ '02'
+|   C                     MOVELAI04      WFLD    4
+|   C                     MOVE WFLD      WND04
+| 06-C                     END
+| 07-C           AI05A     IFEQ '02'
+|   C                     MOVELAI05      WFLD    4
+|   C                     MOVE WFLD      WND04
+| 07-C                     END
+| 08-C           AI06A     IFEQ '02'
+|   C                     MOVELAI06      WFLD    4
+|   C                     MOVE WFLD      WND04
+| 08-C                     END
+| 09-C           AI07A     IFEQ '02'
+|   C                     MOVELAI07      WFLD    4
+|   C                     MOVE WFLD      WND04
+| 09-C                     END
+| 10-C           AI08A     IFEQ '02'
+|   C                     MOVELAI08      WFLD    4
+|   C                     MOVE WFLD      WND04
+| 10-C                     END
+     C*CHAIN APUXLF01
+     C           AI06A     IFEQ '17'
+     C                     MOVELAI06      WUX02
+     C           KEYUX     CHAINUX0                  41
+     C           *IN41     IFEQ '0'
+     C                     MOVELUX07      WND04
+     C                     END
+     C                     END
+      *
+|    C           WND04     CHAINNC0                  40
+| 11-C           *IN40     IFEQ '0'
+      *存在合併品牌中以９９為合併品牌
+|   C                     MOVEL'99'      WND04
+|   C                     MOVELNC01      WND03
+|   C           KEYND3    CHAINND0                  41
+|   C                     TIME           ND97
+|   C                     Z-ADD$A8YMD    ND98
+|   C                     MOVEL$USER     ND99
+| 12-C           *IN41     IFEQ '0'
+|   C                     ADD  @W03,I    @W01,I
+|   C                     UPDATND0
+| 12*C                     ELSE
+|   C                     MOVELDAI01     ND01
+|   C                     Z-ADD$YEAR     ND02
+|   C                     MOVELWND03     ND03
+|   C                     MOVELWND04     ND04
+|   C                     MOVELWND05     ND05
+|   C                     MOVELWND05     ND051
+|   C                     Z-ADD0         @W02
+|   C                     Z-ADD0         @W01
+|   C                     Z-ADD@W03,I    @W01,I
+|   C                     WRITEND0
+| 12-C                     END
+      *
+| 11*C                     ELSE
+|   C           KEYND2    CHAINND0                  41
+      *不存在合併品牌中以ＷＮＤ０４原品牌
+|   C                     TIME           ND97
+|   C                     Z-ADD$A8YMD    ND98
+|   C                     MOVEL$USER     ND99
+| 13-C           *IN41     IFEQ '0'
+|   C                     ADD  @W03,I    @W01,I
+|   C                     UPDATND0
+| 13*C                     ELSE
+      *不存在合併品牌中，產品組別以產品主檔中ＭＡ１１寫入
+|   C                     MOVELDAI01     ND01
+|   C                     Z-ADD$YEAR     ND02
+|   C                     MOVELWND04     ND04
+|   C                     MOVELWND05     ND05
+|   C                     MOVELWND05     ND051
+|   C                     MOVEL'99'      ND03
+|   C*用產品主檔之等級一碼當組別
+|   C           WND04     SETLLMA0
+|   C           WND04     READEMA0                      46
+| 14-C           *IN46     DOWEQ'0'
+| 15-C           MA11      IFNE *BLANK
+|   C                     MOVELMA11      WFLD2   1
+| 16-C           WFLD2     IFEQ '1'
+|   C                     MOVEL'10'      ND03
+| 16-C                     END
+| 17-C           WFLD2     IFEQ '2'
+|   C                     MOVEL'20'      ND03
+| 17-C                     END
+| 18-C           WFLD2     IFEQ '3'
+|   C                     MOVEL'30'      ND03
+| 18-C                     END
+|   C                     SETON                     46
+| 15-C                     END
+|   C  N46      ND04      READEMA0                      46
+| 14-C                     END
+|   C                     Z-ADD0         @W02
+|   C                     Z-ADD0         @W01
+|   C                     Z-ADD@W03,I    @W01,I
+|   C                     WRITEND0
+| 13-C                     END
+| 11-C                     END
+      *
+02===C                     ENDSR
+

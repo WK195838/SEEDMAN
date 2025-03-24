@@ -1,0 +1,183 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA420                                     *
+     H*    PROGRAM NAME :產生排班資料                          *
+     H*    AUTHOR       : A1386.                                     *
+     H*    CREATE DATE  : 94/01/14                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYA420WLUF  E           K        DISK
+     FPYA420D CF  E                    WORKSTN
+     I*------------------------------------------------------------***
+     I            DS
+     I                                        1   80DSDATE
+     I                                        1   60WYEAR
+     I                                        7   8 DSDD
+     I            DS
+     I                                        1   80DSDATD
+     I                                        1   60WYEARD
+     I                                        7   8 DSDDD
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      203 2060$A8YM
+     I                                      211 2160DDATE
+     I*
+     I                                      501 502 DEM01
+     I                                      503 5070DYEAR
+     I                                      508 5130UDYYMM
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY4W     KLIST
+     C                     KFLD           W201
+     C                     KFLD           W203
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INI. RTN.
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C                     EXSR RTN100                     *MAIN
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL ROUTINE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   *NAMVAR
+|    C*------------------------------------------------------------***
+|    C                     Z-ADD*ZERO     DYEAR
+|    C*------------------------------------------------------------***
+|    C*
+|    C                     MOVEL$COR      DEM01
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100.... MAIN ROUTINE
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     SETON                     97
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO END100
+| 01-C                     END
+|    C*
+|    C                     EXSR RTN110                     *CHK SCREEN1
+|    C*
+| 02-C           *IN13     IFEQ '1'
+|   C                     EXSR RTN120                     *PROCESS
+| 02-C                     END
+|    C*
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          RTN110....CHECK SCREEN1
+     C*==============================================================*
+03===C           RTN110    BEGSR
+|    C* << CHACK 公司別NOT *BLANK >>
+| 01-C           DEM01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DEM01     CM001I  2         公司代號
+|    C           CM02      PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 02-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 02-C                     END
+|    C   99                GOTO END110
+|    C*
+| 03-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+| 05-C           DYEAR     IFEQ *ZERO
+|   C                     SETON                     6199
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 05*C                     ELSE
+|   C           DYEAR     ADD  191100    WYEAR
+|   C           DYEAR     ADD  191100    WYEARD
+|   C           DYEAR     ADD  191100    UDYYMM
+|   C                     MOVE '01'      DSDD
+|   C                     MOVE '31'      DSDDD
+  05-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*
+03===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN120.... PROCESS
+     C*==============================================================*
+04===C           RTN120    BEGSR
+|    C*
+|    C                     SETON                     96
+|    C                     WRITEDSPC1
+|    C*
+|    C                     OUT  *NAMVAR
+|    C*
+|    C                     MOVE DEM01     W201
+|    C                     MOVE DSDATE    W203
+     C           KEY4W     SETLLPYA420WL
+     C           LOOP      TAG
+     C                     READ PYA420WL                 57
+     C   57                GOTO NEXT
+     C           DEM01     IFNE W201
+     C                     GOTO NEXT
+     C                     END
+     C           W203      IFGT DSDATD
+     C                     GOTO NEXT
+     C                     END
+     C                     DELETW20
+     C                     GOTO LOOP
+|    C*
+|    C           NEXT      TAG
+|    C                     CALL 'PYA420C'
+|    C*
+|    C                     SETON                     93
+|    C                     SETOF                     96
+|    C*
+04===C                     ENDSR
+

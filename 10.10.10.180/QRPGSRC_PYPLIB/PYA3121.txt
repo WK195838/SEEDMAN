@@ -1,0 +1,181 @@
+     A****************************************************************
+     A*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     A*                                                              *
+     A*    PROGRAM ID   : PYA312                                     *
+     A*    PROGRAM NAME : 薪資月份彙總作業　　　　　　             *
+     A*    AUTHOR       : A1260 VAN                                  *
+     A*    CREATE DATE  : 88/02/01                                   *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       :                                            *
+     A****************************************************************
+     FPYCDLF02IF  E           K        DISK
+     FPYA312D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      111 118 $CHYMD
+     I                                      119 124 $ADMDY
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DCD01
+     I                                      503 5080DCD03
+     I                                      509 509 DOPT
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN $A8YMD    FDATE            .TRANS DATE USE
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETR LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN10     PARM *IN10     IN10    1
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYCD     KLIST
+     C                     KFLD           DCD01            .公司編號
+     C                     KFLD           DCD03            .年月
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100                      *INIT VALUE
+     C   10                EXSR R0200                      *INIT MSG
+     C*
+     C                     MOVEL*BLANK    @PRT    1
+  01-C           *IN03     DOUEQ'1'
+    C           @PRT      OREQ 'Y'
+    C                     EXSR R1000                      *SCRN
+  01-C                     END
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+     C*==============================================================*
+     C*          R0100 ....SCREEN INIT VALUE SET
+     C*==============================================================*
+01===CSR         R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C                     SETON                     1027
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     MOVEL*BLANK    DCD01
+|    C                     Z-ADD*ZEROS    DCD03
+|    C                     MOVEL'N'       DOPT
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ....SCREEN INIT MSG
+     C*==============================================================*
+02===C           R0200     BEGSR
+|    C*
+|    C                     SETON                     29
+|    C*
+02===C                     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+03===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      .CHECK      ?
+|    C*
+| 02-C           *IN99     IFEQ '0'
+|   C           *IN13     ANDEQ'1'
+|   C                     SETOF                     27
+|   C                     SETON                     28    .執行中
+|   C                     WRITEDSPC1
+|   C                     SETOF                     28
+|   C*
+|   C                     OUT  LDA
+|   C                     MOVEL'Y'       @PRT
+| 02-C                     END
+|    C*
+03===C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00  ...CHECK DATA FROM SCREEN KEY-IN
+     C*===============================================================*
+04===C           R1B00     BEGSR
+|    C*
+| 01-C           DCD01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+|   C                     SETON                     27
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 02-C           DCD03     IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+|   C                     SETON                     27
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P38'
+|    C                     PARM DCD03     P3801I  60
+|    C                     PARM '2'       P3802I  1
+|    C                     PARM '1'       P3803I  1
+|    C                     PARM           P3801O  60
+|    C                     PARM           P3811O  1
+|    C*
+| 03-C           P3811O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+|   C                     SETON                     27
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*公司編號,年月是否存在 PYCDPF
+|    C           KEYCD     CHAINCD0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606199
+|   C                     SETON                     27
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*重新整理
+| 05-C           DOPT      IFNE 'Y'
+|   C           DOPT      ANDNE'N'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+|   C                     SETON                     27
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+04===CSR         E1B00     ENDSR
+     C*==============================================================*
+

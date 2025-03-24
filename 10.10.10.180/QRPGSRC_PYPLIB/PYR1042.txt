@@ -1,0 +1,188 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR1042                                     *
+     H*   AUTHER       : SUSAN                                       *
+     H*   CREATE DATE  : 79/07/17                                    *
+     H*   UPDATE DATE  : 83/06/03                                    *
+     H*   SYSTEM       : KH                                          *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR1041C                                    *
+     H*   PURPOSE      :                                             *
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYEDJF01IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYECPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR104P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    ARR     5   5 10
+     E*---------------------------------------------------------------
+     IEDJF01
+     I                                              EM041 L3
+     I                                              EM042 L3
+     I                                              EM043 L3
+     I                                              EM044 L3
+     I                                              ED02  L2
+     I                                              ED12  L1
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I*
+     I                                      501 502 DED01
+     I                                      503 509 DEM041
+     I                                      510 516 DEM042
+     I*                                     513 517 DED021
+     I*                                     518 522 DED022
+     I**                                    523 5280DED031
+     I**                                    529 5340DED032
+     I                                      537 544 DED021
+     I                                      545 552 DED022
+     I                                      601 6060DED031
+     I                                      608 6130DED032
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C   L2                SETON                     32
+     C   L3                SETON                     31
+     C                     EXSR RTN100
+     C*
+     CL1 10                EXSR RTN810
+     CL2 10                EXSR RTN820
+     CL3 10                EXSR RTN830
+     CLR 10                EXSR RTN890
+     C*==============================================================*
+     C*          RTN010... INITIAL
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           ED01      CHAINCM0                  40
+|    C   40                MOVE *BLANK    CM03
+|    C*
+|    C                     SETON                     313210
+|    C                     SETON                     39
+|    C*
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     IN   PTDA01
+| 01-C           *INL2     IFEQ '1'
+|   C           KEYDP     CHAINDP0                  40
+|   C   40                MOVEL*BLANK    DP02
+| 01-C                     END
+|    C*
+|    C                     MOVELED11      I       10
+| 02-C           I         IFEQ 0
+|    C                     Z-ADD1         I
+|    C                     END
+|    C                     MOVELARR,I     ED11N
+|    C*
+|    C                     MOVEL*BLANKS   ED05N
+|    C           ED05      CHAINEC0                  40
+|    C  N40                MOVELEC03      ED05N
+|    C*
+| 02-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETON                     3132
+| 02-C                     END
+|    C*
+|    C*                    CALL 'P31'
+|    C*                    PARM ED03      P3101I  80
+|    C*                    PARM '2'       P3102I  1
+|    C*                    PARM '1'       P3103I  1
+|    C*                    PARM DFMT      P3104I  1
+|    C*                    PARM DTYPE     P3105I  1
+|    C*                    PARM           P3111O  80
+|    C                     Z-ADDED03      PED03
+|    C*
+|    C*                    CALL 'P31'
+|    C*                    PARM ED04      P3101I  80
+|    C*                    PARM '2'       P3102I  1
+|    C*                    PARM '1'       P3103I  1
+|    C*                    PARM DFMT      P3104I  1
+|    C*                    PARM DTYPE     P3105I  1
+|    C*                    PARM           P3111O  80
+|    C                     Z-ADDED04      PED04
+|    C*
+|    C                     WRITEPD1
+|    C                     SETOF                     3132
+|    C*
+| 03-C           ED11      IFNE '2'
+|   C                     ADD  ED09      PT12
+|   C                     ADD  ED06      PT13
+| 03-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK 2
+     C*==============================================================*
+03===C           RTN810    BEGSR
+|    C*
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN820... LEVEL BREAK 2
+     C*==============================================================*
+04===C           RTN820    BEGSR
+|    C*
+|    C                     WRITEPT1
+|    C*
+|    C                     SETON                     3536
+|    C                     ADD  PT12      PT22
+|    C                     ADD  PT13      PT23
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN830... LEVEL BREAK 3
+     C*==============================================================*
+05===C           RTN830    BEGSR
+|    C*
+|    C                     WRITEPT2
+|    C*
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR
+     C*==============================================================*
+06===C           RTN890    BEGSR
+|    C*
+|    C                     WRITEPT3
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+**
+內訓    新人訓練讀書會  研討會  外訓
+

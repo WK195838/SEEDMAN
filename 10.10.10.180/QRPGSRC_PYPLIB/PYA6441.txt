@@ -1,0 +1,155 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA541                                     *
+     H*    PROGRAM NAME :每月扣繳健保費分攤                        *
+     H*    AUTHOR       : A1445 HONDA                                *
+     H*    CREATE DATE  : 95/03/20                                   *
+     H*    UPDATE DATE  : 95/05/16                                   *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     H****************************************************************
+     FPYE1LF03IF  E           K        DISK
+     FPYE8PF  IF  E           K        DISK
+     FPYTIPF  UF  E           K        DISK                      A
+     FPYHDPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160DDATE
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I*----------------------------------------------------------
+     I*程式使用
+     I                                      501 502 DPW01
+     I                                      503 5070DPW03
+     I                                      503 5050DPW03Y
+     I                                      506 5070DPW03M
+     I                                      508 508 DPW04
+     I                                      511 5160WPW03
+     I                                      511 5180WPW03Q
+     I                                      517 5180WQ
+     I*----------------------------------------------------------
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYDEL    KLIST
+     C                     KFLD           DPW01
+     C                     KFLD           WPW03
+     C           KEYE8     KLIST
+     C                     KFLD           DPW01
+     C                     KFLD           E102
+     C                     KFLD           WPW03Q
+     C           KEYE81    KLIST
+     C                     KFLD           DPW01
+     C                     KFLD           E102
+     C           KEYHD     KLIST
+     C                     KFLD           E101             公司編號
+     C                     KFLD           E102             員工編號
+     C                     KFLD           WPW03            年月
+     C                     KFLD           HD041            期別
+     C                     KFLD           HD05D3           薪資項目D3
+     C*
+     C                     MOVEL'1'       HD041   1        期別
+     C                     MOVEL'52'      HD05D3  2        健保D3
+     C                     Z-ADD31        WQ
+     C*
+     C*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INI. RTN.
+     C*
+     C                     EXSR DLTF                       *DEL  PYT1PF
+     C*
+     C                     EXSR CRTTIF                     *MAKE PYT1PF
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL ROUTINE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*<<初始值設定>>
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          DLTF  .... 清檔
+     C*==============================================================*
+02===C           DLTF      BEGSR
+|    C*
+|    C           KEYDEL    SETLLTI0
+|    C           KEYDEL    READETI0                      44
+|    C*
+| 01-C           *IN44     DOWEQ*OFF
+|   C*
+|   C                     DELETTI0
+|   C*
+|   C           KEYDEL    READETI0                      44
+| 01-C                     ENDDO
+|    C                     CLEARTI0
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*==============================================================*
+     C*          CRTTIF.... 寫基本資料至PYTIPF
+     C*==============================================================*
+03===C           CRTTIF    BEGSR
+|    C*
+|    C                     MOVEL*BLANK    WKE102 10
+|    C                     Z-ADDE103      ZZE103  60
+|    C*
+|    C           DPW01     SETLLPYE1LF03
+|    C           DPW01     READEPYE1LF03                 44
+|    C*
+| 01-C           *IN44     DOWEQ*OFF
+|   C* 員工不同時(一個員工只抓最新一筆PYE1PF的資料)
+| 02-C           E102      IFNE WKE102                      *IF WKE102
+|   C                     MOVELE102      WKE102
+|   C* 抓取歷史資料，原本抓取最新資料
+|   C           KEYE8     SETGTE80
+|   C           KEYE81    REDPEE80                      46
+| 03-C           *IN46     IFEQ '0'
+|    *
+|   C* 該月CHAIN到PYHDPF
+|   C           KEYHD     CHAINPYHDPF               40
+|   C*
+| 04-C           *IN40     IFEQ *OFF                        *IF  *IN40
+|   C* 該月  CHAIN到PYHDPF有健保費時才寫檔
+|   C                     MOVELE101      TI01             公司別
+|   C                     Z-ADDWPW03     TI02             年月
+|   C                     MOVELE102      TI03             員工代號
+|   C  N40                Z-ADDHD06      TI04             健保費
+|   C                     Z-ADDE805      TI05             投保金額
+|   C                     MOVELE808      TI06             本人補助碼
+|   C                     Z-ADDE806      TI07             投保人數
+|   C                     Z-ADD$A8YMD    TI97
+|   C                     TIME           TI98
+|   C                     MOVEL$USER     TI99
+|   C*
+| 05-C           *IN40     IFEQ *OFF
+|   C                     WRITETI0
+| 05-C                     END
+|   C*
+|   C                     CLEARTI0
+|   C* 該月CHAIN到PYHDPF或PYDAPF有D3健保費時才寫檔
+| 04-C                     END                              *END *IN40
+|   C* 該月CHAIN到PYHDPF或PYDAPF有D3健保費時才寫檔
+| 03-C                     END
+|   C*
+|   C* 員工不同時(一個員工只抓最新一筆PYE1PF的資料)
+| 02-C                     END                              *END WKE102
+|   C* 員工不同時(一個員工只抓最新一筆PYE1PF的資料)
+|   C*
+|   C           DPW01     READEPYE1LF03                 44
+| 01-C                     ENDDO
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+

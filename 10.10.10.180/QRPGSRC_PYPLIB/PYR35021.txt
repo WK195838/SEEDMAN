@@ -1,0 +1,856 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR3502                                     *
+     H*   AUTHER       : A1490 TERESA                                *
+     H*   CREATE DATE  : 96/05/08                                    *
+     H*   UPDATE DATE  :                                             *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR3501C                                    *
+     H*00A 服務單號:1031597
+     H*00A JONATHAN 1030910   修正列印BUG
+     H*00B 服務單號:1031745
+     H*00B JONATHAN 1030929   修正列印BUG
+     H*00C需求單號: 1040475                                        *
+     H*00C DEREK 1040525修正列印BUG (部門BREAK判斷方式         *
+     H*00C              及列印PH2,PD1時機有誤)                   *
+     H****************************************************************
+     FPYEMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYWDPF  IF  E           K        DISK
+ 002+FPYWDLF02IF  E           K        DISK
+ 002+F            WD0                               KRENAMEWDL2
+     FPYSSPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR350WFUF  E           K        DISK                      A
+     FPYR350P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E*加項薪資
+     E                    @A2        19  2
+     E*減項薪資
+     E                    @A3        10  2
+     E*---------------------------------------------------------------
+ 002+IWDL2
+ |   I              WD01                            WD012
+ |   I              WD02                            WD022
+ |   I              WD03                            WD032
+ |   I              WD04                            WD042
+ |   I              WD05                            WD052
+ 002+I              WD06                            WD062
+     ILDA        UDS
+     I                                      125 1270$CPY
+     I                                      201 2080PDATE
+     I                                      203 2080DDATE
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I                                      501 5040DYM
+     I                                      503 5040DMM
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      601 602 DEM011
+     I                                      603 604 DEM012
+     I                                      605 611 DEM041
+     I                                      612 618 DEM042
+     I                                      619 626 DEM021
+     I                                      627 634 DEM022
+     I                                      635 6420CDYMD
+     I                                      635 6400CDYM
+     I                                      635 6380CDYMYY
+     I                                      639 6400CDYMMM
+     I                                      641 6420CDYMDD
+     I                                      643 643 DHD04
+     I                                      644 644 DOP
+     I*
+     IWF05        DS
+     I                                        1   1 WF051
+     I                                        2   2 WF052
+     I                                        3   3 WF053
+     I                                        4   7 WF054
+     I*
+     I            DS
+     I                                        1   7 O04
+     I                                        1   1 O041
+     I                                        2   2 O042
+     I                                        3   3 O043
+     I                                        4   7 O044
+     I*
+     I            DS
+     I                                        1   80PDYMD
+     I                                        1   40PDY
+     I                                        5   60PDM
+     I                                        7   80PDD
+     I*
+     I              '業績獎金'          C         CON1
+     I              '已發業獎'          C         CON2
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYWD     KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           CDYM             年月
+     C                     KFLD           DHD04            期別
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           WD05             薪資代號
+     C           KEYWDS    KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           CDYM             年月
+     C                     KFLD           DHD04            期別
+     C                     KFLD           EM02             員工編號
+     C           KEYWD1    KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           CDYM             年月
+     C                     KFLD           THD04   1        期別
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           WD052            薪資代號
+     C*
+     C           KEYDP     KLIST
+     C                     KFLD           EM041            部門編號
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*
+     C           KEYSS     KLIST
+     C                     KFLD           SS18             薪資組別
+     C                     KFLD           SS01             薪資代碼
+     C*
+     C           KEYWF     KLIST
+     C                     KFLD           WF05             部門編號
+     C                     KFLD           WF03             薪資代碼
+     C                     KFLD           WF06             期別
+     C*
+     C           KEYWFS    KLIST
+     C                     KFLD           WF05             部門編號
+     C                     KFLD           WF03             薪資代碼
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*PRINT FILE HEADING
+     C                     EXSR RTN010                      HEADING
+     C*
+     C                     EXSR RTN200                     寫入WROKFILE
+     C*
+     C           *LOVAL    SETLLPYEMPF
+     C                     READ PYEMPF                   46
+ 00B+C                     MOVELDP02      TEMP1  16
+     C                     CLEARPH2
+     C           KEYDP     CHAINPYDPPF               40
+     C*手動LEVEL BREAK判斷劃線
+ 00B+C           DP02      IFNE TEMP1
+ |   C                     MOVELDP02      TEMP1            部門暫存
+ |   C                     MOVEL'Y'       TEMP2   1
+ |   C                     ELSE
+ |   C                     MOVEL'N'       TEMP2            是否劃線
+ 00B+C                     END
+     C*
+ 00C-C*                    WRITEPH2
+ 00C-C*                    MOVELEM041     O041
+ 00C-C*                    MOVELEM042     O042
+ 00C-C*                    MOVELEM043     O043
+ 00C-C*                    MOVELEM044     O044
+ 00C+C                     MOVEL*BLANK    O04
+  01-C           *IN46     DOWEQ*OFF
+    C*HEADING
+    C   39      EM01      CHAINSYCMPF               40
+    C   39                WRITEPH1
+    C   39                SETOF                     39
+    C*換部門
+  02-C           O041      IFNE EM041
+    C           O042      ORNE EM042
+    C           O043      ORNE EM043
+    C           O044      ORNE EM044
+   *C                     CLEARPH2
+   *C           KEYDP     CHAINPYDPPF               40
+   *C                     WRITEPH2
+    C                     MOVELEM041     O041
+    C                     MOVELEM042     O042
+    C                     MOVELEM043     O043
+    C                     MOVELEM044     O044
+     C                     MOVEL'00'      WF03
+ 00B+C           DHD04     IFEQ '2'
+ |   C                     MOVEL'14'      WF03
+ 00B+C                     END
+ 00B+C           DP02      IFNE TEMP1
+ |   C                     MOVELDP02      TEMP1
+ |   C                     MOVEL'Y'       TEMP2   1
+ |   C                     ELSE
+ |   C                     MOVEL'N'       TEMP2
+ 00B+C                     END
+ 00C+C                     EXSR RTN300                      PRINT FILE
+  02-C                     ENDIF
+    C*00C-                EXSR RTN300                      PRINT FILE
+    C                     READ PYEMPF                   46
+  01-C                     ENDDO
+     C*
+     C   39                WRITEPH1                         PRINT END
+     C   39                SETOF                     39
+     C                     EXSR RTN900                      PRINT END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010... PRINT FILE HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*帶出PRINT FILE HEADING資料
+|    C                     MOVEL'SC'      SS18
+|    C*
+|    C                     Z-ADD1         I2
+| 01-C           I2        DO   18                         加項
+| 02-C           @A2,I2    IFNE *BLANK
+| 03-C           @A2,I2    IFNE '14'
+|   C                     MOVEL@A2,I2    SS01
+|   C           KEYSS     CHAINPYSSPF               40
+| 04-C                     SELEC
+|   C           PH101     WHEQ *BLANK
+|   C                     MOVELSS02      PH101
+|   C           PH102     WHEQ *BLANK
+|   C                     MOVELSS02      PH102
+|   C           PH103     WHEQ *BLANK
+|   C                     MOVELSS02      PH103
+|   C           PH104     WHEQ *BLANK
+|   C                     MOVELSS02      PH104
+|   C           PH105     WHEQ *BLANK
+|   C                     MOVELSS02      PH105
+|   C           PH106     WHEQ *BLANK
+|   C                     MOVELSS02      PH106
+|   C           PH107     WHEQ *BLANK
+|   C                     MOVELSS02      PH107
+|   C           PH108     WHEQ *BLANK
+|   C                     MOVELSS02      PH108
+|   C           PH109     WHEQ *BLANK
+|   C                     MOVELSS02      PH109
+|   C           PH110     WHEQ *BLANK
+|   C                     MOVELSS02      PH110
+|   C           PH111     WHEQ *BLANK
+|   C                     MOVELSS02      PH111
+|   C           PH112     WHEQ *BLANK
+|   C                     MOVELSS02      PH112
+|   C           PH113     WHEQ *BLANK
+|   C                     MOVELSS02      PH113
+|   C           PH114     WHEQ *BLANK
+|   C                     MOVELSS02      PH114
+|   C           PH115     WHEQ *BLANK
+|   C                     MOVELSS02      PH115
+|   C           PH116     WHEQ *BLANK
+|   C                     MOVELSS02      PH116
+|   C           PH117     WHEQ *BLANK
+|   C                     MOVELSS02      PH117
+|   C           PH118     WHEQ *BLANK
+|   C                     MOVELSS02      PH118
+| 04-C                     ENDSL
+| 03*C                     ELSE
+| 05-C           DHD04     IFEQ '1'
+| 06-C                     SELEC
+|   C           PH101     WHEQ *BLANK
+|   C                     MOVELCON1      PH101
+|   C                     MOVELCON2      PH102
+|   C           PH102     WHEQ *BLANK
+|   C                     MOVELCON1      PH102
+|   C                     MOVELCON2      PH103
+|   C           PH103     WHEQ *BLANK
+|   C                     MOVELCON1      PH103
+|   C                     MOVELCON2      PH104
+|   C           PH104     WHEQ *BLANK
+|   C                     MOVELCON1      PH104
+|   C                     MOVELCON2      PH105
+|   C           PH105     WHEQ *BLANK
+|   C                     MOVELCON1      PH105
+|   C                     MOVELCON2      PH106
+|   C           PH106     WHEQ *BLANK
+|   C                     MOVELCON1      PH106
+|   C                     MOVELCON2      PH107
+|   C           PH107     WHEQ *BLANK
+|   C                     MOVELCON1      PH107
+|   C                     MOVELCON2      PH108
+|   C           PH108     WHEQ *BLANK
+|   C                     MOVELCON1      PH108
+|   C                     MOVELCON2      PH109
+|   C           PH109     WHEQ *BLANK
+|   C                     MOVELCON1      PH109
+|   C                     MOVELCON2      PH110
+|   C           PH110     WHEQ *BLANK
+|   C                     MOVELCON1      PH110
+|   C                     MOVELCON2      PH111
+|   C           PH111     WHEQ *BLANK
+|   C                     MOVELCON1      PH111
+|   C                     MOVELCON2      PH112
+|   C           PH112     WHEQ *BLANK
+|   C                     MOVELCON1      PH112
+|   C                     MOVELCON2      PH113
+|   C           PH113     WHEQ *BLANK
+|   C                     MOVELCON1      PH113
+|   C                     MOVELCON2      PH114
+|   C           PH114     WHEQ *BLANK
+|   C                     MOVELCON1      PH114
+|   C                     MOVELCON2      PH115
+|   C           PH115     WHEQ *BLANK
+|   C                     MOVELCON1      PH115
+|   C                     MOVELCON2      PH116
+|   C           PH116     WHEQ *BLANK
+|   C                     MOVELCON1      PH116
+|   C                     MOVELCON2      PH117
+|   C           PH117     WHEQ *BLANK
+|   C                     MOVELCON1      PH117
+|   C                     MOVELCON2      PH118
+|   C           PH118     WHEQ *BLANK
+|   C                     MOVELCON1      PH118
+| 06-C                     ENDSL
+|   C                     ADD  1         I2
+| 05*C                     ELSE
+| 07-C                     SELEC
+|   C           PH101     WHEQ *BLANK
+|   C                     MOVELCON2      PH101
+|   C                     MOVELCON1      PH102
+|   C           PH102     WHEQ *BLANK
+|   C                     MOVELCON2      PH102
+|   C                     MOVELCON1      PH103
+|   C           PH103     WHEQ *BLANK
+|   C                     MOVELCON2      PH103
+|   C                     MOVELCON1      PH104
+|   C           PH104     WHEQ *BLANK
+|   C                     MOVELCON2      PH104
+|   C                     MOVELCON1      PH105
+|   C           PH105     WHEQ *BLANK
+|   C                     MOVELCON2      PH105
+|   C                     MOVELCON1      PH106
+|   C           PH106     WHEQ *BLANK
+|   C                     MOVELCON2      PH106
+|   C                     MOVELCON1      PH107
+|   C           PH107     WHEQ *BLANK
+|   C                     MOVELCON2      PH107
+|   C                     MOVELCON1      PH108
+|   C           PH108     WHEQ *BLANK
+|   C                     MOVELCON2      PH108
+|   C                     MOVELCON1      PH109
+|   C           PH109     WHEQ *BLANK
+|   C                     MOVELCON2      PH109
+|   C                     MOVELCON1      PH110
+|   C           PH110     WHEQ *BLANK
+|   C                     MOVELCON2      PH110
+|   C                     MOVELCON1      PH111
+|   C           PH111     WHEQ *BLANK
+|   C                     MOVELCON2      PH111
+|   C                     MOVELCON1      PH112
+|   C           PH112     WHEQ *BLANK
+|   C                     MOVELCON2      PH112
+|   C                     MOVELCON1      PH113
+|   C           PH113     WHEQ *BLANK
+|   C                     MOVELCON2      PH113
+|   C                     MOVELCON1      PH114
+|   C           PH114     WHEQ *BLANK
+|   C                     MOVELCON2      PH114
+|   C                     MOVELCON1      PH115
+|   C           PH115     WHEQ *BLANK
+|   C                     MOVELCON2      PH115
+|   C                     MOVELCON1      PH116
+|   C           PH116     WHEQ *BLANK
+|   C                     MOVELCON2      PH116
+|   C                     MOVELCON1      PH117
+|   C           PH117     WHEQ *BLANK
+|   C                     MOVELCON2      PH117
+|   C                     MOVELCON1      PH118
+|   C           PH118     WHEQ *BLANK
+|   C                     MOVELCON2      PH118
+| 07-C                     ENDSL
+|   C                     ADD  1         I2
+| 05-C                     ENDIF
+| 03-C                     ENDIF
+| 02-C                     ENDIF
+|   C                     ADD  1         I2
+| 01-C                     ENDDO
+|    C*
+| 08-C           1         DO   10        I3               減項
+| 09-C           @A3,I3    IFNE *BLANK
+|   C                     MOVEL@A3,I3    SS01
+|   C           KEYSS     CHAINPYSSPF               40
+| 10-C                     SELEC
+|   C           PH121     WHEQ *BLANK
+|   C                     MOVELSS02      PH121
+|   C           PH122     WHEQ *BLANK
+|   C                     MOVELSS02      PH122
+|   C           PH123     WHEQ *BLANK
+|   C                     MOVELSS02      PH123
+|   C           PH124     WHEQ *BLANK
+|   C                     MOVELSS02      PH124
+|   C           PH125     WHEQ *BLANK
+|   C                     MOVELSS02      PH125
+|   C           PH126     WHEQ *BLANK
+|   C                     MOVELSS02      PH126
+|   C           PH127     WHEQ *BLANK
+|   C                     MOVELSS02      PH127
+|   C           PH128     WHEQ *BLANK
+|   C                     MOVELSS02      PH128
+|   C           PH129     WHEQ *BLANK
+|   C                     MOVELSS02      PH129
+|   C           PH130     WHEQ *BLANK
+|   C                     MOVELSS02      PH130
+| 10-C                     ENDSL
+| 09-C                     ENDIF
+| 08-C                     ENDDO
+|    C*
+|    C           DEM011    CHAINSYCMPF               40
+|    C                     WRITEPH1
+|    C                     SETOF                     39
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200... WRITE TO PYR350WF
+     C*==============================================================*
+02===C           RTN200    BEGSR
+|    C*
+|    C           *LOVAL    SETLLPYEMPF
+|    C                     READ PYEMPF                   46
+| 01-C           *IN46     DOWEQ*OFF
+|   C*檢查該員工該月份有無任何薪資資料
+|   C           KEYWDS    CHAINPYWDPF               40
+|   C   40                GOTO NOSAL
+|   C*寫入加項資料
+|   C                     Z-ADD1         I2
+| 02-C           I2        DO   18
+| 03-C           @A2,I2    IFNE *BLANK
+| 04-C           @A2,I2    IFNE '14'
+|   C                     MOVEL@A2,I2    WD05
+|   C           KEYWD     CHAINPYWDPF               40
+|   C                     CLEARWF0
+|   C                     MOVELEM041     WF051
+|   C                     MOVELEM042     WF052
+|   C                     MOVELEM043     WF053
+|   C                     MOVELEM044     WF054
+|   C                     MOVELWD05      WF03
+|00A+C                     MOVELDHD04     WF06
+|00A+C     N40             Z-ADDWD06      TEMP01  60
+     C           KEYWFS    CHAINPYR350WF             42
+     C           *IN42     IFEQ '1'
+|00A-C*                    Z-ADDWD06      WF04
+|00A+C                     Z-ADDTEMP01    WF04
+|   C                     WRITEWF0
+     C                     Z-ADD*ZERO     WD06
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     ELSE
+ 00A-C*                    ADD  WD06      WF04
+ 00A+C                     ADD  TEMP01    WF04
+     C                     UPDATWF0
+     C                     Z-ADD*ZERO     WD06
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     END
+| 04*C                     ELSE
+     C*
+| 05-C           DHD04     IFEQ '1'
+|   C                     MOVEL@A2,I2    WD05
+|   C           KEYWD     CHAINPYWDPF               40
+|   C                     CLEARWF0
+|   C                     MOVELEM041     WF051
+|   C                     MOVELEM042     WF052
+|   C                     MOVELEM043     WF053
+|   C                     MOVELEM044     WF054
+|   C                     MOVELWD05      WF03
+|   C                     MOVELDHD04     WF06
+|00A+C     N40             Z-ADDWD06      TEMP01
+     C           KEYWFS    CHAINPYR350WF             42
+     C           *IN42     IFEQ '1'
+|00A-C*                    Z-ADDWD06      WF04
+|00A+C                     Z-ADDTEMP01    WF04
+|   C                     WRITEWF0
+     C                     Z-ADD*ZERO     WD06
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     ELSE
+ 00A-C*                    ADD  WD06      WF04
+ 00A+C                     ADD  TEMP01    WF04
+     C                     UPDATWF0
+     C                     Z-ADD*ZERO     WD06
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     END
+     C*
+|   C                     MOVEL'2'       THD04
+|   C                     MOVEL@A2,I2    WD052
+|   C           KEYWD1    CHAINPYWDLF02             41
+|   C                     CLEARWF0
+|   C                     MOVELEM041     WF051
+|   C                     MOVELEM042     WF052
+|   C                     MOVELEM043     WF053
+|   C                     MOVELEM044     WF054
+|   C                     MOVELWD05      WF03
+|   C                     MOVELTHD04     WF06
+|00A+C  N41                Z-ADDWD062     TEMP01
+     C           KEYWFS    CHAINPYR350WF             42
+     C           *IN42     IFEQ '1'
+|00A-C*                    Z-ADDWD062     WF04
+|00A+C                     Z-ADDTEMP01    WF04
+|   C                     WRITEWF0
+     C                     Z-ADD*ZERO     WD06
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     ELSE
+|00A+C                     ADD  TEMP01    WF04
+ 00A-C*                    ADD  WD062     WF04
+     C                     UPDATWF0
+     C                     Z-ADD*ZERO     WD06
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     END
+     C*
+| 05*C                     ELSE
+|   C                     MOVEL@A2,I2    WD05
+|   C           KEYWD     CHAINPYWDPF               40
+|   C                     CLEARWF0
+|   C                     MOVELWD05      WF03
+|   C                     MOVELEM041     WF051
+|   C                     MOVELEM042     WF052
+|   C                     MOVELEM043     WF053
+|   C                     MOVELEM044     WF054
+|   C                     MOVELDHD04     WF06
+|00A+C  N40                Z-ADDWD06      TEMP01
+     C           KEYWFS    CHAINPYR350WF             42
+     C           *IN42     IFEQ '1'
+|00A-C*                    Z-ADDWD06      WF04
+|00A+C                     Z-ADDTEMP01    WF04
+|   C                     WRITEWF0
+     C                     Z-ADD*ZERO     WD06
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     ELSE
+ 00A+C                     ADD  TEMP01    WF04
+ 00A-C*                    ADD  WD06      WF04
+     C                     UPDATWF0
+ 00A+C                     Z-ADD*ZERO     TEMP01
+ 00A-C*                    Z-ADD*ZERO     WD06
+     C                     END
+     C*
+|   C                     MOVEL'1'       THD04
+|   C                     MOVEL@A2,I2    WD052
+|   C           KEYWD1    CHAINPYWDLF02             41
+|   C                     CLEARWF0
+|   C                     MOVELWD05      WF03
+|   C                     MOVELTHD04     WF06
+|   C                     MOVELEM041     WF051
+|   C                     MOVELEM042     WF052
+|   C                     MOVELEM043     WF053
+|   C                     MOVELEM044     WF054
+|00A+C  N41                Z-ADDWD062     TEMP01
+     C           KEYWFS    CHAINPYR350WF             42
+     C           *IN42     IFEQ '1'
+|00A-C*                    Z-ADDWD062     WF04
+|00A+C                     Z-ADDTEMP01    WF04
+|   C                     WRITEWF0
+ 00A+C                     Z-ADD*ZERO     WD06
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     ELSE
+ 00A-C*                    ADD  WD06      WF04
+ 00A+C                     ADD  TEMP01    WF04
+     C                     UPDATWF0
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     Z-ADD*ZERO     WD06
+     C                     END
+     C*
+| 05-C                     ENDIF
+|   C                     ADD  1         I2
+| 04-C                     ENDIF
+| 03-C                     ENDIF
+|   C                     ADD  1         I2
+| 02-C                     ENDDO
+|   C*寫入減項資料
+| 06-C           1         DO   10        I3
+| 07-C           @A3,I3    IFNE *BLANK
+|   C                     MOVEL@A3,I3    WD05
+|   C           KEYWD     CHAINPYWDPF               40
+|   C                     CLEARWF0
+|   C                     MOVELWD05      WF03
+|   C                     MOVELEM041     WF051
+|   C                     MOVELEM042     WF052
+|   C                     MOVELEM043     WF053
+|   C                     MOVELEM044     WF054
+|   C                     MOVELDHD04     WF06
+|00A+C  N40                Z-ADDWD06      TEMP01
+     C           KEYWFS    CHAINPYR350WF             42
+     C           *IN42     IFEQ '1'
+|00A-C*                    Z-ADDWD06      WF04
+|00A+C                     Z-ADDTEMP01    WF04
+|   C                     WRITEWF0
+     C                     Z-ADD*ZERO     WD06
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     ELSE
+ 00A-C*                    ADD  WD06      WF04
+ 00A+C                     ADD  TEMP01    WF04
+     C                     UPDATWF0
+     C                     Z-ADD*ZERO     WD06
+ 00A+C                     Z-ADD*ZERO     TEMP01
+     C                     END
+| 07-C                     ENDIF
+| 06-C                     ENDDO
+|   C*
+|   C           NOSAL     TAG
+|   C                     READ PYEMPF                   46
+| 01-C                     ENDDO
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN300... PRINT FILE
+     C*==============================================================*
+03===C           RTN300    BEGSR
+|    C*寫PD1
+|    C                     CLEARPD1
+|    C                     MOVELEM041     WF051
+|    C                     MOVELEM042     WF052
+|    C                     MOVELEM043     WF053
+|    C                     MOVELEM044     WF054
+|    C*檢查該員工有無薪資資料
+|    C           KEYWFS    CHAINPYR350WF             40
+|    C   40                GOTO END300
+|00B+C  N40                MOVEL'N'       TEMP2
+|    C*
+|    C                     Z-ADD1         I2
+| 01-C           I2        DO   18
+|   C                     MOVEL@A2,I2    WF03
+|   C                     MOVELDHD04     WF06
+|   C           KEYWF     CHAINPYR350WF             40
+| 02-C           *IN40     IFEQ *OFF
+| 03-C                     SELEC
+|   C           I2        WHEQ 1
+|   C                     Z-ADDWF04      PD101
+|   C                     ADD  WF04      PT201
+|   C           I2        WHEQ 2
+|   C                     Z-ADDWF04      PD102
+|   C                     ADD  WF04      PT202
+|   C           I2        WHEQ 3
+|   C                     Z-ADDWF04      PD103
+|   C                     ADD  WF04      PT203
+|   C           I2        WHEQ 4
+|   C                     Z-ADDWF04      PD104
+|   C                     ADD  WF04      PT204
+|   C           I2        WHEQ 5
+|   C                     Z-ADDWF04      PD105
+|   C                     ADD  WF04      PT205
+|   C           I2        WHEQ 6
+|   C                     Z-ADDWF04      PD106
+|   C                     ADD  WF04      PT206
+|   C           I2        WHEQ 7
+|   C                     Z-ADDWF04      PD107
+|   C                     ADD  WF04      PT207
+|   C           I2        WHEQ 8
+|   C                     Z-ADDWF04      PD108
+|   C                     ADD  WF04      PT208
+|   C           I2        WHEQ 9
+|   C                     Z-ADDWF04      PD109
+|   C                     ADD  WF04      PT209
+|   C           I2        WHEQ 10
+|   C                     Z-ADDWF04      PD110
+|   C                     ADD  WF04      PT210
+|   C           I2        WHEQ 11
+|   C                     Z-ADDWF04      PD111
+|   C                     ADD  WF04      PT211
+|   C           I2        WHEQ 12
+|   C                     Z-ADDWF04      PD112
+|   C                     ADD  WF04      PT212
+|   C           I2        WHEQ 13
+|   C                     Z-ADDWF04      PD113
+|   C                     ADD  WF04      PT213
+|   C           I2        WHEQ 14
+|   C                     Z-ADDWF04      PD114
+|   C                     ADD  WF04      PT214
+|   C           I2        WHEQ 15
+|   C                     Z-ADDWF04      PD115
+|   C                     ADD  WF04      PT215
+|   C           I2        WHEQ 16
+|   C                     Z-ADDWF04      PD116
+|   C                     ADD  WF04      PT216
+|   C           I2        WHEQ 17
+|   C                     Z-ADDWF04      PD117
+|   C                     ADD  WF04      PT217
+|   C           I2        WHEQ 18
+|   C                     Z-ADDWF04      PD118
+|   C                     ADD  WF04      PT218
+| 03-C                     ENDSL
+|   C*累計金額
+|   C                     ADD  WF04      PD1T1
+|   C                     ADD  WF04      PT2T1
+|   C                     ADD  WF04      PT2T2
+| 02-C                     ENDIF
+| 04-C           @A2,I2    IFEQ '14'
+|   C                     ADD  1         I2
+|   C                     MOVEL'14'      WF03
+|   C                     MOVELTHD04     WF06
+|   C           KEYWF     CHAINPYR350WF             40
+| 05-C           *IN40     IFEQ *OFF
+| 06-C                     SELEC
+|   C           I2        WHEQ 1
+|   C                     Z-ADDWF04      PD101
+|   C                     ADD  WF04      PT201
+|   C           I2        WHEQ 2
+|   C                     Z-ADDWF04      PD102
+|   C                     ADD  WF04      PT202
+|   C           I2        WHEQ 3
+|   C                     Z-ADDWF04      PD103
+|   C                     ADD  WF04      PT203
+|   C           I2        WHEQ 4
+|   C                     Z-ADDWF04      PD104
+|   C                     ADD  WF04      PT204
+|   C           I2        WHEQ 5
+|   C                     Z-ADDWF04      PD105
+|   C                     ADD  WF04      PT205
+|   C           I2        WHEQ 6
+|   C                     Z-ADDWF04      PD106
+|   C                     ADD  WF04      PT206
+|   C           I2        WHEQ 7
+|   C                     Z-ADDWF04      PD107
+|   C                     ADD  WF04      PT207
+|   C           I2        WHEQ 8
+|   C                     Z-ADDWF04      PD108
+|   C                     ADD  WF04      PT208
+|   C           I2        WHEQ 9
+|   C                     Z-ADDWF04      PD109
+|   C                     ADD  WF04      PT209
+|   C           I2        WHEQ 10
+|   C                     Z-ADDWF04      PD110
+|   C                     ADD  WF04      PT210
+|   C           I2        WHEQ 11
+|   C                     Z-ADDWF04      PD111
+|   C                     ADD  WF04      PT211
+|   C           I2        WHEQ 12
+|   C                     Z-ADDWF04      PD112
+|   C                     ADD  WF04      PT212
+|   C           I2        WHEQ 13
+|   C                     Z-ADDWF04      PD113
+|   C                     ADD  WF04      PT213
+|   C           I2        WHEQ 14
+|   C                     Z-ADDWF04      PD114
+|   C                     ADD  WF04      PT214
+|   C           I2        WHEQ 15
+|   C                     Z-ADDWF04      PD115
+|   C                     ADD  WF04      PT215
+|   C           I2        WHEQ 16
+|   C                     Z-ADDWF04      PD116
+|   C                     ADD  WF04      PT216
+|   C           I2        WHEQ 17
+|   C                     Z-ADDWF04      PD117
+|   C                     ADD  WF04      PT217
+|   C           I2        WHEQ 18
+|   C                     Z-ADDWF04      PD118
+|   C                     ADD  WF04      PT218
+| 06-C                     ENDSL
+|   C*累計金額
+|   C                     ADD  WF04      PT2T1
+|   C                     ADD  WF04      PT2T2
+| 05-C                     ENDIF
+| 04-C                     ENDIF
+|   C                     ADD  1         I2
+| 01-C                     ENDDO
+|    C                     Z-ADDPD1T1     PD1T2
+|    C*
+| 07-C           1         DO   10        I3
+|   C                     MOVEL@A3,I3    WF03
+|   C                     MOVELDHD04     WF06
+|   C           KEYWF     CHAINPYR350WF             40
+| 08-C           *IN40     IFEQ *OFF
+| 09-C                     SELEC
+|   C           I3        WHEQ 1
+|   C                     Z-ADDWF04      PD121
+|   C                     ADD  WF04      PT221
+|   C           I3        WHEQ 2
+|   C                     Z-ADDWF04      PD122
+|   C                     ADD  WF04      PT222
+|   C           I3        WHEQ 3
+|   C                     Z-ADDWF04      PD123
+|   C                     ADD  WF04      PT223
+|   C           I3        WHEQ 4
+|   C                     Z-ADDWF04      PD124
+|   C                     ADD  WF04      PT224
+|   C           I3        WHEQ 5
+|   C                     Z-ADDWF04      PD125
+|   C                     ADD  WF04      PT225
+|   C           I3        WHEQ 6
+|   C                     Z-ADDWF04      PD126
+|   C                     ADD  WF04      PT226
+|   C           I3        WHEQ 7
+|   C                     Z-ADDWF04      PD127
+|   C                     ADD  WF04      PT227
+|   C           I3        WHEQ 8
+|   C                     Z-ADDWF04      PD128
+|   C                     ADD  WF04      PT228
+|   C           I3        WHEQ 9
+|   C                     Z-ADDWF04      PD129
+|   C                     ADD  WF04      PT229
+|   C           I3        WHEQ 10
+|   C                     Z-ADDWF04      PD130
+|   C                     ADD  WF04      PT230
+| 09-C                     ENDSL
+|   C*累計金額
+|   C                     SUB  WF04      PD1T2
+|   C                     SUB  WF04      PT2T2
+| 08-C                     ENDIF
+| 07-C                     ENDDO
+|    C*
+|    C                     MOVEL*ALL'-'   LINE4
+|    C                     WRITEPD1
+|    C*
+|00B+C           END300    TAG
+||   C           *IN40     IFEQ '1'
+||   C           TEMP2     ANDEQ'Y'
+||   C                     MOVEL*ALL'-'   LINE4
+||   C                     MOVEL'N'       TEMP2
+||   C                     WRITEPD1
+|00B+C                     END
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN900... PRINT ENDING
+     C*==============================================================*
+04===C           RTN900    BEGSR
+|    C*
+|    C                     WRITEPT2
+|    C                     WRITEPE1
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          *INZSR    INITIAL
+     C*==============================================================*
+05===C           *INZSR    BEGSR
+|    C*
+|    C                     Z-ADD1         I2      20
+|    C                     Z-ADD1         I3      20
+|    C*帶出此月份所有新資項目,分加減項存入@A2,@A3
+|    C           *LOVAL    SETLLPYWDPF
+|    C                     READ PYWDPF                   46
+| 01-C           *IN46     DOWEQ*OFF
+|   C                     MOVEL'SC'      SS18
+|   C                     MOVELWD05      SS01
+|   C           KEYSS     CHAINPYSSPF               40
+| 02-C           *IN40     IFEQ *OFF
+| 03-C           SS04      IFEQ 'A'
+|   C                     Z-ADD1         X       20
+|   C           WD05      LOKUP@A2,X                    48
+|   C  N48                MOVELWD05      @A2,I2
+|   C  N48                ADD  1         I2
+| 04-C  N48      WD05      IFEQ '14'
+|   C                     MOVELWD05      @A2,I2
+|   C                     ADD  1         I2
+| 04-C                     ENDIF
+| 03*C                     ELSE
+|   C                     Z-ADD1         X
+|   C           WD05      LOKUP@A3,X                    48
+|   C  N48                MOVELWD05      @A3,I3
+|   C  N48                ADD  1         I3
+| 03-C                     ENDIF
+| 02-C                     ENDIF
+|   C                     READ PYWDPF                   46
+| 01-C                     ENDDO
+|    C*
+|    C                     MOVEL*ALL'-'   LINE1
+|    C                     MOVEL*ALL'-'   LINE2
+|    C                     MOVEL*ALL'-'   LINE3
+|    C                     MOVEL*ALL'-'   LINE6
+|    C*
+|    C           CDYMD     ADD  100       PDYMD
+      *
+     C           PDM       IFGT 12
+     C                     SUB  12        PDM
+     C                     ADD  1         PDY
+     C                     ENDIF
+      *
+| 05-C           DHD04     IFEQ '1'
+|   C                     ADD  4         PDYMD
+| 05*C                     ELSE
+|   C                     ADD  19        PDYMD
+| 05-C                     ENDIF
+|    C*
+05===C                     ENDSR
+

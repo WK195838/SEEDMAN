@@ -1,0 +1,171 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA4102                                    *
+     H*    PROGRAM NAME :福利獎金資料核定作業　　　　　            *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 90/02/27                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYPBPF  UP  E           K        DISK
+     FPYPCPF  O   E           K        DISK                      A
+     FPYDSPF  IF  E           K        DISK
+     E*-------------------------------------------------------------**
+     E                    C1          3  1               .成本中心１
+     E                    C2          3  3               .成本中心２
+     E                    C3          3  1               .成本中心３
+     E                    A1          3  5 2             .分攤率
+     E*-------------------------------------------------------------**
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DPB01
+     I                                      610 6120DPB03
+     I                                      505 506 DPB04
+     I                                      601 6070DPB05
+     I                                      513 5200WPB05
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN PB06      PB06S
+     C           *LIKE     DEFN PB08      PB08S
+     C           *LIKE     DEFN PB09      PB09S
+     C           *LIKE     DEFN PB10      PB10S
+     C           *LIKE     DEFN PB11      PB11S
+     C           *LIKE     DEFN PB12      PB12S
+     C*---------------------------------------------------------------
+     C           KEYEM     KLIST
+     C                     KFLD           PB01
+     C                     KFLD           PB02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN100                     .成本中心
+     C                     EXSR RTN200                     .成本分攤
+     C*
+     C                     Z-ADD$A8YMD    PB96
+     C                     Z-ADD$A8YMD    PB97
+     C                     TIME           WTIME  120
+     C                     MOVELWTIME     PB98
+     C                     MOVEL$USER     PB99
+     C*
+     C                     UPDATPB0
+     C*==============================================================*
+     C*   RTN100... 員工基本資料 PYEMPF
+     C*==============================================================*
+01===C           RTN100    BEGSR
+|    C*
+|    C*設定成本中心
+|    C                     MOVEL*BLANK    C1
+|    C                     MOVEL*BLANK    C2
+|    C                     MOVEL*BLANK    C2
+|    C                     MOVEL*ZERO     A1
+|    C                     Z-ADD*ZERO     IC      10
+|    C*
+|    C           KEYEM     SETLLDS0
+|    C           KEYEM     READEDS0                      40
+| 01-C           *IN40     DOWEQ'0'
+|   C*
+|   C                     ADD  1         IC
+|   C                     MOVELDS041     C1,IC
+|   C                     MOVELDS042     C2,IC
+|   C                     MOVELDS043     C3,IC
+|   C                     Z-ADDDS05      A1,IC
+|   C*
+|   C           KEYEM     READEDS0                      40
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200...成本分攤
+     C*==============================================================*
+02===C           RTN200    BEGSR
+|    C*
+|    C                     MOVELPB01      PC01
+|    C                     MOVELPB02      PC02
+|    C                     Z-ADDPB03      PC03
+|    C                     MOVELPB04      PC04
+|    C                     Z-ADDPB05      PC05
+|    C                     Z-ADDPB05D     PC05D
+|    C                     Z-ADD$A8YMD    PC97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     PC98
+|    C                     MOVEL$USER     PC99
+|    C*
+|    C                     Z-ADD*ZERO     PB06S
+|    C                     Z-ADD*ZERO     PB08S
+|    C                     Z-ADD*ZERO     PB09S
+|    C                     Z-ADD*ZERO     PB10S
+|    C                     Z-ADD*ZERO     PB11S
+|    C                     Z-ADD*ZERO     PB12S
+|    C*
+|    C*          DPB04     IFEQ 'X1'
+|    C*          DPB04     OREQ 'X2'
+|    C                     Z-ADD1         X1      10
+| 01-C           X1        DOWLEIC
+|   C                     EXSR RTN210
+|   C                     ADD  1         X1
+| 01-C                     END
+|    C*                    END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*   RTN210... 成本資料PYPCPF
+     C*==============================================================*
+03===C           RTN210    BEGSR
+|    C*
+|    C                     MOVELC1,X1     PC091
+|    C                     MOVELC2,X1     PC092
+|    C                     MOVELC3,X1     PC093
+|    C                     Z-ADDA1,X1     PC10
+|    C*
+| 01-C           X1        IFEQ IC
+|   C*
+|   C           PB06      SUB  PB06S     PC06
+|   C           PB08      SUB  PB08S     PC08
+|   C           PB09      SUB  PB09S     PC11
+|   C           PB10      SUB  PB10S     PC12
+|   C           PB11      SUB  PB11S     PC13
+|   C           PB12      SUB  PB12S     PC14
+|   C*                    Z-ADDPB06      PC06
+|   C*                    Z-ADDPB08      PC08
+|   C*                    Z-ADDPB09      PC11
+|   C*                    Z-ADDPB10      PC12
+|   C*                    Z-ADDPB11      PC13
+|   C*                    Z-ADDPB12      PC14
+|   C*
+| 01*C                     ELSE
+|   C           PB06      MULT A1,X1     WAMT   197
+|   C           WAMT      DIV  100       PC06      H
+|   C                     ADD  PC06      PB06S
+|   C*
+|   C           PB08      MULT A1,X1     WAMT
+|   C           WAMT      DIV  100       PC08      H
+|   C                     ADD  PC08      PB08S
+|   C*
+|   C           PB09      MULT A1,X1     WAMT
+|   C           WAMT      DIV  100       PC11      H
+|   C                     ADD  PC11      PB09S
+|   C*
+|   C           PB10      MULT A1,X1     WAMT
+|   C           WAMT      DIV  100       PC12      H
+|   C                     ADD  PC12      PB10S
+|   C*
+|   C           PB11      MULT A1,X1     WAMT
+|   C           WAMT      DIV  100       PC13      H
+|   C                     ADD  PC13      PB11S
+|   C*
+|   C           PB12      MULT A1,X1     WAMT
+|   C           WAMT      DIV  100       PC14      H
+|   C                     ADD  PC14      PB12S
+|   C*
+| 01-C                     END
+|    C*
+|    C                     WRITEPC0
+|    C*
+03===C                     ENDSR
+

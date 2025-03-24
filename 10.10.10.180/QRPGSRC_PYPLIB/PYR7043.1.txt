@@ -1,0 +1,188 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR7042                                     *
+     H*   AUTHER       : A1138 DAVID.                                *
+     H*   CREATE DATE  : 81/03/26                                    *
+     H*   UPDATE DATE  :                                             *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR7041C                                    *
+     H*   PURPOSE      :                                             *
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYTDPF  IP  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYEMLF04IF  E           K        DISK
+     FPYR704P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E*: PYDA03 (01-30) :
+     E                    A1         15  2
+     E*: PYDA03 (31-270) :
+     E                    A2         15 16
+     E*---------------------------------------------------------------
+@81C ITD0
+@03C I                                              TD04  L1
+@25C I*
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 504 DTD02
+     I                                      505 5060DTD01
+     I                                      507 5100WTD01
+     I                                      518 519 DCO
+     I*
+     IPYDA03     UDS                            512
+     I                                        1  30 A1
+     I                                       31 270 A2
+     I                                      300 301 CTD04
+     I*
+     I            DS
+     I                                        1   4 TD02
+     I                                        5  110TD03
+     I                                        1  11 TD0203
+     I            DS
+     I                                        1  62 EM031
+     I                                        1  19 EM032
+     I                                       33  44 EM033
+     I                                       33  51 EM034
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*--------------------*
+     C* CM03扣繳單位名稱 *
+     C*--------------------*
+  01-C           *INLR     IFEQ '1'
+    C           TD11      CHAINCM0                  40
+    C   40                MOVEL*BLANK    CM03
+    C                     MOVELCM03      PCM03H
+    C                     SETON                     39
+  01-C                     END
+     C*
+     C           DCO       IFEQ *BLANKS                    公司
+     C           TD11      OREQ DCO
+     C                     EXSR RTN100
+     C                     END
+     C*
+     CL1 10                EXSR RTN800
+     CLR 10                EXSR RTN810
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           KEYEM     KLIST
+|    C                     KFLD           EM01
+|    C                     KFLD           TD05
+|    C                     MOVEL'SQ'      EM01
+|    C*
+|    C                     Z-ADDTD01      PTD01H
+|    C                     MOVELTD02      PTD02H
+|    C                     SETON                     1039
+|    C                     MOVEL'Y'       $DATA
+|    C*
+|    C                     EXSR RTN811
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+|    C                     MOVE *BLANK    EM032P
+|    C           KEYEM     CHAINEM0                  41
+| 02-C  N41      EM033     IFEQ *BLANK
+|  YC*                    MOVELEM032     EM032P
+|  YC                     MOVE *BLANK    EM032P
+| 02*C                     ELSE
+|  YC*                    MOVELEM034     EM032P
+|  YC                     MOVE *BLANK    EM032P
+| 02-C                     END
+|    C*
+|    C                     MOVEL*BLANK    PARR2
+| 03-C           TD04      IFNE *BLANK
+|   C                     Z-ADD1         XX      20
+|   C           TD04      LOKUPA1,XX                    40
+| 04-C           *IN40     IFEQ '1'
+|   C                     MOVE A2,XX     PARR2
+| 04-C                     END
+| 03-C                     END
+|    C*
+|    C           TD07      SUB  TD08      TD0708
+|  YKC                     Z-ADDTD20      TD20P
+|    C*
+|    C                     WRITEPD1
+|    C*
+|    C                     ADD  TD07      TTD07
+|    C                     ADD  TD08      TTD08
+|    C                     ADD  TD0708    TTD708
+|    C                     ADD  1         TSUM
+|  YKC                     ADD  TD20P     TTD20
+|    C*
+|    C                     ADD  TD07      STD07
+|    C                     ADD  TD08      STD08
+|    C                     ADD  TD0708    STD708
+|    C                     ADD  1         SSUM
+|  YKC                     ADD  TD20P     STD20
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN800... LEVEL BREAK L1
+     C*==============================================================*
+03===C           RTN800    BEGSR
+|    C*
+|    C                     WRITEPE0
+|    C*
+|    C                     Z-ADD*ZERO     STD07
+|    C                     Z-ADD*ZERO     STD08
+|    C                     Z-ADD*ZERO     STD708
+|    C                     Z-ADD*ZERO     SSUM
+|  YKC                     Z-ADD*ZERO     STD20
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK LR
+     C*==============================================================*
+04===C           RTN810    BEGSR
+|    C*
+|    C                     WRITEPE1
+|    C*
+|    C                     EXSR RTN811
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN811... LEVEL BREAK 1 FIELD CLEAR
+     C*==============================================================*
+05===C           RTN811    BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     TTD07
+|    C                     Z-ADD*ZERO     TTD08
+|    C                     Z-ADD*ZERO     TTD708
+|    C                     Z-ADD*ZERO     TSUM
+|  YKC                     Z-ADD*ZERO     TTD20
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+06===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+

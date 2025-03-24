@@ -1,0 +1,221 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME : CKB320                                     *
+     H*    AUTHOR       : A1130 李玉龍                             *
+     H*    CREATE DATE  : 81/10/08                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :　　　　                                  *
+     H*    SUBSYSTEM    :票據系統                                  *
+     H*    PURPOSE      :資料整理作業                              *
+     H****************************************************************
+     FPT#XPF  IF  E           K        DISK
+     FCKB320D CF  E                    WORKSTN
+     I*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      501 502 DCOMP
+     I                                      503 5100WDATE
+     I                                      511 520 DDEV
+     I*
+     I/COPY QRPGSRC,PT#XDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*
+     C           *LIKE     DEFN DCOMP     #B001I
+     C*          *LIKE     DEFN DHA02     #C001I
+     C*          *LIKE     DEFN DHA04F    #C002I
+     C*          *LIKE     DEFN DHA02     #D001I
+     C*          *LIKE     DEFN DHA04F    #D002I
+     C*          *LIKE     DEFN DHA02     #E001I
+     C*          *LIKE     DEFN HA13      #E002I
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY#X3    KLIST
+     C                     KFLD           D#X03   2
+     C                     KFLD           DCOMP
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INI. RTN.
+     C*
+     C           *IN03     DOWEQ'0'
+     C                     EXSR R1000                      *MAIN
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL ROUTINE
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C                     IN   *NAMVAR
+     C*
+     C                     IN   PTDA01
+     C*
+     C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           DDATEC    PARM           P3101O  80
+     C*
+     C* SC01 FIELD INITIALIZE *--------------------------------------*
+     C                     MOVEL$COR      DCOMP
+     C                     MOVEL*BLANKS   DCOMPD
+     C*公司檔
+     C                     CALL 'CKS#B0'
+     C                     PARM DCOMP     #B001I
+     C           DCOMPD    PARM           #B002O 16
+     C                     PARM           #B003O 34
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C*
+     C                     MOVE 'CK'      D#X03
+     C           KEY#X3    CHAIN#X0                  40
+     C  N40                Z-ADD#X107     DLDATE
+     C*--------------------------------------------------------------*
+     C                     Z-ADD0         DDATE
+     C                     MOVEL'TAP01'   DDEV
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1000 .... MAIN ROUTINE
+     C*==============================================================*
+     C           R1000     BEGSR
+     C*
+     C  N99                SETON                     88
+     C*
+     C                     EXFMTDSPC1
+     C                     MOVEA*ALL'0'   *IN,60
+     C*
+     C           *IN03     IFEQ '1'
+     C           *IN12     OREQ '1'
+     C   12                SETON                     03
+     C                     GOTO E1000
+     C                     END
+     C*
+     C                     EXSR R1A00                      *CHK SCREEN1
+     C*
+     C           *IN99     IFEQ '0'
+     C                     EXSR R1B00                      *PROCESS
+     C                     END
+     C*
+     C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....CHECK SCREEN1
+     C*==============================================================*
+     C           R1A00     BEGSR
+     C* CHK FUN AUT
+     C           $ADD      IFNE 'Y'
+     C           $UPD      ORNE 'Y'
+     C           $DLT      ORNE 'Y'
+     C           $INQ      ORNE 'Y'
+     C                     MOVEL'UPT2150' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     99
+     C                     END
+     C   99                GOTO E1A00
+     C*<公司別>
+     C                     MOVEL*BLANKS   DCOMPD
+     C           DCOMP     IFEQ *BLANK
+     C                     SETON                     6099
+     C                     MOVEL'UPT0010' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     ELSE
+     C*公司檔
+     C                     CALL 'CKS#B0'
+     C                     PARM DCOMP     #B001I
+     C           DCOMPD    PARM           #B002O 16
+     C                     PARM           #B003O 34
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C           #B099O    IFNE 'Y'
+     C                     MOVEL'UPT0030' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6099
+     C                     END
+     C*
+     C                     END
+     C   99                GOTO E1A00
+     C*<資料日期>
+     C           DDATE     IFEQ 0
+     C                     SETON                     6199
+     C                     MOVEL'UPT0080' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     ELSE
+     C                     Z-ADD0         WDATE   80
+     C                     CALL 'P31'
+     C                     PARM DDATE     P3101I  80
+     C                     PARM #X101     P3102I  1
+     C                     PARM #X102     P3103I  1
+     C                     PARM '2'       P3104I  1
+     C                     PARM '1'       P3105I  1
+     C           WDATE     PARM           P3101O  80
+     C           WDATE     IFGE $A8YMD
+     C                     SETON                     6199
+     C                     MOVEL'UPT0120' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     ELSE
+     C*
+     C                     MOVEL*BLANK    P3011O  1
+     C                     CALL 'P30'
+     C                     PARM DDATE     P3001I  80
+     C                     PARM #X101     P3002I  1
+     C                     PARM #X102     P3003I  1
+     C                     PARM           P3011O  1
+     C           P3011O    IFNE 'Y'
+     C                     MOVEL'UPT0040' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6199
+     C                     END
+     C                     END
+     C                     END
+     C   99                GOTO E1A00
+     C*
+     C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... PROCESS
+     C*==============================================================*
+     C           R1B00     BEGSR
+     C*
+     C                     SETON                     9699
+     C                     MOVEL'UPT2130' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     WRITEDSPC1
+     C*
+     C                     OUT  *NAMVAR
+     C*
+     C                     CALL 'CKB3201C'
+     C*
+     C                     MOVEL'UPT2143' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     WRITEDSPC1
+     C*
+     C                     CALL 'CKB3202'
+     C*
+     C                     SETOF                     96
+     C                     MOVEL'UPT2142' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C*
+     C                     ENDSR
+

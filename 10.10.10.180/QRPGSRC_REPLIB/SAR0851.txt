@@ -1,0 +1,235 @@
+      ****************************************************************
+      *   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+      * PROGRAM NAME : SAR0851                                       *
+      * AUTHER       : JONATHAN YEH                                  *
+      * CREATE DATE  : 103/03/11                                     *
+      * SYSTEM       :                                           *
+      * SUBSYSTEM    :銷售分析系統                                 *
+      *  REMARK      :業務同仁銷售毛利報表(總表)                 *
+      *服務單號: NOTE:1030308    WEB:1030319                       *
+      * 00A需求單號: 1030866
+      * 00A 2014/05/26 DEREK修正BUG :銷售金額有誤                *
+      ****************************************************************
+     FSOSCPF  IF  E           K        DISK
+     FSOSDPF  IF  E           K        DISK
+     FSOSFPF  IF  E           K        DISK
+     FREWF100 UF  E           K        DISK                      A
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      598 5990$LPRT
+      *業務員代碼
+     I                                      601 606 DSD03S
+     I                                      607 612 DSD03E
+     I                                      613 6180YMDS
+     I                                      619 6240YMDE
+     I                                      625 6300DSC39S
+     I                                      631 6360DSC39E
+     I                                      637 641 DSC04S
+     I                                      642 646 DSC04E
+     I                                      647 650 DSC05S
+     I                                      651 654 DSC05E
+     I                                      655 6600DSC08S
+     I                                      661 6660DSC08E
+     I                                      667 6670PRTOPT
+     I            DS
+     I                                        1   2 SC01
+     I                                        1   1 SC01L
+     I            DS
+     I                                        1   2 SG01
+     I                                        1   1 SG01L
+      *==============================================================*
+      *                    DEFINE ROUTINE
+      *==============================================================*
+     C           *LIKE     DEFN WFH01     WORK01           業務員
+     C           *LIKE     DEFN WFH02     WORK02           客戶代號
+     C           *LIKE     DEFN WFH03     WORK03           分店代號
+     C           *LIKE     DEFN WFH04     WORK04           銷售金額
+     C           *LIKE     DEFN WFH06     WORK06           銷貨成本1
+     C           *LIKE     DEFN WFH06     WORK07           銷貨成本2
+     C           *LIKE     DEFN WFH06     WORK08           銷貨成本3
+     C           *LIKE     DEFN WFH06     WORK09           銷貨成本4
+     C           *LIKE     DEFN WFH06     WORK10           銷貨成本5
+     C           *LIKE     DEFN WFH06     WORK11           銷貨成本6
+      *==============================================================*
+      *                    KEY LIST
+      *==============================================================*
+     C           KEYWF     KLIST
+     C                     KFLD           WFH01            業務員
+     C                     KFLD           WFH02            客戶代號
+     C                     KFLD           WFH03            分店代號
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+      *銷售
+     C                     READ SC0                      45
+     C           *IN45     DOWEQ'0'
+     C*
+     C           SC02      CHAINSD0                  49
+     C           *IN49     IFEQ '0'
+     C           SC27      IFGE DSD03S
+     C           SC27      ANDLEDSD03E
+     C                     EXSR RTN700
+     C           *IN49     IFEQ '1'
+     C                     EXSR RTN600
+     C                     ENDIF
+     C                     ENDIF
+  02-C                     ENDIF
+    C*
+    C                     READ SC0                      45
+  01-C                     END
+     C*
+     C                     SETON                     LR
+      *==============================================================*
+      *          RTN100....WRITE OR UPDATE REWF100 FOR SOSDPF
+      *==============================================================*
+01===C           RTN100    BEGSR
+|     *
+|    C                     Z-ADD0         WORK04
+|    C                     Z-ADD0         WORK06
+|    C                     Z-ADD0         WORK07
+|    C                     Z-ADD0         WORK08
+|    C                     Z-ADD0         WORK09
+|    C                     Z-ADD0         WORK10
+|    C                     Z-ADD0         WORK11
+|     *
+|    C                     Z-ADDSD07      WORK04
+| 01-C           SC33      IFEQ 'B'
+|   C           WORK04    DIV  1.05      WORK04    H
+| 01-C                     ENDIF
+|     *
+|    C           SD04      MULT SD22      WORK06    H
+|    C           SD04      MULT SD23      WORK07    H
+|    C           SD04      MULT SD24      WORK08    H
+|    C           SD05      MULT SD22      WORK09    H
+|    C           SD05      MULT SD23      WORK10    H
+|    C           SD05      MULT SD24      WORK11    H
+|     *
+| 02-C           *IN40     IFEQ '0'
+|   C                     ADD  WORK04    WFH04
+|   C                     ADD  WORK06    WFH06
+|   C                     ADD  WORK07    WFH06
+|   C                     ADD  WORK08    WFH06
+|   C                     ADD  WORK09    WFH07
+|   C                     ADD  WORK10    WFH07
+|   C                     ADD  WORK11    WFH07
+|    *
+|   C                     UPDATWF100
+     C                     Z-ADD*ZERO     WFH06
+     C                     Z-ADD*ZERO     WFH07
+| 02*C                     ELSE
+|   C                     Z-ADDWORK04    WFH04
+|   C                     ADD  WORK06    WFH06
+|   C                     ADD  WORK07    WFH06
+|   C                     ADD  WORK08    WFH06
+|   C                     ADD  WORK09    WFH07
+|   C                     ADD  WORK10    WFH07
+|   C                     ADD  WORK11    WFH07
+|   C                     WRITEWF100
+     C                     Z-ADD*ZERO     WFH06
+     C                     Z-ADD*ZERO     WFH07
+|   C*
+| 02-C                     END
+|    C*
+01===C                     ENDSR
+      *==============================================================*
+     C*     RTN600 GET DATE FRON SOSFPF
+     C*============================================================
+03===C           RTN600    BEGSR
+|    C*
+|    C           SC29      SETLLSF0
+|    C           SC29      READESF0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C*
+|00A+C                     EXSR RTN102
+|   C           KEYWF     CHAINWF100                40
+|   C                     EXSR RTN101
+|    *
+|   C           SC29      READESF0                      46
+| 01-C                     ENDDO
+03===C                     ENDSR
+     C*============================================================
+     C*     RTN700 GET DATE FRON SOSDPF
+     C*============================================================
+04===C           RTN700    BEGSR
+|    C*
+|    C           SC02      SETLLSD0
+|    C           SC02      READESD0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C                     MOVELSC27      WFH01
+|   C                     MOVELSC04      WFH02
+|   C                     MOVELSC05      WFH03
+|00A+C                     EXSR RTN102
+|   C           KEYWF     CHAINWF100                40
+|   C                     EXSR RTN100
+|    *
+|   C           SC02      READESD0                      46
+| 01-C                     ENDDO
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN101....WRITE OR UPDATE REWF100 FOR SOSFPF
+      *==============================================================*
+05===C           RTN101    BEGSR
+|     *
+|    C                     Z-ADD0         WORK04
+|    C                     Z-ADD0         WORK06
+|    C                     Z-ADD0         WORK07
+|    C                     Z-ADD0         WORK08
+|    C                     Z-ADD0         WORK09
+|    C                     Z-ADD0         WORK10
+|    C                     Z-ADD0         WORK11
+|     *
+|    C           SF19      MULT SF06      WORK04    H
+| 01-C           SC33      IFEQ 'B'
+|   C           WORK04    DIV  1.05      WORK04    H
+| 01-C                     ENDIF
+|     *
+|    C           SF19      MULT SF28      WORK06    H
+|    C           SF19      MULT SF29      WORK07    H
+|    C           SF19      MULT SF30      WORK08    H
+|    C           SF20      MULT SF28      WORK09    H
+|    C           SF20      MULT SF29      WORK10    H
+|    C           SF20      MULT SF30      WORK11    H
+|     *
+| 02-C           *IN40     IFEQ '0'
+|   C                     ADD  WORK04    WFH04
+|   C                     ADD  WORK06    WFH06
+|   C                     ADD  WORK07    WFH06
+|   C                     ADD  WORK08    WFH06
+|   C                     ADD  WORK09    WFH07
+|   C                     ADD  WORK10    WFH07
+|   C                     ADD  WORK11    WFH07
+|    *
+|   C                     UPDATWF100
+     C                     Z-ADD*ZERO     WFH06
+     C                     Z-ADD*ZERO     WFH07
+| 02*C                     ELSE
+|   C                     Z-ADDWORK04    WFH04
+|   C                     ADD  WORK06    WFH06
+|   C                     ADD  WORK07    WFH06
+|   C                     ADD  WORK08    WFH06
+|   C                     ADD  WORK09    WFH07
+|   C                     ADD  WORK10    WFH07
+|   C                     ADD  WORK11    WFH07
+|   C                     WRITEWF100
+     C                     Z-ADD*ZERO     WFH06
+     C                     Z-ADD*ZERO     WFH07
+|   C*
+| 02-C                     END
+|    C*
+05===C                     ENDSR
+ 00A+C*==============================================================*
+ 00A+C*          RTN102....INIT REWF100
+ 00A+C*==============================================================*
+ 00A+C           RTN102    BEGSR
+ 00A+C*
+ 00A+C                     Z-ADD0         WFH04
+ 00A+C                     Z-ADD0         WFH05
+ 00A+C                     Z-ADD0         WFH06
+ 00A+C                     Z-ADD0         WFH07
+ 00A+C*
+ 00A+C                     ENDSR
+      *==============================================================*
+

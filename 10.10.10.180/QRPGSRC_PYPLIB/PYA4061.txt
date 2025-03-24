@@ -1,0 +1,495 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM NAME : PYA4061                                    *
+     H*    PROGRAM NAME :兼職人員薪水試算作業                      *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 89/03/08                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYPBPF  UF  E           K        DISK                      A
+     FPYP2LF01IF  E           K        DISK
+     FPYE1PF  IF  E           K        DISK
+     FPYE2PF  IF  E           K        DISK
+     FPYE4PF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYTAPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     I/COPY PYDDSSRC,PYPMDS01
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      210 2160DDATE
+     I*
+     I                                      501 502 DPB01
+     I                                      507 508 DPB04
+     I                                      509 5160WYMD
+     I                                      509 5140WYM
+     I                                      509 5120WPB03
+     I                                      509 5140WPB05
+     I                                      515 5160WPB05D
+     I                                      531 535 DEPT1
+     I                                      536 540 DEPT2
+     I                                      541 545 WDEPT1
+     I                                      546 550 WDEPT2
+     C*
+     I            DS
+     I                                        1   80EM13
+     I                                        1   60EM13YM
+     I                                        7   80EM13D
+     I*
+     I            DS
+     I                                        1   80EM19
+     I                                        1   60EM19YM
+     I                                        7   80EM19D
+     I*
+     I            DS
+     I                                        1   80EM17
+     I                                        1   60EM17YM
+     I                                        7   80EM17D
+     I*
+     I            DS
+     I                                        1   80EM18
+     I                                        1   60EM18YM
+     I                                        7   80EM18D
+     I*
+     I            DS
+     I                                        1   80EM14
+     I                                        1   60EM14YM
+     I                                        7   80EM14D
+     I*
+     I            DS
+     I                                        1   80EM16
+     I                                        1   60EM16YM
+     I                                        7   80EM16D
+     I*
+     I            DS
+     I                                        1   80WLV03
+     I                                        1   40WLV03Y
+     I                                        5   60WLV03M
+     I            DS
+     I                                        1   3 K#Y03
+     I                                        1   10K#Y031
+     I                                        3   30K#Y032
+     C*==============================================================*
+     C*                    KEY  LIST
+     C*==============================================================*
+     C           KEYPB     KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           EM02             .員工
+     C                     KFLD           WPB03            .獎金年度
+     C                     KFLD           DPB04            .獎金類別
+     C                     KFLD           WPB05            .發放年月
+     C                     KFLD           WPB05D           .發放日期
+     C*
+     C                     MOVEL'01'      WPM01   2 P
+     C           KEYPM     KLIST
+     C                     KFLD           WPM01            .類別
+     C                     KFLD           DPB01            .公司
+     C*
+     C           KEYP2     KLIST
+     C                     KFLD           EM02             .員工
+     C                     KFLD           WYMD
+     C*
+     C           KEYE11    KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WTYMD
+     C*
+     C           KEYE12    KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C*
+     C           KEY#Y     KLIST
+     C                     KFLD           #Y01
+     C                     KFLD           #Y02
+     C*
+     C           KEYE2     KLIST
+     C                     KFLD           E101
+     C                     KFLD           E102
+     C                     KFLD           E103
+     C*
+     C                     MOVEL'0'       WE400   1 P
+     C           KEYE4     KLIST
+     C                     KFLD           WE400            . KEY
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*
+     C                     EXSR RTN010                     .INIT.
+     C*
+     C                     EXSR RTN100                     .薪水試算　
+     C*
+     C*先計算健保費：因需GET健保本人補助碼
+  01-C           WP2010    IFEQ 'Y'
+    C                     EXSR RTN110                     .健保費
+  01-C                     END
+     C*
+  02-C           WP209     IFEQ 'Y'
+    C                     EXSR RTN120                     .勞保費
+  02-C                     END
+     C*
+     C                     EXSR RTN400                     . WRITE PB0
+     C*
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C*GET TAX 所得稅率參數
+|    C           '0'       CHAINTA0                  40
+|    C           '0'       CHAINE40                  43
+|    C           KEYPM     CHAINPM0                  44
+|    C*------------------------------------------------------------***
+|    C*GET THIS MONTH FIRST DATE (WFYMD)  YYYYMM01
+|    C                     MOVE '01'      WFYMD
+|    C                     MOVELWYM       WFYMD   80
+|    C*
+|    C*GET THIS MONTH LAST DATE (WTYMD)   YYYYMMDD
+|    C                     MOVELWYM       WTYMD   80
+|    C*
+|    C                     CALL 'P34'
+|    C                     PARM WYM       P3401I  60
+|    C                     PARM '2'       P3403I  1
+|    C                     PARM '1'       P3404I  1
+|    C                     PARM           P3411O  1
+|    C                     PARM           P3412O  20
+|    C                     MOVE P3412O    WTYMD
+|    C*
+|    C                     Z-ADDWFYMD     #YMDF
+|    C                     Z-ADDWTYMD     #YMDT   80       .計算止日
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... 兼職員工薪水試算
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     WPB06   70       發放金額
+|    C*
+|    C           KEYP2     SETLLP20
+|    C           KEYP2     READEP20                      41
+| 01-C           *IN41     DOWEQ'0'
+|   C                     ADD  P2021     WPB06
+|   C                     MOVELP209      WP209   1 P      勞保Y/N
+|   C                     MOVELP2010     WP2010  1 P      健保Y/N
+|   C                     MOVELP2011     WP2011  1 P      所得扣抵
+|   C           KEYP2     READEP20                      41
+| 01-C                     END
+|    C*本國人士
+| 02-C           EM321     IFEQ 'L'
+| 03-C           WP2011    IFEQ 'Y'
+|   C*
+| 04-C           P207      IFEQ '1'
+|   C                     Z-ADDWPB06     PI1     80
+|   C                     MOVELEM34      PI2     1        婚姻狀況
+|   C                     Z-ADDEM35      PI3     20       撫養人數
+|   C                     CALL 'PYS306'                   計算所得稅
+|   C                     PARM           PI1
+|   C                     PARM           PI2
+|   C                     PARM           PI3
+|   C                     PARM           PO1     70       所得稅
+|   C                     PARM           PO2     53       所得稅率
+| 04-C                     END
+|   C*
+| 05-C           P207      IFEQ '2'
+|   C                     Z-ADD0.1       PO2
+|   C           WPB06     MULT PO2       PO1       H
+| 05-C                     END
+|   C*
+| 06-C           P207      IFEQ '3'
+|   C                     Z-ADD0.2       PO2
+|   C           WPB06     MULT PO2       PO1       H
+| 06-C                     END
+|   C*
+| 07-C           P207      IFEQ '5'
+|   C                     Z-ADD0.06      PO2
+|   C           WPB06     MULT PO2       PO1       H
+| 07-C                     END
+|   C*
+| 03*C                     ELSE
+|   C                     Z-ADD0         PO1
+|   C                     Z-ADD0         PO2
+| 03-C                     END
+| 02-C                     END
+|    C*-------------------------------------------------------------***
+|    C*外籍人士
+| 08-C           EM321     IFEQ 'F'
+| 09-C           WP2011    IFEQ 'Y'
+|   C*
+| 10-C           P207      IFEQ '1'
+|   C                     Z-ADDWPB06     PI1     80
+|   C                     MOVELEM34      PI2     1
+|   C                     Z-ADDEM35      PI3     20
+|   C                     CALL 'PYS306'                   .TAX
+|   C                     PARM           PI1
+|   C                     PARM           PI2
+|   C                     PARM           PI3
+|   C                     PARM           PO1     70
+|   C                     PARM           PO2     53
+| 10-C                     END
+|   C*
+| 11-C           P207      IFEQ '2'
+|   C                     Z-ADD0.1       PO2
+|   C           WPB06     MULT PO2       PO1       H
+| 11-C                     END
+|   C*
+| 12-C           P207      IFEQ '3'
+|   C                     Z-ADD0.2       PO2
+|   C           WPB06     MULT PO2       PO1       H
+| 12-C                     END
+|   C*
+| 13-C           P207      IFEQ '5'
+|   C                     Z-ADD0.06      PO2
+|   C           WPB06     MULT PO2       PO1       H
+| 13-C                     END
+| 09*C                     ELSE
+|   C                     Z-ADD0         PO1
+|   C                     Z-ADD0         PO2
+| 09-C                     END
+| 08-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN110... GET 健保費
+     C*==============================================================*
+03===C           RTN110    BEGSR
+|    C*
+|    C*GET到本月底之投保狀況
+|    C           KEYE11    SETGTE10
+|    C           KEYE12    REDPEE10                      40
+|    C   40                GOTO END110                     無投保
+|    C*
+| 01-C           E106      IFEQ 0                          全部停保
+|   C                     GOTO END110
+| 01-C                     END
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*離職，當月不計
+| 02-C           EM19      IFNE *ZERO
+|   C           EM19      ANDLT#YMDT
+|   C                     GOTO END110
+| 02-C                     END
+|    C*
+|    C*退保，當月不計
+| 03-C           E104      IFEQ '9'                        退保
+|   C           E103      ANDLT#YMDT
+|   C                     GOTO END110
+| 03-C                     END
+|    C*
+|    C*計算健保補助款－本人
+|    C                     MOVEL*BLANK    M#Y03   3        本人－補助
+|    C                     Z-ADD*ZERO     WE108   54       本人－補助
+|    C                     Z-ADD0         WINSR   54       補助總額
+|    C*
+| 04-C           E108      IFNE *BLANK                     有補助
+|   C                     MOVEL'INSR'    #Y01      P
+|   C                     MOVELE108      #Y02      P
+|   C           KEY#Y     CHAIN#Y0                  40
+| 05-C           *IN40     IFEQ '0'
+|   C                     MOVEL#Y03      M#Y03            本人
+|   C                     MOVEL#Y03      K#Y03
+| 06-C           K#Y03     IFNE 'ALL'                      顧主
+|   C           E107      ANDEQ*BLANK                     未停保
+|   C           K#Y032    ANDNE0
+|   C           K#Y031    DIV  K#Y032    WE108   54H
+|   C                     Z-ADDWE108     WINSR   54H
+| 06-C                     END
+| 05-C                     END
+| 04-C                     END
+|    C*
+|    C*計算健保補助款－眷屬
+| 07-C           M#Y03     IFNE 'ALL'                      顧主
+|   C           KEYE2     SETLLE20
+|   C           KEYE2     READEE20                      46
+| 08-C           *IN46     DOWEQ'0'
+| 09-C           E211      IFNE *BLANK                     補助
+|   C           E205      ANDEQ*BLANK                     未停保
+|   C                     MOVEL'INSR'    #Y01      P
+|   C                     MOVELE211      #Y02      P
+|   C           KEY#Y     CHAIN#Y0                  40
+| 10-C           *IN40     IFEQ '0'
+|   C                     MOVEL#Y03      K#Y03
+| 11-C           K#Y03     IFNE 'ALL'                      非顧主
+|   C           K#Y032    ANDNE0
+|   C           K#Y031    DIV  K#Y032    WE211   54H
+|   C                     ADD  WE211     WINSR   54H
+| 11-C                     END
+| 10-C                     END
+| 09-C                     END
+|   C           KEYE2     READEE20                      46
+| 08-C                     END
+| 07-C                     END
+|    C*
+|    C*健保費＝投保額Ｘ費率
+|    C           E105      MULT E401      KPW24   94
+|    C*
+|    C*最多四人投保（系統設定）
+| 12-C           E106      IFGT E405
+|   C                     Z-ADDE405      KPW26   30       員工負擔人數
+| 12*C                     ELSE
+|   C                     Z-ADDE106      KPW26   30
+| 12-C                     END
+|    C*
+| 13-C           KPW24     IFGT *ZERO                      健保費
+|   C*
+| 14-C           M#Y03     IFNE 'ALL'                      顧主
+|   C           KPW24     MULT E402      WAMTX   70H
+| 14*C                     ELSE
+|   C                     Z-ADDKPW24     WAMTX
+| 14-C                     END
+|   C*補助扣減
+|   C           KPW26     SUB  WINSR     WAMT    70
+| 15-C           WAMT      IFLT 0
+|   C                     Z-ADD0         WAMT
+| 15-C                     END
+|   C*
+|   C           WAMTX     MULT WAMT      WPB10   70H
+| 13-C                     END
+|    C*
+03===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN120... GET 勞保費
+     C*==============================================================*
+04===C           RTN120    BEGSR
+|    C*未投保
+| 01-C           EM14      IFEQ *ZERO
+|   C           EM14      ORGT WTYMD
+|   C                     GOTO END120
+| 01-C                     END
+|    C*
+|    C                     Z-ADDWFYMD     #YMDF   80       .計算起日
+|    C                     Z-ADDWTYMD     #YMDT   80       .計算止日
+|    C*本月新進人員
+| 02-C           EM13YM    IFEQ WYM
+|   C                     Z-ADDEM13      #YMDF
+| 02-C                     END
+|    C*勞保投保日
+| 03-C           EM14      IFGT #YMDF
+|   C                     Z-ADDEM14      #YMDF
+| 03-C                     END
+|    C*離職
+| 04-C           EM19      IFNE *ZERO
+|   C           EM19      ANDLT#YMDT
+|   C                     Z-ADDEM19      #YMDT
+| 04-C                     END
+|    C*勞保退保日
+| 05-C           EM16      IFNE *ZERO
+|   C           EM16      ANDLT#YMDT
+|   C                     Z-ADDEM16      #YMDT
+| 05-C                     END
+|    C*
+| 06-C           #YMDT     IFLE #YMDF
+|   C                     GOTO END120
+| 06-C                     END
+|    C*
+|    C*勞保費
+|    C                     Z-ADD*ZERO     WAMT
+|    C*
+|    C           EM23      MULT TA09      WAMT
+|    C                     Z-ADDPM102     KPW22   30       勞保天數
+|    C*
+| 07-C           #YMDF     IFNE WFYMD
+|   C           #YMDT     ORNE WTYMD
+|   C*
+|   C                     CALL 'P32'
+|   C                     PARM #YMDF     P3201I  80
+|   C                     PARM #YMDT     P3202I  80
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3211O  90
+|   C*
+|   C*離職天數含當天日期,EX: 1/15離職則計薪天數共有15天
+| 08-C           EM19      IFNE *ZERO
+|   C                     ADD  1         P3211O
+| 08-C                     END
+|   C*
+|   C                     Z-ADDP3211O    KPW22
+|   C                     MULT P3211O    WAMT
+|   C                     DIV  PM102     WAMT
+| 07-C                     END
+|    C*
+|    C                     Z-ADDWAMT      KPW19   70H
+|    C                     Z-ADD*ZERO     AA      54
+|    C                     Z-ADD*ZERO     BB     218
+|    C*扣補助
+| 09-C           KPW19     IFGT *ZERO
+|   C           1         SUB  WE108     AA
+|   C           AA        MULT TA10      BB
+|   C           KPW19     MULT BB        WPB09   70H
+| 09-C                     END
+|    C*
+04===C           END120    ENDSR
+     C*==============================================================*
+     C*          RTN400   寫入獎金資料檔中　 PYPBPF
+     C*==============================================================*
+05===C           RTN400    BEGSR
+|    C*
+|    C           KEYPB     CHAINPB0                  43
+|    C                     MOVELDPB01     PB01             .公司編號
+|    C                     MOVELEM02      PB02             .員工編號
+|    C                     Z-ADDWPB03     PB03             .薪資年度
+|    C                     MOVELDPB04     PB04             .薪資類別
+|    C                     Z-ADDWPB05     PB05             .發放年月
+|    C                     Z-ADDWPB05D    PB05D            .發放日
+|    C                     Z-ADDWPB06     PB06             .發放金額
+|    C                     Z-ADDPO2       PB07             .所得稅率
+|    C                     Z-ADDPO1       KPB08   70        .扣繳稅額
+|    C*
+|    C**獎金稅額＞＝最低稅額　才寫入
+| 01-C           KPB08     IFLT TA08
+|   C                     Z-ADD*ZERO     PB08
+| 01*C                     ELSE
+|   C                     Z-ADDKPB08     PB08
+| 01-C                     END
+|    C*
+|    C                     Z-ADDWPB09     PB09             .勞保費　
+|    C                     Z-ADDWPB10     PB10             .健保費　
+|    C                     Z-ADD*ZERO     PB11             .其他扣項
+|    C*
+|    C                     Z-ADD*ZERO     PB12
+|    C                     Z-ADD*ZERO     A01     70
+|    C           PB08      ADD  PB09      A01     70
+|    C                     ADD  PB10      A01
+|    C                     ADD  PB11      A01
+|    C           PB06      SUB  A01       PB12             .實領總額
+|    C*
+|    C                     MOVEL*BLANK    PB13             .發放說明
+|    C                     Z-ADD*ZERO     PB96             .核定日期
+|    C                     Z-ADD$A8YMD    PB97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     PB98
+|    C                     MOVEL$USER     PB99
+|    C*
+|    C*-------------------------------------------------------------***
+| 02-C           *IN43     IFEQ '0'
+|   C           PB96      ANDEQ*ZERO                      .未核定
+|   C*
+|   C*薪資金額＝0時．該筆資料不寫入
+| 03-C           PB06      IFEQ *ZERO
+|   C                     DELETPB0
+| 03*C                     ELSE
+|   C                     UPDATPB0
+| 03-C                     END
+|   C*
+| 02*C                     ELSE
+|   C*
+|   C*薪資金額＝0時．該筆資料不寫入
+| 04-C           PB06      IFEQ *ZERO
+|   C                     GOTO END400
+| 04*C                     ELSE
+|   C                     WRITEPB0
+| 04-C                     END
+| 02-C                     END
+|    C*
+05===C           END400    ENDSR
+     C*==============================================================*
+

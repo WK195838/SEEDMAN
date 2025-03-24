@@ -1,0 +1,211 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM NAME : GLS916                                     *
+     H*    AUTHOR       : A1084  CHARLES                             *
+     H*    CREATE DATE  : 81/11/19                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :財務系統                                  *
+     H*    SUBSYSTEM    :總帳系統                                  *
+     H*    REMARK       :檢核規則代碼代碼                          *
+     F****************************************************************
+     FMTMCPF  IF  E           K        DISK
+     FMTMEPF  IF  E           K        DISK
+     FMTMBLF  IF  E           K        DISK
+     FMTMBLF02IF  E           K        DISK
+     F            MB0                               KRENAMEMB0L2
+     FCKHDLF96IF  E           K        DISK
+     FCKHBLF01IF  E           K        DISK
+     IS002I1      DS
+     I                                        1   2 WAK01
+     I                                        3  22 W#A01
+      *員工代號
+     I                                        3   8 W#A01A
+      *供應商／費用商／客戶
+     I                                        3   7 W#A01B
+      *帳戶簡碼
+     I                                        3   8 W#A01E
+      *傳入參數
+     I                                       23  32 W#A11
+      *檢核員工
+     I                                       23  23 W#A11A
+      *檢核供應商
+     I                                       24  24 W#A11B
+      *檢核費用商
+     I                                       25  25 W#A11C
+      *檢核客戶
+     I                                       26  26 W#A11D
+      *檢核甲乙存
+     I                                       27  27 W#A11E
+     I*WCHK='1' CALL WINDOW
+     I                                       33  33 WCHK
+     C*==============================================================*
+     C*                    PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+      *公司＋員工代號＋說明
+     C                     PARM           S002I1 33
+      *傳出選擇員工代號
+     C                     PARM           S002O1  1
+      *傳出說明
+     C                     PARM           S002O2 20
+     C*==============================================================*
+     C*                    KEY LIST FOR 員工
+     C*==============================================================*
+     C           *LIKE     DEFN MC01      WMC01T
+     C           *LIKE     DEFN MC02      WMC02T
+     C           *LIKE     DEFN MC01      WMC01B
+     C           *LIKE     DEFN MC02      WMC02B
+     C*==============================================================*
+     C*                    KEY LIST FOR 供應商
+     C*==============================================================*
+     C           *LIKE     DEFN MB01      WMB01T
+     C           *LIKE     DEFN MB03      WMB03T
+     C           *LIKE     DEFN MB01      WMB01B
+     C           *LIKE     DEFN MB03      WMB03B
+     C           *LIKE     DEFN ME04      WME04T
+     C           *LIKE     DEFN ME04      WME04B
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C           KEYMC     KLIST
+     C                     KFLD           W#A01A
+     C           KEYMB     KLIST
+     C                     KFLD           W#A01B
+     C           KEYME     KLIST
+     C                     KFLD           W#A01B
+     C           KEYHD     KLIST
+     C                     KFLD           WAK01
+     C                     KFLD           W#A01E
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     MOVEL*BLANK    S002O1
+     C*挑選員工代號
+  01-C           W#A11A    IFEQ '1'
+  02-C           WCHK      IFEQ '1'
+    C*                    CALL 'WDS005'
+    C*          W#A01A    PARM W#A01A    P005I1  6
+    C                     CALL 'GLS9161'
+    C                     PARM           S002I1
+    C                     SETON                     20
+  02-C                     END
+    C*
+    C           KEYMC     CHAINMC0                  40
+  03-C           *IN40     IFEQ '1'
+    C                     MOVE 'N'       S002O1
+    C                     MOVE *BLANKS   S002O2
+    C                     MOVELW#A01A    S002O2
+  03*C                     ELSE
+    C                     MOVE 'Y'       S002O1
+    C                     MOVE *BLANK    W#A01
+    C                     MOVELMC01      W#A01A
+    C                     MOVE *BLANKS   S002O2
+    C                     MOVELMC02      S002O2
+  03-C                     END
+  01-C                     END
+     C                     SETOF                     03
+     C   20                SETON                     LR
+     C*
+     C*挑選供應商代號
+  04-C           W#A11B    IFEQ '1'
+    C           S002O1    ANDNE'Y'
+  05-C           WCHK      IFEQ '1'
+    C                     CALL 'GLS9161'
+    C                     PARM           S002I1
+    C                     SETON                     20
+  05-C                     END
+    C*
+    C           KEYMB     CHAINMB0                  40
+  06-C           *IN40     IFEQ '1'
+    C                     MOVE 'N'       S002O1
+    C                     MOVE *BLANKS   S002O2
+    C                     MOVELW#A01B    S002O2
+  06*C                     ELSE
+    C                     MOVE 'Y'       S002O1
+    C                     MOVE *BLANK    W#A01
+    C                     MOVELMB01      W#A01B
+    C                     MOVE *BLANKS   S002O2
+    C                     MOVELMB03      S002O2
+  06-C                     END
+  04-C                     END
+     C                     SETOF                     03
+     C   20                SETON                     LR
+      *
+     C*挑選費用商代號
+  07-C           W#A11C    IFEQ '1'
+    C           S002O1    ANDNE'Y'
+  08-C           WCHK      IFEQ '1'
+    C                     CALL 'GLS9161'
+    C                     PARM           S002I1
+    C                     SETON                     20
+  08-C                     END
+    C*
+    C           KEYMB     CHAINMB0L2                40
+  09-C           *IN40     IFEQ '1'
+    C                     MOVE 'N'       S002O1
+    C                     MOVE *BLANKS   S002O2
+    C                     MOVELW#A01B    S002O2
+  09*C                     ELSE
+    C                     MOVE 'Y'       S002O1
+    C                     MOVE *BLANK    W#A01
+    C                     MOVELMB01      W#A01B
+    C                     MOVE *BLANKS   S002O2
+    C                     MOVELMB03      S002O2
+  09-C                     END
+  07-C                     END
+     C                     SETOF                     03
+     C   20                SETON                     LR
+     C*挑選客戶代號
+  10-C           W#A11D    IFEQ '1'
+    C           S002O1    ANDNE'Y'
+  11-C           WCHK      IFEQ '1'
+    C                     CALL 'GLS9161'
+    C                     PARM           S002I1
+    C                     SETON                     20
+  11-C                     END
+    C*
+    C           KEYME     CHAINME0                  40
+  12-C           *IN40     IFEQ '1'
+    C                     MOVE 'N'       S002O1
+    C                     MOVE *BLANKS   S002O2
+    C                     MOVELW#A01B    S002O2
+  12*C                     ELSE
+    C                     MOVE 'Y'       S002O1
+    C                     MOVE *BLANK    W#A01
+    C                     MOVELME01      W#A01B
+    C                     MOVE *BLANKS   S002O2
+    C                     MOVELME04      S002O2
+  12-C                     END
+  10-C                     END
+     C                     SETOF                     03
+     C   20                SETON                     LR
+      *
+      *檢核甲乙存
+  13-C           W#A11E    IFEQ '1'
+    C           S002O1    ANDNE'Y'
+  14-C           WCHK      IFEQ '1'
+    C                     CALL 'GLS9161'
+    C                     PARM           S002I1
+  14-C                     END
+    C*
+    C           KEYHD     CHAINHD0                  40
+  15-C           *IN40     IFEQ '1'
+    C                     MOVE 'N'       S002O1
+    C                     MOVE *BLANKS   S002O2
+    C                     MOVELW#A01E    S002O2
+  15*C                     ELSE
+    C                     MOVE 'Y'       S002O1
+    C                     MOVE *BLANK    W#A01
+    C                     MOVELHD04      W#A01E
+    C                     MOVE *BLANKS   S002O2
+    C           HD03      CHAINHB0                  41
+  16-C           *IN41     IFEQ '0'
+    C                     MOVELHB03      S002O2
+  16-C                     END
+  15-C                     END
+  13-C                     END
+     C*
+     C                     SETOF                     03
+     C                     SETON                     LR
+

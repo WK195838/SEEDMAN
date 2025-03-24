@@ -1,0 +1,329 @@
+      ****************************************************************
+      *   人頭馬匯東洋酒股份有限公司－版權所有      TEL:5042266    *
+      *                                                              *
+      * PROGRAM NAME : PCA003                                        *
+      * AUTHER       : AN MING HSIA                                  *
+      * CREATE DATE  : 10/08/93                                      *
+      * UPDATE DATE  :                                               *
+      * SYSTEM       :人頭馬匯東                                   *
+      * SUBSYSTEM    :零用金系統                                   *
+      * REMARK       :零用金作廢／取消處理                         *
+      ****************************************************************
+     FPCCALF01UF  E           K        DISK
+     FAPUXLF01UF  E           K        DISK
+     FMTMCPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FPCA0031DCF  E                    WORKSTN
+     F                                        RRN1  KSFILE SFLSR
+     E*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      152 161 $USERN
+     I                                      575 576 WAH01
+     I*
+     I                                      601 602 DCA01
+     I                                      603 603 DCA17S
+     I                                      604 604 DCA17E
+     I                                      619 619 DCA17
+     I                                      605 605 DSEL1
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYCA     KLIST
+     C                     KFLD           DCA01
+     C                     KFLD           DCA17S
+     C           KEYCA1    KLIST
+     C                     KFLD           CA01
+     C                     KFLD           CA17
+     C                     KFLD           DCA02
+     C           KEYUX     KLIST
+     C                     KFLD           UX01
+     C                     KFLD           UX02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+  01-C           *IN03     DOUNE'0'
+    C           *IN12     ORNE '0'
+    C                     EXSR R1000                      *SCR PROCESS
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+| 02-C           DSEL1     IFEQ 'A'
+|   C                     SETON                     20
+| 02*C                     ELSE
+|   C                     SETOF                     20
+| 02-C                     END
+|    C*
+|    C           KEYCA     SETLLCA0                  40
+|    C                     EXSR R1A00                      .SFL INIT
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END PRO
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C           *LOVAL    SETLLCA0
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1D00                      *SUB PRO
+|    C*
+02===C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C                     Z-ADD1         DRRN
+|    C                     Z-ADD0         RRN1
+|    C*
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     5053  *SFLDSP,END
+|    C*
+|    C                     EXSR R1A20                      *SFL HEAD
+|    C*
+|    C                     EXSR R1A10                      *ADD SFL DTA
+|    C*
+|    C*
+| 01-C           RRN1      IFGT 0
+|   C                     SETON                     50    *SFLDSP
+| 01*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+04===C           R1A10     BEGSR
+|    C*
+|    C                     READ CA0                      46
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C*
+|   C                     EXSR R1A11                      *WRITE SFL
+|   C*
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*=============================================================*
+     C*          R1A11 .... WRITE SUBFILE DATA
+     C*=============================================================*
+05===C           R1A11     BEGSR
+|    C*
+|    C*請款人
+|    C           CA28      CHAINMC0                  45
+| 01-C           *IN45     IFEQ '1'
+|   C                     MOVEL*BLANKS   MC02
+| 01-C                     END
+|    C* 日期轉換
+| 02-C           CA10      IFNE 0
+|   C                     CALL 'P31'
+|   C                     PARM CA10      P310I1  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '3'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           DCA10     PARM           P3111O  80
+| 02*C                     ELSE
+|   C                     Z-ADD0         DCA10
+| 02-C                     END
+|    C*請款金額
+|    C                     MOVE CA28      DCA28
+|    C                     MOVE CA02      DCA02
+|    C                     Z-ADD0         TOTAL
+| 03-C           DCA02     DOWEQCA02
+|   C           *IN46     ANDEQ'0'
+|   C                     ADD  CA12      TOTAL
+|   C                     READ CA0                      46
+| 03-C                     END
+|    C*
+|    C                     ADD  1         RRN1
+|    C                     SETON                     3154
+|    C                     WRITESFLSR
+|    C*
+05===C                     ENDSR
+     C*=============================================================*
+     C*          R1A20 .... SFL HEADING (SFL CONTROL DATA PREPARE)
+     C*=============================================================*
+06===C           R1A20     BEGSR
+|    C*
+|    C                     MOVE *BLANK    D#B02
+|    C           DCA01     CHAIN#B0                  40
+|    C  N40                MOVE #B02      D#B02
+|    C*辦事處
+| 01-C           DCA17     IFEQ '1'
+|   C                     MOVEL'台北'  TEXT
+| 01*C                     ELSE
+| 02-C           DCA17     IFEQ '2'
+|   C                     MOVEL'台中'  TEXT
+| 02*C                     ELSE
+| 03-C           DCA17     IFEQ '3'
+|   C                     MOVEL'高雄'  TEXT
+| 03*C                     ELSE
+|   C                     MOVEL'全部'  TEXT
+| 03-C                     END
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C*
+06===C                     ENDSR
+     C*=============================================================*
+     C*          R1D00 ....UPADTE GLAHLF01 & CALL SUB PRO
+     C*=============================================================*
+07===C           R1D00     BEGSR
+|    C*
+|    C                     SETON                     54
+|    C                     READCSFLSR                  4242
+|    C*
+| 01-C           *IN42     DOWEQ'0'
+|   C           *IN99     ANDEQ'0'
+|   C*
+| 02-C           DSEL1     IFEQ 'B'
+|   C           DOPT1     ANDEQ'6'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     996054
+|   C                     SETON                     31
+|   C                     UPDATSFLSR
+|   C                     GOTO UPD
+| 02-C                     END
+|   C*
+| 03-C           DSEL1     IFEQ 'A'
+|   C           DOPT1     ANDEQ'7'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     996054
+|   C                     SETON                     31
+|   C                     UPDATSFLSR
+|   C                     GOTO UPD
+| 03-C                     END
+|   C*
+| 04-C           DOPT1     IFEQ '6'
+|   C           DSEL1     ANDEQ'A'
+|   C                     MOVEL*BLANK    DOPT1
+|   C                     SETOF                     31
+|   C                     UPDATSFLSR
+|   C           KEYCA1    SETLLCA0
+|   C           KEYCA1    READECA0                      44
+| 05-C           *IN44     DOWEQ'0'
+|   C                     MOVEL'V'       CA20
+|   C                     TIME           CA97
+|   C                     Z-ADD$A8YMD    CA98
+|   C                     MOVEL$USER     CA99
+|   C                     UPDATCA0
+     C*UPDAT APUXPF
+     C                     EXSR RTNUX
+     C           *IN45     IFEQ '0'
+     C                     SUB  CA12      UX13
+     C                     UPDATUX0
+     C                     END
+     C*
+|   C           KEYCA1    READECA0                      44
+| 05-C                     END
+| 04-C                     END
+|   C*
+| 06-C           DOPT1     IFEQ '7'
+|   C           DSEL1     ANDEQ'B'
+|   C                     MOVEL*BLANK    DOPT1
+|   C                     SETOF                     31
+|   C                     UPDATSFLSR
+|   C           KEYCA1    SETLLCA0
+|   C           KEYCA1    READECA0                      44
+| 07-C           *IN44     DOWEQ'0'
+|   C                     MOVEL' '       CA20
+|   C                     TIME           CA97
+|   C                     Z-ADD$A8YMD    CA98
+|   C                     MOVEL$USER     CA99
+|   C                     UPDATCA0
+     C*UPDAT APUXPF
+     C                     EXSR RTNUX
+     C           *IN45     IFEQ '0'
+     C                     ADD  CA12      UX13
+     C                     UPDATUX0
+     C                     END
+|   C           KEYCA1    READECA0                      44
+| 07-C                     END
+| 06-C                     END
+|   C*
+| 08-C           DOPT1     IFEQ '5'
+|   C                     CALL 'PCI001'
+|   C                     PARM DCA01     P001I1  2
+|   C                     PARM DCA02     P001I2  9
+|   C                     PARM           P001O1  2
+|   C                     SETON                     31
+|   C                     UPDATSFLSR
+|   C           *LOVAL    SETLLCA0
+| 08-C                     END
+|   C*
+|   C                     READCSFLSR                    42
+|   C*
+|   C           UPD       TAG
+|   C*
+| 01-C                     END
+|    C                     SETOF                     54
+|    C*
+07===C           E1D00     ENDSR
+     C*=============================================================*
+     C*          RTNUX .... CHAINUX0
+     C*=============================================================*
+06===C           RTNUX     BEGSR
+|    C*
+     C                     MOVELCA01      UX01
+     C                     MOVELCA07      UX02
+     C           KEYUX     CHAINUX0                  45
+|   C                     TIME           UX97
+|   C                     Z-ADD$A8YMD    UX98
+|   C                     MOVEL$USER     UX99
+|    C*
+06===C                     ENDSR
+

@@ -1,0 +1,406 @@
+     A****************************************************************
+     A*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     A*--------------------------------------------------------------*
+     A*    PROGRAM ID   : PCA004                                     *
+     A*    AUTHOR       : TINA                                       *
+     A*    DATE WRITTEN : 82/10/08                                   *
+     A*    SYSTEM       :人頭馬匯東                                *
+     A*    SUBSYSTEM    :零用金作業系統                            *
+     A*    PROCEDURE    :支付撥補／取消作業 (A/U/D/I)              *
+     A****************************************************************
+     FPCCALF02UF  E           K        DISK
+     FMTMCPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FPCA0041DCF  E                    WORKSTN
+     F                                        RRN1  KSFILE SFLSR1
+     E*---------------------------------------------------------------*
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      152 161 $USERN
+     I                                      601 602 DCA01
+     I                                      603 603 COMPS
+     I                                      604 604 COMPE
+     I                                      605 605 DSEL1
+     I                                      606 606 DSEL2
+     I                                      607 607 COMP
+     I                                      611 6180YCA10S
+     I                                      621 6280YCA10E
+     I                                      631 639 DCA02S
+     I                                      641 649 DCA02E
+     I                                      651 6580YDATE
+     I                                      661 6660DDATE
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CA01      CA01W
+     C           *LIKE     DEFN CA17      CA17W
+     C           *LIKE     DEFN CA02      CA02W
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYCA     KLIST                           *SETGT CA0
+     C                     KFLD           DCA01
+     C                     KFLD           COMPS
+     C           KEYCA1    KLIST                           *SETGT CA0
+     C                     KFLD           CA01W
+     C                     KFLD           CA17W
+     C                     KFLD           CA02W
+     C           KEYCA2    KLIST                           *SETGT CA0
+     C                     KFLD           CA01
+     C                     KFLD           CA17
+     C                     KFLD           DCA02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C           *IN12     ANDEQ'0'
+    C                     EXSR R1000                      *SCR PROCESS
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C           KEYCA     CHAINCA0                  40
+|    C*--------------------------------------------------------------*
+|    C                     EXSR R1A00                      .SFL INIT
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END PRO
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C           *LOVAL    SETLLCA0
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C*
+|    C                     EXSR R1D00                      *SUB PRO
+|    C*
+02===C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C                     Z-ADD1         DRRN1
+|    C                     Z-ADD0         RRN1
+|    C*
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR1
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     5053  *SFLDSP,END
+|    C*
+|    C                     EXSR R1A20                      *SFL HEAD
+|    C* <<SFL INITIAITAL DATA ADD>>
+|    C                     MOVEL*BLANKS   DOPT1
+|    C*
+|    C                     EXSR R1A10                      *ADD SFL DTA
+|    C*
+|    C*
+| 01-C           RRN1      IFGT 0
+|   C                     SETON                     50    *SFLDSP
+| 01*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+04===C           R1A10     BEGSR
+|    C*
+|    C           *LOVAL    SETLLCA0
+|    C                     READ CA0                      46
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C                     EXSR R1A11                      *WRITE SFL
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*=============================================================*
+     C*          R1A11 .... WRITE SUBFILE DATA
+     C*=============================================================*
+05===C           R1A11     BEGSR
+|    C* << SUBFILE DATA VALUE SET >>
+|    C                     MOVE CA28      DCA28
+|    C                     MOVE CA02      DCA02
+|    C                     Z-ADD0         TOTAL
+|    C*請款人
+|    C           DCA28     CHAINMC0                  45
+| 01-C           *IN45     IFEQ '1'
+|   C                     MOVEL*BLANKS   MC02
+| 01-C                     END
+|    C* 日期轉換
+|    C                     Z-ADD0         DCA10
+| 02-C           CA10      IFNE 0
+|   C                     CALL 'P31'
+|   C                     PARM CA10      P310I1  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '3'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           DCA10     PARM           P3111O  80
+| 02-C                     END
+|    C*
+|    C                     Z-ADD0         DCA11
+| 03-C           CA11      IFNE 0
+|   C                     CALL 'P31'
+|   C                     PARM CA11      P310I1  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '3'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           DCA11     PARM           P3111O  80
+| 03-C                     END
+|    C*
+|    C                     Z-ADD0         DCA29
+| 04-C           CA29      IFNE 0
+|   C                     CALL 'P31'
+|   C                     PARM CA29      P310I1  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM '3'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C           DCA29     PARM           P3111O  80
+| 04-C                     END
+|    C*請款金額
+| 05-C           DCA02     DOWEQCA02
+|   C           *IN46     ANDEQ'0'
+|   C                     ADD  CA12      TOTAL
+|   C                     READ CA0                      46
+| 05-C                     END
+|    C*
+|    C                     SETON                     3154
+|    C                     ADD  1         RRN1
+|    C                     WRITESFLSR1
+|    C*
+05===C                     ENDSR
+     C*=============================================================*
+     C*          R1A20 .... SFL HEADING (SFL CONTROL DATA PREPARE)
+     C*=============================================================*
+06===C           R1A20     BEGSR
+|    C*
+|    C                     SETOF                     30
+| 01-C           DSEL1     IFEQ 'A'
+|   C                     SETON                     30
+| 01-C                     END
+|    C*公司
+|    C           DCA01     CHAIN#B0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     MOVEL*BLANKS   D#B02
+| 02*C                     ELSE
+|   C                     MOVEL#B02      D#B02
+| 02-C                     END
+|    C*辦事處
+| 03-C           COMP      IFEQ '1'
+|   C                     MOVEL'台北'  TEXT
+| 03*C                     ELSE
+| 04-C           COMP      IFEQ '2'
+|   C                     MOVEL'台中'  TEXT
+| 04*C                     ELSE
+| 05-C           COMP      IFEQ '3'
+|   C                     MOVEL'高雄'  TEXT
+| 05*C                     ELSE
+|   C                     MOVEL'全部'  TEXT
+| 05-C                     END
+| 04-C                     END
+| 03-C                     END
+|    C*
+|    C*選擇碼
+|    C                     SETOF                     212223
+| 06-C           DSEL2     IFEQ 'A'
+|   C                     SETON                     21
+| 06*C                     ELSE
+| 07-C           DSEL2     IFEQ 'B'
+|   C                     SETON                     22
+| 07*C                     ELSE
+|   C                     SETON                     23
+| 07-C                     END
+| 06-C                     END
+|    C*
+06===C                     ENDSR
+     C*=============================================================*
+     C*          R1D00 ....UPADTE PCCALF01 & CALL SUB PRO
+     C*=============================================================*
+07===C           R1D00     BEGSR
+|    C*
+|    C                     READCSFLSR1                 4242
+|    C*
+| 01-C           *IN42     DOWEQ'0'
+|   C*
+|   C                     SETOF                     60
+| 02-C           DSEL1     IFEQ 'A'
+|   C           DOPT1     ANDEQ'7'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     Z-ADDRRN1      DRRN1
+|   C                     SETON                     996054
+|   C                     SETON                     31
+|   C                     GOTO UPD
+| 02-C                     END
+|   C*
+|   C*
+| 03-C           DSEL1     IFEQ 'B'
+|   C           DOPT1     ANDEQ'6'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+     C                     Z-ADDRRN1      DRRN1
+|   C                     SETON                     996054
+|   C                     SETON                     31
+|   C                     GOTO UPD
+| 03-C                     END
+|   C*
+| 04-C           DOPT1     IFEQ *BLANK
+|   C                     MOVEL*BLANK    DOPT1
+     C                     Z-ADDRRN1      DRRN1
+|   C                     SETOF                     54
+|   C                     SETON                     31
+|   C                     GOTO UPD
+| 04-C                     END
+|   C*
+|   C*
+| 05-C           DSEL1     IFEQ 'A'
+|   C           DOPT1     ANDEQ'6'
+|   C                     MOVEL*BLANK    DOPT1
+|   C                     SETOF                     5431
+     C                     Z-ADDRRN1      DRRN1
+|   C                     EXSR R1D10
+|   C                     GOTO UPD
+| 05-C                     END
+|   C*
+| 06-C           DSEL1     IFEQ 'B'
+|   C           DOPT1     ANDEQ'7'
+|   C                     MOVEL*BLANK    DOPT1
+|   C                     SETOF                     5431
+     C                     Z-ADDRRN1      DRRN1
+|   C                     EXSR R1D20
+|   C                     GOTO UPD
+| 06-C                     END
+|   C*
+| 07-C           DOPT1     IFEQ '5'
+|   C                     MOVEL*BLANK    DOPT1
+|   C                     CALL 'PCI001'
+|   C                     PARM CA01      P001I1  2
+|   C                     PARM DCA02     P001I2  9
+|   C                     PARM           P001O1  2
+     C                     Z-ADDRRN1      DRRN1
+|   C                     SETON                     31
+|   C                     SETOF                     54
+|   C                     GOTO UPD
+| 07-C                     END
+|   C*
+|   C           UPD       TAG
+|   C                     UPDATSFLSR1
+|   C                     READCSFLSR1                   42
+| 01-C                     END
+|    C*
+07===C           E1D00     ENDSR
+     C*=============================================================*
+     C*          R1D10 ....CONFIRM
+     C*=============================================================*
+08===C           R1D10     BEGSR
+|    C*
+|    C           KEYCA2    SETLLCA0
+|    C           KEYCA2    READECA0                      45
+| 01-C           *IN45     DOWEQ'0'
+|   C*確認支付
+| 02-C           DSEL1     IFEQ 'A'
+|   C           DSEL2     ANDEQ'A'
+|   C                     Z-ADDYDATE     CA11
+|   C                     Z-ADDCA12      CA13
+| 02-C                     END
+|   C*確認撥補
+| 03-C           DSEL1     IFEQ 'A'
+|   C           DSEL2     ANDEQ'B'
+|   C                     Z-ADDYDATE     CA29
+| 03-C                     END
+|   C*確認支付撥補
+| 04-C           DSEL1     IFEQ 'A'
+|   C           DSEL2     ANDEQ'C'
+| 05-C           CA11      IFEQ 0
+|   C                     Z-ADDYDATE     CA11
+|   C                     Z-ADDCA12      CA13
+| 05-C                     END
+|   C                     Z-ADDYDATE     CA29
+| 04-C                     END
+|   C*
+|   C                     Z-ADD$A8YMD    CA98
+|   C                     TIME           CA97
+|   C                     MOVE $USER     CA99
+|   C*
+|   C                     UPDATCA0
+|   C           KEYCA2    READECA0                      45
+| 01-C                     END
+|    C*
+08===C                     ENDSR
+     C*=============================================================*
+     C*          R1D20 ....CANCEL
+     C*=============================================================*
+09===C           R1D20     BEGSR
+|    C*
+|    C           KEYCA2    SETLLCA0
+|    C           KEYCA2    READECA0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C*確認支付
+| 02-C           DSEL1     IFEQ 'B'
+|   C           DSEL2     ANDEQ'A'
+|   C                     Z-ADD0         CA11
+|   C                     Z-ADD0         CA13
+| 02-C                     END
+|   C*取消撥補
+| 03-C           DSEL1     IFEQ 'B'
+|   C           DSEL2     ANDEQ'B'
+|   C                     Z-ADD0         CA29
+| 03-C                     END
+|   C*取消支付撥補
+| 04-C           DSEL1     IFEQ 'B'
+|   C           DSEL2     ANDEQ'C'
+|   C                     Z-ADD0         CA11
+|   C                     Z-ADD0         CA29
+|   C                     Z-ADD0         CA13
+| 04-C                     END
+|   C*
+|   C                     Z-ADD$A8YMD    CA98
+|   C                     TIME           CA97
+|   C                     MOVE $USER     CA99
+|   C*
+|   C                     UPDATCA0
+|   C           KEYCA2    READECA0                      46
+| 01-C                     END
+|    C*
+09===C                     ENDSR
+     C*=============================================================*
+

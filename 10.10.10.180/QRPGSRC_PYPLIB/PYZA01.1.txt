@@ -1,0 +1,530 @@
+     H        1   Y
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYZA01                                     *
+     H*    PROGRAM NAME :西祺，康寧-薪資主檔轉檔               *
+     H*    AUTHOR       : A1491 EASON                                *
+     H*    CREATE DATE  : 96/12/18                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYZAPF  IP  E           K        DISK
+     FPYSSPF  IF  E           K        DISK
+     FPYPWPF  UF  E           K        DISK                      A
+     FPYPHPF  UF  E           K        DISK                      A
+     FPYWDPF  UF  E           K        DISK                      A
+     FPYHDPF  UF  E           K        DISK                      A
+     F*---------------------------------------------------------------*
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I            DS
+     I                                        1   80DPH96
+     I                                        1   60ZA03
+     I                                        7   80D96
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN WD05      #WD05
+     C           *LIKE     DEFN WD06      #WD06
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C*PYPWPF
+     C           KEYPW     KLIST
+     C                     KFLD           ZA01             公司
+     C                     KFLD           ZA03             年月
+     C                     KFLD           QZA04   1         期別
+     C                     KFLD           QZA02   8         員工編號
+     C*PYPHPF
+     C           KEYPH     KLIST
+     C                     KFLD           ZA01             公司
+     C                     KFLD           QZA02   8         員工編號
+     C                     KFLD           ZA03             年月
+     C                     KFLD           QZA04   1         期別
+     C*PYSSPF
+     C           KEYSS     KLIST
+     C                     KFLD           ZA01             公司編號
+     C                     KFLD           SS01             薪資項目
+     C*
+     C           KEYWD     KLIST
+     C                     KFLD           ZA01             公司編號
+     C                     KFLD           ZA03             年月
+     C                     KFLD           QZA04             期別
+     C                     KFLD           QZA02             員工編號
+     C                     KFLD           WD05             薪資項目
+     C*
+     C           KEYHD     KLIST
+     C                     KFLD           ZA01             公司編號
+     C                     KFLD           QZA02             員工編號
+     C                     KFLD           ZA03             年月
+     C                     KFLD           QZA04             期別
+     C                     KFLD           HD05             薪資項目
+     C*
+     C           KEYWD1    KLIST
+     C                     KFLD           ZA01             公司編號
+     C                     KFLD           ZA03             年月
+     C                     KFLD           QZA04             期別
+     C                     KFLD           QZA02             員工編號
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     CLEARPW0
+     C                     CLEARPH0
+     C                     CLEARWD0
+     C                     CLEARHD0
+     C* 初始值
+     C                     MOVELZA04      QZA04
+     C                     MOVELZA02      QZA02
+     C*
+     C*寫清空  PYPWPF  PYWDPF
+     C                     EXSR RTN025
+     C*          KEYPW     CHAINPW0                  47
+     C*寫薪資項目PYWDPF
+     C                     EXSR RTN200
+     C*
+     C*薪定項目: PYWDPF --> PYPWPF
+     C                     EXSR RTN250
+     C*所得稅
+  01-C           ZA31      IFNE 0
+    C                     MOVEL'53'      #WD05
+    C                     MOVEL'53'      WD05
+    C                     Z-ADDZA31      #WD06
+    C                     Z-ADDZA31      WD06
+    C                     EXSR RTN100
+    C                     EXSR RTN260
+  01-C                     ENDIF
+     C*----------------------------------------------------------------
+     C*獎金所得稅
+  02-C           ZA29      IFNE 0
+    C                     MOVEL'54'      #WD05
+    C                     MOVEL'54'      WD05
+    C                     Z-ADDZA29      #WD06
+    C                     Z-ADDZA29      WD06
+    C                     EXSR RTN100
+    C                     EXSR RTN260
+  02-C                     ENDIF
+     C*寫到PYPWPF
+  03-C           *IN47     IFEQ '1'
+    C                     WRITEPW0
+  03*C                     ELSE
+    C                     UPDATPW0
+  03-C                     END
+     C*寫到PYPHPF
+     C                     EXSR RTN150
+     C*
+  04-C           *IN48     IFEQ '1'
+    C                     WRITEPH0
+  04*C                     ELSE
+    C                     UPDATPH0
+  04-C                     END
+     C*將業績獎金提出來做
+  05-C           ZA18      IFNE 0
+    C                     MOVEL'2'       QZA04
+    C                     EXSR RTN025
+    C*          KEYPW     CHAINPW0                  47
+    C                     MOVEL'14'      WD05
+    C                     Z-ADDZA18      WD06
+    C                     EXSR RTN100
+    C                     EXSR RTN250
+    C*寫到PYPWPF
+  06-C           *IN47     IFEQ '1'
+    C                     WRITEPW0
+  06*C                     ELSE
+    C                     UPDATPW0
+  06-C                     END
+    C*寫到PYPHPF
+    C                     EXSR RTN150
+    C*
+  07-C           *IN48     IFEQ '1'
+    C                     WRITEPH0
+  07*C                     ELSE
+    C                     UPDATPH0
+  07-C                     END
+  05-C                     END
+     C*
+     C*==============================================================*
+     C*          RTN200... WRITE PYWDPF
+     C*==============================================================*
+01===C           RTN200    BEGSR
+|    C*
+|    C*本薪
+| 01-C           ZA10      IFNE 0
+|   C                     MOVEL'00'      WD05
+|   C                     Z-ADDZA10      WD06
+|   C                     EXSR RTN100
+| 01-C                     ENDIF
+|    C*餐費津貼
+| 02-C           ZA11      IFNE 0
+|   C                     MOVEL'01'      WD05
+|   C                     Z-ADDZA11      WD06
+|   C                     EXSR RTN100
+| 02-C                     ENDIF
+|    C*化妝津貼
+| 03-C           ZA12      IFNE 0
+|   C                     MOVEL'02'      WD05
+|   C                     Z-ADDZA12      WD06
+|   C                     EXSR RTN100
+| 03-C                     ENDIF
+|    C*職務津貼
+| 04-C           ZA13      IFNE 0
+|   C                     MOVEL'03'      WD05
+|   C                     Z-ADDZA13      WD06
+|   C                     EXSR RTN100
+| 04-C                     ENDIF
+|    C*油資津貼
+| 05-C           ZA14      IFNE 0
+|   C                     MOVEL'67'      WD05
+|   C                     Z-ADDZA14      WD06
+|   C                     EXSR RTN100
+| 05-C                     ENDIF
+|    C*組長津貼
+| 06-C           ZA15      IFNE 0
+|   C                     MOVEL'04'      WD05
+|   C                     Z-ADDZA15      WD06
+|   C                     EXSR RTN100
+| 06-C                     ENDIF
+|    C*特別津貼
+| 07-C           ZA16      IFNE 0
+|   C                     MOVEL'05'      WD05
+|   C                     Z-ADDZA16      WD06
+|   C                     EXSR RTN100
+| 07-C                     ENDIF
+|    C*助理組長津貼
+| 08-C           ZA17      IFNE 0
+|   C                     MOVEL'13'      WD05
+|   C                     Z-ADDZA17      WD06
+|   C                     EXSR RTN100
+| 08-C                     ENDIF
+|    C*年終獎金津貼
+| 09-C           ZA19      IFNE 0
+|   C                     MOVEL'16'      WD05
+|   C                     Z-ADDZA19      WD06
+|   C                     EXSR RTN100
+| 09-C                     ENDIF
+|    C*全勤獎金
+| 10-C           ZA20      IFNE 0
+|   C                     MOVEL'19'      WD05
+|   C                     Z-ADDZA20      WD06
+|   C                     EXSR RTN100
+| 10-C                     ENDIF
+|    C*現場加給
+| 11-C           ZA21      IFNE 0
+|   C                     MOVEL'66'      WD05
+|   C                     Z-ADDZA21      WD06
+|   C                     EXSR RTN100
+| 11-C                     ENDIF
+|    C*補發薪資
+| 12-C           ZA22      IFNE 0
+|   C                     MOVEL'45'      WD05
+|   C                     Z-ADDZA22      WD06
+|   C                     EXSR RTN100
+| 12-C                     ENDIF
+|    C*考核獎金
+| 13-C           ZA23      IFNE 0
+|   C                     MOVEL'22'      WD05
+|   C                     Z-ADDZA23      WD06
+|   C                     EXSR RTN100
+| 13-C                     ENDIF
+|    C*延時津貼
+| 14-C           ZA24      IFNE 0
+|   C                     MOVEL'36'      WD05
+|   C                     Z-ADDZA24      WD06
+|   C                     EXSR RTN100
+| 14-C                     ENDIF
+|    C*代班費
+| 15-C           ZA25      IFNE 0
+|   C                     MOVEL'38'      WD05
+|   C                     Z-ADDZA25      WD06
+|   C                     EXSR RTN100
+| 15-C                     ENDIF
+|    C*講師費
+| 16-C           ZA26      IFNE 0
+|   C                     MOVEL'42'      WD05
+|   C                     Z-ADDZA26      WD06
+|   C                     EXSR RTN100
+| 16-C                     ENDIF
+|    C*勞保費
+| 17-C           ZA27      IFNE 0
+|   C                     MOVEL'51'      WD05
+|   C                     Z-ADDZA27      WD06
+|   C                     Z-ADDZA27      PW19
+|   C                     EXSR RTN100
+| 17-C                     ENDIF
+|    C*健保費
+| 18-C           ZA28      IFNE 0
+|   C                     MOVEL'52'      WD05
+|   C                     Z-ADDZA28      WD06
+|   C                     Z-ADDZA28      PW24
+|   C                     EXSR RTN100
+| 18-C                     ENDIF
+|    C*團保費
+| 19-C           ZA30      IFNE 0
+|   C                     MOVEL'48'      WD05
+|   C                     Z-ADDZA30      WD06
+|   C                     EXSR RTN100
+| 19-C                     ENDIF
+|    C*退休金自提
+| 20-C           ZA32      IFNE 0
+|   C                     MOVEL'56'      WD05
+|   C                     Z-ADDZA32      WD06
+|   C                     EXSR RTN100
+| 20-C                     ENDIF
+|    C*百貨伙食
+| 21-C           ZA33      IFNE 0
+|   C                     MOVEL'60'      WD05
+|   C                     Z-ADDZA33      WD06
+|   C                     EXSR RTN100
+| 21-C                     ENDIF
+|    C*貸款
+| 22-C           ZA34      IFNE 0
+|   C                     MOVEL'58'      WD05
+|   C                     Z-ADDZA34      WD06
+|   C                     EXSR RTN100
+| 22-C                     ENDIF
+|    C*借支
+| 23-C           ZA35      IFNE 0
+|   C                     MOVEL'59'      WD05
+|   C                     Z-ADDZA35      WD06
+|   C                     EXSR RTN100
+| 23-C                     ENDIF
+|    C*電話費
+| 24-C           ZA36      IFNE 0
+|   C                     MOVEL'68'      WD05
+|   C                     Z-ADDZA36      WD06
+|   C                     EXSR RTN100
+| 24-C                     ENDIF
+|    C*扣重複發放獎金
+| 25-C           ZA37      IFNE 0
+|   C                     MOVEL'70'      WD05
+|   C                     Z-ADDZA37      WD06
+|   C                     EXSR RTN100
+| 25-C                     ENDIF
+|    C*追扣健保費
+| 26-C           ZA38      IFNE 0
+|   C                     MOVEL'71'      WD05
+|   C                     Z-ADDZA38      WD06
+|   C                     EXSR RTN100
+| 26-C                     ENDIF
+|    C*退休專戶
+| 27-C           ZA39      IFNE 0
+|   C                     MOVEL'49'      WD05
+|   C                     Z-ADDZA39      WD06
+|   C                     EXSR RTN100
+| 27-C                     ENDIF
+|    C*請假扣款
+| 27-C           ZA40      IFNE 0
+|   C                     MOVEL'57'      WD05
+|   C                     Z-ADDZA40      WD06
+|   C                     EXSR RTN100
+| 27-C                     ENDIF
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN250... 薪資項目－一
+     C*==============================================================*
+02===C           RTN250    BEGSR
+|    C*
+|    C           KEYWD1    SETLLWD0
+|    C           KEYWD1    READEWD0                      44
+| 01-C           *IN44     DOWEQ'0'
+|   C*
+|   C                     MOVELWD05      SS01             薪資代碼
+|   C           KEYSS     CHAINSS0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C*
+| 03-C           SS04      IFEQ 'B'                        .減項
+|   C*
+| 04-C           SS03      IFEQ 'N'                        .免稅
+|   C                     ADD  WD06      PW18
+| 04*C                     ELSE                            .應稅
+| 05-C           SS11      IFEQ '1'                        .固定
+|   C                     ADD  WD06      PW28
+| 05*C                     ELSE                            .非固定
+|   C                     ADD  WD06      PW29
+| 05-C                     END
+| 04-C                     END
+|   C*
+| 03*C                     ELSE                            .加項
+|   C*
+| 06-C           SS03      IFEQ 'N'                        .免稅
+|   C                     ADD  WD06      PW16
+| 06*C                     ELSE                            .應稅
+| 07-C           SS11      IFEQ '1'                        .固定
+|   C                     ADD  WD06      PW17
+| 07*C                     ELSE                            .非固定
+|   C                     ADD  WD06      PW27
+| 07-C                     END
+| 06-C                     END
+|   C*
+| 03-C                     END
+| 02-C                     END
+|   C*
+|   C           KEYWD1    READEWD0                      44
+| 01-C                     ENDDO
+|    C*
+02===C           END250    ENDSR
+     C*==============================================================*
+     C*          RTN260... 薪資項目－一
+     C*==============================================================*
+03===C           RTN260    BEGSR
+|    C*
+|    C                     MOVEL#WD05     SS01             薪資代碼
+|    C           KEYSS     CHAINSS0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+| 02-C           SS04      IFEQ 'B'                        .減項
+|   C*
+| 03-C           SS03      IFEQ 'N'                        .免稅
+|   C                     ADD  #WD06     PW18
+| 03*C                     ELSE                            .應稅
+| 04-C           SS11      IFEQ '1'                        .固定
+|   C                     ADD  #WD06     PW28
+| 04*C                     ELSE                            .非固定
+|   C                     ADD  #WD06     PW29
+| 04-C                     END
+| 03-C                     END
+|   C*
+| 02*C                     ELSE                            .加項
+|   C*
+| 05-C           SS03      IFEQ 'N'                        .免稅
+|   C                     ADD  #WD06     PW16
+| 05*C                     ELSE                            .應稅
+| 06-C           SS11      IFEQ '1'                        .固定
+|   C                     ADD  #WD06     PW17
+| 06*C                     ELSE                            .非固定
+|   C                     ADD  #WD06     PW27
+| 06-C                     END
+| 05-C                     END
+|   C*
+| 02-C                     END
+| 01-C                     END
+|    C*
+03===C           END260    ENDSR
+     C*==============================================================*
+     C*          RTN025... CLEAR PW FIELD
+     C*==============================================================*
+04===C           RTN025    BEGSR
+|    C*
+|    C                     Z-ADD0         WAMT    70
+|    C*
+|    C                     MOVELZA01      PW01
+|    C                     MOVELZA02      PW02
+|    C                     Z-ADDZA03      PW03
+|    C                     MOVELQZA04     PW04
+     C           KEYPW     CHAINPW0                  47
+|    C                     Z-ADDZA10      PW05
+|    C                     Z-ADDZA05      PW07
+|    C                     Z-ADD*ZERO     PW14
+|    C                     Z-ADD*ZERO     PW15
+|    C                     Z-ADD*ZERO     PW16
+|    C                     Z-ADD*ZERO     PW17
+|    C                     Z-ADD*ZERO     PW18
+|    C                     Z-ADD*ZERO     PW19
+|    C                     MOVEL*BLANK    PW20
+|    C                     Z-ADD*ZERO     PW22
+|    C                     Z-ADD*ZERO     PW24
+|    C                     Z-ADD*ZERO     PW26
+|    C                     Z-ADD*ZERO     PW27
+|    C                     Z-ADD*ZERO     PW28
+|    C                     Z-ADD*ZERO     PW29
+|    C                     Z-ADD*ZERO     PW30
+|    C                     Z-ADD*ZERO     PW31
+|    C                     Z-ADD*ZERO     PW32
+|    C                     Z-ADD*ZERO     PW33
+|    C* PYPHPF
+|    C                     MOVELZA01      PH01
+|    C                     MOVELZA02      PH02
+|    C                     Z-ADDZA03      PH03
+|    C                     MOVELQZA04     PH04
+|    C                     Z-ADDZA10      PH05
+|    C                     Z-ADDZA05      PH07
+|    C                     Z-ADD*ZERO     PH14
+|    C                     Z-ADD*ZERO     PH15
+|    C                     Z-ADD*ZERO     PH16
+|    C                     Z-ADD*ZERO     PH17
+|    C                     Z-ADD*ZERO     PH18
+|    C                     Z-ADD*ZERO     PH19
+|    C                     MOVEL*BLANK    PH20
+|    C                     Z-ADD*ZERO     PH24
+|    C                     Z-ADD*ZERO     PH26
+|    C                     Z-ADD*ZERO     PH27
+|    C                     Z-ADD*ZERO     PH28
+|    C                     Z-ADD*ZERO     PH29
+|    C                     Z-ADD*ZERO     PH30
+|    C                     Z-ADD*ZERO     PH31
+|    C                     Z-ADD*ZERO     PH32
+|    C                     Z-ADD*ZERO     PH33
+|    C                     MOVEL*BLANK    PH341
+|    C                     MOVEL*BLANK    PH342
+|    C                     MOVEL*BLANK    PH343
+|    C                     MOVEL*BLANK    PH344
+|    C                     MOVEL*BLANK    PH35
+|    C                     Z-ADD*ZERO     PH96
+|    C* PYWDPF
+|    C                     MOVELZA01      WD01
+|    C                     MOVELZA02      WD02
+|    C                     Z-ADDZA03      WD03
+|    C                     MOVELQZA04     WD04
+|    C* PYHDPF
+|    C                     MOVELZA01      HD01
+|    C                     MOVELZA02      HD02
+|    C                     Z-ADDZA03      HD03
+|    C                     MOVELQZA04     HD04
+|    C*
+04===C                     ENDSR
+     C*
+     C*==============================================================*
+     C*          RTN100...
+     C*==============================================================*
+05===C           RTN100    BEGSR
+|    C*
+|    C           KEYWD     CHAINWD0                  40
+|    C  N40                UPDATWD0
+|    C   40                WRITEWD0
+|    C*
+|    C                     MOVELWD05      HD05
+|    C                     Z-ADDWD06      HD06
+|    C*
+|    C           KEYHD     CHAINHD0                  41
+|    C  N41                UPDATHD0
+|    C   41                WRITEHD0
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTN150...
+     C*==============================================================*
+06===C           RTN150    BEGSR
+|    C*
+|    C                     MOVELPW01      PH01
+|    C                     MOVELPW02      PH02
+|    C                     Z-ADDPW03      PH03
+|    C                     MOVELPW04      PH04
+     C           KEYPH     CHAINPH0                  48
+|    C                     Z-ADDPW05      PH05
+|    C                     Z-ADDPW07      PH07
+|    C                     Z-ADDPW14      PH14
+|    C                     Z-ADDPW15      PH15
+|    C                     Z-ADDPW16      PH16
+|    C                     Z-ADDPW17      PH17
+|    C                     Z-ADDPW18      PH18
+|    C                     Z-ADDPW19      PH19
+|    C                     MOVELPW20      PH20
+|    C                     Z-ADDPW24      PH24
+|    C                     Z-ADDPW26      PH26
+|    C                     Z-ADDPW27      PH27
+|    C                     Z-ADDPW28      PH28
+|    C                     Z-ADDPW29      PH29
+|    C                     Z-ADDPW30      PH30
+|    C                     Z-ADDPW33      PH33
+| 01-C           PH04      IFEQ '1'
+|   C                     Z-ADD5         D96
+| 01*C                     ELSE
+     C                     Z-ADD0         PH05
+|   C                     Z-ADD20        D96
+| 01-C                     ENDIF
+|    C                     Z-ADDDPH96     PH96
+|    C*
+06===C                     ENDSR
+

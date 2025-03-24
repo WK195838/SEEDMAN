@@ -1,0 +1,299 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYA4031                                     *
+     H*   AUTHER       : A1070 CHOIE                                 *
+     H*   CREATE DATE  : 79/07/21                                    *
+     H*   UPDATE DATE  :                                             *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :員工特別休假作業                           *
+     H****************************************************************
+     FPY2HPF  IP  E           K        DISK
+     FPYLTPF  UF  E           K        DISK                      A
+     FPYLUPF  O   E           K        DISK
+     F*PYTXPF  IF  E           K        DISK
+     FPYLVLF02UF  E           K        DISK
+     F            LV0                               KRENAMELVL2
+     F*PYVAPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     I*
+     I           UDS
+     I                                      211 2160DDATE
+     I                                      101 110 $USER
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DH201
+     I                                      503 5050DH203
+     I                                      506 5090WH203
+     I*
+     I            DS
+     I                                        1   80WTYMD
+     I                                        1   40WTY
+     I                                        5   60WTM
+     I                                        1   60WTYM
+     I                                        7   80WTD
+     I*
+     I            DS
+     I                                        1   80WFYMD
+     I                                        1   40WFY
+     I                                        5   60WFM
+     I                                        1   60WFYM
+     I                                        7   80WFD
+     I/COPY PYDDSSRC,PYPMDS01
+     I/COPY PYRPGSRC,PYC09I
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN LV03      KLV03
+     C           *LIKE     DEFN LV04      KLV04
+     C           *LIKE     DEFN LV96      KLV96
+     C*
+     C           *LIKE     DEFN LT01      KLT01
+     C           *LIKE     DEFN LT02      KLT02
+     C           *LIKE     DEFN LT03      KLT03
+     C           *LIKE     DEFN LT03      WLT03
+     C           *LIKE     DEFN LT10      WLT10
+     C           *LIKE     DEFN LT11      WLT11
+     C           *LIKE     DEFN LT12      WLT12
+     C           *LIKE     DEFN LT13      WLT13
+     C           *LIKE     DEFN LT14      WLT14
+     C           *LIKE     DEFN LT15      WLT15
+     C           *LIKE     DEFN LT16      WLT16
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DH201
+     C           KEYH2     KLIST
+     C                     KFLD           H201             公司
+     C                     KFLD           H202             員工
+     C           KEYLV     KLIST
+     C                     KFLD           H201             公司
+     C                     KFLD           H202             員工
+     C                     KFLD           KLV03            處理年度
+     C           KEYLV2    KLIST
+     C                     KFLD           H201             公司
+     C                     KFLD           H202             員工
+     C                     KFLD           KLV96            薪資處理月
+     C                     KFLD           KLV04            假別
+     C           KEYLT     KLIST
+     C                     KFLD           KLT01            公司
+     C                     KFLD           KLT02            員工
+     C                     KFLD           KLT03            年度
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C           KEYH2     CHAINEM0                  40
+  01-C           EM19      IFNE *ZERO                      .離職日
+    C           EM19      ANDLTWFYMD
+    C*                   上半年已離職不處理
+  01*C                     ELSE
+    C*
+    C                     EXSR RTN100
+    C*
+  02-C           EM19      IFNE *ZERO
+    C           EM19      ANDLEWTYMD                      .本年離職
+    C                     EXSR RTN200
+    C*
+  02*C                     ELSE
+    C                     EXSR RTN300                     .在職人員
+  02-C                     END
+    C*
+    C                     EXSR RTN400
+    C*
+  01-C                     END
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DH201     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C*GET PAYROLL PARAMETER
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C*
+|    C*THIS YEAR LAST DATE(WTYMD)
+|    C           WH203     SUB  1         WTY
+|    C                     Z-ADD12        WTM
+|    C*
+|    C                     Z-ADDWTYM      P2201I  40
+|    C                     CALL 'P22'
+|    C                     PARM           P2201I
+|    C                     PARM           P2211O  1
+|    C                     PARM           P2212O  20
+|    C                     Z-ADDP2212O    WTD
+|    C*
+|    C*THIS YEAR FIRST DATE(WFYMD)
+|    C                     Z-ADDWTYMD     WFYMD
+|    C                     SUB  1         WFY
+|    C                     ADD  1         WFM
+| 01-C           WFM       IFGT 12
+|   C                     ADD  1         WFY
+|   C                     SUB  12        WFM
+| 01-C                     END
+|    C*
+|    C                     Z-ADD01        WFD
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*     RTN100 :GET 特休去年資料
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     MOVELH201      KLT01
+|    C                     MOVELH202      KLT02
+|    C           H203      SUB  1         KLT03
+|    C*
+|    C                     Z-ADD*ZERO     WLT10
+|    C                     Z-ADD*ZERO     WLT11
+|    C                     Z-ADD*ZERO     WLT12
+|    C                     Z-ADD*ZERO     WLT13
+|    C                     Z-ADD*ZERO     WLT14
+|    C                     Z-ADD*ZERO     WLT15
+|    C                     Z-ADD*ZERO     WLT16
+|    C*
+|    C           KEYLT     CHAINLT0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     Z-ADDLT10      WLT10            去年特休年假
+|   C                     Z-ADDLT11      WLT11            去年已休年假－天
+|   C                     Z-ADDLT12      WLT12            去年已休年假－時
+|   C                     Z-ADDLT13      WLT13            去年轉休年假－天
+|   C                     Z-ADDLT14      WLT14            去年轉休年假－時
+|   C                     Z-ADDLT15      WLT15            明年預借年假－天
+|   C                     Z-ADDLT16      WLT16            明年預借年假－時
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*     RTN200 :上年已離職者
+     C*==============================================================*
+03===C           RTN200    BEGSR
+|    C*
+|    C*                    MOVEL'Y'       LT90
+|    C*                    WRITELT0
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*     RTN300 :今年年假計算
+     C*==============================================================*
+04===C           RTN300    BEGSR
+|    C*
+|    C                     Z-ADDH204      LT10             本年特休年假
+|    C                     Z-ADD*ZERO     LT11             本年已休年假－天
+|    C                     Z-ADD*ZERO     LT12             本年已休年假－時
+|    C                     Z-ADDH210      LT13             去年轉休年假－天
+|    C                     Z-ADDH210H     LT14             去年轉休年假－時
+|    C                     Z-ADD*ZERO     LT15             明年預借年假－天
+|    C                     Z-ADD*ZERO     LT16             明年預借年假－時
+|    C*
+|    C*滿一年者可預借明年休假天數
+| 03-C*          #C04Y     IFGT *ZERO
+|   C*                    Z-ADDWTYMD     #C04I1
+|   C*                    ADD  10000     #C04I1
+|   C*                    EXSR RTN800
+|   C*          WEM48     MULT PM101     WAMT
+|   C*          WAMT      MULT PM109     WAMT      H
+|   C*          WAMT      DIV  PM101     LT15
+|   C*                    MVR            LT16
+| 03-C*                    END
+|    C*
+|    C*月休
+| 04-C           EM107     IFEQ 'Y'
+|   C           EM108     MULT 12        LT20
+| 04*C                     ELSE
+|   C                     Z-ADD*ZERO     LT20
+| 04-C                     END
+|    C                     Z-ADD*ZERO     LT21
+|    C                     Z-ADD*ZERO     LT22
+|    C                     Z-ADD*ZERO     LT23
+|    C                     Z-ADD*ZERO     LT24
+|    C                     Z-ADD*ZERO     LT25
+|    C                     Z-ADD*ZERO     LT26
+|    C*加班轉休
+|    C                     MOVELH201      LU01
+|    C                     MOVELH202      LU02
+|    C                     Z-ADDH203      LU03
+|    C                     Z-ADD*ZERO     LU05
+|    C                     Z-ADD*ZERO     LU06
+|    C*
+|    C                     Z-ADD$A8YMD    LU97
+|    C                     TIME           LU98
+|    C                     MOVEL$USER     LU99
+|    C*
+|    C*今年到職不計算
+| 05-C           EM13      IFLE WTYMD
+| 06-C                     DO   12        LU04
+|   C                     WRITELU0
+| 06-C                     END
+|   C*
+|   C                     MOVELH201      LT01
+|   C                     MOVELH202      LT02
+|   C                     Z-ADDH203      LT03
+|   C*
+|   C                     Z-ADD*ZERO     LT96
+|   C                     Z-ADD$A8YMD    LT97
+|   C                     TIME           LT98
+|   C                     MOVEL$USER     LT99
+|   C                     WRITELT0
+| 05-C                     END
+|    C*
+|    C*                    Z-ADDDDATE     EM97
+|    C*                    TIME           WTIME  120
+|    C*                    MOVELWTIME     EM98
+|    C*                    MOVEL$USER     EM99
+|    C*                    UPDATEM0
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*     RTN400 :去年年假、轉休結轉
+     C*==============================================================*
+05===C           RTN400    BEGSR
+|    C*特休
+|    C                     Z-ADD*ZERO     KLV96
+|    C                     MOVELPM106     KLV04
+|    C           KEYLV2    SETLLLVL2
+|    C           KEYLV2    READELVL2                     42
+|    C*
+| 01-C           *IN42     DOWEQ'0'
+|   C           LV03      ANDLEWTYMD
+|   C*
+|   C                     MOVELWTYMD     LV96
+|   C                     MOVE '99'      LV96
+|   C                     UPDATLVL2
+|   C*
+|   C           KEYLV2    READELVL2                     42
+| 01-C                     END
+|    C*轉休
+|    C                     MOVELPM110     KLV04
+|    C           KEYLV2    SETLLLVL2
+|    C           KEYLV2    READELVL2                     42
+|    C*
+| 02-C           *IN42     DOWEQ'0'
+|   C           LV03      ANDLEWTYMD
+|   C*
+|   C                     MOVELWTYMD     LV96
+|   C                     MOVE '99'      LV96
+|   C                     UPDATLVL2
+|   C*
+|   C           KEYLV2    READELVL2                     42
+| 02-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C****/COPY PYRPGSRC,PYC09
+

@@ -1,0 +1,125 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYA3142                                     *
+     H*   AUTHER       : JADI                                        *
+     H*   CREATE DATE  : 02/07/21                                    *
+     H*   UPDATE DATE  : 02/01/12 PHILIP                             *
+     H****************************************************************
+     FPYWDPF  IP  E           K        DISK
+     FPYOSPF  UF  E           K        DISK                      A
+     FPYPYPF  IF  E           K        DISK
+     FPYPDPF  IF  E           K        DISK
+     F*PYPD1LF1IF  E           K        DISK
+     E*---------------------------------------------------------------
+     I           UDS
+     I                                      211 2160DDATE
+     I                                      101 110 $USER
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DWD01
+     I                                      501 502 OS01
+     I                                      503 504 DWD05
+     I                                      503 504 OS05
+     I*                                     507 5100DWD03
+     I                                      511 5160WWD03
+     I                                      511 5160OS03
+     I                                      521 5231D01
+     I                                      531 5331D02
+     I                                      541 5460D03
+     I                                      551 555 DDS04
+     I                                      556 5560DOPT
+     I                                      601 6050DWD03
+     I            DS
+     I                                        1   8 PY02
+     I                                        1   8 OS02
+     I*
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*                    KEY  LIST
+     C*==============================================================*
+     C           KEYOS     KLIST
+     C                     KFLD           WD01
+     C                     KFLD           WD02
+     C                     KFLD           WWD03
+     C                     KFLD           OS04
+     C                     KFLD           DWD05
+     C           KEYPY     KLIST
+     C                     KFLD           WD01
+     C                     KFLD           WD02
+     C           KEYPD2    KLIST
+     C                     KFLD           WD01
+     C                     KFLD           WD02
+     C                     KFLD           DWD05
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100                     .發放基準
+     C*
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C*GET PAYROLL PARAMETER
+|    C                     MOVEL'1'       OS04
+|    C                     Z-ADD0         W1D     72
+|    C                     Z-ADD0         WD061   70
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*     RTN100 :發放基準=加班費計薪基礎　
+     C*              (WBASE)
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C                     Z-ADD0         W1D     72
+|    C                     Z-ADD0         WD061   70
+|    C                     Z-ADD0         DOS06   70
+|    C*
+|    C           KEYPY     CHAINPY0                  40
+|    C  N40                Z-ADDPY03      WBASE   90
+|    C*
+|    C           KEYOS     CHAINOS0                  41
+|    C           KEYPD2    CHAINPD0                  42
+|    C*依底薪比率
+| 01-C           D01       IFNE 0
+|   C           D02       ANDNE0
+|   C           WBASE     DIV  D01       W1D       H
+|   C           W1D       MULT D02       WD061     H
+| 01-C                     END
+|    C*依固定金額
+| 02-C           D03       IFNE 0
+|   C           D03       ADD  WD061     DOS06
+| 02*C                     ELSE
+|   C                     Z-ADDWD061     DOS06
+| 02-C                     END
+|    C*
+|    C                     Z-ADD$A8YMD    OS97
+|    C                     MOVEL$USER     OS99
+|    C*
+| 03-C********** EM11      IFEQ *BLANK
+|   C           *IN42     IFEQ '0'
+|   C*新增不取代
+| 04-C           DOPT      IFEQ 1
+|   C                     Z-ADDDOS06     OS06
+|   C   41                WRITEOS0
+| 04-C                     END
+|   C*新增且取代
+| 05-C           DOPT      IFEQ 2
+|   C                     Z-ADDDOS06     OS06
+|   C  N41                UPDATOS0
+| 05-C                     END
+|   C*新增且累加
+| 06-C           DOPT      IFEQ 3
+|   C                     ADD  DOS06     OS06
+|   C  N41                UPDATOS0
+| 06-C                     END
+|   C*
+| 03-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+

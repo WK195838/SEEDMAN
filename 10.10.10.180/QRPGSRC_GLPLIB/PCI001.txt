@@ -1,0 +1,230 @@
+     FPCCALF01IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FS#SUPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FMTMCPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FPCI001D CF  E                    WORKSTN
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      152 161 $USERN
+     I            DS
+     I                                        1   9 CA02
+     I                                        2   2 CA17
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           CA01      PARM           P001I1  2         公司別
+     C           CA02      PARM           P001I2  9         傳票號碼
+     C                     PARM @RTNC     @RTNC   2          FUN KEY
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYCA     KLIST                           *READE CA0
+     C                     KFLD           CA01
+     C                     KFLD           CA17
+     C                     KFLD           CA02
+     C           KEYAF     KLIST                           *GET AF03
+     C                     KFLD           CA01
+     C                     KFLD           CA04
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+  01-C           @RTNC     DOWEQ*BLANK
+    C                     EXSR R1000                      *SCR PROCESS
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+|    C* INIT VALUE SET *---------------------------------------------*
+|    C*                    Z-ADD$C8YMD    DATE
+|    C                     MOVEL*BLANK    @RTNC
+|    C*--------------------------------------------------------------*
+|    C                     EXSR R1A00                      .SFL INIT
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     MOVEL'03'      @RTNC
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C                     MOVEL'12'      @RTNC
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     MOVEL'ST'      @RTNC
+|    C*
+02===C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C                     Z-ADD1         DRRN
+|    C                     Z-ADD0         RRN
+|    C                     Z-ADD0         TCA12
+|    C*
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     5053  *SFLDSP,END
+|    C*
+|    C                     EXSR R1A20                      *SFL HEAD
+|    C* <<SFL INITIAITAL DATA ADD>>
+|    C*
+|    C                     EXSR R1A10                      *ADD SFL DTA
+|    C*
+|    C*
+| 01-C           RRN       IFGT 0
+|   C                     SETON                     50    *SFLDSP
+| 01*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+04===C           R1A10     BEGSR
+|    C*
+|    C           KEYCA     SETLLCA0
+|    C           KEYCA     READECA0                      46
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C                     EXSR R1A11                      *WRITE SFL
+|   C           KEYCA     READECA0                      46
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*=============================================================*
+     C*          R1A11 .... WRITE SUBFILE DATA
+     C*=============================================================*
+05===C           R1A11     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << SUBFILE DATA VALUE SET >>
+|    C           KEYAF     CHAINAF0                  40
+|    C  N40                MOVELAF03      DAF03
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL*BLANK    MC02
+     C           CA28      CHAINMC0                  40
+|    C                     ADD  1         RRN
+|    C                     ADD  CA12      TCA12
+|    C                     WRITESFLSR
+|    C*
+05===C                     ENDSR
+     C*=============================================================*
+     C*          R1A20 .... SFL HEADING (SFL CONTROL DATA PREPARE)
+     C*=============================================================*
+06===C           R1A20     BEGSR
+|    C*
+|    C           CA01      CHAINAK0                  40
+|    C*
+|    C           KEYCA     CHAINCA0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*登帳日期
+| 02-C           CA10      IFEQ 0
+|   C                     Z-ADD0         DCA10
+| 02*C                     ELSE
+|   C                     Z-ADDCA10      XX      80
+|   C                     EXSR R1A30
+|   C                     Z-ADDYY        DCA10
+| 02-C                     END
+|   C*
+|   C*支付日期
+| 03-C           CA11      IFEQ 0
+|   C                     Z-ADD0         DCA11
+| 03*C                     ELSE
+|   C                     Z-ADDCA10      XX
+|   C                     EXSR R1A30
+|   C                     Z-ADDYY        DCA11
+| 03-C                     END
+|   C*
+|   C*製票日期
+| 04-C           CA25      IFEQ 0
+|   C                     Z-ADD0         DCA25
+| 04*C                     ELSE
+|   C                     Z-ADDCA25      XX
+|   C                     EXSR R1A30
+|   C                     Z-ADDYY        DCA25
+| 04-C                     END
+|   C*
+|   C*撥補日期
+| 05-C           CA29      IFEQ 0
+|   C                     Z-ADD0         DCA29
+| 05*C                     ELSE
+|   C                     Z-ADDCA29      XX
+|   C                     EXSR R1A30
+|   C                     Z-ADDYY        DCA29
+| 05-C                     END
+|   C*
+|   C           CA26      CHAINS#SUPF               40
+|   C  N40                MOVELSU02      DSU02
+| 01-C                     END
+|    C*
+|    C           CA01      CHAIN#B0                  40
+|    C  N40                MOVEL#B02      D#B02
+06===C                     ENDSR
+     C*=============================================================*
+     C*          R1A30 .... CALL P31(FILE---->SCREEN)
+     C*=============================================================*
+07===C           R1A30     BEGSR
+|    C*
+|    C                     Z-ADD0         YY      80
+|    C                     CALL 'P31'
+|    C                     PARM XX        P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C           YY        PARM           P3111O  80
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+

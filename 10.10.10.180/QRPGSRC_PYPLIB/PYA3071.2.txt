@@ -1,0 +1,244 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA3071                                    *
+     H*    PROGRAM NAME :薪資確認作業                              *
+     H*    AUTHOR       : A1413 CLOUD                                *
+     H*    CREATE DATE  : 96/04/16                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYPWJF12IP  E           K        DISK
+     FPYWDPF  IF  E           K        DISK
+     FPYHCPF  IF  E           K        DISK
+     FPYH4PF  UF  E           K        DISK
+     FPYH6PF  UF  E           K        DISK                      A
+     F*PYEMPF  IF  E           K        DISK
+     F*PYEMLF01IF  E           K        DISK
+     F*            EM0                               KRENAMEEML1
+     FPYPHPF  UF  E           K        DISK                      A
+     FPYHDPF  UF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I           UDS
+     I                                      101 110 $USER
+     I                                      140 140 $RMK02
+     I                                      187 1920DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DPW01
+     I                                      511 5160WPW03
+     I                                      511 5140WPW03Y
+     I                                      515 5160WPW03M
+     I                                      507 507 DPW04
+     I                                      603 6070DPW03
+     I                                      603 6050DPW03Y
+     I                                      606 6070DPW03M
+     I*
+     I            DS
+     I                                        1   80WNYMD
+     I                                        1   60WNYM
+     I                                        1   40WNY
+     I                                        5   60WNM
+     I                                        7   80WND
+     I*
+     I            DS
+     I                                        1   7 PH34
+     I                                        1   1 PH341
+     I                                        2   2 PH342
+     I                                        3   3 PH343
+     I                                        4   7 PH344
+     I/COPY QDDSSRC,PYPMDS01
+     I/COPY QDDSSRC,PYEMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN PW05      PW05S
+     C           *LIKE     DEFN PW07      PW07S
+     C           *LIKE     DEFN PW14      PW14S
+     C           *LIKE     DEFN PW16      PW16S
+     C           *LIKE     DEFN PW17      PW17S
+     C           *LIKE     DEFN PW18      PW18S
+     C           *LIKE     DEFN PW27      PW27S
+     C           *LIKE     DEFN PW28      PW28S
+     C           *LIKE     DEFN PW29      PW29S
+     C           *LIKE     DEFN PW30      PW30S
+     C           *LIKE     DEFN PW31      PW31S
+     C           *LIKE     DEFN PW32      PW32S
+     C           *LIKE     DEFN PW33      PW33S
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYWD     KLIST
+     C                     KFLD           PW01             公司編號
+     C                     KFLD           PW03             年月
+     C                     KFLD           PW04             期別
+     C                     KFLD           PW02             員工編號
+     C           KEYH4     KLIST
+     C                     KFLD           H401
+     C                     KFLD           H402
+     C           KEYHC     KLIST
+     C                     KFLD           HC01
+     C                     KFLD           HC02
+     C                     KFLD           HC03
+     C           KEYH6     KLIST
+     C                     KFLD           H601
+     C                     KFLD           H602
+     C                     KFLD           H603
+     C           KEYPH     KLIST
+     C                     KFLD           PW01             公司編號
+     C                     KFLD           PW02             員工編號
+     C                     KFLD           PW03             年月
+     C                     KFLD           PW04             期別
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     .INIT
+     C*
+     C                     EXSR RTN040                     .MAIN
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN040... MAIN PROCESS
+     C*==============================================================*
+02===C           RTN040    BEGSR
+|   C*
+|   C           KEYPH     SETLLPH0
+|   C           KEYPH     READEPH0                      40
+| 02-C           *IN40     DOWEQ'0'
+|   C                     DELETPH0
+|   C           KEYPH     READEPH0                      40
+| 02-C                     END
+|   C*
+|   C           KEYPH     SETLLHD0
+|   C           KEYPH     READEHD0                      41
+| 03-C           *IN41     DOWEQ'0'
+|   C                     DELETHD0
+|   C           KEYPH     READEHD0                      41
+| 03-C                     END
+|    C*
+|    C*薪資資料HEADING (PYPWPF --> PYPHPF)
+|    C                     EXSR RTN140
+|    C*薪資資料DETAIL  (PYWDPF --> PYHDPF)
+|    C                     EXSR RTN150
+|    C*勞退資料DETAIL  (PYHCPF --> PYH6PF)
+|    C           DPW04     IFEQ '1'
+|    C                     EXSR RTN180
+|    C                     ENDIF
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*   RTN140...薪資資料HEADING, PYPWPF --> PYPHPF, PYCHPF
+     C*==============================================================*
+03===C           RTN140    BEGSR
+|    C*本月薪資歷史檔
+|    C                     MOVELPW01      PH01
+|    C                     MOVELPW02      PH02
+|    C                     Z-ADDPW03      PH03
+|    C                     MOVELPW04      PH04
+|    C                     Z-ADDPW05      PH05
+|    C                     Z-ADDPW07      PH07
+|    C                     Z-ADDPW14      PH14
+|    C                     Z-ADDPW15      PH15
+|    C                     Z-ADDPW16      PH16
+|    C                     Z-ADDPW17      PH17
+|    C                     Z-ADDPW18      PH18
+|    C                     Z-ADDPW19      PH19
+|    C                     MOVELPW20      PH20
+|    C                     Z-ADDPW24      PH24
+|    C                     Z-ADDPW26      PH26
+|    C                     Z-ADDPW27      PH27
+|    C                     Z-ADDPW28      PH28
+|    C                     Z-ADDPW29      PH29
+|    C                     Z-ADDPW30      PH30
+|    C                     Z-ADDPW31      PH31
+|    C                     Z-ADDPW32      PH32
+|    C                     Z-ADDPW33      PH33
+|   C                     MOVEL*BLANK    PH34
+|   C                     MOVEL*BLANK    PH35
+|    C*
+|    C                     Z-ADD$A8YMD    PH97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     PH98
+|    C                     MOVEL$USER     PH99
+|    C                     WRITEPH0                    33
+|    C*
+03===C           END140    ENDSR
+     C*==============================================================*
+     C*   RTN150...薪資資料DETAIL, PYWDPF --> PYHDPF, PYCDPF
+     C*==============================================================*
+04===C           RTN150    BEGSR
+|    C*
+|    C           KEYWD     SETLLWD0
+|    C           KEYWD     READEWD0                      42
+| 01-C           *IN42     DOWEQ'0'
+|   C                     EXSR RTN220
+|   C           KEYWD     READEWD0                      42
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*   RTN180...勞退資料DETAIL, PYHCPF --> PYH6PF,PYH4PF
+     C*==============================================================*
+05===C           RTN180    BEGSR
+|    C*
+|    C                     MOVE DPW01     HC01
+|    C                     MOVE PW02      HC02
+|    C                     Z-ADDWPW03     HC03
+|    C           KEYHC     CHAINPYHCPF               42
+|    C   42                GOTO NEXT
+|    C                     MOVELHC01      H601
+|    C                     MOVELHC02      H602
+|    C                     Z-ADDHC03      H603
+|    C           KEYH6     CHAINPYH6PF               40
+|    C                     Z-ADDHC04      H604
+|   C                     Z-ADDHC05      H605
+|    C                     Z-ADDHC06      H606
+|    C                     Z-ADDHC07      H607
+|    C                     Z-ADDHC08      H608
+|    C                     Z-ADDHC09      H609
+|    C                     Z-ADD$A8YMD    H697
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     H698
+|    C                     MOVEL$USER     H699
+|    C   40                WRITEH60
+|    C  N40                UPDATH60
+|    C*更新提撥主檔 PYH4PF
+| 02-C                     Z-ADD0         H412
+| 02-C                     Z-ADD0         H413
+|    C                     MOVE HC01      H401
+|    C                     MOVE HC02      H402
+|    C           KEYH4     CHAINPYH4PF               40
+| 02-C  N40                DO
+| 02-C           KEYH4     SETLLH60
+| 02-C           KEYH4     READEH60                      44
+| 02-C           *IN44     DOWEQ'0'
+| 02-C                     ADD  H605      H412
+| 02-C                     ADD  H606      H413
+| 02-C           KEYH4     READEH60                      44
+| 02-C                     END
+|   C                     UPDATH40
+| 02-C                     END
+|    C*
+|    C           NEXT      TAG
+05===C                     ENDSR
+     C*==============================================================*
+     C*   RTN220... 薪資資料DETAIL
+     C*==============================================================*
+08===C           RTN220    BEGSR
+|    C*本月薪資歷史檔
+|    C                     MOVELWD01      HD01
+|    C                     MOVELWD02      HD02
+|    C                     Z-ADDWD03      HD03
+|    C                     MOVELWD04      HD04
+|    C                     MOVELWD05      HD05
+|    C                     Z-ADDWD06      HD06
+|    C                     WRITEHD0                    33
+|    C*
+08===C                     ENDSR
+

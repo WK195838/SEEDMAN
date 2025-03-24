@@ -1,0 +1,47 @@
+/*   A*-------------------------------------------------------------*/
+             PGM
+
+             DCL       VAR(&LIB)   TYPE(*CHAR) LEN(10) VALUE('REFLIB')
+             DCL       VAR(&FILE)  TYPE(*CHAR) LEN(10) VALUE('IMR085F')
+
+             CALL       PGM(P63)
+
+             OVRDBF     FILE(IMIAPF) SHARE(*YES)
+             OPNQRYF    FILE((IMIAPF)) QRYSLT('%SST(IA02 1 1) *EQ +
+                          "W"') KEYFLD((IA01) (IA02) (IA03))
+
+/*將目前庫存量寫入檔案*/
+             CLRPFM     FILE(REFLIB/IMR085F)
+             CALL       PGM(IMR0851)
+
+             CLOF       OPNID(IMIAPF)
+             DLTOVR     FILE(*ALL)
+
+/*扣除出貨單未確認數量*/
+             CALL       PGM(IMR0852)
+/*扣除調撥未確認數量*/
+             CALL       PGM(IMR0853)
+
+             OVRDBF     FILE(W1AFPF) SHARE(*YES)
+             OPNQRYF    FILE((W1AFPF)) QRYSLT('%SST(AF03 1 1) *EQ +
+                          "W" & AF05 *EQ " "') KEYFLD((AF02) (AF04))
+/*計算專櫃調撥未確認數量*/
+             CLRPFM     FILE(REFLIB/W1AGWF)
+             CALL       PGM(IMR0854)
+
+             CLOF       OPNID(W1AFPF)
+             DLTOVR     FILE(*ALL)
+
+/*扣除專櫃調撥未確認數量*/
+             CALL       PGM(IMR0855)
+
+/*備份每日庫存數量*/
+             CPYF       FROMFILE(REFLIB/IMR085F) +
+                          TOFILE(REFLIB/IMR085PF) MBROPT(*ADD) +
+                          FMTOPT(*NOCHK)
+
+             /*將IMR085F 換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL210C) PARM(&LIB &FILE)
+
+             ENDPGM
+

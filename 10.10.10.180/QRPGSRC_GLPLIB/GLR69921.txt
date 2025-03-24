@@ -1,0 +1,200 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : GLR69921                                   *
+     H*    PROGRAM NAME : 修繕費ＹＴＤ報表　　                     *
+     H*    AUTHOR       : TINA                                       *
+     H*    CREATE DATE  : 1994.12.22                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : 泛太總帳                                 *
+     H****************************************************************
+     FGLAWF01 IP  E           K        DISK
+     F*T#BPF  IF  E           K        DISK
+     F*LAKPF  IF  E           K        DISK
+     F*LAAPF  IF  E           K        DISK
+     FGLR699P O   E             39     PRINTER
+     I*
+     IGLWF01R
+     I                                              WF0101L1
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAH01S
+     I                                      560 561 DAH01E
+     I                                      503 5090DAH10
+     I                                      511 5180DAH10S
+     I                                      511 5140YY
+     I                                      517 5180DD
+     I                                      521 5280DAH10E
+     I*會計年度起日
+     I                                      550 5570DAC03A
+     I                                      530 535 DAH05S
+     I                                      540 545 DAH05E
+      *是否過帳
+     I                                      797 797 DAH18
+     I*檢核程式之參數
+     ICHKPGM      DS
+     I                                        1   2 WAK01
+     I                                        3  22 WPARM1
+     I                                       23  32 WPARM2
+     I                                       33  33 WCHK
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*          KEYAF     KLIST
+     C*                    KFLD           DAH01
+     C*                    KFLD           WF1708
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      .GET 說明
+     C*
+     CL1 10                EXSR RTNL1
+     CLR 10                EXSR RTNLR
+     C*
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C*
+|    C**
+|    C* CALL 'GLS005' GET 本期結帳碼
+|    C**
+|    C                     CALL 'GLS005'
+|    C                     PARM DAH01S    P005I1  2
+|    C                     PARM DAH10E    P005I2  80
+|    C                     PARM 'S'       P005I3  1
+|    C                     PARM           P005O1  40
+|    C                     PARM           P005O2  20
+|    C                     PARM           P005O3  1
+|    C                     PARM           P005O4  1
+|    C                     SETON                     31
+|    C*
+|    C*是否過帳
+|    C                     MOVE *BLANKS   PASS
+| 01-C           DAH18     IFEQ '1'
+|   C                     MOVE '過　帳'PASS
+| 01*C                     ELSE
+| 02-C           DAH18     IFEQ '2'
+|   C                     MOVE '全　部'PASS
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C                     WRITEPH1
+|    C*CLEAR TOTAL FIELD
+|    C                     Z-ADD*ZERO     T1TOT1
+|    C                     Z-ADD*ZERO     T1TOT2
+|    C                     Z-ADD*ZERO     T1TOT3
+|    C                     Z-ADD*ZERO     T1TOT4
+|    C                     Z-ADD*ZERO     T1TOT5
+|    C                     Z-ADD*ZERO     T1TOT6
+|    C*
+|    C                     SETON                     10
+|    C                     SETON                     31
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ....WRITE PD1
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETON                     31
+| 01-C                     END
+|    C*
+|    C                     MOVELWF0101    WPARM1
+|    C                     MOVEL*BLANK    WPARM2
+|    C                     CALL 'GLS902'
+|    C                     PARM           CHKPGM
+|    C                     PARM           TORN    1
+|    C           #A02      PARM           DESC   20
+|    C*
+|    C           WF0103    SUB  WF0104    BLANCE
+|    C           WF0105    SUB  WF0106    YLANCE
+|    C                     WRITEPD1
+|    C                     SETOF                     31
+|    C                     ADD  WF0103    T1TOT1
+|    C                     ADD  WF0104    T1TOT2
+|    C                     ADD  BLANCE    T1TOT3
+|    C                     ADD  WF0105    T1TOT4
+|    C                     ADD  WF0106    T1TOT5
+|    C                     ADD  YLANCE    T1TOT6
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTNL1 ... WRITEPT1
+     C*==============================================================*
+03===C           RTNL1     BEGSR
+|    C*
+|    C                     ADD  T1TOT1    T2TOT1
+|    C                     ADD  T1TOT2    T2TOT2
+|    C                     ADD  T1TOT3    T2TOT3
+|    C                     ADD  T1TOT4    T2TOT4
+|    C                     ADD  T1TOT5    T2TOT5
+|    C                     ADD  T1TOT6    T2TOT6
+|    C                     WRITEPT1
+|    C                     Z-ADD0         T1TOT1
+|    C                     Z-ADD0         T1TOT2
+|    C                     Z-ADD0         T1TOT3
+|    C                     Z-ADD0         T1TOT4
+|    C                     Z-ADD0         T1TOT5
+|    C                     Z-ADD0         T1TOT6
+|    C                     SETON                     31
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTNLR ... WRITEPT2
+     C*==============================================================*
+04===C           RTNLR     BEGSR
+|    C*
+|    C                     WRITEPT2
+|    C                     WRITEPE2
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+05===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R1000
+|    C*
+|    C*                    WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C                     WRITEPE2
+|    C*
+05===C                     ENDSR
+

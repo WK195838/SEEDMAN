@@ -1,0 +1,159 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR6432                                    *
+     H*    PROGRAM NAME :勞工保險費證明表　　　                    *
+     H*    AUTHOR       : KLAUS                                      *
+     H*    CREATE DATE  : 2001/05/17                                 *
+     H*    UPDATE DATE  : 2006/06/16 CLOUD                           *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYTIPF  IP  E           K        DISK
+     FPYHDPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYR646WFUF  E           K        DISK                      A
+     I*
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      210 2160PDATE
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I                                      503 509 DEM041
+     I                                      510 516 DEM042
+     I                                      541 550 DEM021
+     I                                      551 560 DEM022
+     I                                      601 6020DPEN
+     I                                      611 6140DPENK
+     I                                      620 6250TI02
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*==============================================================*
+     C*                    KEYLIST
+     C*==============================================================*
+     C*PYEMPF
+     C           KEYEM     KLIST
+     C                     KFLD           TI01             .公司編號
+     C                     KFLD           TI03             .員工編號
+     C           KEYWF     KLIST
+     C                     KFLD           WF01             .公司編號
+     C                     KFLD           WF02             .員工編號
+     C                     KFLD           WF07             .眷屬證號
+     C           KEYHD     KLIST
+     C                     KFLD           WF01             .公司編號
+     C                     KFLD           WF02             .員工編號
+     C                     KFLD           TI02             .年月
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN200
+     C*
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200... PROCESS
+     C*==============================================================*
+02===C           RTN200    BEGSR
+|    C*公司
+|    C                     MOVELTI01      WF01
+|    C*員工編號
+|    C                     MOVELTI03      WF02
+|    C*員工姓名、身分證
+|    C           KEYEM     CHAINEM0                  40
+|    C  N40                MOVELEM03      WF03
+|    C  N40                MOVELEM31      WF04
+|    C   40                MOVEL*BLANK    WF03
+|    C   40                MOVEL*BLANK    WF04
+|    C*眷屬ID，先預設一個為自己本人
+|    C                     MOVEL'X'       WF05
+|    C                     MOVELWF03      WF06
+|    C                     MOVELWF04      WF07
+|    C                     Z-ADDTI08      TEMP    50
+|    C*
+|    C                     EXSR RTN201
+|    C*開始計算眷屬@1
+| 01-C           TI111     IFNE *BLANK
+|   C                     MOVELTI113     WF05
+|   C                     MOVELTI112     WF06
+|   C                     MOVELTI111     WF07
+|   C                     Z-ADDTI115     TEMP
+|   C                     Z-ADD0         WF09
+|   C                     EXSR RTN201
+| 01-C                     ENDIF
+|    C*開始計算眷屬@2
+| 02-C           TI121     IFNE *BLANK
+|   C                     MOVELTI123     WF05
+|   C                     MOVELTI122     WF06
+|   C                     MOVELTI121     WF07
+|   C                     Z-ADDTI125     TEMP
+|   C                     Z-ADD0         WF09
+|   C                     EXSR RTN201
+| 02-C                     ENDIF
+|    C*開始計算眷屬@3
+| 03-C           TI131     IFNE *BLANK
+|   C                     MOVELTI133     WF05
+|   C                     MOVELTI132     WF06
+|   C                     MOVELTI131     WF07
+|   C                     Z-ADDTI135     TEMP
+|   C                     Z-ADD0         WF09
+|   C                     EXSR RTN201
+| 03-C                     ENDIF
+|    C*
+|    C                     CLEARWF0
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN201... 寫到檔案
+     C*==============================================================*
+03===C           RTN201    BEGSR
+|    C*
+| 01-C           WF05      IFNE 'X'
+|   C                     Z-ADD0         WF09
+| 01-C                     ENDIF
+|    C*
+|    C           KEYWF     CHAINWF0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     ADD  TEMP      WF08
+| 03-C           WF05      IFEQ 'X'
+|   C                     EXSR RTN202
+| 03-C                     ENDIF
+|   C                     UPDATWF0
+| 02*C                     ELSE
+|   C                     Z-ADDTEMP      WF08
+| 04-C           WF05      IFEQ 'X'
+|   C                     Z-ADD0         WF09
+|   C                     EXSR RTN202
+| 04-C                     ENDIF
+|    *
+|   C                     WRITEWF0
+| 02-C                     ENDIF
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN202... 計算勞保
+     C*==============================================================*
+04===C           RTN202    BEGSR
+|    C*本人多計算勞保費
+|    C           KEYHD     SETLLHD0
+|    C           KEYHD     READEHD0                      46
+| 01-C           *IN46     DOWEQ'0'
+| 02-C           HD05      IFEQ '51'
+|   C                     ADD  HD06      WF09
+| 02-C                     ENDIF
+|   C           KEYHD     READEHD0                      46
+| 01-C                     ENDDO
+|     *
+04===C                     ENDSR
+

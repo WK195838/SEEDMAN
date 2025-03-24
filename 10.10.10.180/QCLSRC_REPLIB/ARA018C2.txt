@@ -1,0 +1,115 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    AUTHOR       : IRIS                                      */
+     /*    CREATE DATE  : 2020/12/25                                */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : ARA018C2                                  */
+     /*    SYSTEM       :進銷存系統                               */
+     /*    SUBSYSTEM    :                                         */
+     /*    REMARK       :電子發票主控作業-作廢B2C               */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&ENDDAT) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&SYSDAT) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&SYSTIM) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&SYSDTM) TYPE(*CHAR) LEN(12)
+             DCL        VAR(&STMFILE) TYPE(*CHAR) LEN(40)
+             DCL        VAR(&OBJFILE) TYPE(*CHAR) LEN(40)
+             DCL        VAR(&UID) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&UPWD) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&UIP) TYPE(*CHAR) LEN(20)
+             DCL        VAR(&UPTH) TYPE(*CHAR) LEN(30)
+             DCL        VAR(&COUNT) TYPE(*DEC) LEN(2 0)
+
+             CHGVAR     VAR(&COUNT) VALUE(0)
+ START:
+                  ALCOBJ     OBJ((EINVO *DTAARA *EXCL)) WAIT(0)
+                  MONMSG     MSGID(CPF1002) EXEC(GOTO CMDLBL(WAIT))
+                  RTVSYSVAL  SYSVAL(QDATE) RTNVAR(&SYSDAT)
+                  RTVSYSVAL  SYSVAL(QTIME) RTNVAR(&SYSTIM)
+             /*   CHGVAR     VAR(%SST(&SYSDTM 1 6)) VALUE(&SYSDAT) */
+                  CHGVAR     VAR(%SST(&SYSDTM 7 6)) VALUE(&SYSTIM)
+                  RTVDTAARA  DTAARA(EINVO (1 10)) RTNVAR(&UID)
+                  RTVDTAARA  DTAARA(EINVO (11 10)) RTNVAR(&UPWD)
+                  RTVDTAARA  DTAARA(EINVO (21 20)) RTNVAR(&UIP)
+                  RTVDTAARA  DTAARA(EINVO (41 30)) RTNVAR(&UPTH)
+
+                  CHGCURDIR  DIR('/EINV/REC0501')
+
+              /*  CLRPFM     FILE(EOINCT)                    */
+                  CLRPFM     FILE(ARAPPF2)
+
+       /*              GET   TIME-RANGE                    */
+             CALL       PGM(ARA0181) PARM(&SYSDAT &ENDDAT)
+             CHGVAR     VAR(%SST(&SYSDTM 1 6)) VALUE(%SST(&ENDDAT 3 6))
+
+       /*              GEN.  OUT-LIST-FILE                 */
+                OVRDBF     FILE(SOSIPF) SHARE(*YES)
+                OPNQRYF    FILE((SOSIPF))
+                CLOF       OPNID(SOSIPF)
+                DLTOVR     FILE(SOSIPF)
+
+                CALL       PGM(ARA0185) PARM(&SYSDTM)
+
+       /*              GEN.  OUT-FILE                      */
+                CALL       PGM(ARA0183) PARM(&SYSDTM)
+
+
+      /*CRT MASTER.CSV  DATA FOR REF. */
+               CHGVAR     VAR(&OBJFILE) VALUE('ARAPPF' *CAT &SYSDTM +
+                            *CAT '.CSV')
+
+             CPY        OBJ('utf8bom.txt') TOOBJ(&OBJFILE) +
+                          FROMCCSID(1208) TOCCSID(1208) REPLACE(*YES)
+
+               CHGVAR     VAR(&STMFILE) VALUE('/EINV/REC0501/ARAPPF' +
+                            *CAT &SYSDTM *CAT '.CSV')
+
+               CPYTOIMPF  FROMFILE(ARAPPF2) TOSTMF(&STMFILE) +
+                            MBROPT(*ADD) STMFCODPAG(01208) +
+                            RCDDLM(*CRLF) STRDLM(*NONE) RMVBLANK(*BOTH)
+      /*CRT MASTER.CSV  DATA FOR TRAN. */
+
+             CPY        OBJ('utf8bom.txt') +
+                          TOOBJ('C0501_invoice_master.csv') +
+                          FROMCCSID(1208) TOCCSID(1208) REPLACE(*YES)
+
+             CHGVAR     VAR(&STMFILE) +
+                          VALUE('/EINV/REC0501/C0501_invoice_master.c+
+                          sv')
+            CPYTOIMPF  FROMFILE(ARAPPF2) TOSTMF(&STMFILE) +
+                         MBROPT(*ADD) STMFCODPAG(1208) +
+                         RCDDLM(*CRLF) STRDLM(*NONE) RMVBLANK(*BOTH)
+
+     /*              START FTP                           */
+
+     /*       GEN. FTP CMD                               */
+              RMVM       FILE(FTPCMD) MBR(*ALL)
+              MONMSG     MSGID(CPF7301) EXEC(CRTSRCPF FILE(FTPCMD) +
+                           IGCDTA(*YES))
+              ADDPFM     FILE(FTPCMD) MBR(INPUT)
+              ADDPFM     FILE(FTPCMD) MBR(OUTPUT)
+
+              OVRDBF     FILE(INPUT) TOFILE(FTPCMD) MBR(INPUT)
+              OVRDBF     FILE(OUTPUT) TOFILE(FTPCMD) MBR(OUTPUT)
+              CALL       PGM(ARA0186) PARM(&UID &UPWD &UPTH &SYSDTM)
+
+
+
+              STRTCPFTP  RMTSYS(*INTNETADR) INTNETADR(&UIP)
+
+              DLYJOB     DLY(100)
+              DLCOBJ     OBJ((EINVO *DTAARA *EXCL))
+              GOTO       CMDLBL(END)
+ WAIT:
+              DLYJOB     DLY(10)
+              CHGVAR     VAR(&COUNT) VALUE(&COUNT + 1)
+              IF         COND(&COUNT > 8) THEN(GOTO CMDLBL(ABNORMAL))
+              GOTO       CMDLBL(START)
+ ABNORMAL:
+              SNDMSG     MSG('發票轉檔異常,請確認狀況') +
+                           TOUSR(*REQUESTER)
+ END:
+              ENDPGM
+

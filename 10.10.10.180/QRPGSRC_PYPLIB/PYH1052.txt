@@ -1,0 +1,184 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : PYH1052                                    *
+     H*    PROGRAM NAME :退休金等級人數及金額統計表                *
+     H*    AUTHOR       : A1415                                      *
+     H*    CREATE DATE  : 94/02/24                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FPYH4JF01IP  E           K        DISK
+     FPYH5LF02IF  E           K        DISK
+     FPYH6PF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYH105P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     IJJREC
+     I                                              H409  L1
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      203 2080DDATE
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DEM01
+     I                                      540 546 DEM041
+     I                                      547 553 DEM042
+     I                                      529 5340DSYYMM
+     I                                      601 6040DYM
+     I            DS
+     I                                        1   80DSDAT1
+     I                                        1   60DSYM1
+     I                                        7   8 DSDD1
+     I            DS
+     I                                        1   80DSDAT2
+     I                                        1   60DSYM2
+     I                                        7   8 DSDD2
+     C*==============================================================*
+     C           KEYH5     KLIST
+     C                     KFLD           H501
+     C                     KFLD           H503
+     C           KEYH6     KLIST
+     C                     KFLD           H601
+     C                     KFLD           H602
+     C                     KFLD           H603
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     CL1 10                EXSR R8100
+     CLR 10                EXSR R8900
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R0100 ... INITIAL PROCESS
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C                     MOVE 'N'       HAVDA   1
+     C                     Z-ADDDYM       DYMX
+     C*
+     C                     SETON                     1039
+     C*GET表頭公司別
+     C           DEM01     CHAINCM0                  40
+     C   40                MOVEL*BLANK    CM03
+     C*
+     C                     Z-ADD0         PX1
+     C                     Z-ADD0         PX2
+     C                     Z-ADD0         PX3
+     C                     Z-ADD0         PX4
+     C*
+     C                     Z-ADD0         PY2
+     C                     Z-ADD0         PY3
+     C                     Z-ADD0         PY4
+     C*
+     C                     WRITEPH1
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+     C           R2000     BEGSR
+     C*
+     C                     MOVE H401      H601
+     C                     MOVE H402      H602
+     C                     Z-ADDDSYYMM    H603
+     C           KEYH6     CHAINPYH6PF               40
+     C   40                GOTO NEXT
+     C*
+     C                     MOVE 'Y'       HAVDA
+     C                     ADD  1         PX2
+     C                     ADD  1         PY2
+     C*          H409      MULT H408      TPAMT   90H
+     C*                    DIV  100       TPAMT     H
+     C*                    ADD  TPAMT     PX3
+     C*                    ADD  TPAMT     PY3
+     C                     ADD  H606      PX3
+     C                     ADD  H606      PY3
+     C*
+     C*          H409      MULT H407      TPAMT   90H
+     C*                    DIV  100       TPAMT     H
+     C*                    ADD  TPAMT     PX4
+     C*                    ADD  TPAMT     PY4
+     C                     ADD  H605      PX4
+     C                     ADD  H605      PY4
+     C*
+     C           NEXT      TAG
+     C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+03===C           R8100     BEGSR
+     C           HAVDA     IFEQ 'Y'
+     C                     Z-ADDH409      PX1
+|    C                     WRITEPD1
+|    C                     END
+|    C                     MOVE 'N'       HAVDA
+     C                     Z-ADD0         PX1
+     C                     Z-ADD0         PX2
+     C                     Z-ADD0         PX3
+     C                     Z-ADD0         PX4
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+04===C           R8900     BEGSR
+|    C*
+|    C                     Z-ADD0         PZ2
+|    C                     Z-ADD0         PZ3
+|    C                     Z-ADD0         PZ4
+|    C                     Z-ADD0         PZ5
+|    C                     MOVE DEM01     H501
+|    C                     Z-ADDDSYYMM    DSYM1
+|    C                     MOVE '01'      DSDD1
+|    C                     Z-ADDDSYYMM    DSYM2
+|    C                     MOVE '31'      DSDD2
+|    C                     Z-ADDDSDAT1    H503
+|    C           KEYH5     SETLLPYH5LF02
+|    C           LOOP      TAG
+|    C                     READ PYH5LF02                 40
+|    C   40                GOTO NEXY
+|    C           H503      IFGT DSDAT2
+|    C                     GOTO NEXY
+|    C                     END
+|    C           H504      IFEQ '1'
+|    C                     ADD  1         PZ3
+|    C                     ELSE
+|    C           H504      IFEQ '3'
+|    C                     ADD  1         PZ4
+|    C                     ELSE
+|    C           H514      IFEQ 'AC'
+|    C                     ADD  1         PZ5
+|    C                     END
+|    C                     END
+|    C                     END
+|    C                     GOTO LOOP
+|    C*
+|    C           NEXY      TAG
+|    C           PY2       ADD  PZ4       PZ2
+|    C                     SUB  PZ3       PZ2
+|    C                     WRITEPT2
+     C           PY2       IFNE *ZERO
+|    C                     WRITEPE2
+|    C                     ELSE
+|    C                     WRITEPE9
+|    C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+05===C           R8999     BEGSR
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+05===C                     ENDSR
+

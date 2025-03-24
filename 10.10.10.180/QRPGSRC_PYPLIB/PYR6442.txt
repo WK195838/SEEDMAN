@@ -1,0 +1,230 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR6432                                    *
+     H*    PROGRAM NAME :勞工保險費證明表　　　                    *
+     H*    AUTHOR       : KLAUS                                      *
+     H*    CREATE DATE  : 2001/05/17                                 *
+     H*    UPDATE DATE  : 2006/06/16 CLOUD                           *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYTILF01IF  E           K        DISK
+     FPYDEPF  IF  E           K        DISK
+     FPYR644WFUF  E           K        DISK                      A
+     I*
+     IEM0
+     I                                              EM02  L1
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      210 2160PDATE
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I                                      503 509 DEM041
+     I                                      510 516 DEM042
+     I                                      541 550 DEM021
+     I                                      551 560 DEM022
+     I                                      601 6020DPEN
+     I                                      611 6140DPENK
+     I*部門代碼
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEYLIST
+     C*==============================================================*
+     C*PYEMPF
+     C           KEYEM     KLIST
+     C                     KFLD           EM01             .公司編號
+     C                     KFLD           EM02             .員工編號
+     C           KEYTI     KLIST
+     C                     KFLD           TI01             .公司編號
+     C                     KFLD           TI03             .員工編號
+     C           KEYWF     KLIST
+     C                     KFLD           WF01             .公司編號
+     C                     KFLD           WF02             .員工編號
+     C                     KFLD           WF07             .年度
+     C                     KFLD           WF04             .身份字號
+     C           KEYDE     KLIST
+     C                     KFLD           TEMP1   2        .公司編號
+     C                     KFLD           TEMP1   2        .種類
+     C*
+     C                     MOVEL'01'      TEMP1
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN200                     *WRITE PD1
+     C*
+     CL1 10                EXSR RTN810
+     CLR 10                EXSR RTN890
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DEM01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C*                    CALL 'P82'
+|    C*                    PARM DPENK     P8201I  40
+|    C*                    PARM '2'       P8202I  1
+|    C*                    PARM '1'       P8203I  1
+|    C*                    PARM '2'       P8204I  1
+|    C*                    PARM '1'       P8205I  1
+|    C*                    PARM           P8211O  40
+|    C                     Z-ADDDPENK     DYY     40
+|    C                     MOVEL*BLANK    DFLG    1
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200... PROCESS
+     C*==============================================================*
+02===C           RTN200    BEGSR
+|    C*
+|    C*                    MOVEL*BLANK    DFLG
+|    C*
+|    C                     MOVELEM01      TI01             公司別
+|    C                     MOVELEM02      TI03             員工ID
+|    C           KEYTI     SETLLTI0
+|    C           KEYTI     READETI0                      44
+|    C           *IN44     DOWEQ'0'
+|    C*該員工及眷屬計算保費加總
+|    C                     EXSR RTN201
+|    C*
+|    C           KEYTI     READETI0                      44
+|   C                     ENDDO
+|    C*
+|   C*                    MOVEL'Y'       DFLG
+|    C*
+02===C           ETN200    ENDSR
+     C*==============================================================*
+     C*          RTN201... 該員工及眷屬計算保費加總
+     C*==============================================================*
+03===C           RTN201    BEGSR
+|    C*
+|    C                     MOVELTI01      WF01             公司編號
+|    C                     MOVELTI03      WF02             員工編號
+|    C                     MOVELEM03      WF03             員工姓名
+|   C                     Z-ADDDYY       WF07             年月
+|    C*部門列印順序
+03===C                     EXSR RTN202
+|    C*本人保費-員工
+|    C           TI08      IFGT 0
+|    C                     MOVELTI03      WF04             身份証號
+|    C                     ENDIF
+|    C           KEYWF     CHAINWF0                  40
+|    C           *IN40     IFEQ '0'
+|    C                     ADD  TI08      WF05
+|    C                     UPDATWF0
+|    C                     ELSE
+|    C                     MOVELEM03      WF10             姓名
+|    C                     Z-ADDTI08      WF05
+|    C                     WRITEWF0
+|    C                     ENDIF
+|    C*眷屬 ID 1
+|    C           TI115     IFGT 0
+|    C                     MOVELTI111     WF04             身份証號
+|    C                     ENDIF
+|    C           KEYWF     CHAINWF0                  40
+|    C           *IN40     IFEQ '0'
+|    C                     ADD  TI115     WF05
+|    C                     UPDATWF0
+|    C                     ELSE
+|    C                     Z-ADDTI115     WF05
+|    C                     MOVELTI112     WF10             姓名
+|    C                     WRITEWF0
+|    C                     ENDIF
+|    C*眷屬 ID 2
+|    C           TI125     IFGT 0
+|    C                     MOVELTI121     WF04             身份証號
+|    C                     ENDIF
+|    C           KEYWF     CHAINWF0                  40
+|    C           *IN40     IFEQ '0'
+|    C                     ADD  TI125     WF05
+|    C                     UPDATWF0
+|    C                     ELSE
+|    C                     Z-ADDTI125     WF05
+|    C                     MOVELTI122     WF10             姓名
+|    C                     WRITEWF0
+|    C                     ENDIF
+|    C*眷屬 ID 3
+|    C           TI135     IFGT 0
+|    C                     MOVELTI131     WF04             身份証號
+|    C                     ENDIF
+|    C           KEYWF     CHAINWF0                  40
+|    C           *IN40     IFEQ '0'
+|    C                     ADD  TI135     WF05
+|    C                     UPDATWF0
+|    C                     ELSE
+|    C                     Z-ADDTI135     WF05
+|    C                     MOVELTI132     WF10             姓名
+|    C                     WRITEWF0
+|    C                     ENDIF
+|    C*
+|    C                     CLEARWF0
+|    C*
+02===C           ETN201    ENDSR
+     C*==============================================================*
+     C*          RTN202... 部門列印順序
+     C*==============================================================*
+03===C           RTN202    BEGSR
+|    C*
+|   C                     MOVELEM04      WF08             部門代碼
+|    C*部門列印順序
+|    C           KEYDE     SETLLDE0
+|    C           KEYDE     READEDE0                      46
+|    C           *IN46     DOWEQ'0'
+|    C*
+|    C           DE04      IFEQ EM04
+|    C                     Z-ADDDE03      WF09             順序
+|    C                     LEAVE
+|    C                     ENDIF
+|    C*
+|    C           KEYDE     READEDE0                      46
+|    C                     ENDDO
+|    C*
+02===C           ETN202    ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK 1
+     C*==============================================================*
+03===C           RTN810    BEGSR
+     C*
+     C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR
+     C*==============================================================*
+03===C           RTN890    BEGSR
+     C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+03===C           RTN899    BEGSR
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+

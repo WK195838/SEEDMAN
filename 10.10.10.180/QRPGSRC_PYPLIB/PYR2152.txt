@@ -1,0 +1,632 @@
+     H****************************************************************/
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   */
+     H*                                                              */
+     H*    PROGRAM ID   : PYR2152                                    */
+     H*    PROGRAM NAME :考勤刷卡資料表  　                      */
+     H*    AUTHOR       : A1274 EVA                                  */
+     H*    CREATE DATE  : 90/07/09                                   */
+     H*    UPDATE DATE  : 90/11/09 A1274 EVA                         */
+     H*    SYSTEM       :人事薪資系統                              */
+     H****************************************************************/
+     FPYT5PF  IP  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYLCPF  IF  E           K        DISK
+     FPYLVPF  IF  E           K        DISK
+     FPYT7PF  IF  E           K        DISK
+     FPYR215WFO   E           K        DISK
+     FPYR215P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    @AR0    7   7  4               星期別
+     E                    @AR1       32  8 0             日期
+     E                    @AR2       32  4               週　
+     E                    @AR3       32  4 0             上班
+     E                    @AR4       32  4 0             下班
+     E                    @AR5       32  4               上班異常
+     E                    @AR6       32  4               下班異常
+     E                    @AR8       32  6               假別統計
+     E                    @AR9       32 20               備註
+     E*---------------------------------------------------------------
+     IT50
+     I                                              T501  L2
+     I                                              T502  L1
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DT505
+     I                                      560 566 DT506F
+     I                                      567 573 DT506T
+     I                                      513 520 DT501F
+     I                                      521 528 DT501T
+     I*
+     I**                                    529 5320DT502
+     I                                      533 5380WT502
+     I                                      533 5360W502Y
+     I                                      537 5380W502M
+     I*
+     I                                      539 5400MONTH
+     I                                      541 5420DAY
+     I*
+     I                                      543 5500WYMD1
+     I                                      543 5480DYM1
+     I                                      547 5500DAY1
+     I                                      543 5460WYY01
+     I                                      547 5480WMM01
+     I                                      549 5500WDD01
+     I*
+     I                                      551 5580WYMD2
+     I                                      551 5560DYM2
+     I                                      555 5580DAY2
+     I                                      551 5540WYY02
+     I                                      555 5560WMM02
+     I                                      557 5580WDD02
+     I                                      600 6040DT502
+     I            DS
+     I                                        1   7 T506
+     I                                        1   1 T5061
+     I                                        2   2 T5062
+     I                                        3   3 T5063
+     I                                        4   7 T5064
+     I            DS
+     I                                        1   40WT534
+     I                                        1   20T503
+     I                                        3   40T504
+     I            DS
+     I                                        1   80BEGIN
+     I                                        1   60BYM1
+     I                                        7   80BDD
+     I            DS
+     I                                        1   80END
+     I                                        1   60EYM2
+     I                                        7   80EDD
+     I            DS
+     I                                        1   40P03W
+     I                                        1   20P03W1
+     I                                        3   40P03W2
+     I            DS
+     I                                        1   5 P03
+     I                                        1   2 P03A1
+     I                                        3   3 P03A2
+     I                                        4   5 P03A3
+     I            DS
+     I                                        1   40P04W
+     I                                        1   20P04W1
+     I                                        3   40P04W2
+     I            DS
+     I                                        1   5 P04
+     I                                        1   2 P04A1
+     I                                        3   3 P04A2
+     I                                        4   5 P04A3
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYCM     KLIST
+     C                     KFLD           DT505
+     C*
+     C                     MOVEL'01'      WPM01   2
+     C           KEYPM     KLIST
+     C                     KFLD           WPM01
+     C                     KFLD           DT505
+     C*
+     C           KEYEM     KLIST
+     C                     KFLD           DT505
+     C                     KFLD           T501
+     C           KEYDP     KLIST
+     C                     KFLD           T5061
+     C                     KFLD           T5062
+     C                     KFLD           T5063
+     C                     KFLD           T5064
+     C           KEYLV1    KLIST
+     C                     KFLD           DT505
+     C                     KFLD           T501
+     C                     KFLD           WYMD1
+     C           KEYLV2    KLIST
+     C                     KFLD           DT505
+     C                     KFLD           T501
+     C*
+     C           KEYT7E    KLIST
+     C                     KFLD           END
+     C           KEYT7S    KLIST
+     C                     KFLD           BEGIN
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     CL2 10                EXSR R8200
+     C*
+     CLR 10                EXSR R8900
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C                     SETON                     1039
+|    C*
+|    C*公司別
+|    C           KEYCM     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C*-------------------------------------------------------------***
+|    C*獲得正常上下班時間
+|    C           KEYPM     CHAINPM0                  40
+|    C*-------------------------------------------------------------***
+|    C* INIT. ARR. VALUE
+|    C                     Z-ADD*ZERO     @AR1
+|    C                     MOVEL*BLANK    @AR2
+|    C                     Z-ADD*ZERO     @AR3
+|    C                     Z-ADD*ZERO     @AR4
+|    C                     MOVEL*BLANK    @AR5
+|    C                     MOVEL*BLANK    @AR6
+|    C                     MOVEL*BLANK    @AR8
+|    C                     MOVEL*BLANK    @AR9
+|    C*-------------------------------------------------------------***
+|    C*求上半月日數
+|    C                     Z-ADD*ZERO     CUNT1   20
+|    C                     CALL 'P34'
+|    C                     PARM DYM1      P3401I  60
+|    C                     PARM '2'       P3403I  1
+|    C                     PARM '1'       P3404I  1
+|    C                     PARM           P3411O  1
+|    C           CUNT1     PARM           P3412O  20
+|    C*-------------------------------------------------------------***
+|    C*獲得日期及星期別資料
+|    C                     Z-ADDWYMD2     END     80       迄日MM2/1
+|    C                     Z-ADD1         EDD
+|    C                     Z-ADD0         Y       20       累計次數－下半月
+| 01-C           EDD       DOWLE15
+|   C                     ADD  1         Y
+|   C                     CALL 'P35'
+|   C                     PARM END       P3501I  80
+|   C                     PARM '2'       P3502I  1
+|   C                     PARM '1'       P3503I  1
+|   C                     PARM           P3511O  10
+|   C                     Z-ADDP3511O    J       10
+|   C                     Z-ADDEND       @AR1,Y           日
+|   C                     MOVEL@AR0,J    @AR2,Y           星期
+|   C*
+|   C           KEYT7E    CHAINT70                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM T702      P6501I 80
+|   C                     PARM 19        P6502I  30
+|   C           @AR9,Y    PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 02-C                     END
+|   C*
+| 03-C           @AR9,Y    IFEQ '週六'
+|   C           @AR9,Y    OREQ '週日'
+|   C                     MOVEL*BLANK    @AR9,Y
+| 03-C                     END
+|   C*
+|   C                     ADD  1         EDD
+| 01-C                     END
+|    C*
+|    C                     Z-ADDWYMD1     BEGIN   80       起日MM1/16
+|    C                     Z-ADD15        X       20       累計次數－上半月
+| 04-C           BDD       DOWLECUNT1
+|   C                     ADD  1         X
+|   C                     CALL 'P35'
+|   C                     PARM BEGIN     P3501I  80
+|   C                     PARM '2'       P3502I  1
+|   C                     PARM '1'       P3503I  1
+|   C                     PARM           P3511O  10
+|   C                     Z-ADDP3511O    J       10       週內第幾天
+|   C                     Z-ADDBEGIN     @AR1,X           日
+|   C                     MOVEL@AR0,J    @AR2,X           星期
+|   C*
+|   C           KEYT7S    CHAINT70                  40
+| 05-C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM T702      P6501I 80
+|   C                     PARM 19        P6502I  30
+|   C           @AR9,X    PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 05-C                     END
+|   C*
+| 06-C           @AR9,X    IFEQ '週六'
+|   C           @AR9,X    OREQ '週日'
+|   C                     MOVEL*BLANK    @AR9,X
+| 06-C                     END
+|   C*
+|   C                     ADD  1         BDD
+| 04-C                     END
+|    C*-------------------------------------------------------------***
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C                     Z-ADD1         W       20
+|    C*
+|    C           T502      LOKUP@AR1,W                   48
+| 01-C           *IN48     IFEQ '1'
+|   C*
+|   C*-------------------------------------------------------------***
+|   C*刷卡次：上班．下班
+|   C*由於所轉資料已經是一天最多兩筆的狀況．所以直接搬值 *YH USE
+|   C***        WT534     IFLE PM184
+|   C***                  Z-ADDWT534     @AR3,W
+|   C***                  END
+|   C*
+|   C***        WT534     IFGE PM185
+|   C***                  Z-ADDWT534     @AR4,W
+|   C***                  END
+|   C*
+| 02-C           @AR3,W    IFEQ *ZERO
+|   C                     Z-ADDWT534     @AR3,W
+| 02*C                     ELSE
+|   C                     Z-ADDWT534     @AR4,W
+| 02-C                     END
+|   C*
+|   C*-------------------------------------------------------------***
+|   C*特殊上下班時間控制：                    *YH USE ONLY
+|   C*１．星期六．日不處理
+|   C*２．上班時間：09:30~13:30
+|   C*３．特殊人員：
+|   C*   05393  0930~1330 不用檢查是否遲到早退
+|   C*   38484  0850~1300 不用檢查是否遲到早退
+|   C*   38603  0850~1730
+|   C*
+|   C*
+| 03-C           T501      IFEQ '05393'
+|   C*
+| 04-C           @AR2,W    IFNE '六'
+|   C           @AR2,W    ANDNE'日'
+|   C*
+| 06-C           @AR3,W    IFEQ *ZERO
+|   C                     MOVEL'＊'    @AR5,W
+| 06-C                     END
+|   C*
+| 07-C***        @AR3,W    IFGE 931
+|   C***                  MOVEL'＊'    @AR5,W
+| 07-C***                  END
+|   C*
+| 08-C           @AR4,W    IFGT 1329
+|   C***                  MOVEL'＊'    @AR6,W
+     C***                  ELSE
+|   C                     MOVEL*BLANK    @AR6,W
+| 08-C                     END
+|   C*
+| 08-C           @AR4,W    IFNE *ZERO
+| 08-C           @AR4,W    ANDEQ@AR3,W
+|   C                     MOVEL'＊'    @AR6,W
+| 08-C                     END
+|   C*
+|   C                     GOTO TAG
+|   C*
+| 04-C                     END
+| 03-C                     END
+|   C*
+|   C*
+| 09-C           T501      IFEQ '38484'
+|   C*
+| 10-C           @AR2,W    IFNE '六'
+|   C           @AR2,W    ANDNE'日'
+|   C*
+| 12-C           @AR3,W    IFEQ *ZERO
+|   C                     MOVEL'＊'    @AR5,W
+| 12-C                     END
+|   C*
+| 13-C***        @AR3,W    IFGE 851
+|   C***                  MOVEL'＊'    @AR5,W
+| 13-C***                  END
+|   C*
+| 14-C           @AR4,W    IFGT 1259
+|   C***                  MOVEL'＊'    @AR6,W
+     C***                  ELSE
+|   C                     MOVEL*BLANK    @AR6,W
+| 14-C                     END
+|   C*
+| 08-C           @AR4,W    IFNE *ZERO
+| 08-C           @AR4,W    ANDEQ@AR3,W
+|   C                     MOVEL'＊'    @AR6,W
+| 08-C                     END
+|   C*
+|   C                     GOTO TAG
+|   C*
+| 10-C                     END
+| 09-C                     END
+|   C*
+|   C*
+| 15-C           T501      IFEQ '38603'
+|   C*
+| 16-C           @AR2,W    IFNE '六'
+|   C           @AR2,W    ANDNE'日'
+|   C*
+| 18-C           @AR3,W    IFEQ *ZERO
+|   C                     MOVEL'＊'    @AR5,W
+| 18-C                     END
+|   C*
+| 19-C           @AR3,W    IFGE 851
+|   C                     MOVEL'＊'    @AR5,W
+| 19-C                     END
+|   C*
+| 20-C           @AR4,W    IFLE 1729
+|   C                     MOVEL'＊'    @AR6,W
+     C                     ELSE
+|   C                     MOVEL*BLANK    @AR6,W
+| 20-C                     END
+|   C*
+|   C                     GOTO TAG
+|   C*
+| 16-C                     END
+| 15-C                     END
+|   C*-------------------------------------------------------------***
+|   C*異常：
+|   C*１．星期六．日不處理
+|   C*２．星期一遲到：8:51~9:02
+|   C*３．非星期一遲到：8:54~9:05
+| 21-C           @AR2,W    IFNE '六'
+|   C           @AR2,W    ANDNE'日'
+|   C*
+| 22-C           @AR4,W    IFLT PM182
+|   C           @AR4,W    ANDNE*ZERO
+|   C                     MOVEL'＊'    @AR6,W
+| 22-C                     ELSE
+|   C                     MOVEL*BLANK    @AR6,W
+| 22-C                     END
+|   C*
+| 23-C           @AR3,W    IFEQ *ZERO
+|   C                     MOVEL'＊'    @AR5,W
+| 23-C                     END
+|   C*-----------------------------------------------------***
+|   C*
+| 24-C           @AR2,W    IFEQ '一'                     星期一
+|   C           @AR3,W    ANDGE851
+|   C                     MOVEL'＊'    @AR5,W
+| 24-C                     END
+|   C*-----------------------------------------------------***
+|   C*
+| 25-C           @AR2,W    IFNE '一'                     非星期一
+|   C           @AR3,W    ANDGE854
+|   C                     MOVEL'＊'    @AR5,W
+| 25-C                     END
+|   C*------------------------------------------------------------***
+|   C*
+| 21-C                     END
+|   C*------------------------------------------------------------***
+|   C           TAG       TAG
+|   C*
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R8200 ... LEVEL BREAK 2
+     C*==============================================================*
+03===C           R8200     BEGSR
+|    C*
+|    C*------------------------------------------------------------***
+|    C*假別
+|    C           KEYLV1    SETLLLV0                        請假
+|    C           KEYLV2    READELV0                      42
+| 01-C           *IN42     DOWEQ'0'
+|   C           LV03      ANDLEWYMD2
+|   C*
+|   C                     Z-ADDLV03      W
+|   C           LV04      CHAINLC0                  40
+|   C  N40                MOVELLC02      @AR8,W
+|   C*
+|   C           KEYLV2    READELV0                      42
+| 01-C                     END
+|    C*------------------------------------------------------------***
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C           KEYEM     CHAINEM0                  40
+|    C   40                MOVEL*BLANK    EM03
+|    C*------------------------------------------------------------***
+|    C*
+| 02-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     ADD  1         PAGNBR  40
+|   C                     SETOF                     39
+| 02-C                     END
+|    C*------------------------------------------------------------***
+|    C*上月１６日～
+|    C                     Z-ADD16        X
+| 03-C           X         DOWLECUNT1
+|   C                     Z-ADD@AR1,X    P01
+|   C                     MOVEL@AR2,X    P02
+|   C*
+|   C                     MOVEL*BLANK    P03
+|   C                     MOVEL*BLANK    P04
+|   C                     MOVEL*BLANK    P05
+|   C                     MOVEL*BLANK    P06
+|   C*
+| 04-C           @AR3,X    IFNE *ZERO
+|   C                     Z-ADD@AR3,X    P03W
+|   C                     MOVELP03W1     P03A1
+|   C                     MOVEL':'       P03A2
+|   C                     MOVELP03W2     P03A3
+| 04*C                     ELSE
+| 05-C           @AR9,X    IFEQ *BLANK
+|   C           @AR2,X    ANDNE'六'
+|   C           @AR2,X    ANDNE'日'
+|   C                     MOVEL'--:--'   P03
+| 05-C                     END
+| 04-C                     END
+|   C*
+| 06-C           @AR4,X    IFNE *ZERO
+|   C                     Z-ADD@AR4,X    P04W
+|   C                     MOVELP04W1     P04A1
+|   C                     MOVEL':'       P04A2
+|   C                     MOVELP04W2     P04A3
+| 06*C                     ELSE
+| 07-C           @AR9,X    IFEQ *BLANK
+|   C           @AR2,X    ANDNE'六'
+|   C           @AR2,X    ANDNE'日'
+|   C                     MOVEL'--:--'   P04
+| 07-C                     END
+| 06-C                     END
+|   C*
+|   C                     MOVEL@AR5,X    P05
+| 08-C           @AR3,X    IFEQ *ZERO
+|   C                     MOVEL'＊'    P05
+| 08-C                     END
+|   C*
+|   C                     MOVEL@AR6,X    P06
+| 09-C           @AR4,X    IFEQ *ZERO
+|   C                     MOVEL'＊'    P06
+| 09-C                     END
+|   C*
+|   C                     MOVEL@AR8,X    P08
+|   C                     MOVEL@AR9,X    P09
+|   C*
+| 10-C           @AR2,X    IFEQ '六'
+|   C           @AR2,X    OREQ '日'
+|   C                     MOVEL*BLANK    P05
+|   C                     MOVEL*BLANK    P06
+| 10-C                     END
+|   C*
+| 11-C           @AR9,X    IFNE *BLANK
+|   C                     MOVEL*BLANK    P05
+|   C                     MOVEL*BLANK    P06
+| 11-C                     END
+|   C*
+|   C                     WRITEPD1
+|   C*
+| 12-C           @AR2,X    IFEQ '日'
+|   C                     WRITEPD2
+| 12-C                     END
+|   C*
+|   C                     ADD  1         X
+| 03-C                     END
+|    C*
+|    C*------------------------------------------------------------***
+|    C*～下月１５日
+|    C                     Z-ADD1         Y
+| 13-C           Y         DOWLE15
+|   C                     Z-ADD@AR1,Y    P01
+|   C                     MOVEL@AR2,Y    P02
+|   C*
+|   C                     MOVEL*BLANK    P03
+|   C                     MOVEL*BLANK    P04
+|   C                     MOVEL*BLANK    P05
+|   C                     MOVEL*BLANK    P06
+|   C*
+| 14-C           @AR3,Y    IFNE *ZERO
+|   C                     Z-ADD@AR3,Y    P03W
+|   C                     MOVELP03W1     P03A1
+|   C                     MOVEL':'       P03A2
+|   C                     MOVELP03W2     P03A3
+| 14*C                     ELSE
+| 15-C           @AR9,Y    IFEQ *BLANK
+|   C           @AR2,Y    ANDNE'六'
+|   C           @AR2,Y    ANDNE'日'
+|   C                     MOVEL'--:--'   P03
+| 15-C                     END
+| 14-C                     END
+|   C*
+| 16-C           @AR4,Y    IFNE *ZERO
+|   C                     Z-ADD@AR4,Y    P04W
+|   C                     MOVELP04W1     P04A1
+|   C                     MOVEL':'       P04A2
+|   C                     MOVELP04W2     P04A3
+| 16*C                     ELSE
+| 17-C           @AR9,Y    IFEQ *BLANK
+|   C           @AR2,Y    ANDNE'六'
+|   C           @AR2,Y    ANDNE'日'
+|   C                     MOVEL'--:--'   P04
+| 17-C                     END
+| 16-C                     END
+|   C*
+|   C                     MOVEL@AR5,Y    P05
+| 18-C           @AR3,Y    IFEQ *ZERO
+|   C                     MOVEL'＊'    P05
+| 18-C                     END
+|   C*
+|   C                     MOVEL@AR6,Y    P06
+| 19-C           @AR4,Y    IFEQ *ZERO
+|   C                     MOVEL'＊'    P06
+| 19-C                     END
+|   C*
+|   C                     MOVEL@AR8,Y    P08
+|   C                     MOVEL@AR9,Y    P09
+|   C*
+| 20-C           @AR2,Y    IFEQ '六'
+|   C           @AR2,Y    OREQ '日'
+|   C                     MOVEL*BLANK    P05
+|   C                     MOVEL*BLANK    P06
+| 20-C                     END
+|   C*
+| 21-C           @AR9,Y    IFNE *BLANK
+|   C                     MOVEL*BLANK    P05
+|   C                     MOVEL*BLANK    P06
+| 21-C                     END
+|   C*
+|   C                     WRITEPD1
+|   C*
+| 22-C           @AR2,Y    IFEQ '日'
+|   C                     WRITEPD2
+| 22-C                     END
+|   C*
+|   C                     ADD  1         Y
+| 13-C                     END
+|    C*------------------------------------------------------------***
+|    C* INIT. ARR. VALUE
+|    C                     Z-ADD*ZERO     @AR3
+|    C                     Z-ADD*ZERO     @AR4
+|    C                     MOVEL*BLANK    @AR5
+|    C                     MOVEL*BLANK    @AR6
+|    C                     MOVEL*BLANK    @AR8
+|    C*------------------------------------------------------------***
+|    C*
+|    C                     WRITEPT1
+|    C                     WRITEPT2
+|    C*
+|    C                     MOVELT506      W2151
+|    C                     MOVELDP02      W2152
+|    C                     MOVELT501      W2153
+|    C                     MOVELEM03      W2154
+|    C                     MOVELPAGNBR    W2155
+|    C*
+|    C                     WRITEW215
+|    C*
+|    C                     SETON                     39
+|    C*
+03===C           E8200     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+04===C           R8900     BEGSR
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+05===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R1000
+|    C*
+|    C                     WRITEPH1
+|    C                     WRITEPE9
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+**
+一二三四五六日
+

@@ -1,0 +1,43 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250  */
+     /*                                                             */
+     /*    AUTHOR       : A1650   DEREK                             */
+     /*    CREATE DATE  : 101/06/22                                 */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : KIS024C1                                  */
+     /*    SYSTEM       :茂世企業                                 */
+     /*    SUBSYSTEM    :專櫃系統                                 */
+     /*    REMARK       :失敗訂單報表                             */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&WBA01S) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WBA01E) TYPE(*CHAR) LEN(8)
+
+             CHGVAR     VAR(&WBA01S) VALUE(%SST(*LDA 601 8))
+             CHGVAR     VAR(&WBA01E) VALUE(%SST(*LDA 609 8))
+
+             CHGVAR     VAR(&LIB)   VALUE('REFLIB')
+             CHGVAR     VAR(&FILE)  VALUE('W2DCPF')
+
+             CLRPFM     FILE(W2DCPF)  /*失敗訂單報表*/
+
+             OVRDBF     FILE(W2BAPF) TOFILE(W2BAPF) SHARE(*YES)
+             OPNQRYF    FILE((W2BAPF)) QRYSLT(' BA01C *EQ %RANGE("' +
+                          *CAT &WBA01S *CAT '" "' *CAT &WBA01E *CAT +
+                          '") & BA05 *EQ "E" ') +
+                          MAPFLD((BA01C BA01 *CHAR 8))
+
+             CALL       PGM(KIS0241)  /*產生失敗訂單資料*/
+
+             CLOF       OPNID(W2BAPF)
+             DLTOVR     FILE(*ALL)
+
+             /*將W2DCPF轉換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

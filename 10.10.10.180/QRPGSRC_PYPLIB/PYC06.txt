@@ -1,0 +1,135 @@
+     H****************************************************************
+     H*   SOURCE NAME  : PYC06                                       *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PURPOSE      :在職月份                                   *
+     H*--------------------------------------------------------------*
+     H*  計算基準年當年度在職月數                                  *
+     H*  說明：１．中途到職者該月整月計算
+     H*        ２．留職停薪扣除實際日數，未滿月部份不計算
+     H*        ３．離職不考慮                                      *
+     H*--------------------------------------------------------------*
+     H*  年起日= #C06I2 (YMD, 9(6))                                *
+     H*  年迄日= #C06I3 (YMD, 9(6))                                *
+     H*  在職月數= #C06M1 (月, 9(2) )                            *
+     H*  在職月數= #C06M2 (月, 9(2) ) --不扣留職者             *
+     H*--------------------------------------------------------------*
+     H*   EXSR #C0600                                                *
+     H****************************************************************
+     C           KEYTX     KLIST                           *PYTXPF
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           KTX031  1
+     C*--------------------------------------------------------------*
+01===C           #C0600    BEGSR
+|    C*
+| 01-C           EM13      IFGT #C06I3
+|   C                     Z-ADD*ZERO     #C06M1  20
+|   C                     Z-ADD*ZERO     #C06M2  20
+|   C                     GOTO #C0699
+| 01-C                     END
+|    C*
+|    C                     Z-ADD12        #C06M1
+|    C                     EXSR #C0601
+|    C                     Z-ADD#C06M1    #C06M2
+|    C*
+|    C                     EXSR #C0602
+|    C*
+| 02-C           #C06M1    IFLT *ZERO
+|   C                     Z-ADD*ZERO     #C06M1
+| 02-C                     END
+|    C*
+01===C           #C0699    ENDSR
+     C*===============================================================
+     C* #C0601 :計算在職月數
+     C*===============================================================
+02===C           #C0601    BEGSR
+|    C*
+|    C                     Z-ADDEM13      #EM13
+|    C*
+|    C                     Z-ADD0         #C06W1  20
+| 01-C           #EM13A    IFGE #C06F
+|   C           #EM13M    SUB  #C06FM    #C06W1
+|   C*
+| 02-C           #C06W1    IFLT *ZERO
+|   C                     ADD  12        #C06W1
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+|    C                     SUB  #C06W1    #C06M1
+|    C*
+02===C                     ENDSR
+     C*===============================================================
+     C* #C0602 :留職停薪扣除
+     C*===============================================================
+03===C           #C0602    BEGSR
+|    C*
+|    C*NEXT DATE OF #C06I3
+|    C                     Z-ADD#C06I3    P6201I  60
+|    C                     Z-ADD1         P6202I  40
+|    C                     CALL 'P62'
+|    C                     PARM           P6201I
+|    C                     PARM           P6202I
+|    C                     PARM           P6211O  60
+|    C*
+|    C                     Z-ADD*ZERO     #WC06M  50       .月數
+|    C                     Z-ADD*ZERO     #WC06D  50       .日數
+|    C*已復職之留職停薪
+|    C                     MOVEL'D'       KTX031
+|    C           KEYTX     SETLLTX0
+|    C           KEYTX     READETX0                      40
+|    C*
+| 01-C           *IN40     DOWEQ'0'
+| 02-C           TX032     IFEQ '2'                        .留職復職
+|   C           TX06      ANDLTP6211O                     .留職日<本年止
+|   C           TX04      ANDGT#C06I2                     .復職日>本年起
+|   C*
+|   C                     Z-ADDTX06      P2101I           .留職日
+|   C                     Z-ADDTX04      P2102I           .復職日
+| 03-C           TX06      IFLT #C06I2
+|   C                     Z-ADD#C06I2    P2101I
+| 03-C                     END
+| 04-C           TX04      IFGT P6211O
+|   C                     Z-ADDP6211O    P2102I
+| 04-C                     END
+|   C*
+|   C                     CALL 'P21'
+|   C                     PARM           P2101I  60
+|   C                     PARM           P2102I  60
+|   C                     PARM           P2111O  70       .月數
+|   C                     PARM           P2112O  20       .日數
+|   C*
+|   C                     ADD  P2111O    #WC06M
+|   C                     ADD  P2112O    #WC06D
+| 02-C                     END
+|   C*
+|   C           KEYTX     READETX0                      40
+| 01-C                     END
+|    C*----------------------------------------------------------
+|    C*目前留職停薪
+| 05-C           EM11      IFEQ 'R'
+|   C           EM17      ANDLTP6211O
+|   C                     Z-ADDEM17      P2101I
+| 06-C           EM17      IFLT #C06I2
+|   C                     Z-ADD#C06I2    P2101I
+| 06-C                     END
+|   C                     Z-ADDP6211O    P2102I
+|   C                     CALL 'P21'
+|   C                     PARM           P2101I
+|   C                     PARM           P2102I
+|   C                     PARM           P2111O
+|   C                     PARM           P2112O
+|   C*
+|   C                     ADD  P2111O    #WC06M
+|   C                     ADD  P2112O    #WC06D
+| 05-C                     END
+|    C*
+|    C*----------------------------------------------------------
+|    C                     SUB  #WC06M    #C06M1
+|    C           #WC06D    DIV  30        #WC06M
+|    C                     MVR            #WC06D
+|    C                     SUB  #WC06M    #C06M1
+|    C*
+03===C                     ENDSR
+

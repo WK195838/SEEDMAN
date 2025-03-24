@@ -1,0 +1,710 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM NAME : PYA4212                                    *
+     H*    PROGRAM NAME :公司獎金資料建立　V2                      *
+     H*    AUTHER       : KIN WANG                                   *
+     H*    CREATE DATE  : 91/07/08                                   *
+     H*    UPDATE DATE  : 92/12/19 ALLEN MAX                         *
+     H*    SYSTEM       :人事薪資                                  *
+     H* 修改記錄
+     H*---------------------------------------------------------------
+     H* SEQ     DATE      BY      DESC
+     H*---------------------------------------------------------------
+     H* 0003 2005/12/12 GARY LEE  年終獎金錯誤修正
+     H* 0002 2005/05/05 GARY LEE  年終扣除夏季秋季需已核定者才扣
+     H* 0001 2005/05/04 GARY LEE  年終獎金錯誤修正
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYPBPF  UF  E           K        DISK                      A
+     FPYRBPF  UF  E           K        DISK                      A
+     FPYPEPF  UF  E           K        DISK                      A
+     FPYPDPF  IF  E           K        DISK
+     FPYPYPF  IF  E           K        DISK
+     FPYTAPF  IF  E           K        DISK
+     FPYBMPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYRV4L01IF  E           K        DISK
+     FPYLVPF  IF  E           K        DISK
+     FPY2HPF  IF  E           K        DISK
+     FPYPD3PF IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYPAPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     I/COPY PYDDSSRC,PYPMDS01
+     I/COPY PYDDSSRC,PYEMDS01
+     I*
+     I            DS
+     I                                        1   80LV03
+     I                                        1   40LV03Y
+     I*
+     I            DS
+     I                                        1   80XX05
+     I                                        1   40XX05Y
+     I*到職日
+     I            DS
+     I                                        1   80EM13
+     I                                        1   40EM13Y
+     I                                        5   60EM13M
+     I                                        5   60EM13D
+     I*復職日
+     I            DS
+     I                                        1   80EM18
+     I                                        1   40EM18Y
+     I                                        5   60EM18M
+     I                                        5   60EM18D
+     I*部門編號
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I*留職停薪日
+     I            DS
+     I                                        1   80EM17
+     I                                        1   40EM17Y
+     I                                        5   60EM17M
+     I                                        5   60EM17D
+     I*離職日期
+     I            DS
+     I                                        1   80EM19
+     I                                        1   40EM19Y
+     I                                        5   60EM19M
+     I                                        5   60EM19D
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      211 2160DDATE
+     I*
+     I                                      501 502 DPB01
+     I                                      503 5060WPB03
+     I                                      507 508 DPB04
+     I                                      509 5140WPB05
+     I                                      515 5160WPB05D
+     I                                      601 607 WDEPT1
+     I                                      608 614 WDEPT2
+     I                                      667 6746DDAYS
+     I                                      571 5770WRATS
+     I                                      578 5840WRATE
+     I                                      585 585 DOPT
+     I                                      617 6191DAMTS
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*==============================================================*
+     C*                    KEY  LIST
+     C*==============================================================*
+     C           KEYEM     KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           EM02             .員工
+     C*
+     C           KEYPD     KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           EM02             .員工
+     C                     KFLD           PM302            .薪資項目
+     C*
+     C           KEYPD1    KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           EM02             .員工
+     C                     KFLD           PD302            .薪資項目
+     C*
+     C           KEYRB     KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           WPB03            .年度
+     C*
+     C           KEYPB     KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           EM02             .員工
+     C                     KFLD           WPB03            .獎金年度
+     C                     KFLD           DPB04            .獎金類別
+     C*
+     C           KEYPA     KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           EM02             .員工
+     C                     KFLD           WPB03            .獎金年度
+     C*
+     C           KEYPB1    KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           EM02             .員工
+     C                     KFLD           WPB03            .獎金年度
+     C                     KFLD           KPB04            .獎金類別
+     C*
+     C           KEYPE     KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           EM02             .員工
+     C                     KFLD           WPB03            .獎金年度
+     C*
+     C                     MOVEL'01'      WPM01   2 P
+     C           KEYPM     KLIST
+     C                     KFLD           WPM01            .類別
+     C                     KFLD           DPB01            .公司
+     C           KEYLT     KLIST
+     C                     KFLD           DPB01
+     C                     KFLD           EM02
+     C                     KFLD           WPB03
+     C*
+     C*ALLEN 940104 ADD
+     C*          WPB03     SUB  1         TPB03   40
+     C           KEYBM     KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           EM05             .職稱
+     C                     KFLD           WPB03            .年度
+     C*                    KFLD           TPB03            .年度
+     C                     KFLD           WRV05            .考績項目
+     C                     KFLD           EM32             .性別
+     C*ALLEN 940104 ADD
+     C           WPB03     SUB  1         QPB03   40
+     C           KEYH2     KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           EM02             .員工
+     C*                    KFLD           WPB03            .獎金年度
+     C                     KFLD           QPB03            .獎金年度
+     C           KEYRV     KLIST
+     C                     KFLD           DPB01            .公司
+     C                     KFLD           WPB03            .年度
+     C*                    KFLD           EM04             .部門
+     C                     KFLD           EM02             .員工
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     .INIT.
+     C*
+     C           KEYPM     CHAINPM0                  46
+  01-C           *IN46     IFEQ '0'
+    C*
+  02-C           EM19      IFEQ 0
+    C           EM19      ORGT KPB03
+    C*
+    C*本薪計算BASEP
+    C*
+    C           KEYEM     CHAINPY0                  41
+  03-C           *IN41     IFEQ '1'
+    C                     GOTO EXIT
+  03-C                     END
+    C*
+    C                     EXSR RTN100
+    C*
+    C*年資率RATE
+    C*
+    C                     EXSR RTN110
+    C*出勤率AAA
+    C*
+  04-C           DPB04     IFEQ '01'                       *年終獎金
+    C           DPB04     OREQ '03'                       *紅利
+    C*
+  06-C           DOPT      IFEQ 'Y'
+    C           KEYPE     CHAINPE0                  44
+    C   44                Z-ADD1         AAA
+    C  N44                Z-ADDPE06      AAA
+     C                     ELSE
+    C                     Z-ADD1         AAA
+  06-C                     END
+    C*
+  04-C                     END
+    C*
+    C*獎金月數BM05T &職務加給PAY1
+    C*
+    C                     EXSR RTN130
+    C*
+    C*年終獎金
+  07-C           DPB04     IFEQ '01'
+    C*年休補發YSR
+    C                     EXSR RTN140
+    C                     EXSR RTN310
+  07-C                     END
+    C*
+    C*夏季獎金&其它
+  08-C           DPB04     IFEQ '02'
+    C           DPB04     OREQ '04'
+    C                     EXSR RTN320
+  08-C                     END
+    C*
+    C*紅利
+  09-C           DPB04     IFEQ '03'
+    C                     EXSR RTN330
+  09-C                     END
+    C*
+    C                     EXSR RTN400                     . WRITE PB0
+    C*
+  02-C                     END
+    C*
+  01-C                     END
+     C           EXIT      TAG
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     Z-ADD0         WPB06  135
+|    C                     Z-ADD0         BASEP   70
+|    C                     Z-ADD0         KPB07   63
+|    C                     Z-ADD0         SALRY   70
+|    C                     Z-ADD0         PAY1    70
+|    C                     Z-ADD0         RATE    54
+|    C                     Z-ADD0         AAA     64
+|    C                     Z-ADD0         YSR     70
+|    C                     Z-ADD0         BM05T   86
+|    C                     Z-ADD0         WPB05
+|    C                     Z-ADD0         WPB05D
+|    C                     Z-ADD0         EDATE   80
+|    C                     Z-ADD0         SDATE   80
+|    C*
+|    C           DPB01     CHAINCM0                  41
+|    C  N41                MOVE CM14      DFMT
+|    C  N41                MOVE CM15      DTYPE
+|    C*
+|    C*GET TAX 所得稅率參數
+|    C           '0'       CHAINTA0                  40
+|    C  N40                Z-ADDTA07      KPB07
+|    C*
+|    C*計算獎金年度的最後一天
+|    C                     MOVELWPB03     KPB03   80
+|    C                     MOVE 1231      KPB03
+|    C*
+|    C*儲存獎金紅利
+|    C*
+| 01-C           DPB04     IFEQ '03'
+|   C           DPB04     OREQ '04'
+| 02-C           DAMTS     IFNE *ZERO
+|   C                     EXSR RTN402
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100   發放基準：本薪+獎金計算基礎
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C*獲得基本底薪金額
+|    C*本薪＋伙食津貼＋交通津貼
+|    C*
+|    C                     Z-ADD*ZERO     ALL     70
+|    C                     Z-ADD*ZERO     BASEP   70
+|    C                     Z-ADD*ZERO     SALRY
+|    C*　　　　　　　　
+|    C                     Z-ADDPY03      BASEP
+|    C*基本薪資
+|    C*
+| 01-C           EM100     IFEQ '2'                        日薪制
+|   C           BASEP     MULT 30        SALRY     H
+| 01*C                     ELSE                            月薪制
+|   C                     Z-ADDBASEP     SALRY
+| 01-C                     END
+|    C*
+|    C                     SETOF                     4243
+|    C*
+| 02-C           DPB04     IFNE '03'                       *紅利
+|   C           DPB01     SETLLPD30
+|   C           DPB01     READEPD30                     42
+| 03-C           *IN42     DOWEQ'0'
+|   C           KEYPD1    CHAINPD0                  43
+|   C  N43                ADD  PD04      ALL
+|   C           DPB01     READEPD30                     42
+| 03-C                     END
+|   C                     ADD  ALL       SALRY
+| 02-C                     END
+|    C*
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          RTN110 :年資率
+     C*==============================================================*
+03===C           RTN110    BEGSR
+|    C*
+|    C*計算年資率起~年資率迄的天數
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM WRATS     P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           SDATE     PARM           P3101O  80       FROM
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM WRATE     P3101I  80
+|    C                     PARM DFMT      P3102I  1
+|    C                     PARM DTYPE     P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           EDATE     PARM           P3101O  80       TO
+|    C*
+|    C                     CALL 'P32'
+|    C                     PARM SDATE     P3201I  80
+|    C                     PARM EDATE     P3202I  80
+|    C                     PARM '2'       P3203I  1
+|    C                     PARM '1'       P3204I  1
+|    C                     PARM           P3201O  90
+|    C                     Z-ADDP3201O    ADAYS   90
+|    C*
+|    C                     ADD  1         ADAYS
+|    C*
+|    C*到職日介於計算年資之間
+| 01-C           EM13      IFGE SDATE
+|   C           EM13      ANDLEEDATE
+|   C*
+|   C                     CALL 'P32'
+|   C                     PARM EM13      P3201I  80
+|   C                     PARM EDATE     P3202I  80
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3201O  90
+|   C                     Z-ADDP3201O    BDAYS   90
+|   C*
+|   C                     ADD  1         BDAYS
+|   C*
+|   C           BDAYS     DIV  ADAYS     RATE      H      .日數
+|   C*
+| 01*C                     ELSE
+|   C*
+| 02-C           EM13      IFGT EDATE
+|   C                     Z-ADD0         RATE
+| 02*C                     ELSE
+|   C                     Z-ADD1         RATE
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+03===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN120... 出勤率
+     C*==============================================================*
+04===C           RTN120    BEGSR
+|    C*
+|    C                     Z-ADD0         LV08
+|    C                     Z-ADD0         LV09
+|    C                     Z-ADD0         LV08I
+|    C                     Z-ADD0         LV09I
+|    C                     Z-ADD0         LV08S
+|    C                     Z-ADD0         LV09S
+|    C                     Z-ADD0         LV08V
+|    C                     Z-ADD0         LV09V
+|    C                     Z-ADD0         LV08X
+|    C                     Z-ADD0         LV09X
+|    C                     Z-ADD0         LV08P
+|    C                     Z-ADD0         LV09P
+|    C                     Z-ADD0         LV08I1
+|    C                     Z-ADD0         LV08S1
+|    C                     Z-ADD0         LV08X1
+|    C                     Z-ADD0         LV08P1
+|    C                     Z-ADD0         AA      75       考勤率
+|    C                     Z-ADD0         AAA     64       考勤率
+|    C*
+|    C                     Z-ADD0         LVIX    75
+|    C                     Z-ADD0         LVSX    75
+|    C                     Z-ADD0         LVVX    75
+|    C                     Z-ADD0         LVXX    75
+|    C                     Z-ADD0         LVPX    75
+|    C*
+|    C                     Z-ADD0         PB21
+|    C                     Z-ADD0         PB22
+|    C                     Z-ADD0         PB23
+|    C                     Z-ADD0         PB24
+|    C*
+|    C           KEYEM     SETLLLV0
+|    C           KEYEM     READELV0                      40
+| 01-C           *IN40     DOWEQ'0'
+| 02-C           LV03Y     IFEQ WPB03
+|   C*
+| 03-C           LV04      IFEQ PM104                      事假
+|   C                     ADD  LV08      LV08I   52
+|   C                     ADD  LV09      LV09I   40
+| 03-C                     END
+|   C*
+| 04-C           LV04      IFEQ PM105                      病假
+|   C                     ADD  LV08      LV08S   52
+|   C                     ADD  LV09      LV09S   40
+| 04-C                     END
+|   C*
+| 05-C           LV04      IFEQ PM127                      曠職
+|   C                     ADD  LV08      LV08V   52
+|   C                     ADD  LV09      LV09V   30
+| 05-C                     END
+|   C*
+| 06-C           LV04      IFEQ PM143                      喪假
+|   C                     ADD  LV08      LV08X   52
+|   C                     ADD  LV09      LV09X   40
+| 06-C                     END
+|   C*
+| 07-C           LV04      IFEQ PM144                      產假
+|   C                     ADD  LV08      LV08P   52
+|   C                     ADD  LV09      LV09P   40
+| 07-C                     END
+|   C*
+| 02-C                     END
+|   C           KEYEM     READELV0                      40
+| 01-C                     END
+|    C*事假
+|    C*天－－＞小時
+|    C           LV09I     MULT PM101     PB21    40
+|    C                     ADD  LV08I     PB21             事假總時數
+|    C*小時－－＞天
+|    C           LV08I     DIV  PM101     LV08I1  75
+|    C                     ADD  LV08I1    LV09I
+|    C*病假
+|    C*天－－＞小時
+|    C           LV09S     MULT PM101     PB22    40       病假總時數
+|    C                     ADD  LV08S     PB22
+|    C*小時－－＞天
+|    C           LV08S     DIV  PM101     LV08S1  75
+|    C                     ADD  LV08S1    LV09S
+|    C*曠職
+|    C           LV08V     MULT PM101     LV08V1  52       喪假總時數
+|    C                     ADD  LV08V1    LV09V            曠職總時數
+|    C*喪假
+|    C           LV09X     MULT PM101     LV08X1  52       喪假總時數
+|    C                     ADD  LV08X1    LV08X
+|    C*產假
+|    C           LV09P     MULT PM101     LV08P1  52       產假總時數
+|    C                     ADD  LV08P1    LV08P
+|    C*
+|    C           PM101     MULT 365       YH01    52       全年時數
+|    C           LV09I     DIV  YH01      LVIX             事假比率
+|    C           LV09V     DIV  YH01      LVVX             曠職比率
+|    C           LV09S     DIV  YH01      LVSX             病假比率
+|    C           LV09X     DIV  YH01      LVXX             喪假比率
+|    C           LV09P     DIV  YH01      LVPX             產假比率
+|    C           1         SUB  LVIX      AA
+|    C                     SUB  LVVX      AA
+|    C                     SUB  LVSX      AA
+|    C                     SUB  LVXX      AA
+|    C                     SUB  LVPX      AA
+|    C                     Z-ADDAA        AAA       H
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN121...存回出勤率檔PYPEPF
+     C*==============================================================*
+05===C           RTN121    BEGSR
+|    C*
+|    C                     MOVELDPB01     PE01
+|    C                     MOVELEM02      PE02
+|    C                     Z-ADDWPB03     PE03
+|    C                     Z-ADDAAA       PE04
+|    C                     Z-ADD$A8YMD    PE97
+|    C                     TIME           PE98
+|    C                     MOVEL$USER     PE99
+|    C*
+|    C                     WRITEPE0
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          RTN130   獎金月數、職務加給
+     C*==============================================================*
+06===C           RTN130    BEGSR
+|    C*
+|    C*-------------------獎金月數-------------------------------
+|    C*
+| 01-C           DPB04     IFEQ '01'                       年終獎金
+|   C*
+|   C           KEYRV     CHAINRVD0                 47
+|   C  N47                MOVELRVD05     WRV05   1        考核結果
+|   C*
+| 02-C           *IN47     IFEQ '0'
+|   C           KEYBM     CHAINBM0                  55
+|   C  N55                MOVELBM05      BM05T   86
+| 02-C                     END
+|   C*
+| 01*C                     ELSE
+|   C                     Z-ADDDDAYS     BM05T
+| 01-C                     END
+|    C*
+|    C*-------------------職務加給------------------------------
+|    C*獎金為紅利時才計算
+| 03-C           DPB04     IFEQ '03'
+|   C           KEYPD     CHAINPD0                  43
+|   C  N43                Z-ADDPD04      PAY1
+|   C   43                Z-ADD*ZERO     PAY1
+| 03*C                     ELSE
+|   C                     Z-ADD*ZERO     PAY1
+| 03-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          RTN140   年休補發YSR
+     C*==============================================================*
+07===C           RTN140    BEGSR
+|    C*
+|    C           KEYH2     CHAINH20                  46
+|    C  N46                Z-ADDH206      YSR
+|    C   46                Z-ADD0         YSR
+|    C                     Z-ADDH206      QPB06F  70
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          RTN400   寫入獎金資料檔中　 PYPBPF
+     C*==============================================================*
+08===C           RTN400    BEGSR
+|    C*
+|    C                     EXSR RTN401
+|    C*
+|    C*獎金金額＝0時．該筆資料不寫入
+| 01-C           PB06      IFEQ *ZERO
+|   C                     GOTO END400
+| 01*C                     ELSE
+|   C           KEYPB     CHAINPB0                  46
+|   C  N46                UPDATPB0
+|   C   46                WRITEPB0
+| 01-C                     END
+|    C*
+08===C           END400    ENDSR
+     C*==============================================================*
+     C*          RTN401    GET DATA FOR CHECKING PYPBPF
+     C*==============================================================*
+09===C           RTN401    BEGSR
+|    C*
+|    C                     MOVELDPB01     PB01             .公司編號
+|    C                     MOVELEM02      PB02             .員工編號
+|    C                     Z-ADDWPB03     PB03             .獎金年度
+|    C                     MOVELDPB04     PB04             .獎金類別
+|    C           PB04      IFEQ '01'                        年終獎金
+|    C           WPB03     ADD  1         PB03              獎金年度
+|    C                     END
+|    C                     Z-ADD0         PB05             .發放年月
+|    C                     Z-ADD0         PB05D            .發放日
+|    C                     Z-ADDWPB06     PB06             .獎金金額
+|    C                     Z-ADDQPB06F    PB06F
+|    C*
+|    C*獎金稅率
+|    C                     Z-ADDKPB07     PB07             .獎金稅率
+|    C*
+|    C*獎金計算公式=應領金額－稅額（６％）＝實領金額
+|    C*獎金扣繳稅額
+|    C*--SHARON MOD 940223--
+|    C*          WPB06     SUB  QPB06F    QPB06   70
+|    C*          QPB06     MULT KPB07     KPB08   70H
+|    C           WPB06     MULT KPB07     KPB08   70H
+|    C                     Z-ADDKPB08     PB08             .獎金稅額
+|    C*
+|    C                     Z-ADD*ZERO     PB09             .勞保費　
+|    C                     Z-ADD*ZERO     PB10             .健保費　
+|    C                     Z-ADD*ZERO     PB11             .其他扣項
+|    C           WPB06     SUB  KPB08     PB12             .實領總額
+|    C                     ADD  QPB06F    PB12             .實領總額
+|    C                     MOVEL*BLANK    PB13             .發放說明
+|    C*
+|    C                     MOVELEM041     PB141            .部門代碼一
+|    C                     MOVELEM042     PB142            .部門代碼二
+|    C                     MOVELEM043     PB143            .部門代碼三
+|    C                     MOVELEM044     PB144            .部門代碼四
+|    C                     MOVELEM135     PB15             .報稅地點
+|    C*
+|    C                     Z-ADDBM05T     PB16             .基數
+|    C                     Z-ADDRATE      PB17             .在職率　
+|    C                     Z-ADDAAA       PB18             .考勤率
+|    C                     Z-ADD0         PB19             .獎懲率
+|    C                     Z-ADD0         PB20             .考績率
+|    C*
+|    C                     Z-ADDSALRY     PB31             .計算基礎
+|    C                     Z-ADD*ZERO     PB96             .核定日期
+|    C                     Z-ADD$A8YMD    PB97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     PB98
+|    C                     MOVEL$USER     PB99
+|    C*
+09===C           END401    ENDSR
+     C*==============================================================*
+     C*          RTN402   儲存獎金紅利
+     C*==============================================================*
+10===C           RTN402    BEGSR
+|    C*
+|    C                     MOVELDPB01     RB01
+|    C                     MOVELWPB03     RB02
+|    C                     MOVELDAMTS     RB03
+|    C*
+|    C                     Z-ADD$A8YMD    RB97
+|    C                     TIME           DTIME  120
+|    C                     MOVELDTIME     RB98
+|    C                     MOVEL$USER     RB99
+|    C*
+|    C           KEYRB     CHAINRB0                  46
+|    C  N46                UPDATRB0
+|    C   46                WRITERB0
+|    C*
+10===C           END402    ENDSR
+     C*=============================================================
+     C*                年終獎金
+     C*=============================================================
+11===C           RTN310    BEGSR
+|    C*
+|    C*(日薪*30+職務加給)*年資率*出勤率*獎金月數
+|    C*(月薪+職務加給)*年資率*出勤率*獎金月數
+|    C*
+|    C*          SALRY     ADD  PAY1      WPB06            職務加給
+|    C                     Z-ADDSALRY     WPB06            基本薪資
+|    C                     MULT RATE      WPB06     H      年資率
+|    C                     MULT AAA       WPB06     H      出勤率
+|    C                     MULT BM05T     WPB06     H      獎金月數
+|    C*
+|    C*SHARON MOD 940223   ADD  YSR       WPB06            年休補發
+|    C*
+     C                     MOVEL*BLANK    KPB04   2
+     C*扣除當年度已發放之夏季獎金02,秋季獎金04
+     C*                    MOVEL'02'      KPB04
+     C*          KEYPB1    CHAINPB0                  42
+     C*          *IN42     IFEQ '0'
+     C*          PB96      ANDNE0                          核定日期
+     C*                    SUB  PB06      WPB06
+     C*                    END
+     C*
+     C*                    MOVEL'04'      KPB04
+     C*          KEYPB1    CHAINPB0                  43
+     C*          *IN43     IFEQ '0'
+     C*          PB96      ANDNE0
+     C*                    SUB  PB06      WPB06
+     C*                    END
+     C*
+     C*扣除項目:  PYPAPF
+     C*
+     C           KEYPA     SETLLPA0
+     C           KEYPA     READEPA0                      43
+     C           *IN43     DOWEQ'0'
+     C                     SUB  PA06      WPB06
+     C           KEYPA     READEPA0                      43
+     C                     END
+     C*
+11===C           END310    ENDSR
+     C*=============================================================
+     C*                  夏季獎金&其它獎金
+     C*=============================================================
+12===C           RTN320    BEGSR
+|    C*
+|    C*(日薪*30+職務加給)*年資率*獎金月數
+|    C*(月薪+職務加給)*年資率*獎金月數
+|    C*
+|    C*          SALRY     ADD  PAY1      WPB06            職務加給
+|    C                     Z-ADDSALRY     WPB06            職務加給
+|    C                     MULT RATE      WPB06     H      年資率
+|    C                     MULT BM05T     WPB06     H      獎金月數
+|    C*
+12===C           END320    ENDSR
+     C*=============================================================
+     C*                          紅利
+     C*==============================================================*
+13===C           RTN330    BEGSR
+|    C*
+|    C*(日薪*3)*年資率*出勤率*獎金月數+職務加給*N
+|    C*月薪*年資率*出勤率*獎金月數+職務加給*N
+|    C*
+|    C                     Z-ADD*ZERO     S1      70
+|    C*
+|    C           SALRY     MULT RATE      WPB06     H      年資率
+|    C                     MULT AAA       WPB06     H      出勤率
+|    C                     MULT BM05T     WPB06     H      獎金月數
+|    C*
+|    C*職務加給*N
+|    C           PAY1      MULT DAMTS     S1        H
+|    C                     ADD  S1        WPB06
+|    C*
+13===C           END330    ENDSR
+

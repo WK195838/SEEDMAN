@@ -1,0 +1,256 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYH133
+     H*    PROGRAM NAME :勞／健保調整確認作業                      *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 90/03/26                                   *
+     H*    UPDATE DATE  : 92/12/30 ALLEN                             *
+     H*    SYSTEM       :員工保險維護子系統                        *
+     H****************************************************************
+     FPYH131WFUF  E           K        DISK
+     FPYH4PF  UF  E           K        DISK
+     FPYH5PF  UF  E           K        DISK                      A
+     FPYEMPF  IF  E           K        DISK
+     FPYH133D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E*                   WFUN    5   5  6
+     E*---------------------------------------------------------------*
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      187 1920DATE
+     I                                      211 2160DDATE
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      201 2040YEAR
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYW13    KLIST
+     C                     KFLD           DEM01            *公司
+     C*                    KFLD           W1302
+     C           KEYEM     KLIST
+     C                     KFLD           W1301            *公司
+     C                     KFLD           W1302            *員工編號
+     C           KEYH4     KLIST
+     C                     KFLD           H401             *公司編號
+     C                     KFLD           H402             *員工編號
+     C           KEYH5     KLIST
+     C                     KFLD           H501             *公司編號
+     C                     KFLD           H502             *員工編號
+     C                     KFLD           H503             *異動日期
+     C                     KFLD           H504             *異動別
+     C*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   LDA
+|    C*RENT AUTHORITY CHECK
+|    C                     MOVELDDATE     P#103
+|    C                     CALL 'L@CHK'
+|    C                     PARM           P#103   6
+|    C                     PARM '01'      P#106   2
+|    C                     PARM '  '      P#104   6
+|    C                     PARM '2'       PFUN    1
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     MOVEL*BLANKS   DYM
+|    C*                    Z-ADD1         DOPT
+|    C*------------------------------------------------------------****
+|    C*公司別
+|    C                     MOVEL$COR      DEM01
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     97
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 02-C           *IN99     IFEQ '0'
+|   C           *IN13     ANDEQ'1'
+|   C                     EXSR R1C00                      *PROCESS
+| 02-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 ....SCREEN CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*公司別
+| 01-C           DEM01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DEM01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C                     PARM           CM004O  1         日期格式
+|    C                     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C                     MOVE CM004O    DFMT
+|    C                     MOVE CM005O    DTYPE
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 02-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 03-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*調整年月DYM
+|    C                     Z-ADDDYM       FDATE   80
+|    C                     CALL 'P38'
+|    C                     PARM FDATE     P3801I  60
+|    C                     PARM CM004O    P3802I  1        .YYYYMM
+|    C                     PARM CM005O    P3803I  1
+|    C                     PARM           P3801O  60
+|    C                     PARM           P3811O  1        .'Y':OK
+|    C*                                                    .'N':ERROR
+| 04-C           P3811O    IFNE 'Y'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM FDATE     P3901I  60
+|    C                     PARM CM004O    P3902I  1
+|    C                     PARM CM005O    P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C                     PARM           P3911O  60
+|    C                     Z-ADDP3911O    YYMME   60       *
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....MOVE  SCREEN TO SCID
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+|    C                     SETON                     98
+|    C                     WRITEDSPC1
+|    C           KEYW13    SETLLW13R
+|    C           KEYW13    READEW13R                     46
+| 01-C           *IN46     DOWEQ'0'
+|   C*
+| 02-C           W1320     IFEQ *BLANK                     *確認
+|   C           KEYEM     CHAINEM0                  40
+| 03-C           *IN40     IFEQ '0'
+|   C           EM19      ANDEQ0                          *離職日期
+|   C*
+| 05-C           W1308     IFGT 0                          *健保金額
+|   C*
+|   C                     EXSR R1C20                      *健保
+| 05-C                     END
+|   C*
+| 03-C                     END
+|   C*
+|   C                     MOVEL'*'       W1320            *確認
+|   C                     UPDATW13R
+| 02-C                     END
+|   C           KEYW13    READEW13R                     46
+| 01-C                     END
+|    C*UPT2142--->作業完成
+|    C                     MOVEL'UPT2142' ERRID
+|    C                     MOVEL'PTMF'    ERRF
+|    C                     SETON                       99
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1C20 ....WRITE PYE1PF PYH4PF
+     C*==============================================================*
+06===C           R1C20     BEGSR
+|    C                     CLEARH40
+|    C                     MOVE W1301     H401
+|    C                     MOVE W1302     H402
+|    C           KEYH4     CHAINPYH4PF               40
+|    C  N40                DO
+|   C                     Z-ADDW1308     H409             *月提繳工
+|    C                     Z-ADD$A8YMD    H497             *
+|    C                     TIME           H498             *
+|    C                     MOVEL$USER     H499             *
+     C*產生退休金提撥異動檔
+|    C                     CLEARH50
+     C                     MOVE H401      H501
+     C                     MOVE H402      H502
+     C                     Z-ADDW1310     H503
+     C                     MOVE '2'       H504
+     C           KEYH5     CHAINPYH5PF               44
+     C                     MOVE 'AA'      H514
+     C                     Z-ADDH407      H505               @自提率
+     C                     Z-ADDH408      H507               @企提率
+     C                     Z-ADDH409      H506               @月提繳
+     C                     Z-ADD$A8YMD    H597
+     C                     TIME           H598
+     C                     MOVEL$USER     H599
+     C   44                WRITEH50
+     C  N44                UPDATH50
+     C*
+|   C                     UPDATH40
+|   C                     END
+06===C           E1C20     ENDSR
+     C*==============================================================*
+

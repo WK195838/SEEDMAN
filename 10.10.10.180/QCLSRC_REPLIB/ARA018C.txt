@@ -1,0 +1,45 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    AUTHOR       : IRIS                                      */
+     /*    CREATE DATE  : 2020/12/25                                */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : ARA018C                                   */
+     /*    SYSTEM       :進銷存系統                               */
+     /*    SUBSYSTEM    :                                         */
+     /*    REMARK       :電子發票轉檔與傳送-作廢                */
+     /***************************************************************/
+             PGM
+
+             DCL        VAR(&IN03) TYPE(*LGL) LEN(1)
+             DCL        VAR(&IN10)   TYPE(*LGL)  LEN(1)
+             DCL        VAR(&UJOB) TYPE(*CHAR) LEN(10)
+
+             RTVJOBA    JOB(&UJOB)
+
+             CHGVAR     VAR(%SST(*LDA 125 3)) VALUE('001')
+             CHGVAR     VAR(%SST(*LDA 220 10)) VALUE('          ')
+
+             ALCOBJ     OBJ((EINVO *DTAARA *EXCL *N)) WAIT(0)
+             MONMSG     MSGID(CPF1002) EXEC(GOTO CMDLBL(ABNORMARL))
+ START:      DLCOBJ     OBJ((EINVO *DTAARA *EXCL))
+             CALL       PGM(ARA018) PARM(&IN03 &IN10)
+             IF         COND(&IN03) THEN(DO)
+             CHGVAR     VAR(%SST(*LDA 501 100)) VALUE(' ')
+             GOTO       CMDLBL(END)
+             ENDDO
+
+         /*  CALL       PGM  */
+             SBMJOB     JOB(ARA018C1) RQSDTA('CALL ARA018C1')
+             DLYJOB     DLY(60)
+             SBMJOB     JOB(ARA018C2) RQSDTA('CALL ARA018C2')
+             DLYJOB     DLY(10)
+             GOTO       CMDLBL(START)
+ ABNORMARL:
+             SNDBRKMSG  +
+                          MSG('作業間距過短．請稍等五分鐘再嘗試執行+
+                          ＜按執行鍵以離開＞') TOMSGQ(&UJOB)
+ END:
+             RETURN
+              ENDPGM
+

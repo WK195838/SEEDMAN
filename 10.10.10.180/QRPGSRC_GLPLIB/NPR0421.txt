@@ -1,0 +1,264 @@
+     FNPNFLF01IP  E           K        DISK
+     FMTMEPF  IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FNPR042P O   E             39     PRINTER
+     E*---------------------------------------------------------------*
+     INF0
+     I                                              NF10  L1
+     I                                              NF05  L2
+     I                                              NF07  L3
+     I                                              NF06A L4
+     I                                              NF02  L4
+     I                                              NF01  L4
+     I*
+     I*DATA AREA
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* SCREEN INPUT FIELD  ++++++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DNF01
+     I                                      509 5110DYEAR
+     I                                      512 5130DMM
+     I                                      514 5200DMDYS
+     I                                      521 5270DMDYE
+     I                                      535 5380$YEAR
+     I                                      541 541 DNF06S
+     I                                      542 542 DNF06E
+     I                                      543 547 DNF07S
+     I                                      548 552 DNF07E
+     I                                      553 555 DNF05S
+     I                                      556 558 DNF05E
+     I                                      559 560 DNF03S
+     I                                      561 562 DNF03E
+     I                                      563 564 DNF03
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+  01-C           *IN10     IFEQ '0'
+    C                     EXSR RTN010
+  01-C                     END
+     C*
+     C                     EXSR RTN100
+     C*
+     CL1 10                EXSR RTNL1
+     CL2 10                EXSR RTNL2
+     CL3 10                EXSR RTNL3
+     CL4 10                EXSR RTNL4
+     CLR                   EXSR RTNLR
+     C*==============================================================*
+     C*          RTN010....GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           DYEAR     ADD  1         DYEAR1
+      *
+|    C                     MOVEL*BLANK    #B02
+|    C           DNF01     CHAIN#B0                  40
+      *
+|    C*種類
+|    C                     MOVEL*BLANKS   GROUP
+| 02-C           DNF03     IFEQ '10'
+|   C                     MOVEL'白蘭地'GROUP
+| 02*C                     ELSE
+| 03-C           DNF03     IFEQ '20'
+|   C                     MOVEL'威士忌'GROUP
+| 03*C                     ELSE
+| 04-C           DNF03     IFEQ '30'
+|   C                     MOVEL'葡萄酒'GROUP
+| 04*C                     ELSE
+| 05-C           DNF03     IFEQ '99'
+|   C                     MOVEL'合併'  GROUP
+| 05*C                     ELSE
+|   C                     MOVEL'全部'  GROUP
+| 05-C                     END
+| 05-C                     END
+| 04-C                     END
+| 03-C                     END
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETON                     10
+|   C           DNF01     CHAINAK0                  40
+|   C*
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN100....PROCESS
+      *==============================================================*
+02===C           RTN100    BEGSR
+      *
+| 01-C           NF02A     IFEQ DMM
+|   C                     ADD  1         WNUM    30
+|   C                     ADD  NF09      T0NF09
+| 01-C                     END
+|   C                     ADD  NF09      T1YTD
+|   C*
+02===C                     ENDSR
+      *==============================================================*
+      *          RTNL1 ....PD1
+      *==============================================================*
+03===C           RTNL1     BEGSR
+|   C*
+| 01-C           NF02A     IFEQ DMM
+| 02-C           NF06A     IFEQ '1'
+|   C                     MOVEL'台北'  COMP
+| 02*C                     ELSE
+| 03-C           NF06A     IFEQ '2'
+|   C                     MOVEL'台中'  COMP
+| 03*C                     ELSE
+|   C                     MOVEL'高雄'  COMP
+| 03-C                     END
+| 02-C                     END
+|   C*
+|   C                     MOVEL*BLANK    ME04
+|   C           NF07      CHAINME0                  40
+|   C*
+|   C                     SETOF                     28
+      *正負號
+| 04-C           T0NF09    IFLT 0
+|   C                     SETON                     28
+| 04-C                     END
+      *
+|   C* 日期格式轉換(FILE->SCREEN)
+|   C                     CALL 'P31'
+|   C                     PARM NF10      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM AK11      P3104I  1
+|   C                     PARM AK09      P3105I  1
+|   C           DNF10     PARM           P3101O  80
+      *
+|   C   39                EXSR RTN900
+|   C                     WRITEPD1
+|   C                     SETON                     313233
+|   C                     SETOF                     20
+| 01-C                     END
+|   C                     ADD  T0NF09    T1NF09
+|   C                     Z-ADD0         T0NF09
+|   C*
+03===C                     ENDSR
+      *==============================================================*
+      *          RTNL2 ....PT1
+      *==============================================================*
+04===C           RTNL2     BEGSR
+|   C*
+| 01-C           WNUM      IFEQ 0
+|   C                     SETOF                     28
+|   C                     Z-ADD0         DNF10
+|   C                     Z-ADD0         T0NF09
+|   C                     WRITEPD1
+| 01-C                     END
+|   C*
+|   C                     SETOF                     2829
+      *正負號
+| 02-C           T1NF09    IFLT 0
+|   C                     SETON                     28
+| 02-C                     END
+| 03-C           T1YTD     IFLT 0
+|   C                     SETON                     29
+| 03-C                     END
+      *
+|   C   39                EXSR RTN900
+|   C                     WRITEPT1
+|   C                     SETOF                     31
+|   C                     SETON                     20
+|   C                     ADD  T1NF09    T2NF09
+|   C                     ADD  T1YTD     T2YTD
+|   C                     Z-ADD0         T1NF09
+|   C                     Z-ADD0         T1YTD
+|   C                     Z-ADD0         WNUM
+|   C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTNL3 ....PT2
+      *==============================================================*
+05===C           RTNL3     BEGSR
+|   C*
+|   C                     SETOF                     2829
+      *正負號
+| 01-C           T2NF09    IFLT 0
+|   C                     SETON                     28
+| 01-C                     END
+| 02-C           T2YTD     IFLT 0
+|   C                     SETON                     29
+| 02-C                     END
+      *
+|   C   39                EXSR RTN900
+|   C                     WRITEPT2
+|   C                     SETOF                     32
+|   C                     ADD  T2NF09    T3NF09
+|   C                     ADD  T2YTD     T3YTD
+|   C                     Z-ADD0         T2NF09
+|   C                     Z-ADD0         T2YTD
+|   C*
+05===C                     ENDSR
+      *==============================================================*
+      *          RTNL4 ....PT3
+      *==============================================================*
+06===C           RTNL4     BEGSR
+|   C*
+|   C*
+|   C                     SETOF                     2829
+      *正負號
+| 01-C           T3NF09    IFLT 0
+|   C                     SETON                     28
+| 01-C                     END
+| 02-C           T3YTD     IFLT 0
+|   C                     SETON                     29
+| 02-C                     END
+      *
+|   C   39                EXSR RTN900
+|   C                     WRITEPT3
+|   C                     SETOF                     33
+|   C                     ADD  T3NF09    T4NF09
+|   C                     ADD  T3YTD     T4YTD
+|   C                     Z-ADD0         T3NF09
+|   C                     Z-ADD0         T3YTD
+|   C*
+06===C                     ENDSR
+      *==============================================================*
+      *          RTNLR ....(NO DATA)
+      *==============================================================*
+07===C           RTNLR     BEGSR
+|   C*
+| 01-C           *IN10     IFEQ '0'
+|   C                     EXSR RTN010
+|   C                     WRITEPE9
+| 01*C                     ELSE
+|   C                     SETOF                     2829
+      *正負號
+| 02-C           T4NF09    IFLT 0
+|   C                     SETON                     28
+| 02-C                     END
+| 03-C           T4YTD     IFLT 0
+|   C                     SETON                     29
+| 03-C                     END
+      *
+|   C   39                EXSR RTN900
+|   C                     WRITEPT4
+| 01-C                     END
+|   C                     WRITEPE2
+      *
+07===C                     ENDSR
+      *==============================================================*
+      *          RTN900....OVERFLOW
+      *==============================================================*
+08===C           RTN900    BEGSR
+|   C*
+|   C                     WRITEPE1
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETOF                     203132
+|   C                     SETOF                     33
+|   C*
+08===C                     ENDSR
+

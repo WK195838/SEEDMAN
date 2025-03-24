@@ -1,0 +1,265 @@
+     H****************************************************************/
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    */
+     H*                                                              */
+     H*    PROGRAM-ID   : PYA2132                                    */
+     H*    PROGRAM NAME :出勤資料明細表列印                        */
+     H*    AUTHOR       : A1226 PETER                                */
+     H*    CREATE DATE  : 97/01/20                                   */
+     H*    UPDATE DATE  :                                            */
+     H*    SYSTEM       :人事薪資系統                              */
+     H****************************************************************/
+     FPYT5PF  IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYR213P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    @AR1    7   7  4
+     E                    @AR2       32  2 0
+     E                    @AR3       32  4
+     E                    @AR4       32  4 0
+     E                    @AR5       32  4 0
+     E                    @AR6       32  3 1
+     E                    @AR7       32  4 0
+     E                    @AR8       32  4 0
+     E*---------------------------------------------------------------
+     IT50
+     I                                              T501  L2
+     I                                              T502  L1
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      187 1920DDATE
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DT505
+     I                                      560 566 DT506F
+     I                                      567 573 DT506T
+     I                                      513 520 DT501F
+     I                                      521 528 DT501T
+     I**                                    529 5320DT502
+     I                                      533 5380WDT502
+     I                                      600 6040DT502
+     I            DS
+     I                                        1   7 T506
+     I                                        1   1 T5061
+     I                                        2   2 T5062
+     I                                        3   3 T5063
+     I                                        4   7 T5064
+     I            DS
+     I                                        1   60WYMD
+     I                                        1   40WT502
+     I                                        5   60D
+     I            DS
+     I                                        1   80T502
+     I                                        7   80WT502D
+     I            DS
+     I                                        1   20T503
+     I                                        3   40T504
+     I                                        1   40WT534
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C*                                                                USE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYEM     KLIST
+     C                     KFLD           T505
+     C                     KFLD           T501
+     C           KEYDP     KLIST
+     C                     KFLD           T5061
+     C                     KFLD           T5062
+     C                     KFLD           T5063
+     C                     KFLD           T5064
+     C           KEYCM     KLIST
+     C                     KFLD           T505
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*+ LEVEL BREAK INIT PROCESS +++++++++++++++++++++++++++++++++++
+     C   L1                EXSR R7100
+     C   L2                SETON                     39
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     C*+ LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++
+     CL2 10                EXSR R8100
+     CLR 10                EXSR R8900
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C*GET表頭公司別++++++++++++++++++++++++++++++++++++++++++++++++
+|    C           KEYCM     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C*
+|    C                     Z-ADDDT502     WT502
+|    C* CLEAR ARR
+|    C                     Z-ADD*ZERO     @AR2
+|    C                     MOVEL*BLANK    @AR3
+|    C                     Z-ADD*ZERO     @AR4
+|    C                     Z-ADD*ZERO     @AR5
+|    C                     Z-ADD*ZERO     @AR6
+|    C                     Z-ADD*ZERO     @AR7
+|    C                     Z-ADD*ZERO     @AR8
+|    C                     Z-ADD*ZERO     D       20
+|    C*求該月日數
+|    C                     CALL 'P22'
+|    C                     PARM DT502     P2201I  40
+|    C                     PARM           P2211O  10
+|    C                     PARM           P2212O  20
+|    C                     Z-ADDP2212O    DAY     20
+|    C* PRE ARR
+| 01-C           1         DO   DAY       D
+|   C                     CALL 'P40'
+|   C                     PARM WYMD      P4001I  60
+|   C                     PARM           P4011O  10
+|   C                     Z-ADDP4011O    J       10
+|   C                     MOVEL@AR1,J    @AR3,D           週
+|   C*
+|   C                     Z-ADDD         @AR2,D           日
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C                     Z-ADD1         W       20
+|    C           WT502D    LOKUP@AR2,W                   48
+| 01-C           *IN48     IFEQ '1'
+|   C*
+| 02-C                     SELEC
+|   C           WTIME     WHEQ 1
+|   C                     Z-ADDWT534     @AR4,W
+|   C           WTIME     WHEQ 2
+|   C                     Z-ADDWT534     @AR5,W
+|   C*時數
+|   C                     CALL 'P68'
+|   C                     PARM @AR4,W    P6801I  40
+|   C                     PARM @AR5,W    P6802I  40
+|   C                     PARM           P6811O  90
+|   C           P6811O    DIV  60        @AR6,W
+|   C*
+|   C           WTIME     WHEQ 3
+|   C                     Z-ADDWT534     @AR7,W
+|   C           WTIME     WHEQ 4
+|   C                     Z-ADDWT534     @AR8,W
+| 02-C                     END
+|   C*
+|   C                     ADD  1         WTIME
+|   C*
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+03===C           R7100     BEGSR
+|    C*
+|    C                     Z-ADD1         WTIME   10
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 2
+     C*==============================================================*
+04===C           R8100     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C           KEYEM     CHAINEM0                  40
+|    C   40                MOVEL*BLANK    EM03
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+|    C                     Z-ADD0         X       20
+|    C                     Z-ADD0         Y       20
+| 02-C           1         DO   16        X
+|   C                     Z-ADD@AR2,X    P01
+|   C                     MOVEL@AR3,X    P02
+|   C                     Z-ADD@AR4,X    P03
+|   C                     Z-ADD@AR5,X    P04
+|   C                     Z-ADD@AR6,X    P05
+|   C                     Z-ADD@AR7,X    P06
+|   C                     Z-ADD@AR8,X    P07
+| 03-C           P06       IFEQ 0
+|   C                     SETOF                     31
+| 03-C                     END
+| 04-C           P07       IFEQ 0
+|   C                     SETOF                     32
+| 04-C                     END
+|   C           X         ADD  16        Y
+|   C                     Z-ADD@AR2,Y    P11
+|   C                     MOVEL@AR3,Y    P12
+|   C                     Z-ADD@AR4,Y    P13
+|   C                     Z-ADD@AR5,Y    P14
+|   C                     Z-ADD@AR6,Y    P15
+|   C                     Z-ADD@AR7,Y    P16
+|   C                     Z-ADD@AR8,Y    P17
+| 05-C           P16       IFEQ 0
+|   C                     SETOF                     33
+| 05-C                     END
+| 06-C           P17       IFEQ 0
+|   C                     SETOF                     34
+| 06-C                     END
+|   C*
+|   C                     WRITEPD1
+|   C*
+| 02-C                     END
+|    C*
+|    C                     Z-ADD*ZERO     @AR4
+|    C                     Z-ADD*ZERO     @AR5
+|    C                     Z-ADD*ZERO     @AR6
+|    C                     Z-ADD*ZERO     @AR7
+|    C                     Z-ADD*ZERO     @AR8
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     WRITEPT1
+|    C*
+|    C                     SETON                     313233
+|    C                     SETON                     34
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+05===C           R8900     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+06===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R1000
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+**
+一二三四五六日
+

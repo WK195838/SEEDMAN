@@ -1,0 +1,735 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : S#A170                                     *
+     H*    PROGRAM NAME :使用者管制資料維護                        *
+     H*    AUTHOR       : A1165 SERMON                               *
+     H*    CREATE DATE  : 85/08/07                                   *
+     H*    UPDATE DATE  : 90/05/18 A1274 EVA                         *
+     H*    SYSTEM       :程式安全管制系統                          *
+     H****************************************************************
+     FS#SDPF  UF  E           K        DISK                      A
+     FS#SPPF  IF  E           K        DISK
+     FS#SUPF  IF  E           K        DISK
+     FS#A170D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     IS#DA01      DS
+     I                                        1  10 ADMIN
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      201 2080$A8YMD
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           S#DA01
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C           *LIKE     DEFN RRN       @LRRN            LAST REC NUM
+     C           *LIKE     DEFN RRN       @LPAGE           LAST PAGE
+     C           *LIKE     DEFN RRN       @PRRN            PROMPT USE
+     C           *LIKE     DEFN SD01      WSD01
+     C           *LIKE     DEFN SD02      WSD02
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYSD     KLIST
+     C                     KFLD           WSD01
+     C                     KFLD           WSD02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N99                EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   S#DA01
+|    C                     MOVE 'SC01'    SCID    4
+|    C*執行者名稱
+|    C                     MOVEL*BLANK    SU02
+|    C           $USER     CHAINSU0                  40
+|    C                     MOVELSU02      $USERN
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DSD01
+|    C                     MOVEL*BLANK    DSD01C
+|    C                     MOVEL*BLANK    DSD02F
+|    C                     MOVEL*BLANK    DSD02T
+|    C*未重新授權
+|    C                     MOVEL*BLANK    FLAG    1
+|    C*--------------------------------------------------------------*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'                        *PROMPT
+|   C                     EXSR R1E00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+|   C                     MOVEL'SC02'    SCID
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*使用者編號
+|    C*（非管制者必須存在才可執行）
+| 01-C           $USER     IFNE ADMIN
+|   C           $USER     CHAINSU0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     MOVEL'US#0003' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+|   C                     SETON                     99
+| 02-C                     END
+|   C   99                GOTO E1B00
+|   C*
+|   C*-------------------------------------------------------------***
+|   C*（管制資料必須存在）
+|   C           $USER     CHAINSD0                  40
+| 03-C           *IN40     IFEQ '1'
+|   C                     MOVEL'US#0004' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+|   C                     SETON                     99
+| 03-C                     END
+|   C   99                GOTO E1B00
+| 01-C                     END
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*（必須輸入）
+| 04-C           DSD01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*（使用者基本資料須存在）
+|    C           DSD01     CHAINSU0                  40
+| 05-C           *IN40     IFEQ '1'
+|   C                     MOVEL'US#0005' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+|   C                     SETON                     6099
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*（新增時．若被拷貝者有資料．其使用者基本資料須存在）
+| 06-C           DOPT      IFEQ 1
+|   C           DSD01C    ANDNE*BLANK
+|   C*
+|   C           DSD01C    CHAINSU0                  40
+| 07-C           *IN40     IFEQ '1'
+|   C                     MOVEL'US#0005' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+|   C                     SETON                     6399
+| 07-C                     END
+|   C   99                GOTO E1B00
+|   C*
+| 06-C                     END
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*（除管制者外）
+| 08-C           $USER     IFNE ADMIN
+|   C*（無法使用管制者的資料）
+| 09-C           DSD01     IFEQ ADMIN
+|   C                     MOVEL'US#0001' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+|   C                     SETON                     6099
+| 09-C                     END
+|   C   99                GOTO E1B00
+|   C*
+|   C*（只有被授權者和授權者才可異動）
+| 10-C           $USER     IFNE SU03
+|   C           $USER     ANDNESU01
+|   C                     MOVEL'US#0001' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+|   C                     SETON                     6099
+| 10-C                     END
+|   C   99                GOTO E1B00
+|   C*
+| 08-C                     END
+|    C*-------------------------------------------------------------***
+|    C*程式範圍
+|    C*（空白表全部）
+| 11-C           DSD02F    IFEQ *BLANK
+|   C                     MOVEL*LOVAL    DSD02F
+| 11-C                     END
+|    C*
+| 12-C           DSD02T    IFEQ *BLANK
+|   C                     MOVEL*HIVAL    DSD02T
+| 12-C                     END
+|    C*（區間檢查）
+| 13-C           DSD02F    IFGT DSD02T
+|   C                     MOVEL'UPT0042' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     616299
+| 13-C                     END
+|    C   99                GOTO E1B00
+|    C*-------------------------------------------------------------***
+|    C*（除管制者外）
+| 14-C           DSD01     IFNE ADMIN
+|   C*
+|   C                     MOVELDSD01     WSD01
+|   C                     MOVELDSD02F    WSD02
+|   C           KEYSD     SETLLSD0
+|   C           DSD01     READESD0                      46
+|   C*（非新增時，程式範圍資料須存在）
+| 15-C           DOPT      IFNE 1                          *UPD,DEL,INQ
+| 16-C           *IN46     IFEQ '1'
+|   C           *IN46     OREQ '0'
+|   C           SD02      ANDGTDSD02T
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     616299
+| 16-C                     END
+| 15-C                     END
+|   C   99                GOTO E1B00
+|   C*
+|   C*（被授權者只可查詢）
+| 17-C           DOPT      IFNE 5
+|   C           $USER     ANDEQDSD01
+|   C                     MOVEL'US#0002' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+|   C                     SETON                     6099
+| 17-C                     END
+|   C   99                GOTO E1B00
+|   C*
+| 14-C                     END
+|    C*-------------------------------------------------------------***
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+|    C                     SETOF                     31    *IN CONTROL
+|    C                     EXSR R1CC0                      *INIT SFL
+|    C* ADD
+| 01-C           DOPT      IFEQ 1
+|   C                     SETON                     31
+|   C                     EXSR R1CB0                      *HEADING
+|   C*
+| 02-C           DSD01C    IFEQ *BLANK
+|   C                     EXSR R1CD0                      *INIT DETAIL
+| 02*C                     ELSE
+|   C                     EXSR R1CF0                      *INIT DETAIL
+| 02-C                     END
+|   C*
+|   C                     SETON                     53    *SFLEND
+| 01-C                     END
+|    C* UPD
+| 03-C           DOPT      IFEQ 2
+|   C                     SETON                     31
+|   C                     EXSR R1CB0                      *HEADING
+|   C                     EXSR R1CE0                      *READ DETAIL
+|   C                     SETON                     53    *SFLEND
+| 03-C                     END
+|    C* DEL & INQ
+| 04-C           DOPT      IFEQ 4
+|   C           DOPT      OREQ 5
+|   C                     EXSR R1CB0                      *HEADING
+|   C                     EXSR R1CE0                      *READ DETAIL
+|   C                     SETON                     53    *SFLEND
+| 04-C                     END
+|    C*SFLDSP
+| 05-C           @LRRN     IFGT 0
+|   C                     Z-ADD1         DRRN
+|   C                     SETON                     50    *SFLDSP
+| 05*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 05-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)++++++++++++++++++++++++++++++++++*
+| 06-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C           *LOVAL    SETLLSD0
+| 06-C                     END
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1CB0 ....SFL HEAD INIT : U/D/I/A-COPY
+     C*==============================================================*
+05===C           R1CB0     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << U/D/I AND ADD-COPY : SUBFILE HEAD DATA INITAILIZE>>
+|    C*使用者名稱
+|    C                     MOVEL*BLANK    SU02
+|    C                     MOVEL*BLANK    SU03
+|    C           DSD01     CHAINSU0                  40
+|    C                     MOVELSU02      DSD01N
+|    C*授權者編號
+|    C                     MOVELSU03      DSU03
+|    C*授權者名稱
+|    C                     MOVEL*BLANK    SU02
+|    C           DSU03     CHAINSU0                  40
+|    C                     MOVELSU02      DSU03N
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+05===C                     ENDSR
+     C*=============================================================*
+     C*          R1CC0 ....SUBFILE INIT
+     C*=============================================================*
+06===C           R1CC0     BEGSR
+|    C* SFL SETTING ++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD13        @PRCD            *PGE RCD
+|    C                     Z-ADD9         @SFTOP  20       *SFL TOP LIN
+|    C                     Z-ADD21        @SFBOT  20       *SFL BOT LIN
+|    C                     Z-ADD1         @LNUM   20       *明細行數
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD0         DRRN
+|    C                     Z-ADD0         RRN
+|    C                     Z-ADD0         @LRRN            *LAST RRN
+|    C                     Z-ADD0         @DRCD            *DSP RCD
+|    C*
+|    C                     SETOF                     51    *SFLDSPCTL
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     5053  *SFLDSP,END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R1CD0 ....DETAIL DATA TO SFL (ADD)
+     C*==============================================================*
+07===C           R1CD0     BEGSR
+|    C*
+|    C                     SETON                     54    *54
+|    C           DSD02F    SETLLSP0
+|    C                     READ SP0                      46
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C           SP01      ANDLEDSD02T
+|   C                     EXSR R1CD1
+|   C                     READ SP0                      46
+| 01-C                     END
+|    C*
+|    C                     Z-ADDRRN       @LRRN
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1CD1 ....DETAIL DATA TO SFL (ADD)
+     C*==============================================================*
+08===C           R1CD1     BEGSR
+|    C*未授權的程式
+|    C                     MOVELDSD01     WSD01
+|    C                     MOVELSP01      WSD02
+|    C           KEYSD     CHAINSD0                  40
+|    C  N40                GOTO E1CD1
+|    C*管制者新增
+| 01-C           $USER     IFEQ ADMIN
+|   C           DSD01     OREQ ADMIN
+|   C*（全部程式皆可被授權）
+|   C                     MOVEL'Y'       DUSE
+|   C                     MOVELSP01      SD02
+|   C                     MOVEL'Y'       SD03
+|   C                     MOVEL'Y'       SD04
+|   C                     MOVEL'Y'       SD05
+|   C                     MOVEL'Y'       SD06
+|   C                     MOVEL'Y'       SD07
+|   C                     MOVEL'Y'       SD08
+|   C                     MOVEL'Y'       SD09
+| 01*C                     ELSE
+|   C*非管制者新增
+|   C*（挑選可被授權的程式）
+|   C                     MOVEL$USER     WSD01
+|   C           KEYSD     CHAINSD0                  40
+|   C   40                GOTO E1CD1
+|   C*（授權資料保護）
+|   C                     MOVEL'Y'       DUSE
+|   C                     EXSR R1CD2
+| 01-C                     END
+|    C*
+|    C                     ADD  1         RRN
+|    C                     WRITESFLSR
+|    C*
+08===C           E1CD1     ENDSR
+     C*==============================================================*
+     C*          R1CD2 ....PROTECT FIELD
+     C*==============================================================*
+09===C           R1CD2     BEGSR
+|    C*
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           SD03      IFEQ *BLANK
+|   C                     SETON                     60
+| 01-C                     END
+|    C*
+| 02-C           SD04      IFEQ *BLANK
+|   C                     SETON                     61
+| 02-C                     END
+|    C*
+| 03-C           SD05      IFEQ *BLANK
+|   C                     SETON                     62
+| 03-C                     END
+|    C*
+| 04-C           SD06      IFEQ *BLANK
+|   C                     SETON                     63
+| 04-C                     END
+|    C*
+| 05-C           SD07      IFEQ *BLANK
+|   C                     SETON                     64
+| 05-C                     END
+|    C*
+| 06-C           SD08      IFEQ *BLANK
+|   C                     SETON                     65
+| 06-C                     END
+|    C*
+| 07-C           SD09      IFEQ *BLANK
+|   C                     SETON                     66
+| 07-C                     END
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R1CE0 ....DETAIL DATA TO SFL
+     C*==============================================================*
+10===C           R1CE0     BEGSR
+|    C*
+|    C                     SETON                     54    *54
+|    C*
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     MOVELDSD01     WSD01
+|    C                     MOVELDSD02F    WSD02
+|    C           KEYSD     SETLLSD0
+|    C           WSD01     READESD0                      46
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C           SD02      ANDLEDSD02T
+|   C                     EXSR R1CE1
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+|   C*
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C           WSD01     READESD0                      46
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C*
+| 01-C                     END
+|    C*
+|    C                     Z-ADDRRN       @LRRN
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R1CE1 ....DETAIL DATA TO SFL
+     C*==============================================================*
+11===C           R1CE1     BEGSR
+|    C*
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << OTHER FILE FIELD TO SFLSR >>
+|    C                     MOVEL'Y'       DUSE
+|    C*程式名稱
+|    C                     MOVEL*BLANK    SP02
+|    C           SD02      CHAINSP0                  40
+|    C*
+| 01-C           DOPT      IFEQ 2
+|   C                     EXSR R1CD2                      *PROTECT
+| 01-C                     END
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R1CF0 ....DETAIL DATA TO SFL
+     C*==============================================================*
+12===C           R1CF0     BEGSR
+|    C*
+|    C                     SETON                     54    *54
+|    C*
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     MOVELDSD01C    WSD01
+|    C                     MOVELDSD02F    WSD02
+|    C           KEYSD     SETLLSD0
+|    C           WSD01     READESD0                      46
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C           SD02      ANDLEDSD02T
+|   C                     EXSR R1CF1
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+|   C*
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C           WSD01     READESD0                      46
+|   C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|   C*
+| 01-C                     END
+|    C*
+|    C                     Z-ADDRRN       @LRRN
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R1CF1 ....DETAIL DATA TO SFL
+     C*==============================================================*
+13===C           R1CF1     BEGSR
+|    C*
+|    C*------------------------------------------------------------***
+|    C* << OTHER FILE FIELD TO SFLSR >>
+|    C                     MOVEL'Y'       DUSE
+|    C*程式名稱
+|    C                     MOVEL*BLANK    SP02
+|    C           SD02      CHAINSP0                  40
+|    C*------------------------------------------------------------***
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+14===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*------------------------------------------------------------***
+|    C*使用者編號
+| 01-C           #LIN      IFEQ 4
+|   C           #COL      ANDGE15
+|   C           #COL      ANDLE24
+|   C                     CALL 'S#S110'
+|   C           DSD01     PARM DSD01     S1101I 10        *使用者
+|   C                     PARM           @RTNC   2
+| 01-C                     END
+|    C*------------------------------------------------------------***
+|    C*備份使用者編號
+| 02-C           #LIN      IFEQ 4
+|   C           #COL      ANDGE49
+|   C           #COL      ANDLE58
+|   C                     CALL 'S#S110'
+|   C           DSD01C    PARM DSD01C    S1101I 10        *使用者
+|   C                     PARM           @RTNC   2
+| 02-C                     END
+|    C*------------------------------------------------------------***
+|    C*程式範圍
+| 03-C           #LIN      IFEQ 5
+|   C           #COL      ANDGE15
+|   C           #COL      ANDLE24
+|   C                     CALL 'S#S140'
+|   C           DSD02F    PARM DSD02F    S1401I 10        *程式
+|   C                     PARM           @RTNC   2
+| 03-C                     END
+|    C*
+| 04-C           #LIN      IFEQ 5
+|   C           #COL      ANDGE28
+|   C           #COL      ANDLE37
+|   C                     CALL 'S#S140'
+|   C           DSD02T    PARM DSD02T    S1401I 10        *程式
+|   C                     PARM           @RTNC   2
+| 04-C                     END
+|    C*------------------------------------------------------------***
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+15===C           R2000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C                     Z-ADD#DRRN     DRRN
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN25     IFEQ '1'                        *NEXT PAGE
+|   C                     SETON                     96    *EOP
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 03-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C* RELEAS FILE --------------------------------------------------*
+|   C           *LOVAL    SETLLSD0
+|   C*---------------------------------------------------------------*
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 03-C                     END
+|    C*重新授權
+| 04-C           *IN10     IFEQ '1'
+| 05-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 2                          *UPD
+|   C                     EXSR R2B00
+| 05-C                     END
+|   C                     GOTO E2000
+| 04-C                     END
+|    C*
+| 06-C           *IN99     IFEQ '0'                        *CHK OK
+|   C*非管制者才存檔
+| 07-C           DSD01     IFNE ADMIN
+|   C                     EXSR R2D00                      *FILE UPD
+| 07-C                     END
+|   C                     MOVE 'SC01'    SCID
+| 06-C                     END
+|    C*
+15===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....重新授權
+     C*==============================================================*
+16===C           R2B00     BEGSR
+|    C*
+|    C                     EXSR R1CC0                      *INIT SFL
+|    C                     SETON                     54
+|    C                     MOVEL'Y'       FLAG
+|    C*管制者授權
+| 01-C           $USER     IFEQ ADMIN
+|   C                     MOVEL'Y'       DUSE
+|   C                     MOVEL'Y'       SD03
+|   C                     MOVEL'Y'       SD04
+|   C                     MOVEL'Y'       SD05
+|   C                     MOVEL'Y'       SD06
+|   C                     MOVEL'Y'       SD07
+|   C                     MOVEL'Y'       SD08
+|   C                     MOVEL'Y'       SD09
+| 01-C                     END
+|    C*
+|    C           DSD02F    SETLLSP0
+|    C                     READ SP0                      46
+| 02-C           *IN46     DOWEQ'0'
+|   C           SP01      ANDLEDSD02T
+|   C                     EXSR R2B10
+|   C                     READ SP0                      46
+| 02-C                     END
+|    C*
+|    C                     Z-ADDRRN       @LRRN
+|    C                     SETON                     53    *SFLEND
+|    C*SFLDSP
+| 03-C           @LRRN     IFGT 0
+|   C                     Z-ADD1         DRRN
+|   C                     SETON                     50    *SFLDSP
+| 03*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     END
+|    C*
+16===C                     ENDSR
+     C*==============================================================*
+     C*          R2B10 ....重新授權
+     C*==============================================================*
+17===C           R2B10     BEGSR
+|    C*
+|    C*管制者授權
+| 01-C           $USER     IFEQ ADMIN
+|   C                     MOVELSP01      SD02
+|   C*非管制者授權
+| 01*C                     ELSE
+|   C*（挑選可被授權的程式）
+|   C                     MOVEL$USER     WSD01
+|   C                     MOVELSP01      WSD02
+|   C           KEYSD     CHAINSD0                  40
+|   C   40                GOTO E2B10
+|   C*（授權資料保護）
+|   C                     MOVEL'Y'       DUSE
+|   C                     EXSR R1CD2
+| 01-C                     END
+|    C*
+|    C                     ADD  1         RRN
+|    C                     WRITESFLSR
+|    C*
+17===C           E2B10     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+18===C           R2D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R2D10
+|   C           DOPT      CASEQ2         R2D20
+|   C           DOPT      CASEQ4         R2D30
+| 01-C                     END
+|    C*
+18===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+19===C           R2D10     BEGSR
+|    C*(DELETE)
+| 01-C           FLAG      IFNE *BLANK
+|   C                     EXSR R2D30
+| 01-C                     END
+|    C*
+|    C                     READCSFLSR                  5757
+|    C                     MOVELDSD01     SD01             *SFL->PF
+|    C*(WRITE)
+| 02-C           *IN57     DOWEQ'0'
+| 03-C           DUSE      IFEQ 'Y'
+|   C                     WRITESD0
+| 03-C                     END
+|   C                     READCSFLSR                    57
+| 02-C                     END
+|    C*
+19===C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+20===C           R2D20     BEGSR
+|    C*
+|    C                     EXSR R2D30                      *DEL
+|    C                     EXSR R2D10                      *ADD
+|    C*
+20===C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+21===C           R2D30     BEGSR
+|    C*
+|    C                     MOVEL*BLANK    FLAG
+|    C*
+|    C                     MOVELDSD01     WSD01
+|    C                     MOVELDSD02F    WSD02
+|    C           KEYSD     SETLLSD0
+|    C           DSD01     READESD0                      46
+|    C*
+| 01-C           *IN46     DOWEQ'0'
+|   C           SD02      ANDLEDSD02T
+|   C           SD01      CHAINSU0                  40
+| 02-C  N40      $USER     IFEQ ADMIN
+|   C           $USER     OREQ SU03
+|   C                     DELETSD0
+| 02-C                     END
+|   C           DSD01     READESD0                      46
+| 01-C                     END
+|    C*
+21===C                     ENDSR
+

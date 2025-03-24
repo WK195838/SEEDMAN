@@ -1,0 +1,831 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA610                                     *
+     H*    PROGRAM NAME :綜合福利金發放作業                        *
+     H*    AUTHOR       : A1327 WILLIAMS                             *
+     H*    CREATE DATE  : 89/12/28                                   *
+     H*    UPDATE DATE  : 90/12/17 A1336 KLAUS                       *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYGDLF02UF  E           K        DISK                      A
+     FPYERPF  UF  E           K        DISK                      A
+     FPYERLF04IF  E           K        DISK
+     F            ER0                               KRENAMEER4
+     FPYGHPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FPYA610D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E                    WFUN    5   5  6
+     E*---------------------------------------------------------------*
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      210 2120YEAR
+     I                                      205 2080MMDD
+     I            DS
+     I                                        1   80YMD
+     I                                        1   40YY06
+     I                                        5   60MM06
+     I                                        7   80DD06
+     I            DS
+     I                                        1   7 DGD03
+     I                                        1   1 WEM041
+     I                                        2   2 WEM042
+     I                                        3   3 WEM043
+     I                                        4   7 WEM044
+     I            DS
+     I                                        1   70DGD06
+     I                                        1   50DGD6YM
+     I                                        6   70DGD6D
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*SYCMPF
+     C           KEYCM     KLIST
+     C                     KFLD           DGD01            福委會
+     C*PYEMPF
+     C           KEYEM     KLIST
+     C                     KFLD           DGD01            福委會
+     C                     KFLD           DGD02            員工編號
+     C*PYDPPF
+     C           KEYDP     KLIST
+     C                     KFLD           WEM041           部門一
+     C                     KFLD           WEM042           部門二
+     C                     KFLD           WEM043           部門三
+     C                     KFLD           WEM044           部門四
+     C*PYGHPF
+     C           KEYGH     KLIST
+     C                     KFLD           DGD01            福委會
+     C                     KFLD           DGD02            員工編號
+     C                     KFLD           WGD04            福利年度
+     C*PYGDLF02
+     C           KEYGD     KLIST
+     C                     KFLD           DGD01            福委會
+     C                     KFLD           DGD02            員工編號
+     C                     KFLD           WGD06            申請日期
+     C                     KFLD           DGD07            申請項目
+     C                     KFLD           WGD04            福利年度
+     C*PYERPF
+     C                     MOVEL'2'       WER04   1        員工給福委會
+     C                     MOVEL'A2'      WER06   2        收支項目
+     C           KEYER     KLIST
+     C                     KFLD           DGD01            福委會
+     C                     KFLD           DGD02            員工編號
+     C                     KFLD           WGD06            申請日期
+     C                     KFLD           WER04            員工給福委
+     C                     KFLD           WER06            收支項目
+     C           KEYER4    KLIST
+     C                     KFLD           DGD01            福委會
+     C                     KFLD           DGD02            員工編號
+     C                     KFLD           WER04            員工給福委
+     C                     KFLD           WER06            收支項目
+     C                     KFLD           WGD04            福利年度
+     C*PT#YPF
+     C                     MOVEL'GRANT'   W#Y01  10
+     C           KEY#Y     KLIST
+     C                     KFLD           W#Y01
+     C                     KFLD           W#Y02  10
+     C*910128S KLAUS
+     C           KEYER1    KLIST
+     C                     KFLD           DGD01            福委會
+     C                     KFLD           DGD02            員工編號
+     C                     KFLD           WGD06            申請日期
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     MOVEL*BLANKS   DGD01            福委會
+|    C                     MOVEL*BLANKS   DGD01N
+|    C                     MOVEL*BLANKS   DGD02            員工編號
+|    C                     MOVEL*BLANKS   DGD02N
+|    C                     MOVEL*BLANKS   DGD07            申請項目
+|    C                     MOVEL*BLANKS   DGD07N
+|    C                     Z-ADDDDATE     DGD06            申請日期
+|    C                     Z-ADD0         WGD06
+|    C*910124S KLAUS       Z-ADDYEAR      DGD04            福利年度
+|    C           MMDD      IFLE 0331
+|    C           YEAR      SUB  1         DGD04
+|    C                     ELSE
+|    C                     Z-ADDYEAR      DGD04            福利年度
+| 01-C                     END
+|    C*910124E KLAUS
+|    C                     Z-ADD1         DOPT             作業項目
+|    C                     Z-ADD*ZERO     DMNY             剩餘金額
+|    C*------------------------------------------------------------****
+|    C*公司別
+|    C                     MOVEL$COR      DGD01
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+|   C                     EXSR R1E00                      *欄位查詢
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+| 03-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00                      全頁查詢
+|   C                     GOTO E1000
+| 03-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 04-C           *IN99     IFEQ '0'
+|   C                     EXSR R1C00
+|   C                     MOVEL'SC02'    SCID             *SCR2
+| 04-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C*
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'PYI610'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*------------------------------------------------------------***
+|    C*
+|    C                     CALL 'PYI610'
+|    C           DGD01     PARM DGD01     I610I1  2        *公司別
+|    C           DGD04     PARM DGD04     I610I2  30       *申請年度
+|    C           DGD02     PARM DGD02     I610I3  8        *員工　
+|    C                     PARM           @RTNC   2          FUN KEY
+|    C* RETURN CODE CHECK
+| 02-C           @RTNC     IFEQ '03'                       *PF3
+|   C                     SETON                     03
+| 02-C                     END
+|    C*------------------------------------------------------------***
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 ....SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*福委會
+|    C                     MOVEL*BLANK    DGD01N
+| 02-C           DGD01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DGD01     CM001I  2         公司代號
+|    C           DGD01N    PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 03-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 04-C           CM099O    IFEQ *BLANK
+|   C                     SETON                     6099
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 04-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           KEYCM     CHAINCM0                  40
+| 05-C           *IN40     IFEQ '0'
+|   C                     MOVELCM02      DGD01N    P
+| 05*C                     ELSE
+|   C                     MOVEL*BLANK    DGD01N
+| 05-C                     END
+|    C*
+|    C*員工編號
+|    C                     MOVEL*BLANK    DGD02N
+| 06-C           DGD02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C           KEYEM     CHAINEM0                  40
+| 07-C           *IN40     IFEQ '0'
+|   C                     MOVELEM03      DGD02N    P
+| 07*C                     ELSE
+|   C                     MOVEL*BLANK    DGD02N
+| 07-C                     END
+|    C*
+|    C*申請日期DGD06
+|    C                     Z-ADD*ZERO     WGD06   80
+| 08-C           DGD06     IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 09-C           DGD06     IFNE *ZERO
+|   C                     CALL 'P30'
+|   C                     PARM DGD06     P3001I  80
+|   C                     PARM DFMT      P3002I  1
+|   C                     PARM DTYPE     P3003I  1
+|   C                     PARM           P3011O  1
+|   C*
+| 10-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 10-C                     END
+|   C   99                GOTO E1B00
+|   C*
+|   C                     CALL 'P31'
+|   C                     PARM DGD06     P3101I  80
+|   C                     PARM DFMT      P3102I  1
+|   C                     PARM DTYPE     P3103I  1
+|   C                     PARM '2'       P3104I  1
+|   C                     PARM '1'       P3105I  1
+|   C                     PARM           P3101O  80
+|   C                     Z-ADDP3101O    WGD06
+| 09-C                     END
+|    C*
+|    C*申請項目．說明
+| 11-C           DGD07     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 11-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 12-C           DGD07     IFNE *BLANK
+|   C                     MOVEL*BLANK    DGD07N
+|   C                     MOVELDGD07     W#Y02     P
+|   C           KEY#Y     CHAIN#Y0                  42
+| 13-C           *IN42     IFEQ '0'
+|   C                     MOVEL#Y03      DGD07N
+| 13*C                     ELSE
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 13-C                     END
+|   C   99                GOTO E1B00
+| 12-C                     END
+|    C*
+|    C*福利年度（西元年）DGD04
+| 14-C           DGD04     IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 14-C                     END
+|    C   99                GOTO E1B00
+| 14-C           DGD04     ADD  1911      WGD04   40
+|    C*
+|    C*該員工必須已有本福利年度的年度補助金金額
+|    C                     Z-ADD*ZERO     WGH04   70       年度補助金
+|    C           KEYGH     CHAINGH0                  41
+| 15-C           *IN41     IFEQ '1'
+|   C                     MOVEL'UPT5016' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606163
+|   C                     SETON                     99
+| 15*C                     ELSE
+|   C                     Z-ADDGH04      WGH04
+| 15-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*新增．修改．刪除及其他
+|    C           KEYGD     CHAINGD0                  42
+|    C*
+| 16-C           DOPT      IFEQ 1                          *UPD,DEL,INQ
+| 17-C           *IN42     IFEQ '0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606162
+|   C                     SETON                     6499
+| 17-C                     END
+| 16-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 18-C           DOPT      IFNE 1                          *UPD,DEL,INQ
+| 19-C           *IN42     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     606162
+|   C                     SETON                     6499
+| 19-C                     END
+| 18-C                     END
+|    C   99                GOTO E1B00
+|    C*---------------------------------------------------------------
+|    C*
+04===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....MOVE  SCREEN TO SCID
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+|    C                     MOVE WFUN,DOPT DFUN
+|    C*
+| 01-C           DOPT      IFEQ 1
+|   C           DOPT      OREQ 2
+|   C                     SETON                     31    *IN CONTROL
+| 01*C                     ELSE
+|   C                     SETOF                     31    *IN CONTROL
+| 01-C                     END
+|    C*
+| 02-C           DOPT      IFEQ 1                          *ADD
+|   C                     EXSR R1C10
+| 02*C                     ELSE
+|   C                     EXSR R1C20                      *U/D/I
+| 02-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)++++++++++++++++++++++++++++++++++*
+| 03-C           DOPT      IFEQ 1                          *ADD
+|   C           DOPT      OREQ 5                          *INQ
+|   C           *LOVAL    SETLLGD0
+|   C           *LOVAL    SETLLGH0
+| 03-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....CLEAR SCREEN VARIABLES
+     C*==============================================================*
+06===C           R1C10     BEGSR
+|    C*
+|    C*工作地點．說明
+|    C           KEYEM     CHAINEM0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELEM130     DGD03     P
+| 01*C                     ELSE
+|   C                     MOVEL*BLANK    DGD03
+| 01-C                     END
+|    C*
+|    C           KEYDP     CHAINDP0                  41
+| 02-C           *IN41     IFEQ '0'
+|   C                     MOVELDP02      DGD03N    P
+| 02*C                     ELSE
+|   C                     MOVEL*BLANK    DGD03N
+| 02-C                     END
+|    C*
+|    C*金額．年月．備註
+|    C                     Z-ADD*ZERO     DGD08
+|    C                     Z-ADDDGD6YM    DGD05
+|    C                     MOVEL*BLANK    DGD10
+|    C*-----------------------------------------------------------***
+|    C*年度剩餘金額
+|    C                     Z-ADD*ZERO     DMNY             剩餘金額
+|    C                     Z-ADD*ZERO     WER05   60
+|    C*
+|    C           KEYER4    SETLLER4
+|    C           KEYER4    READEER4                      46
+| 03-C           *IN46     DOWEQ'0'
+|   C*
+|   C                     ADD  ER05      WER05
+|   C*
+|   C           KEYER4    READEER4                      46
+| 03-C                     END
+|    C*
+|    C           GH04      SUB  WER05     DMNY
+|    C*-----------------------------------------------------------***
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R1C20 ....MOVE DATA TO SCREEN
+     C*==============================================================*
+07===C           R1C20     BEGSR
+|    C*
+|    C           KEYGD     CHAINGD0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+|   C*工作地點．說明
+|   C                     MOVELGD03      DGD03     P
+|   C           KEYDP     CHAINDP0                  41
+| 02-C           *IN41     IFEQ '0'
+|   C                     MOVELDP02      DGD03N    P
+| 02*C                     ELSE
+|   C                     MOVEL*BLANK    DGD03N
+| 02-C                     END
+|   C*
+|   C                     Z-ADDGD08      DGD08
+|   C                     Z-ADDGD08      KGD08   70
+|   C*
+|   C                     CALL 'P39'
+|   C                     PARM GD05      P3901I  60
+|   C                     PARM '2'       P3902I  1
+|   C                     PARM '1'       P3903I  1
+|   C                     PARM DFMT      P3904I  1
+|   C                     PARM DTYPE     P3905I  1
+|   C           DGD05     PARM           P3911O  60
+|   C*
+|   C                     MOVELGD10      DGD10     P
+|   C*
+| 01-C                     END
+|    C*-----------------------------------------------------------***
+|    C*年度剩餘金額
+|    C                     Z-ADD*ZERO     DMNY
+|    C                     Z-ADD*ZERO     WER05   60
+|    C*
+|    C           KEYER4    SETLLER4
+|    C           KEYER4    READEER4                      46
+| 03-C           *IN46     DOWEQ'0'
+|   C*
+|   C                     ADD  ER05      WER05
+|   C*
+|   C           KEYER4    READEER4                      46
+| 03-C                     END
+|    C*
+|    C           GH04      SUB  WER05     DMNY
+|    C*KLAUS
+|    C*901217    DMNY      SUB  DGD08     DMNY
+|    C*-----------------------------------------------------------***
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+08===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*--------------------------------------------------------------**
+|    C*員工編號DGD02
+| 01-C           #FLD      IFEQ 'DGD02'
+|   C                     CALL 'PYI101'
+|   C                     PARM DGD01     P101I1  2         公司別
+|   C           DGD02     PARM DGD02     P101I2  8         員工　
+|   C                     PARM           @RTNC   2          FUN KEY
+| 01-C                     END
+|    C*--------------------------------------------------------------**
+|    C*申請項目DGD07
+| 02-C           #FLD      IFEQ 'DGD07'
+|   C                     CALL 'TRW001'
+|   C                     PARM 'GRANT'   TR101I 10
+|   C           DGD07     PARM DGD07     TR102I 10
+|   C           DGD07N    PARM           TR103I 32
+|   C                     PARM           TR104I  2
+| 02-C                     END
+|    C*--------------------------------------------------------------**
+|    C*
+08===C           E1E00     ENDSR
+     C*==============================================================*
+     C*          R2000  ...'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+09===C           R2000     BEGSR
+|    C*
+|    C                     EXFMTDSPD2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C           *IN12     IFEQ '1'
+|   C                     MOVE 'SC01'    SCID
+|   C                     GOTO E2000
+| 02-C                     END
+|    C*
+| 03-C           DOPT      IFEQ 1
+|   C           DOPT      OREQ 2
+|   C                     EXSR R2B00                      *SCR CHK
+| 03-C                     END
+|    C*
+| 04-C           *IN99     IFEQ '0'
+| 05-C           DOPT      IFNE 5
+|   C                     EXSR R2D00                      *PROCESS
+| 05-C                     END
+|   C                     MOVE 'SC01'    SCID
+|   C                     GOTO E2000
+| 04-C                     END
+|    C*
+09===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....CHECK 'SC02' SCREEN
+     C*==============================================================*
+10===C           R2B00     BEGSR
+|    C*
+|    C*申請金額
+| 01-C           DGD08     IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 01-C                     END
+|    C   99                GOTO E2B00
+|    C*
+|    C*申請年月
+|    C                     Z-ADD*ZERO     WGD05   60
+|    C*
+| 02-C           DGD05     IFEQ *ZERO
+|   C                     MOVEL'UPT0012' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 02-C                     END
+|    C   99                GOTO E2B00
+|    C*
+| 03-C           DGD05     IFNE *ZERO
+|   C                     CALL 'P38'
+|   C                     PARM DGD05     P3801I  60
+|   C                     PARM DFMT      P3802I  1
+|   C                     PARM DTYPE     P3803I  1
+|   C                     PARM           P3801O  60
+|   C                     PARM           P3811O  1
+| 04-C           P3811O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 04-C                     END
+|   C   99                GOTO E2B00
+|   C*
+|   C                     CALL 'P39'
+|   C                     PARM DGD05     P3901I  60
+|   C                     PARM DFMT      P3902I  1
+|   C                     PARM DTYPE     P3903I  1
+|   C                     PARM '2'       P3904I  1
+|   C                     PARM '1'       P3905I  1
+|   C           WGD05     PARM           P3911O  60
+| 03-C                     END
+|    C*
+|    C*年度申請金額不可大於所設定的年度補助金金額
+|    C                     Z-ADD*ZERO     WER05   60
+|    C*
+|    C           KEYER4    SETLLER4
+|    C           KEYER4    READEER4                      46
+| 05-C           *IN46     DOWEQ'0'
+|   C*
+|   C                     ADD  ER05      WER05
+|   C*
+|   C           KEYER4    READEER4                      46
+| 05-C                     END
+|    C*
+| 06-C           DOPT      IFEQ 1                          新增時
+|   C           DGD08     ADD  WER05     WER05
+| 06-C                     END
+|    C*KLAUS
+|    C***901217   DOPT      IFEQ 2                          修改時
+|    C**          WER05     SUB  KGD08     WER05
+|    C**          DGD08     ADD  WER05     WER05
+|    C**                    END
+|    C**
+|    C**          WGH04     IFLT WER05
+|    C**                    MOVEL'UTR0017' ERRID
+|    C**                    MOVEL'TRMF'    ERRF
+|    C**                    SETON                     6599
+|    C**                    END
+|    C**  99                GOTO E2B00
+|    C*
+|    C*KLAUS 901217S
+| 07-C           DOPT      IFEQ 2                          　　　
+|   C                     Z-ADD*ZERO     MER05   70
+|   C                     ADD  KGD08     MER05             修改前
+|   C*
+|   C                     Z-ADD*ZERO     NER05   70
+|   C                     ADD  DGD08     NER05             修改後
+|   C*
+|   C                     Z-ADD*ZERO     TER05   70
+|   C                     Z-ADD*ZERO     KER05   70
+| 08-C           KGD08     IFNE DGD08
+| 09-C           KGD08     IFGT DGD08
+|   C           MER05     SUB  NER05     TER05
+|   C                     SUB  TER05     WER05
+|   C           ER05      SUB  TER05     KER05
+| 09*C                     ELSE
+|   C           NER05     SUB  MER05     TER05
+|   C                     ADD  TER05     WER05
+|   C           ER05      ADD  TER05     KER05
+| 09-C                     END
+| 08-C                     END
+| 07-C                     END
+|    C*
+| 10-C           WGH04     IFLT WER05
+|   C****       WER05     IFGT DMNY
+|   C                     MOVEL'UTR0017' ERRID
+|   C                     MOVEL'TRMF'    ERRF
+|   C                     SETON                     6599
+| 10-C                     END
+|    C   99                GOTO E2B00
+|    C*KLAUS 901217E
+10===C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+11===C           R2D00     BEGSR
+|    C*
+| 01-C           DOPT      CASEQ1         R2D10
+|   C           DOPT      CASEQ2         R2D20
+|   C           DOPT      CASEQ4         R2D30
+| 01-C                     END
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+12===C           R2D10     BEGSR
+|    C*
+|    C*PYGDPF
+|    C           KEYGD     CHAINGD0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     EXSR R2D1A
+|   C                     WRITEGD0
+| 01-C                     END
+|    C*
+|    C*PYERPF
+|    C           KEYER     CHAINER0                  41
+| 02-C           *IN41     IFEQ '1'
+|   C                     EXSR R2D2A
+|   C                     WRITEER0
+|   C                     ELSE
+|   C                     SETON                     50
+|   C                     EXSR R2D2A
+|   C                     UPDATER0
+|   C                     SETOF                     50
+| 02-C                     END
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+     C*          R2D1A ....SCREEN FIELD TO FILE (PYGDPF)
+     C*==============================================================*
+13===C           R2D1A     BEGSR
+|    C*
+|    C                     MOVELDGD01     GD01             *公司編號
+|    C                     MOVELDGD02     GD02             *員工編號
+|    C                     MOVELDGD03     GD03             *工作地點
+|    C                     Z-ADDWGD04     GD04             *福利年度
+|    C                     Z-ADDWGD05     GD05             *申請年月
+|    C                     Z-ADDWGD06     GD06             *申請日期
+|    C                     MOVELDGD07     GD07             *申請項目
+|    C                     Z-ADDDGD08     GD08             *申請金額
+|    C                     Z-ADDWGD05     GD09             *申請年月
+|    C                     MOVELDGD10     GD10             *備註　　
+|    C                     Z-ADD$A8YMD    GD97             *記錄更新日期
+|    C                     TIME           GD98             *記錄更新時間
+|    C                     MOVEL$USER     GD99             *使用者代號
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*          R2D2A ....SCREEN FIELD TO FILE (PYERPF)
+     C*==============================================================*
+14===C           R2D2A     BEGSR
+|    C*
+|    C                     MOVELDGD01     ER01             *公司編號
+|    C                     MOVELDGD02     ER02             *員工編號
+|    C                     Z-ADDWGD06     ER03             *收支日期
+|    C                     MOVELWER04     ER04             *收支代碼
+|    C*
+|    C   50                ADD  DGD08     ER05             *申請金額
+|    C  N50                Z-ADDDGD08     ER05             *申請金額
+|    C   51                Z-ADDKER05     ER05             *申請金額
+|    C*
+|    C                     MOVELWER06     ER06             *收支項目
+|    C                     Z-ADDWGD04     ER07             *福利年度
+|    C                     Z-ADD$A8YMD    ER97             *記錄更新日期
+|    C                     TIME           ER98             *記錄更新時間
+|    C                     MOVEL$USER     ER99             *使用者代號
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+15===C           R2D20     BEGSR
+|    C*
+|    C*PYGDPF
+|    C           KEYGD     CHAINGD0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     EXSR R2D1A
+|   C                     UPDATGD0
+| 01-C                     END
+|    C*
+|    C                     Z-ADD0         N       20
+|    C           KEYER1    SETLLGD0
+|    C           KEYER1    READEGD0                      46
+| 05-C           *IN46     DOWEQ'0'
+|   C                     ADD  1         N
+|   C           KEYER1    READEGD0                      46
+| 05-C                     END
+|    C*
+|    C*PYERPF
+|    C           KEYER     CHAINER0                  41
+| 02-C           *IN41     IFEQ '0'
+| 02-C           N         IFGT 1
+| 02-C                     SETON                     51
+| 02-C                     END
+|   C                     EXSR R2D2A
+|   C                     UPDATER0
+|   C                     SETOF                     51
+| 02-C                     END
+|    C*
+15===C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+16===C           R2D30     BEGSR
+|    C*
+|    C*PYGDPF
+|    C           KEYGD     CHAINGD0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     DELETGD0
+| 01-C                     END
+|    C*
+|    C*PYERPF
+|    C           KEYER     CHAINER0                  41
+| 02-C           *IN41     IFEQ '0'
+|   C                     DELETER0
+|    C*
+|    C           KEYER1    CHAINGD0                  40
+| 01-C           *IN40     IFEQ '0'
+|    C                     MOVELGD01      ER01             *公司編號
+|    C                     MOVELGD02      ER02             *員工編號
+|    C                     Z-ADDGD06      ER03             *收支日期
+|    C                     MOVELWER04     ER04             *收支代碼
+|    C                     Z-ADDGD08      ER05             *申請金額
+|    C                     MOVELWER06     ER06             *收支項目
+|    C                     Z-ADDGD04      ER07             *福利年度
+|    C                     Z-ADD$A8YMD    ER97             *記錄更新日期
+|    C                     TIME           ER98             *記錄更新時間
+|    C                     MOVEL$USER     ER99             *使用者代號
+|   C                     WRITEER0
+| 02-C                     END
+| 02-C                     END
+|    C*
+16===C                     ENDSR
+     C*==============================================================*
+**
+新增修改      刪除查詢
+

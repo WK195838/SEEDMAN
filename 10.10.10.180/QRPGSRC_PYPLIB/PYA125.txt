@@ -1,0 +1,821 @@
+     H****************************************************************
+     H*            泛太資訊科技開發股份有限公司－版權所有          *
+     H*--------------------------------------------------------------*
+     H*    PROGRAM NAME : PYA125                                     *
+     H*    AUTHOR       : TOM T.                                     *
+     H*    CREATE DATE  : 89/08/31                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       : MIRS                                       *
+     H*    SUBSYSTEM    : PY                                         *
+     H*    PURPOSE      :人事調動資料建立(A,U,I)                   *
+     H****************************************************************
+     FPYTXPF  UF  E           K        DISK                      A
+     FPYEMPF  UF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYQJPF  IF  E           K        DISK
+     FPYA125D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*: FUNCTION DATA :
+     E*================================================================
+     E                    @A01        5  1               作業權利
+     E                    WFUN    5   5  6
+     E                    W1     15  15  2
+     E                    W2      1  15 12
+     E*================================================================
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      203 2080DDATE
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I*
+     IPYDA01      DS
+     I                                        1 256 PYDA
+     I                                        1   1 PYD011
+     I            DS
+     I                                        1   2 DTX03
+     I                                        1   1 DTX031
+     I                                        2   2 DTX032
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PYDA01
+     C           *LIKE     DEFN TX04      KTX04
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+      *==============================================================*
+      *                    KEY LIST
+      *==============================================================*
+     C           KEYEM     KLIST                           *PYEMPF
+     C                     KFLD           DTX01
+     C                     KFLD           DTX02
+     C           KEYTX     KLIST                           *PYTXPF
+     C                     KFLD           DTX01
+     C                     KFLD           DTX02
+     C                     KFLD           DTX031
+     C                     KFLD           WTX04
+     C                     KFLD           DTX032
+     C           KEYTX1    KLIST                           *PYTXPF
+     C                     KFLD           DTX01
+     C                     KFLD           DTX02
+     C                     KFLD           DTX031
+     C                     KFLD           KTX04
+     C           KEYTX2    KLIST                           *PYTXPF
+     C                     KFLD           DTX01
+     C                     KFLD           DTX02
+     C                     KFLD           DTX031
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+     C                     EXSR RTN010                     *INITIAL
+      ***
+  01-C           *IN03     DOWEQ'0'
+     *
+  02-C           SCID      CASEQ'SC01'    RTN100
+    C           SCID      CASEQ'SC02'    RTN200
+  02-C                     END
+     *
+  01-C                     END
+      ***
+     C                     SETON                     LR
+      *==============================================================*
+      *          RTN010....INITIAL VALUE
+      *==============================================================*
+01===C           RTN010    BEGSR
+|    C* FUN AUT
+|    C                     MOVE $ADD      @A01,1
+|    C                     MOVE $UPD      @A01,2
+|    C                     MOVE $DLT      @A01,4
+|    C                     MOVE $INQ      @A01,5
+|    C                     MOVE 'SC01'    SCID    4
+|    C                     MOVE *BLANK    DTX02
+|    C                     MOVE *BLANK    DTX03
+|    C                     Z-ADDDDATE     DTX04
+|    C                     MOVE '1'       DOPT
+|    C                     IN   PYDA01
+|    C*
+|    C                     MOVEL$COR      DTX01
+| 01-C           $RMK03    IFNE 'Y'
+|   C                     SETOF                     32
+| 01*C                     ELSE
+|   C                     SETON                     32
+| 01-C                     END
+|    C*
+|    C                     IN   PYDA01
+|    C*
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN100....'SC01' SCREEN MAIN ROUTINE
+      *==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|     *
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO END100
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+|   C                     EXSR R1E00
+|   C                     GOTO END100
+| 02-C                     END
+|    C*
+| 03-C           *IN18     IFEQ '1'                        *BROWSE
+|   C                     EXSR R1A00
+|   C                     GOTO END100
+| 03-C                     END
+|    C*
+|    C                     EXSR RTN110                     *SCR CHK
+|    C*
+| 04-C           *IN99     IFEQ '0'
+|   C                     EXSR RTN120
+|   C                     MOVEL'SC02'    SCID             *SCR2
+| 04-C                     END
+|     *
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+03===C           R1A00     BEGSR
+|    C* AUT CHECK
+|    C                     CALL 'S#S01'
+|    C                     PARM $USER     S0101I 10
+|    C                     PARM 'PYI103'  S0102I 10
+|    C                     PARM           S0101O  1
+| 01-C           S0101O    IFEQ 'N'
+|   C                     SETON                     99
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C   99                GOTO E1A00
+|    C*
+|    C                     CALL 'PYI125'
+|    C*----------------------------------------------------------------
+|    C                     PARM DTX01     I103I1  2         公司編號
+|    C           DTX02     PARM DTX02     I103I2  8         員工編號
+|    C           DTX03     PARM DTX03     I103I3  2         異動類別
+|    C           DTX04     PARM DTX04     I103I4  60        生效日期
+|    C*----------------------------------------------------------------
+|    C                     PARM           @RTNC   2          FUN KEY
+|    C*
+| 02-C           @RTNC     IFEQ '03'
+|   C                     SETON                     03
+| 02-C                     END
+|    C*
+03===C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+04===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*員工編號DPY02
+| 01-C           #LIN      IFEQ 5
+|   C           #COL      ANDGE13
+|   C           #COL      ANDLE17
+|   C                     CALL 'PYI101'
+|   C                     PARM DTX01     P101I1  2         公司別
+|   C           DTX02     PARM DTX02     P101I2  8         員工　
+|   C                     PARM           @RTNC   2          FUN KEY
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN110....SCREEN CHECK
+      *==============================================================*
+05===C           RTN110    BEGSR
+|    C* CHK FUN AUT
+|    C                     MOVE DOPT      WNUM    10
+| 01-C           @A01,WNUM IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO END110
+|    C*---------------------------------------------------------------
+|    C* << CHACK 公司別NOT *BLANK >>
+| 02-C           DTX01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DTX01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 03-C*          CM099O    IFEQ 'N'
+|   C*                    SETON                     6099
+|   C*                    MOVEL'US#0099' ERRID
+|   C*                    MOVEL'S#MF'    ERRF
+| 03-C*                    END
+|    C*  99                GOTO END110
+|    C*
+| 04-C*          CM099O    IFEQ *BLANK
+|   C*                    SETON                     6099
+|   C*                    MOVEL'UPT2010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+| 04-C*                    END
+|    C*  99                GOTO END110
+|    C*
+|    C*+<<DATA CHECK>>+++++++++++++++++++++++++++++++++++++++++++++++++
+|     *: CHECK BLANK :
+|    C           DTX01     CHAINCM0                  40
+|     *
+| 05-C           DTX02     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     619899
+| 05*C                     ELSE
+|   C           KEYEM     CHAINEM0                  40
+| 06-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     619799
+|   C                     SETON                     60
+| 06-C                     END
+| 05-C                     END
+|    C   99                GOTO END110
+|    C*---------------------------------------------------------------
+|    C*部門別
+|    C                     CALL 'PYSCM1'
+|    C                     PARM EM01      CM101I  2         公司代號
+|    C                     PARM EM04      CM102I  7         部門代號
+|    C                     PARM           CM103O 14         部門名稱
+|    C                     PARM           CM199O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 07-C           CM199O    IFEQ 'N'
+|   C                     SETON                     6199
+|   C                     MOVEL'US#0098' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 07-C                     END
+|    C   99                GOTO END110
+|    C*
+| 08-C           CM199O    IFEQ *BLANK
+|   C                     SETON                     606199
+|   C                     MOVEL'US#1111' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 08-C                     END
+|    C   99                GOTO END110
+|    C*---------------------------------------------------------------
+|     *
+| 09-C           DTX03     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     639899
+| 09-C                     END
+|    C   99                GOTO END110
+|     *
+| 10-C           DTX04     IFEQ 0
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     629599
+| 10*C                     ELSE
+|   C                     CALL 'P30'
+|   C                     PARM DTX04     P3001I  80
+|   C                     PARM '1'       P3002I  1
+|   C                     PARM '1'       P3003I  1
+|   C                     PARM           P3011O  1
+| 11-C           P3011O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     629599
+| 11-C                     END
+| 10-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DTX04     P3101I  80
+|    C                     PARM '1'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    WTX04   80
+|     *
+| 12-C           DOPT      IFEQ '1'
+|   C                     EXSR RTN111
+| 12-C                     END
+|    C   99                GOTO END110
+|     *
+| 13-C           DOPT      IFEQ '1'
+|   C           WTX04     ANDLTEM13
+|   C                     MOVEL'UMI0360' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     628699
+| 13-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C                     MOVEL*HIVAL    KTX04
+|    C           KEYTX1    SETGTPYTXPF
+|    C           KEYTX2    REDPEPYTXPF                   40
+|    C*
+| 14-C           DOPT      IFEQ '1'
+|   C           *IN40     ANDEQ'0'
+|   C           WTX04     ANDLTTX04
+|   C                     MOVEL'UMI0300' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     629499
+| 14-C                     END
+|    C   99                GOTO END110
+|    C*
+| 15-C           DOPT      IFEQ '2'
+|   C           DOPT      OREQ '4'
+| 16-C           *IN40     IFEQ '0'
+|   C           WTX04     ANDNETX04
+|   C                     MOVEL'UMI0310' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     629399
+| 16-C                     END
+| 15-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C           KEYTX     CHAINTX0                  40    *NF
+| 17-C           DOPT      IFEQ '1'                        *ADD
+|   C           *IN40     ANDEQ'0'
+|   C                     MOVEL'UPT2020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     609699
+|   C                     SETON                     616263
+| 17-C                     END
+|    C   99                GOTO END110
+|     *
+| 18-C           DOPT      IFNE '1'                        *UPD,DEL,INQ
+|   C           *IN40     ANDEQ'1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     609799
+|   C                     SETON                     616263
+| 18-C                     END
+|     *
+05===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN111....'SC01' ADD CHECK
+     C*==============================================================*
+06===C           RTN111    BEGSR
+|    C*
+| 01-C           DTX03     IFEQ 'D1'
+| 02-C           EM11      IFNE *BLANK
+|   C                     MOVEL'UMI0074' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     638899
+| 02-C                     END
+| 01-C                     END
+|    C*
+| 03-C           DTX03     IFEQ 'D2'
+| 04-C           EM11      IFNE 'R'
+|   C                     MOVEL'UMI0070' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     638799
+| 04-C                     END
+| 05-C           WTX04     IFLE EM17
+|   C                     MOVEL'UMI0072' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     628499
+|   C                     GOTO END111
+| 05-C                     END
+| 06-C           WTX04     IFGT $A8YMD
+|   C                     MOVEL'UMI0390' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     628399
+|   C                     GOTO END111
+| 06-C                     END
+| 03-C                     END
+|    C*
+| 07-C           DTX03     IFEQ 'D5'
+| 08-C           EM11      IFNE *BLANK
+|   C                     MOVEL'UMI0074' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     638899
+| 08-C                     END
+| 07-C                     END
+|    C*
+| 09-C           DTX03     IFEQ 'D6'
+| 10-C           EM11      IFNE 'S'
+|   C                     MOVEL'UMI0070' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     638799
+| 10-C                     END
+| 11-C           WTX04     IFLE EM952
+|   C                     MOVEL'UMI0072' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     628499
+|   C                     GOTO END111
+| 11-C                     END
+| 09-C                     END
+|    C*
+| 12-C           DTX03     IFEQ 'Z1'
+| 13-C           EM11      IFNE ' '
+|   C                     MOVEL'UMI0330' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     639199
+| 13-C                     END
+| 12-C                     END
+|    C*
+| 12-C           DTX03     IFEQ 'Z2'
+| 13-C           EM11      IFNE ' '
+|   C                     MOVEL'UMI0330' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     639199
+| 13-C                     END
+| 12-C                     END
+|    C*
+06===C           END111    ENDSR
+      *==============================================================*
+      *          RTN120....'SC02' SCREEN INITIAL
+      *==============================================================*
+07===C           RTN120    BEGSR
+|    C*
+|    C                     MOVE DOPT      WNUM    10
+|    C                     MOVE WFUN,WNUM DFUN
+|    C*
+|    C                     Z-ADD1         WI      20
+|    C           DTX03     LOKUPW1,WI                    40
+|    C   40                MOVELW2,WI     MODE
+|    C*
+| 01-C           DOPT      IFEQ '1'
+|   C                     EXSR RTN800
+| 01*C                     ELSE
+|   C                     EXSR RTN820
+| 01-C                     END
+|    C*
+|    C                     SETOF                     3134
+|    C                     SETON                     33
+| 02-C           DOPT      IFEQ '1'
+|   C           DOPT      OREQ '2'
+|   C*
+| 03-C           DTX03     IFEQ 'D1'
+|   C           DTX03     OREQ 'D5'
+|   C                     SETON                     34
+| 03-C                     END
+|   C*
+| 04-C           DTX03     IFEQ 'Z1'
+| 04-C           DTX03     OREQ 'Z2'
+|   C                     SETON                     33
+| 04-C                     END
+|   C*
+| 02-C                     END
+|    C*
+07===C                     ENDSR
+      *==============================================================*
+      *          RTN200....'SC02' SCREEN MAIN ROUTINE
+      *==============================================================*
+08===C           RTN200    BEGSR
+|    C*
+|    C                     EXFMTDSPC2
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO END200
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+|   C           *IN33     ANDEQ'1'
+|   C                     EXSR R2E00                      .PROMPT
+|   C                     GOTO END200
+| 02-C                     END
+|    C*
+| 03-C           *IN12     IFEQ '1'
+|   C                     MOVE 'SC01'    SCID
+|   C                     GOTO END200
+| 03-C                     END
+|    C*
+| 04-C           DOPT      IFEQ '1'
+|   C           DOPT      OREQ '2'
+|   C                     EXSR RTN810                     *CHK SCR
+| 04-C                     END
+|    C*
+| 05-C           *IN99     IFEQ '0'
+|   C           *IN05     ANDEQ'0'
+| 06-C           DOPT      IFNE '5'
+|   C                     EXSR RTN830                     *TX
+| 07-C           PYD011    IFEQ 'U'
+|   C                     EXSR RTN840                     *EM
+| 07-C                     END
+| 06-C                     END
+|   C                     MOVE 'SC01'    SCID
+|   C                     GOTO END200
+| 05-C                     END
+|    C*
+08===C           END200    ENDSR
+     C*==============================================================*
+     C*          R2E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+09===C           R2E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*原因代碼DTX12
+| 01-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE36
+|   C           #COL      ANDLE37
+|   C                     CALL 'PYI519'
+|   C           DTX12     PARM DTX12     I519I1  2         離職代碼
+|   C                     PARM           @RTNC   2          FUN KEY
+| 01-C                     END
+09===C                     ENDSR
+      *==============================================================*
+      *          RTN800....CLEAR FIELD WHEN ADD
+      *==============================================================*
+10===C           RTN800    BEGSR
+|     *
+|    C*                    Z-ADD*ZERO     DTX05
+|    C*                    Z-ADD*ZERO     DTX07
+|    C                     MOVEL*BLANK    DTX12
+|    C                     MOVEL*BLANK    QJ02
+|     *
+10===C           END800    ENDSR
+      *==============================================================*
+      *          RTN810....CHECK 'SC02' SCREEN
+      *==============================================================*
+11===C           RTN810    BEGSR
+|    C*
+|    C                     MOVEL*BLANK    QJ02
+|     *
+| 01-C*          *IN31     IFEQ '1'
+|   C*          DTX05     ANDEQ*ZERO
+|   C*                    SETON                     619899
+| 01-C*                    END
+|    C*  99                GOTO END810
+|    C*
+| 02-C*          *IN34     IFEQ '1'
+|   C*          DTX07     ANDEQ*ZERO
+|   C*                    SETON                     629899
+| 02-C*                    END
+|    C*  99                GOTO END810
+|    C*
+| 03-C*          *IN33     IFEQ '1'
+|   C*          DTX12     CHAINQJ0                  40
+| 04-C*          *IN40     IFEQ '1'
+|   C*                    SETON                     639799
+| 04-C*                    END
+| 03-C*                    END
+|    C*  99                GOTO END810
+|     *
+|    C           DTX12     CHAINQJ0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6399
+| 03-C                     END
+|    C   99                GOTO END810
+|     *
+11===C           END810    ENDSR
+      *==============================================================*
+      *          RTN820....MOVE DATA TO 'SC02' SCREEN
+      *==============================================================*
+12===C           RTN820    BEGSR
+|    C*
+|    C*                    Z-ADDTX05      DTX05
+|    C*                    Z-ADDTX07      DTX07
+|    C                     MOVELTX12      DTX12
+|    C*
+|    C                     MOVE *BLANK    QJ02
+|    C           TX12      CHAINQJ0                  40
+|     *
+| 01-C           DOPT      IFEQ '5'
+|   C           *LOVAL    SETLLEM0
+|   C           *LOVAL    SETLLTX0
+| 01-C                     END
+|    C*
+12===C                     ENDSR
+      *==============================================================*
+      *          RTN830....MOVE DATA TO FILE
+      *==============================================================*
+13===C           RTN830    BEGSR
+|    C*
+| 01-C           DOPT      IFEQ '4'
+|   C                     DELETTX0
+|   C                     GOTO END830
+| 01-C                     END
+|    C*
+|    C                     MOVELDTX01     TX01
+|    C                     MOVELDTX02     TX02
+|    C                     MOVELDTX031    TX031
+|    C                     MOVELDTX032    TX032
+|    C                     Z-ADDWTX04     TX04
+|    C*                    Z-ADDDTX05     TX05
+|    C*                    Z-ADDDTX07     TX07
+|    C                     MOVELDTX12     TX12
+|    C*
+| 02-C           DOPT      IFEQ '1'
+|   C*
+| 03-C           DTX03     IFEQ 'D1'
+|   C                     Z-ADDEM18      TX06
+|   C                     Z-ADDEM17      TX08
+|   C                     MOVELEM11      TX09
+|   C                     Z-ADD*ZERO     TX10
+|   C                     Z-ADDEM26      TX11
+| 03-C                     END
+|   C*
+| 04-C           DTX03     IFEQ 'D2'
+|   C                     Z-ADDEM17      TX06
+|   C                     Z-ADDEM18      TX08
+|   C                     MOVELEM94      TX09
+|   C                     Z-ADD*ZERO     TX10
+|   C*
+|   C**                   Z-ADDEM17      P3201I  80
+|   C**                   Z-ADDWTX04     P3202I  80
+|   C                     CALL 'P32'
+|   C                     PARM EM17      P3201I  80
+|   C                     PARM WTX04     P3202I  80
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3211O  90
+|   C                     Z-ADDP3211O    TX11
+|   C*
+| 04-C                     END
+|   C*
+| 05-C           DTX03     IFEQ 'D5'
+|   C                     Z-ADDEM952     TX06
+|   C                     Z-ADDEM951     TX08
+|   C                     MOVELEM11      TX09
+|   C                     Z-ADD*ZERO     TX10
+|   C                     Z-ADDEM953     TX11
+| 05-C                     END
+|   C*
+| 06-C           DTX03     IFEQ 'D6'
+|   C                     Z-ADDEM951     TX06
+|   C                     Z-ADDEM952     TX08
+|   C                     MOVELEM94      TX09
+|   C                     Z-ADD*ZERO     TX10
+|   C*
+|   C                     Z-ADDEM951     P3201I  80
+|   C                     Z-ADDWTX04     P3202I  80
+|   C                     CALL 'P32'
+|   C                     PARM           P3201I
+|   C                     PARM           P3202I
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3211O  90
+|   C                     Z-ADDP3211O    TX11
+|   C*
+| 06-C                     END
+|   C*
+| 07-C           DTX03     IFEQ 'Z1'
+|   C                     Z-ADD*ZERO     TX06
+|   C                     Z-ADDEM19      TX08
+|   C                     MOVELEM11      TX09
+|   C                     Z-ADD*ZERO     TX10
+|   C                     Z-ADD*ZERO     TX11
+| 07-C                     END
+|   C*
+| 07-C           DTX03     IFEQ 'Z2'
+|   C                     Z-ADD*ZERO     TX06
+|   C                     Z-ADDEM19      TX08
+|   C                     MOVELEM11      TX09
+|   C                     Z-ADD*ZERO     TX10
+|   C                     Z-ADD*ZERO     TX11
+| 07-C                     END
+|   C*
+| 02-C                     END
+|    C*
+|    C                     MOVELPYD011    TX96
+|    C                     Z-ADD$A8YMD    TX97
+|    C                     TIME           TX98
+|    C                     MOVEL$USER     TX99
+|    C*
+| 08-C           DOPT      IFEQ '1'
+|   C                     WRITETX0
+| 08-C                     END
+|    C*
+| 09-C           DOPT      IFEQ '2'
+|   C                     UPDATTX0
+| 09-C                     END
+|    C*
+13===C           END830    ENDSR
+      *==============================================================*
+      *          RTN840....UPDAT EM0
+      *==============================================================*
+14===C           RTN840    BEGSR
+|    C*
+| 01-C           DTX03     IFEQ 'D1'
+| 02-C           DOPT      IFNE '4'
+|   C                     Z-ADDWTX04     EM17
+|   C                     Z-ADD*ZERO     EM18
+|   C                     MOVEL'R'       EM11
+|   C*                    Z-ADDDTX07     EM26
+| 02*C                     ELSE
+|   C                     Z-ADDTX08      EM17
+|   C                     Z-ADDTX06      EM18
+|   C                     MOVELTX09      EM11
+|   C                     Z-ADDTX11      EM26
+| 02-C                     END
+| 01-C                     END
+|    C*
+| 03-C           DTX03     IFEQ 'D2'
+| 04-C           DOPT      IFNE '4'
+|   C                     Z-ADDWTX04     EM18
+|   C                     MOVEL*BLANK    EM11
+|   C                     MOVEL*BLANK    EM94
+|   C                     ADD  TX11      EM261
+| 04*C                     ELSE
+|   C                     Z-ADDTX08      EM18
+|   C                     MOVEL'R'       EM11
+|   C                     MOVELTX09      EM94
+|   C                     SUB  TX11      EM261
+| 04-C                     END
+| 03-C                     END
+|    C*
+| 05-C           DTX03     IFEQ 'D5'
+| 06-C           DOPT      IFNE '4'
+|   C                     Z-ADDWTX04     EM951
+|   C                     Z-ADD*ZERO     EM952
+|   C                     MOVEL'S'       EM11
+|   C*                    Z-ADDDTX07     EM953
+| 06*C                     ELSE
+|   C                     Z-ADDTX08      EM951
+|   C                     Z-ADDTX06      EM952
+|   C                     MOVELTX09      EM11
+|   C                     Z-ADDTX11      EM953
+| 06-C                     END
+| 05-C                     END
+|    C*
+| 07-C           DTX03     IFEQ 'D6'
+| 08-C           DOPT      IFNE '4'
+|   C                     Z-ADDWTX04     EM952
+|   C                     MOVEL*BLANK    EM11
+|   C                     MOVEL*BLANK    EM94
+| 08*C                     ELSE
+|   C                     Z-ADDTX08      EM952
+|   C                     MOVEL'S'       EM11
+|   C                     MOVELTX09      EM94
+| 08-C                     END
+| 07-C                     END
+|    C*
+| 09-C           DTX03     IFEQ 'Z1'
+| 10-C           DOPT      IFNE '4'
+|   C                     Z-ADDWTX04     EM19
+|   C                     MOVEL'*'       EM11
+| 10*C                     ELSE
+|   C                     Z-ADD*ZERO     EM19
+|   C                     MOVELTX09      EM11
+| 10-C                     END
+| 09-C                     END
+|    C*
+|    C*
+| 09-C           DTX03     IFEQ 'Z2'
+| 10-C           DOPT      IFNE '4'
+|   C                     Z-ADDWTX04     EM19
+|   C                     MOVEL'X'       EM11
+| 10*C                     ELSE
+|   C                     Z-ADD*ZERO     EM19
+|   C                     MOVELTX09      EM11
+| 10-C                     END
+| 09-C                     END
+|    C*
+|    C                     Z-ADD$A8YMD    EM97
+|    C                     TIME           EM98
+|    C                     MOVEL$USER     EM99
+|    C*
+|    C                     UPDATEM0
+|    C*
+14===C                     ENDSR
+**
+新增修改      刪除查詢
+**
+A1A2A3B1B2B3C1C2C3D1D2D5D6Z1Z2
+**
+ 勞保投保
+ 勞保調整
+ 勞保退保
+ 南山投保
+ 南山調整
+ 南山退保
+ 防癌投保
+ 防癌調整
+ 防癌退保
+ 留職停薪
+ 留職復職
+ 長期病假
+長病假復職
+   離職
+   退休
+

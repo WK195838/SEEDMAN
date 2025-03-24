@@ -1,0 +1,240 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : CKI22S                                     *
+     H*    PROGRAM NAME : 票據格式全頁查詢                         *
+     H*    AUTHOR       : A1162  IVORY                               *
+     H*    CREATE DATE  : 84/02/10                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     F****************************************************************
+     FCKHIPF  IF  E           K        DISK
+     FCKI22SD CF  E                    WORKSTN
+     F                                        RRN   KSFILE SFLSR
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      152 161 $USERN
+     I*DEFIND STRAT KEY
+     I            DS
+     I                                        1   3 @KHIO
+     I            DS
+     I                                        1   3 @KHIN
+     I                                        1   3 DHI03
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC NUM
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           DHI01     PARM           @220I1  2         公司別
+     C           DHI02     PARM           @220I2  1         票類
+     C           DHI03     PARM           @220I3  3         格式
+     C                     PARM           @RTNC   2          FUN KEY
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHI     KLIST
+     C                     KFLD           DHI01            *MAIN FILE
+     C                     KFLD           DHI02            *MAIN FILE
+     C                     KFLD           DHI03            *MAIN FILE
+     C           KEYHI1    KLIST
+     C                     KFLD           DHI01            *MAIN FILE
+     C                     KFLD           DHI02            *MAIN FILE
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INIT
+     C*
+     C           @RTNC     DOWEQ*BLANK
+     C                     EXSR R1000                      *SCR PROCESS
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           DDATE     PARM           P3101O  80
+|    C*
+     C*公司檔
+     C                     CALL 'CKS#B0'
+     C                     PARM DHI01     #B001I  2
+     C           #B02      PARM           #B002O 22
+     C                     PARM           #B003O 32
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C*
+     C           DHI02     IFEQ '1'
+     C                     MOVEL'本票'  HI02N
+     C                     ELSE
+     C                     MOVEL'支票'  HI02N
+     C                     END
+     C* CLEAR OUTPUT PARAMETER *-------------------------------------*
+     C                     MOVEL*BLANK    @RTNC
+     C*--------------------------------------------------------------*
+     C                     EXSR R1A00                      .SFL INIT
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....SCREEN  PROCESS
+     C*==============================================================*
+     C           R1000     BEGSR
+     C*
+     C                     WRITEDSPC1
+     C                     EXFMTSFLCR
+     C                     MOVEA*ALL'0'   *IN,60
+     C*
+     C           *IN03     IFEQ '1'                        *END
+     C                     MOVEL'03'      @RTNC
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN12     IFEQ '1'                        *PREVIOUS
+     C                     MOVEL'12'      @RTNC
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN25     IFEQ '1'                        *NEXT PAGE
+     C                     EXSR R1B00
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           @KHIO     IFNE @KHIN                      *START KEY
+     C                     EXSR R1A00                      *SFL INIT
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           RRN       IFGT 0
+     C                     EXSR R1C00                      *OPTION
+     C                     END
+     C*
+     C           E1000     ENDSR
+     C*=============================================================*
+     C*          R1A00 ....SUBFILE INIT PREPARE
+     C*=============================================================*
+     C           R1A00     BEGSR
+     C*
+     C                     Z-ADD0         DRRN
+     C                     Z-ADD0         RRN
+     C                     Z-ADD0         @DRCD            *DSP RCD
+     C                     MOVEL'N'       @BOTOM  1        *BOTTOM
+     C*
+     C                     SETON                     52    *SFLCLR
+     C                     WRITESFLCR
+     C                     SETOF                     52
+     C*
+     C                     SETON                     51    *SFLDSPCTL
+     C                     SETOF                     5053  *SFLDSP,END
+     C*
+     C* <<SFL INITIAITAL DATA ADD>>++++++++++++++++++++++++++++++++++++
+     C                     MOVEL@KHIN     @KHIO            *KEY SAVE
+@   C                     Z-ADD13        @PRCD            *PAGE RCD
+     C*
+     C           KEYHI     SETLLHI0
+     C                     EXSR R1A10                      *ADD SFL DTA
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C           RRN       IFGT 0
+     C                     SETON                     50    *SFLDSP
+     C                     ELSE
+     C                     SETON                     99    *NO DTA
+     C                     MOVEL'UPT2050' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     END
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1A10 .... ADD SUBFILE DATA
+     C*=============================================================*
+     C           R1A10     BEGSR
+     C*
+     C                     ADD  @PRCD     @DRCD
+     C           RRN       DOWLT@DRCD
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           KEYHI1    READEHI0                      46
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           *IN46     IFEQ '0'
+     C                     EXSR R1A11                      *WRITE SFL
+     C                     ELSE                            *EOF
+     C                     Z-ADDRRN       @DRCD
+     C                     MOVE 'Y'       @BOTOM
+     C                     SETON                     9653  *SFLEND
+     C                     END
+     C*
+     C                     END
+     C*
+     C                     Z-ADDRRN       DRRN
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1A11 .... WRITE SUBFILE DATA
+     C*=============================================================*
+     C           R1A11     BEGSR
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* << SUBFILE DATA VALUE SET >>
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL'10'      DHI15
+     C           HI15      IFEQ 'B'
+     C                     MOVEL'15'      DHI15
+     C                     END
+     C*
+     C                     ADD  1         RRN
+     C                     WRITESFLSR
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1B00 ....ROLLUP MAIN ROUTINE
+     C*=============================================================*
+     C           R1B00     BEGSR
+     C*
+     C           @BOTOM    IFEQ 'Y'                        *EOF
+     C                     SETON                         96*LST PAG
+     C                     Z-ADDRRN       DRRN
+     C                     ELSE
+     C                     EXSR R1A10                      *ADD SFL DTA
+     C                     END
+     C*
+     C                     ENDSR
+     C*=============================================================*
+     C*          R1C00 ....挑選資料
+     C*=============================================================*
+     C           R1C00     BEGSR
+     C*
+     C                     READCSFLSR                    42
+     C           *IN42     DOWEQ'0'
+     C*
+     C           DOPT      IFNE *BLANK
+     C* <<SET OUTPUT PARM>>++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVELHI03      @220I3
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     MOVEL'00'      @RTNC
+     C                     SETON                     42
+     C                     END
+     C*
+     C  N42                READCSFLSR                    42
+     C                     END
+     C*
+     C                     ENDSR
+

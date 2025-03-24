@@ -1,0 +1,185 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : PYR6092                                    *
+     H*    PROGRAM NAME :貸款扣款明細表－員工                      *
+     H*    AUTHOR       : WILLIAMS                                   *
+     H*    CREATE DATE  : 90/02/08                                   *
+     H****************************************************************
+     FPYLNJF01IP  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYWDPF  IF  E           K        DISK
+     FPYR609P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    DSORTA  1   2 12
+     ILNJF01
+     I*                                             LN02  L1
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160$DATE
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DLN01
+     I                                      601 607 DEM04S
+     I                                      608 614 DEM04E
+     I                                      519 526 DLN02S
+     I                                      527 534 DLN02E
+     I                                      535 542 DLN12S
+     I                                      543 550 DLN12E
+     I                                      551 551 DLN03S
+     I                                      552 552 DLN03E
+     I                                      553 5570DYM
+     I                                      558 558 DSOPT
+     I                                      561 5660WYM
+     I            DS
+     I                                        1   7 PEM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I*
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYDP     KLIST
+     C                     KFLD           EM041            *部門1
+     C                     KFLD           EM042            *部門2
+     C                     KFLD           EM043            *部門3
+     C                     KFLD           EM044            *部門4
+     C* PYWDPF
+     C           KEYWD     KLIST
+     C                     KFLD           LN01             *公司編號
+     C                     KFLD           WYM              *年月
+     C                     KFLD           DWD04   1        *期別
+     C                     KFLD           LN02             *員工編號
+     C                     KFLD           DWD05   2        *薪資項目
+     C           KEY#Y     KLIST
+     C                     KFLD           #Y01   10
+     C                     KFLD           #Y02   10
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     CLR 10                EXSR R8900
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C*公司別
+|    C           DLN01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C*排序　　
+| 01-C           DSOPT     IFEQ '1'
+|   C                     MOVELDSORTA,1  DSOPTN
+| 01*C                     ELSE
+|   C                     MOVELDSORTA,2  DSOPTN
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*部門說明
+|    C           KEYDP     CHAINDP0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     MOVELDP02      PDP02
+| 01*C                     ELSE
+|   C                     MOVEL*BLANK    PDP02
+| 01-C                     END
+|    C*實扣金額
+|    C                     MOVEL'1'       DWD04            *期別
+|    C                     MOVEL'86'      DWD05            *薪資項目
+|    C           KEYWD     CHAINWD0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C                     Z-ADDWD06      PWD06            *薪資金額
+| 02*C                     ELSE
+|   C                     Z-ADD*ZERO     PWD06
+| 02-C                     END
+|    C*應扣金額
+| 03-C                     SELEC
+|   C           WYM       WHEQ LN06
+|   C                     Z-ADDLN07      PLN07
+|   C           WYM       WHEQ LN09
+|   C                     Z-ADDLN10      PLN07
+|   C                     OTHER
+|   C                     Z-ADDLN08      PLN07
+| 03-C                     END
+|    C*
+|    C*貸款說明PLN03N
+|    C                     MOVEL'LN'      #Y01
+|    C                     MOVELLN03      #Y02
+|    C           KEY#Y     CHAIN#Y0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C                     CALL 'P65'
+|   C                     PARM #Y03      P6501I 80
+|   C                     PARM 13        P6502I  30
+|   C           PLN03N    PARM           P6511O 80
+|   C                     PARM           P6512O 80
+| 04*C                     ELSE
+|   C                     MOVEL*BLANK    PLN03N
+| 04-C                     END
+|    C*
+|    C                     MOVELLN16      PLN16
+|    C                     MOVELLN02      PLN02
+|    C                     MOVELEM03      PEM03
+|    C                     MOVELLN12      PLN12
+|    C                     MOVELLN03      PLN03
+|    C*
+|    C*換頁　
+| 05-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 05-C                     END
+|    C                     WRITEPD1
+|    C*
+|    C                     ADD  1         TT01             *總人數
+|    C                     ADD  PLN07     TT02             *應扣金額
+|    C                     ADD  PWD06     TT03             *實扣金額
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR.....HAS DATA
+     C*==============================================================*
+03===C           R8900     BEGSR
+|    C*
+|    C                     WRITEPT1
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR.....NO DATA
+     C*==============================================================*
+04===C           R8999     BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+** DSORTA
+部門
+員工編號
+

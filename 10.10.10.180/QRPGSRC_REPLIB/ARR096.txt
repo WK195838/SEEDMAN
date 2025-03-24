@@ -1,0 +1,205 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H* PROGRAM NAME : ARR096                                        *
+     H* AUTHER       : DEREK                                         *
+     H* CREATE DATE  : 113/03/08                                     *
+     H* UPDATE DATE  :                                               *
+     H* SYSTEM       :茂世進銷存系統                               *
+     H* SUBSYSTEM    :銷售系統                                     *
+     H* REMARK       :作廢發票報表                                 *
+     H*==============================================================*
+     H* CODE   AUTHOR.     DATE    DESCRIPTION                    *
+     H*--------------------------------------------------------------*
+     H*==============================================================*
+     FARR096D CF  E                    WORKSTN
+     F                                              KINFDS DSPFDS
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      598 5990$PRTID
+     I                                      601 602 DSI01S
+     I                                      603 604 DSI01E
+     I                                      605 6100DSI21S
+     I                                      611 6160DSI21E
+     I                                      617 6240WSI21S
+     I                                      625 6320WSI21E
+     I*
+     I* FOR F4 HELP -- GET CURSOR POSITION
+     I*
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN98     PARM *IN98     IN98    1
+     C           *IN97     PARM *IN97     IN97    1
+     C*==============================================================*
+     C*                    DEFINE
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N97N98             EXSR RTN010                     .INIT SCREEN
+  01-C           *IN03     DOUEQ'1'
+    C           *IN99     OREQ '0'
+    C                     EXFMTDSPD1
+    C                     MOVEA*ALL'0'   *IN,60
+  02-C           *IN03     IFEQ '0'
+  03-C           *IN04     IFEQ '1'
+    C**********************
+    C*  F4 PROMPT PROCESS *
+    C**********************
+    C                     EXSR RTNF4
+  03*C                     ELSE
+    C                     EXSR RTN100                     .CHECK      ?
+  03-C                     END
+  02-C                     END
+  01-C                     END
+     C*
+     C                     EXSR OUTLDA
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+     C*===============================================================*
+     C*          RTN010....INIT SCREEN
+     C*===============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   LDA
+|    C                     Z-ADD2         $EVR
+|    C                     MOVEL$USER     AUT     3
+|    C           AUT       IFNE 'D91'
+|    C           AUT       ANDNE'REP'
+|    C                     SETON                     31
+|    C                     END
+     C*
+|    C                     MOVEL*BLANK    DSI01S
+|    C                     MOVEL*BLANK    DSI01E
+|    C                     Z-ADD0         DSI21S
+|    C                     Z-ADD0         DSI21E
+|    C                     Z-ADD0         WSI21S
+|    C                     Z-ADD0         WSI21E
+|    C                     Z-ADD0         W6      60
+|    C                     MOVEL'SCR001'  APPSCR  6
+|    C*
+01===C                     ENDSR
+      *===============================================================*
+      *          RTN100....CHECK SCREEN
+      *===============================================================*
+02===C           RTN100    BEGSR
+|    C***
+|    C*公司別
+|    C***
+| 01-C           DSI01S    IFEQ *BLANK
+|   C                     MOVEL*LOVAL    DSI01S
+| 01-C                     END
+     C*
+| 01-C           DSI01E    IFEQ *BLANK
+|   C                     MOVEL*HIVAL    DSI01E
+| 01-C                     END
+     C*
+| 03-C           DSI01S    IFGT DSI01E
+|   C                     SETON                     6061
+|   C                     SETON                     9299
+| 03-C                     END
+|    C   99                GOTO END100
+|    C*******
+|    C*發票日期
+|    C*******
+|    C*發票日期要輸入
+| 13-C           DSI21S    IFEQ 0
+|   C           DSI21E    OREQ 0
+|   C                     SETON                     6263
+|   C                     SETON                     9599
+| 13*C                     ELSE
+|   C*(CHECK DATE)-日期
+|00A+C                     CALL 'P30'
+||   C                     PARM DSI21S    P300I1  80       日期
+||   C                     PARM '3'       P302I1  1        日期格式
+||   C                     PARM '1'       P303I1  1        曆別
+||   C                     PARM           P3011O  1        驗證結果
+||   C           P3011O    IFEQ 'N'
+||   C                     SETON                     629399
+| 12-C                     END
+|    C   99                GOTO END100
+|   C*
+|00A+C                     CALL 'P30'
+||   C                     PARM DSI21E    P300I1  80       日期
+||   C                     PARM '3'       P302I1  1        日期格式
+||   C                     PARM '1'       P303I1  1        曆別
+||   C                     PARM           P3011O  1        驗證結果
+||   C           P3011O    IFEQ 'N'
+||   C                     SETON                     639399
+| 12-C                     END
+|    C   99                GOTO END100
+|   C*
+|   C*日期轉換
+|   C                     CALL 'RES001'
+|   C                     PARM 'MDY'     S001I1  3
+|   C                     PARM DSI21S    S001I2  60
+|   C           W6        PARM           S001O1  60
+|   C                     MOVE W6        HB2@F6  6
+|   C                     EXSR HB@68L                     + CENTURY 6->8 LEFT
+|   C                     MOVE HB2@T8    WSI21S
+|   C*
+|   C                     CALL 'RES001'
+|   C                     PARM 'MDY'     S001I1  3
+|   C                     PARM DSI21E    S001I2  60
+|   C           W6        PARM           S001O1  60
+|   C                     MOVE W6        HB2@F6  6
+|   C                     EXSR HB@68L                     + CENTURY 6->8 LEFT
+|   C                     MOVE HB2@T8    WSI21E
+|   C**
+| 24-C           WSI21S    IFGT WSI21E
+|   C                     SETON                     6263
+|   C                     SETON                     9399
+| 24-C                     END
+|   C   99                GOTO END100
+| 13-C                     END
+|    C   99                GOTO END100
+|    C*
+02===C           END100    ENDSR
+      *===============================================================*
+      *          RTNF4 ....F4 HELP
+      *===============================================================*
+03===C           RTNF4     BEGSR
+|    C*
+|    C                     SETON                     99
+|    C********************
+|    C*  GET ROW,COL     *
+|    C********************
+|    C           #CSR      DIV  256       D#ROW            *ROW
+|    C                     MVR            D#COL            *COL
+|    C** 游標位置即為(D#ROW,D#COL)
+| 01-C           APPSCR    IFEQ 'SCR001'
+|   C*
+| 11-C           D#ROW     IFEQ 18
+|   C           D#COL     ANDGE38
+|   C           D#COL     ANDLE39
+|   C                     CALL 'WDS011'
+|   C           $PRTID    PARM $PRTID    S011O1  20
+|   C                     GOTO ENDF4
+| 11-C                     END
+|   C*
+| 01-C                     END
+|    C*
+03===C           ENDF4     ENDSR
+      *===============================================================*
+      *          OUTLDA....OUT LDA
+      *===============================================================*
+04===C           OUTLDA    BEGSR
+|    C*
+|    C                     OUT  *NAMVAR
+|    C*
+04===C           ENDLDA    ENDSR
+     C/COPY HBP2CVTR
+

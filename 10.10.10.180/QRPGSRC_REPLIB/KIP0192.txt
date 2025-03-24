@@ -1,0 +1,153 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    DSPF NAME    : KIP0192                                    *
+     H*    AUTHOR       : DEREK                                      *
+     H*    CREATE DATE  : 2016/12/13                                 *
+     H*    UPDATE DATE  :                                            *
+     H*    PROGRAM NAME : KIP0192                                    *
+     H*    SYSTEM       :茂世進銷存                                *
+     H*    SUBSYSTEM    :專櫃進銷存系統                            *
+     H*    REMARK       :業績獎金計算                              *
+     H****************************************************************
+     FKIP019W IP  E           K        DISK
+     FMTMAPF  IF  E           K        DISK
+     FMTMHPF  IF  E           K        DISK
+     F            MA0                               KRENAMEMH0
+     FW3EAPF  IF  E           K        DISK
+     FW3EBPF  IF  E           K        DISK
+     FW3EDPF  IF  E           K        DISK
+     FW3EEPF  UF  E           K        DISK                      A
+     IWW0
+     I                                              BA02  L1
+     I                                              BB03  L1
+     I           UDS
+     I                                      211 2160DDATE
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      131 1340$WWW
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      142 142 $DEP
+     I                                      152 161 $USERN
+     I                                      162 1620$EVR
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     I                                      501 5060DBA01S
+     I*產品代號
+     I            DS
+     I                                        1   9 BB03
+     I                                        1   1 BB03A
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYEB     KLIST
+     C                     KFLD           DBA01S           年月
+     C                     KFLD           BB03             產品代號
+     C*==============================================================*
+     C*                    DEFINE
+     C*==============================================================*
+     C           *LIKE     DEFN BB04      WBB04            銷售數量
+     C           *LIKE     DEFN BB07      WBB07            沖銷金額
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R0100
+     C*
+     C   L1                EXSR R7100
+     C*
+     C                     EXSR R2000                      PROCESS
+     C*
+     CL1 10                EXSR R8100
+     C*==============================================================*
+     C*          R0100 ... INIT
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETON                         10
+|    C*刪除該年月獎金資料
+|    C           DBA01S    SETLLEE0
+|    C           DBA01S    READEEE0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C                     DELETEE0
+|   C           DBA01S    READEEE0                      46
+| 01-C                     ENDDO
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 -- INIT
+     C*==============================================================*
+02===C           R7100     BEGSR
+|    C*
+|    C                     Z-ADD0         WBB04            銷售數量
+|    C                     Z-ADD0         WBB07            銷售金額
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... PROCESS
+     C*==============================================================*
+03===C           R2000     BEGSR
+|    C*
+|    C                     ADD  BB04      WBB04            銷售數量
+|    C                     ADD  BB07      WBB07            銷售金額
+|    C*
+03===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1 -- TOTAL
+     C*==============================================================*
+04===C           R8100     BEGSR
+|    C*
+|    C                     Z-ADDDBA01S    EE01             獎金年月
+|    C                     MOVELBA02      EE02      P      專櫃代號
+|    C                     MOVELBB03      EE03      P      產品代號
+|    C*
+| 01-C           BB03A     IFEQ 'S'
+|   C           BB03      CHAINMA0                  40
+| 01*C                     ELSE
+|   C           BB03      CHAINMH0                  40
+| 01-C                     ENDIF
+| 02-C           *IN40     IFEQ '0'
+|   C                     MOVELMA12      EE04      P      供應商代號
+| 02*C                     ELSE
+|   C                     MOVEL*BLANK    EE04             供應商代號
+| 02-C                     ENDIF
+|    C*
+|    C           KEYEB     CHAINEB0                  40
+| 03-C           *IN40     IFEQ '0'
+|   C                     Z-ADDEB03      EE05             抽成百分比
+| 03*C                     ELSE
+|   C           DBA01S    CHAINEA0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C                     Z-ADDEA02      EE05             抽成百分比
+| 04-C                     ENDIF
+| 03-C                     ENDIF
+|    C*只有茂世系列才有銷售獎金
+| 01-C           BB03A     IFEQ 'O'
+|   C                     Z-ADD0         EE05             抽成百分比
+| 04-C                     ENDIF
+|    C*
+|    C           KEYEB     CHAINED0                  40
+| 05-C           *IN40     IFEQ '0'
+|   C                     Z-ADDED03      EE06             單瓶獎金
+| 05*C                     ELSE
+|   C                     Z-ADD0         EE06             單瓶獎金
+| 05-C                     ENDIF
+|    C*
+|    C                     Z-ADDWBB04     EE07             銷售數量
+|    C                     Z-ADDWBB07     EE08             銷售金額
+|    C*
+|    C           EE06      MULT EE07      EE09             單瓶總獎金
+|    C*
+|    C           EE05      DIV  100       WEE05   64       抽成
+|    C           EE08      DIV  1.05      WEE08  199       未稅銷售額
+|    C           WEE08     MULT WEE05     EE10      H      銷售總獎金
+|    C*
+|    C                     Z-ADD$A8YMD    EEXX             異動日期
+|    C                     TIME           EEYY             異動時間
+|    C                     MOVEL$USER     EEZZ             異動人員
+|    C*
+|    C                     WRITEEE0
+|    C*
+04===C                     ENDSR
+

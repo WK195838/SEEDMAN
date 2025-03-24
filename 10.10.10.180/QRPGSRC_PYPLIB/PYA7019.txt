@@ -1,0 +1,140 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA7019                                    *
+     H*    PROGRAM NAME :薪資所得銀行媒體轉存作業－萬泰            *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 88/09/16                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYBTPF  IP  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYB8PF  O   E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I*PYBTPF
+     IBT0
+     I                                              BT01  L1
+     I*
+     I/COPY PYDDSSRC,PYPMDS01
+     I/COPY PYDDSSRC,PYB8DS01
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160DDATE
+     I*
+     I                                      501 502 DBT01
+     I                                      503 505 DBT061
+     I                                      506 508 DBT062
+     I                                      510 521 DBT09
+     I                                      522 522 DBT03
+     I                                      523 5260DBT04
+     I                                      527 5280DBT05
+     I                                      529 530 DPB041
+     I                                      531 532 DPB042
+     I                                      533 533 DOPT
+     I                                      534 5350DPY07
+     I                                      536 5450DM406
+     I                                      546 5540TCNT
+     I                                      555 5661TAMT
+     I*
+     I            DS
+     I                                        1   70WTRD
+     I                                        1   50WTRD1
+     I                                        6   70WTRD2
+     I*
+     I            DS
+     I                                        1   80K8105
+     I                                        1   60BT04
+     I                                        7   80BT05
+     I*
+     I            DS
+     I                                        1  10 BT10
+     I                                        1   8 KBT10
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DBT01
+     C*
+     C           KEYEM     KLIST
+     C                     KFLD           DBT01
+     C                     KFLD           BT02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      .DETAIL
+     CL1 10                EXSR R8100                      .L1
+     C*==============================================================*
+     C*          R1000 ... INIT PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R2000 ... MAIN PROCESS
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*INIT RECORD
+|    C                     MOVEL*ALL'0'   B801A
+|    C                     MOVEL*ALL'0'   B801B
+|    C*
+|    C                     MOVEL'S'       B8104            轉帳代碼
+|    C                     MOVEL'S'       B8203            轉帳代碼
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM K8105     P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '2'       P3104I  1
+|    C                     PARM '2'       P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    B8105            轉帳日期
+|    C                     Z-ADDP3111O    B8204            轉帳日期
+|    C*
+|    C                     MOVEL'1115'    B8106            入帳代號
+|    C                     MOVEL'1115'    B8205            入帳代號
+|    C                     MOVELKBT10     B8108            公司統編
+|    C                     MOVELKBT10     B8207            公司統編
+|    C*
+|    C                     MOVELBT07      B8101            帳號
+|    C*
+|    C           KEYEM     CHAINEM0                  40
+|    C  N40                MOVELEM31      B8103            身分證號
+|    C                     Z-ADDBT08      B8107            入帳金額
+|    C*
+|    C                     MOVELB801A     B801
+|    C                     WRITEB80
+|    C*
+|    C                     MOVEL*BLANK    B801A
+|    C                     MOVEL*BLANK    B801
+|    C*
+|    C                     ADD  1         K8202  110       總筆數
+|    C                     ADD  BT08      K8206  110       總金額
+|    C*
+02===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK L1
+     C*==============================================================*
+03===C           R8100     BEGSR
+|    C*
+|    C                     Z-ADDK8202     B8202            總筆數
+|    C                     Z-ADDK8206     B8206            總金額
+|    C*
+|    C                     MOVELB801B     B801
+|    C                     WRITEB80
+|    C*
+|    C                     MOVEL*BLANK    B801B
+|    C                     MOVEL*BLANK    B801
+|    C*
+03===C                     ENDSR
+

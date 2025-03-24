@@ -1,0 +1,302 @@
+     H****************************************************************/
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   */
+     H*                                                              */
+     H*    PROGRAM-ID   : PYA3202                                    */
+     H*    PROGRAM NAME :薪資所得扣繳稅額繳款書                    */
+     H*    AUTHOR       : A1226 PETER                                */
+     H*    CREATE DATE  : 86/01/20                                   */
+     H*    UPDATE DATE  : 89/04/06 A1274 EVA                         */
+     H*    SYSTEM       :人事薪資系統                              */
+     H****************************************************************/
+     FPYTBPF  IP  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYR320WFUF  E           K        DISK                      A
+     I*--------------------------------------------------------------**
+     ITB0
+     I                                              TB11  L1
+     ILDA        UDS
+     I                                      210 2160DDATE
+     I                                      125 1270$CPY
+     I                                      128 129 $PRTID
+     I                                      152 161 $USERN
+     I                                      162 162 $EVR
+     I*
+     I                                      501 502 DPH01
+     I                                      541 5450DYM
+     I                                      546 5470DMM
+     I                                      507 508 DPH01T
+     I                                      509 5160WYMD
+     I                                      509 5140WYM
+     I                                      513 5140WMM
+     I                                      515 5160WPH01T
+     I                                      520 527 DPH021
+     I                                      528 535 DPH022
+     I                                      550 550 DSEL
+     I            DS
+     I                                        1  10 TB12
+     I                                        1   8 WTB12
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY
+     C*==============================================================*
+     C           KEYEM     KLIST
+     C                     KFLD           DPH01
+     C                     KFLD           WTB12
+     C           KEY32     KLIST
+     C                     KFLD           DPH01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+  01-C           *INL1     IFEQ '1'
+    C                     EXSR RTN010
+  01-C                     END
+     C*
+     C                     EXSR RTN100
+     C*
+     C   10                EXSR RTN200
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DPH01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C                     Z-ADD0         K320A1  40
+|    C                     Z-ADD0         K320B1  40
+|    C                     Z-ADD0         K320C1  40
+|    C                     Z-ADD0         K320D1  40
+|    C                     Z-ADD0         K320E1  40
+|    C                     Z-ADD0         K320F1  40
+|    C                     Z-ADD0         K320G1  40
+|    C                     Z-ADD0         K320H1  40
+|    C                     Z-ADD0         K320A3  80
+|    C                     Z-ADD0         K320B3  80
+|    C                     Z-ADD0         K320C3  80
+|    C                     Z-ADD0         K320D3  80
+|    C                     Z-ADD0         K320E3  80
+|    C                     Z-ADD0         K320F3  80
+|    C                     Z-ADD0         K320G3  80
+|    C                     Z-ADD0         K320H3  80
+|    C                     Z-ADD0         K320A4  80
+|    C                     Z-ADD0         K320B4  80
+|    C                     Z-ADD0         K320C4  80
+|    C                     Z-ADD0         K320D4  80
+|    C                     Z-ADD0         K320E4  80
+|    C                     Z-ADD0         K320F4  80
+|    C                     Z-ADD0         K320G4  80
+|    C                     Z-ADD0         K320H4  80
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... GET DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     MOVELDPH01     W320AA            公司代號
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DYM       P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           WYM       PARM           P3911O  60
+|    C*
+|    C*------------------------------------------------------------***
+|    C*** CHECK該員工有無提撥退休金
+|    C*
+|    C*Ｙ：提撥退休金員工
+| 01-C           DSEL      IFEQ 'Y'
+|   C           KEYEM     CHAINEM0                  40
+| 02-C           *IN40     IFEQ '0'
+|   C           EM105     ANDEQ'Y'
+|   C                     GOTO TAG
+| 02*C                     ELSE
+|   C                     GOTO END100
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C*Ｎ：不提撥退休金員工
+| 03-C           DSEL      IFEQ 'N'
+|   C           KEYEM     CHAINEM0                  40
+| 04-C           *IN40     IFEQ '0'
+|   C*
+| 05-C           EM105     IFEQ 'Y'
+|   C                     GOTO END100
+| 05*C                     ELSE
+|   C                     GOTO TAG
+| 05-C                     END
+|   C*
+| 04*C                     ELSE
+|   C                     GOTO TAG
+| 04-C                     END
+|   C*
+| 03-C                     END
+|    C*
+|    C           TAG       TAG
+|    C*
+|    C*------------------------------------------------------------***
+|    C***其他所得課稅資料檔(PYTBPF)
+|    C*
+|    C*５１：租賃
+| 06-C           TB04      IFEQ '51'
+|   C                     ADD  TB07      K320A3  80
+|   C                     ADD  TB08      K320A4  80
+|   C                     ADD  1         K320A1  40
+| 06-C                     END
+|    C*
+|    C*５Ｘ：其他利息(5A/5B/5C/5D/5E)
+| 07-C           TB04      IFEQ '5A'
+|   C           TB04      ANDEQ'5B'
+|   C           TB04      ANDEQ'5C'
+|   C           TB04      ANDEQ'5D'
+|   C           TB04      ANDEQ'5E'
+|   C                     ADD  TB07      K320B3  80
+|   C                     ADD  TB08      K320B4  80
+|   C                     ADD  1         K320B1  40
+| 07-C                     END
+|    C*
+|    C*５３：權利金
+| 08-C           TB04      IFEQ '53'
+|   C                     ADD  TB07      K320C3  80
+|   C                     ADD  TB08      K320C4  80
+|   C                     ADD  1         K320C1  40
+| 08-C                     END
+|    C*
+|    C*５４：盈餘
+| 09-C           TB04      IFEQ '54'
+|   C                     ADD  TB07      K320D3  80
+|   C                     ADD  TB08      K320D4  80
+|   C                     ADD  1         K320D1  40
+| 09-C                     END
+|    C*
+|    C*９Ａ：執行業務報酬
+| 10-C           TB04      IFEQ '9A'
+|   C                     ADD  TB07      K320E3  80
+|   C                     ADD  TB08      K320E4  80
+|   C                     ADD  1         K320E1  40
+| 10-C                     END
+|    C*
+|    C*９Ｂ：稿費
+| 11-C           TB04      IFEQ '9B'
+|   C                     ADD  TB07      K320F3  80
+|   C                     ADD  TB08      K320F4  80
+|   C                     ADD  1         K320F1  40
+| 11-C                     END
+|    C*
+|    C*９１：競技競賽及機會中獎獎金
+| 12-C           TB04      IFEQ '91'
+|   C                     ADD  TB07      K320G3  80
+|   C                     ADD  TB08      K320G4  80
+|   C                     ADD  1         K320G1  40
+| 12-C                     END
+|    C*
+|    C*９２：其他所得
+| 13-C           TB04      IFEQ '92'
+|   C                     ADD  TB07      K320H3  80
+|   C                     ADD  TB08      K320H4  80
+|   C                     ADD  1         K320H1  40
+| 13-C                     END
+|    C*
+|    C*
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          RTN200... ACCOUNT
+     C*==============================================================*
+03===C           RTN200    BEGSR
+|    C*
+|    C           KEY32     CHAINW320                 40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+|   C                     Z-ADDDYM       W320A2
+|   C                     Z-ADDDYM       W320B2
+|   C                     Z-ADDDYM       W320C2
+|   C                     Z-ADDDYM       W320D2
+|   C                     Z-ADDDYM       W320E2
+|   C                     Z-ADDDYM       W320F2
+|   C                     Z-ADDDYM       W320G2
+|   C                     Z-ADDDYM       W320H2
+|   C                     Z-ADDK320A1    W320A1
+|   C                     Z-ADDK320B1    W320B1
+|   C                     Z-ADDK320C1    W320C1
+|   C                     Z-ADDK320D1    W320D1
+|   C                     Z-ADDK320E1    W320E1
+|   C                     Z-ADDK320F1    W320F1
+|   C                     Z-ADDK320G1    W320G1
+|   C                     Z-ADDK320H1    W320H1
+|   C                     Z-ADDK320A3    W320A3
+|   C                     Z-ADDK320B3    W320B3
+|   C                     Z-ADDK320C3    W320C3
+|   C                     Z-ADDK320D3    W320D3
+|   C                     Z-ADDK320E3    W320E3
+|   C                     Z-ADDK320F3    W320F3
+|   C                     Z-ADDK320G3    W320G3
+|   C                     Z-ADDK320H3    W320H3
+|   C                     Z-ADDK320A4    W320A4
+|   C                     Z-ADDK320B4    W320B4
+|   C                     Z-ADDK320C4    W320C4
+|   C                     Z-ADDK320D4    W320D4
+|   C                     Z-ADDK320E4    W320E4
+|   C                     Z-ADDK320F4    W320F4
+|   C                     Z-ADDK320G4    W320G4
+|   C                     Z-ADDK320H4    W320H4
+|   C*
+|   C                     UPDATW320
+| 01*C                     ELSE
+|   C*
+|   C                     Z-ADDDYM       W320A2
+|   C                     Z-ADDDYM       W320B2
+|   C                     Z-ADDDYM       W320C2
+|   C                     Z-ADDDYM       W320D2
+|   C                     Z-ADDDYM       W320E2
+|   C                     Z-ADDDYM       W320F2
+|   C                     Z-ADDDYM       W320G2
+|   C                     Z-ADDDYM       W320H2
+|   C                     Z-ADDK320A1    W320A1
+|   C                     Z-ADDK320B1    W320B1
+|   C                     Z-ADDK320C1    W320C1
+|   C                     Z-ADDK320D1    W320D1
+|   C                     Z-ADDK320E1    W320E1
+|   C                     Z-ADDK320F1    W320F1
+|   C                     Z-ADDK320G1    W320G1
+|   C                     Z-ADDK320H1    W320H1
+|   C                     Z-ADDK320A3    W320A3
+|   C                     Z-ADDK320B3    W320B3
+|   C                     Z-ADDK320C3    W320C3
+|   C                     Z-ADDK320D3    W320D3
+|   C                     Z-ADDK320E3    W320E3
+|   C                     Z-ADDK320F3    W320F3
+|   C                     Z-ADDK320G3    W320G3
+|   C                     Z-ADDK320H3    W320H3
+|   C                     Z-ADDK320A4    W320A4
+|   C                     Z-ADDK320B4    W320B4
+|   C                     Z-ADDK320C4    W320C4
+|   C                     Z-ADDK320D4    W320D4
+|   C                     Z-ADDK320E4    W320E4
+|   C                     Z-ADDK320F4    W320F4
+|   C                     Z-ADDK320G4    W320G4
+|   C                     Z-ADDK320H4    W320H4
+|   C*
+|   C                     WRITEW320
+| 01-C                     END
+|    C*
+03===C           END200    ENDSR
+

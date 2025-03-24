@@ -1,0 +1,233 @@
+      ****************************************************************
+      *   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+      * PROGRAM NAME : SAR0861                                       *
+      * AUTHER       : JONATHAN YEH                                  *
+      * CREATE DATE  : 103/03/18                                     *
+      * UPDATE DATE  :                                               *
+      * SYSTEM       :                                           *
+      * SUBSYSTEM    :銷售分析系統                                 *
+      * REMARK       :滯銷品明細表                                 *
+      *服務單號: NOTE:1030317    WEB:1030360                       *
+      * 00A服務單號:1031674                                        *
+      * 00A       |103.08.27 | 資料寫入SOR044WF來下載EXCEL       *
+      ****************************************************************
+     FMTMAPF  IF  E           K        DISK
+     FMTMHPF  IF  E           K        DISK
+     F            MA0                               KRENAMEMTMH1
+     FSOSFLF02IF  E           K        DISK
+ 00A+FSAR086WFO   E           K        DISK
+     FSAR086P O   E             39     PRINTER
+     E*
+     IMTMH1
+     I              MA01                            MH01
+     I              MA02                            MH02
+     I              MA03                            MH03
+     I              MA04                            MH04
+     I              MA05                            MH05
+     I              MA06                            MH06
+     I              MA07                            MH07
+     I              MA08                            MH08
+     I              MA09                            MH09
+     I              MA10                            MH10
+     I              MA11                            MH11
+     I              MA12                            MH12
+     I              MA13                            MH13
+     I              MA14                            MH14
+     I              MA15                            MH15
+     I              MA16                            MH16
+     I              MA17                            MH17
+     I              MA18                            MH18
+     I              MA19                            MH19
+     I              MA20                            MH20
+     I              MA21                            MH21
+     I              MA22                            MH22
+     I              MA23                            MH24
+     I              MA24                            MH24
+     I              MA25                            MH25
+     I              MA26                            MH26
+     I              MA27                            MH27
+     I              MA28                            MH28
+     I              MA29                            MH29
+     I              MA30                            MH30
+     I              MA31                            MH31
+     I              MA32                            MH32
+     I              MA33                            MH33
+     I              MA34                            MH34
+     I              MA35                            MH35
+     I              MA36                            MH36
+     I              MA37                            MH37
+     I              MA38                            MH38
+     I              MA39                            MH39
+     I              MA40                            MH40
+     I              MA41                            MH41
+     I              MA42                            MH42
+     I              MA43                            MH43
+     I              MA44                            MH44
+     I              MA45                            MH45
+     I              MA46                            MH46
+     I              MA47                            MH47
+     I              MA48                            MH48
+     I              MA49                            MH49
+     I              MA53                            MH53
+     I              MA54                            MH54
+     I              MA55                            MH55
+     I              MA56                            MH56
+     I              MA57                            MH57
+     I              MA58                            MH58
+     I              MA59                            MH59
+     I              MAXX                            MHXX
+     I              MAYY                            MHYY
+     I              MAZZ                            MHZZ
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      598 5990$LPRT
+      *未異動日
+     I                                      613 6150DNSDAT
+      *產品代號
+     I                                      616 624 DMA01S
+     I                                      625 633 DMA01E
+     I* 日期
+     I                                      850 8570NSDAT1
+     IPNAME       DS                          1   6
+     I                                        1   1 PTYPE
+     I                                        2   6 POTER
+      *==============================================================*
+      *                    KEY LIST
+     C*          KEYWF     KLIST
+     C*                    KFLD           WFH02
+     C*                    KFLD           WFH03
+      *==============================================================*
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+  01-C           *IN10     IFEQ '0'
+    C                     EXSR RTN010                     *HEADING
+    C                     SETON                     10
+  01-C                     END
+     C                     READ MA0                      41
+     C           *IN41     DOUEQ'1'
+     C                     EXSR RTN100
+     C                     READ MA0                      41
+     C                     END
+     C   41                EXSR RTN200
+     C                     SETON                     LR
+      *==============================================================*
+      *          RTN010....CHECK HEADING
+      *==============================================================*
+01===C           RTN010    BEGSR
+      *
+|    C                     WRITEPH1
+      *
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN100....READE DETAIL
+      *==============================================================*
+02===C           RTN100    BEGSR
+     C*不抓O開頭的產品
+     C                     MOVELMA01      PNAME
+     C           PTYPE     IFEQ 'O'
+     C                     GOTO END100
+     C                     END
+     C*
+     C           MA01      CHAINSF0                  40
+     C                     Z-ADDSF25      DMA50   60
+     C*最近銷售日大餘等於未異動日則跳出
+  01-C           DMA50     IFGE NSDAT1
+     C                     GOTO END100
+     C                     END
+     C* 產品代號不在範圍內跳出
+  01-C           MA01      IFLT DMA01S
+  01-C           MA01      ORGT DMA01E
+     C                     GOTO END100
+     C                     END
+     C*
+     C                     MOVELMA01      PFH01
+     C                     MOVELMA02      PFH02
+     C           TEST00    TAG
+     C*等於K
+     C           MA07      IFEQ 'K'
+     C           MA01      CHAINMTMH1                40
+     C           *IN40     IFEQ '0'
+     C                     Z-ADDMH29      PFH03
+     C                     Z-ADDMH30      PFH04
+     C           PFH03     ADD  PFH04     PFH05
+     C                     Z-ADDDMA50     PSLDD
+     C                     END
+     C                     END
+     C*不等於K
+     C           MA07      IFNE 'K'
+     C                     Z-ADDMA29      PFH03
+     C                     Z-ADDMA30      PFH04
+     C           PFH03     ADD  PFH04     PFH05
+     C                     Z-ADDDMA50     PSLDD
+     C                     END
+     C*
+     C                     ADD  PFH03     TEMP03  70
+     C                     ADD  PFH04     TEMP04  70
+     C                     ADD  PFH05     TEMP05  80
+|    C*
+|    C*
+|    C*合計數量為零不印出
+|    C           PFH05     IFNE 0
+|    C   39                EXSR RTN900
+|    C                     WRITEPD1
+|00A+C                     EXSR RTN300
+|    C                     SETOF                     20
+|    C                     END
+|    C*
+02===C           END100    ENDSR
+      *==============================================================*
+      *          RTN200....TOTAL
+      *==============================================================*
+05===C           RTN200    BEGSR
+|    C*
+| 01-C           *IN10     IFEQ '0'
+|   C                     WRITEPH1
+|   C                     WRITEPE3
+|   C                     WRITEPE2
+| 01-C                     ELSE
+|    C*
+|    C   39                EXSR RTN900
+|    C                     ADD  TEMP03    TFH03T
+|    C                     ADD  TEMP04    TFH04T
+|    C                     ADD  TEMP05    TFH05T
+|    C                     WRITEPT1
+|    C                     Z-ADD0         TFH03T
+|    C                     Z-ADD0         TFH04T
+|    C                     Z-ADD0         TFH05T
+|    C                     Z-ADD0         TEMP03
+|    C                     Z-ADD0         TEMP04
+|    C                     Z-ADD0         TEMP05
+|    C*
+|    C                     WRITEPE2
+     C                     END
+|    C*
+05===C                     ENDSR
+      *==============================================================*
+      *          RTN900....OVERFLOW
+      *==============================================================*
+06===C           RTN900    BEGSR
+      *
+|    C                     WRITEPE1
+|    C                     WRITEPH1
+|    C                     SETOF                     3920
+      *
+06===C                     ENDSR
+      *==============================================================*
+ 00A+ *          RTN300....WRITE SAR086WF
+ |    *==============================================================*
+ |   C           RTN300    BEGSR
+ |    *
+ |   C                     MOVELPFH01     W8601     P      產品代號
+ |   C                     MOVELPFH02     W8602     P      產品名稱
+ |   C                     Z-ADDPFH03     W8603            保稅倉數量
+ |   C                     Z-ADDPFH04     W8604            完稅倉數量
+ |   C                     Z-ADDPFH05     W8605            合計數量
+ |   C                     Z-ADDPSLDD     W8606            合計數量
+ |   C                     WRITEW86R
+ |    *
+ 00A+C                     ENDSR
+

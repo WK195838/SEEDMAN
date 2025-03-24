@@ -1,0 +1,300 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : S#A140                                     *
+     H*    PROGRAM NAME :程式基本資料維護                          *
+     H*    AUTHOR       : A1165 SERMON                               *
+     H*    CREATE DATE  : 85/08/07                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :程式安全管制系統                          *
+     F****************************************************************
+     FS#SPPF  UF  E           K        DISK                      A
+     FS#SDLF  IF  E           K        DISK
+     FS#SUPF  IF  E           K        DISK
+     FS#A140D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     IS#DA01      DS
+     I                                        1  10 ADMIN
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      201 2080$A8YMD
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           S#DA01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N99                EXSR R0100                      *INITIAL
+     C*
+     C           *IN03     DOWEQ'0'
+     C           SCID      CASEQ'SC01'    R1000
+     C           SCID      CASEQ'SC02'    R2000
+     C                     END
+     C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C                     IN   S#DA01
+     C*
+     C                     MOVE 'SC01'    SCID    4
+     C*執行者名稱
+     C                     MOVEL*BLANK    SU02
+     C           $USER     CHAINSU0                  40
+     C                     MOVELSU02      $USERN
+     C* SC01 FIELD INITIALIZE *--------------------------------------*
+     C                     Z-ADD1         DOPT
+     C                     MOVEL*BLANK    DSP01
+     C*--------------------------------------------------------------*
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+     C           R1000     BEGSR
+     C*
+     C                     EXFMTDSPD1
+     C                     MOVEA*ALL'0'   *IN,60
+     C                     Z-ADD*ZERO     #LIN
+     C                     Z-ADD*ZERO     #COL
+     C*
+     C           *IN03     IFEQ '1'                        *END
+     C                     GOTO E1000
+     C                     END
+     C*
+     C           *IN18     IFEQ '1'                        *BROWSE
+     C                     EXSR R1A00
+     C                     GOTO E1000
+     C                     END
+     C*
+     C                     EXSR R1B00                      *SCR CHK
+     C*
+     C           *IN99     IFEQ '0'                        *SCR CHK OK
+     C                     EXSR R1C00                      *PRE-SC02
+     C                     MOVEL'SC02'    SCID
+     C                     END
+     C*
+     C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1A00 ....全頁查詢 (PF18 : CALL SUB-PROGRAM)
+     C*==============================================================*
+     C           R1A00     BEGSR
+     C*
+     C* CALL SUB-PROGRAM
+     C                     CALL 'S#S140'
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           DSP01     PARM DSP01     S1401I 10        *程式
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     PARM           @RTNC   2
+     C* RETURN CODE CHECK
+     C           @RTNC     IFEQ '03'                       *PF3
+     C                     SETON                     03
+     C                     END
+     C*
+     C           E1A00     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+     C           R1B00     BEGSR
+     C*
+     C* DATA CHECK *--------------------------------------------------*
+     C*程式編號
+     C*（必須輸入）
+     C           DSP01     IFEQ *BLANK
+     C                     MOVEL'UPT0010' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6099
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C           DSP01     CHAINSP0                  40
+     C*
+     C           DOPT      IFEQ 1                          *ADD
+     C           *IN40     ANDEQ'0'
+     C                     MOVEL'UPT2020' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6099
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C           DOPT      IFNE 1                          *UPD,DEL,INQ
+     C           *IN40     ANDEQ'1'
+     C                     MOVEL'UPT2010' ERRID
+     C                     MOVEL'PTMF'    ERRF
+     C                     SETON                     6099
+     C                     END
+     C   99                GOTO E1B00
+     C*（尚有資料無法刪除）
+     C           DOPT      IFEQ 4
+     C           DSP01     SETLLSDL1                     46
+     C           *IN46     IFEQ '1'
+     C                     MOVEL'US#0010' ERRID
+     C                     MOVEL'S#MF'    ERRF
+     C                     SETON                     6099
+     C                     END
+     C                     END
+     C   99                GOTO E1B00
+     C*
+     C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+     C           R1C00     BEGSR
+     C*
+     C           DOPT      IFEQ 1                          *ADD
+     C           DOPT      OREQ 2                          *UPD
+     C                     SETON                     31    *CAN INPUT
+     C                     ELSE                            *DEL, INQ
+     C                     SETOF                     31    *INP PROTECT
+     C                     END
+     C*
+     C           DOPT      IFEQ 1                          *ADD
+     C                     EXSR R1C10
+     C                     ELSE                            *U/D/I
+     C                     EXSR R1C20
+     C                     END
+     C*
+     C* RELEASE FILE (ADD & INQUIRY)----------------------------------*
+     C           DOPT      IFEQ 1                          *ADD
+     C           DOPT      OREQ 5                          *INQ
+     C           *LOVAL    SETLLSP0
+     C                     END
+     C*---------------------------------------------------------------*
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....'SC02' FIELD INIT : ADD (NO COPY)
+     C*==============================================================*
+     C           R1C10     BEGSR
+     C*
+     C                     CALL 'S#A141'
+     C                     PARM DSP01     A140I1 10
+     C           DSP02     PARM *BLANK    A140I2 50
+     C                     MOVEL'P'       DSP03
+     C                     MOVEL*BLANK    DSP04
+     C                     MOVEL*BLANK    DSP05
+     C                     MOVEL*BLANK    DSP06
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....'SC02' FIELD INIT : UPD, DEL, INQ, (ADD & COPY)
+     C*==============================================================*
+     C           R1C20     BEGSR
+     C*
+     C                     MOVELSP02      DSP02
+     C                     MOVELSP03      DSP03
+     C                     MOVELSP04      DSP04
+     C                     MOVELSP05      DSP05
+     C                     MOVELSP06      DSP06
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+     C           R2000     BEGSR
+     C*
+     C                     EXFMTDSPD2
+     C                     MOVEA*ALL'0'   *IN,60
+     C                     Z-ADD*ZERO     #LIN
+     C                     Z-ADD*ZERO     #COL
+     C*
+     C           *IN03     IFEQ '1'                        *END
+     C                     GOTO E2000
+     C                     END
+     C*
+     C           *IN12     IFEQ '1'                        *PREVIOUS
+     C* RELEAS FILE --------------------------------------------------*
+     C           *LOVAL    SETLLSP0
+     C*---------------------------------------------------------------*
+     C                     MOVEL'SC01'    SCID
+     C                     GOTO E2000
+     C                     END
+     C*
+     C           DOPT      IFEQ 1                          *ADD
+     C           DOPT      OREQ 2                          *UPD
+     C                     EXSR R2B00                      *SC02 CHK
+     C                     END
+     C*
+     C           *IN05     IFEQ '1'                        *CHECK ONLY
+     C                     GOTO E2000
+     C                     END
+     C*
+     C           *IN99     IFEQ '0'                        *CHK OK
+     C                     EXSR R2D00                      *FILE UPD
+     C                     MOVE 'SC01'    SCID
+     C                     END
+     C*
+     C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2B00 ....'SC02' CHECK
+     C*==============================================================*
+     C           R2B00     BEGSR
+     C*
+     C*程式名稱
+     C           DSP02     IFEQ *BLANK
+     C                     CALL 'S#A141'
+     C                     PARM DSP01     A140I1 10
+     C           DSP02     PARM DSP02     A140I2 50
+     C                     END
+     C*
+     C           E2B00     ENDSR
+     C*==============================================================*
+     C*          R2D00 ....FILE PROCESS
+     C*==============================================================*
+     C           R2D00     BEGSR
+     C*
+     C           DOPT      CASEQ1         R2D10
+     C           DOPT      CASEQ2         R2D20
+     C           DOPT      CASEQ4         R2D30
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2D10 ....FILE PROCESS : ADD
+     C*==============================================================*
+     C           R2D10     BEGSR
+     C*
+     C                     EXSR R2D11
+     C                     WRITESP0
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2D11 ....SCREEN FIELD TO FILE
+     C*==============================================================*
+     C           R2D11     BEGSR
+     C*
+     C                     MOVELDSP01     SP01
+     C                     MOVELDSP02     SP02
+     C                     MOVELDSP03     SP03
+     C                     MOVELDSP04     SP04
+     C                     MOVELDSP05     SP05
+     C                     MOVELDSP06     SP06
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2D20 ....FILE PROCESS : UPD
+     C*==============================================================*
+     C           R2D20     BEGSR
+     C*
+     C                     EXSR R2D11
+     C                     UPDATSP0
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2D30 ....FILE PROCESS
+     C*==============================================================*
+     C           R2D30     BEGSR
+     C*
+     C                     DELETSP0
+     C*
+     C                     ENDSR
+

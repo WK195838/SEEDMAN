@@ -1,0 +1,85 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM ID   : GLA1401C                                  */
+     /*    PROGRAM NAME :核准作業　　　　                         */
+     /*    AUTHOR       : A1152                                     */
+     /*    CREATE DATE  : 81/11/05                                  */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       :                                           */
+     /***************************************************************/
+             PGM        PARM(&IN03 &IN14)
+             DCL        VAR(&IN03)   TYPE(*LGL)  LEN(1)
+             DCL        VAR(&IN14)   TYPE(*LGL)  LEN(1)
+             DCL        VAR(&DAH01)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&WAH25F)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WAH25T)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WAH10F)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WAH10T)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&WAH02F)   TYPE(*CHAR) LEN(9)
+             DCL        VAR(&WAH02T)   TYPE(*CHAR) LEN(9)
+             DCL        VAR(&WAH26F)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&WAH26T)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&WAH17F)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&WAH17T)   TYPE(*CHAR) LEN(2)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&WAH25F)   VALUE(%SST(*LDA 501 8))
+             CHGVAR     VAR(&WAH25T)   VALUE(%SST(*LDA 509 8))
+             CHGVAR     VAR(&WAH10F)   VALUE(%SST(*LDA 517 8))
+             CHGVAR     VAR(&WAH10T)   VALUE(%SST(*LDA 525 8))
+             CHGVAR     VAR(&WAH02F)   VALUE(%SST(*LDA 533 9))
+             CHGVAR     VAR(&WAH02T)   VALUE(%SST(*LDA 542 9))
+             CHGVAR     VAR(&WAH26F)   VALUE(%SST(*LDA 551 10))
+             CHGVAR     VAR(&WAH26T)   VALUE(%SST(*LDA 561 10))
+             CHGVAR     VAR(&WAH17F)   VALUE(%SST(*LDA 571 2))
+             CHGVAR     VAR(&WAH17T)   VALUE(%SST(*LDA 573 2))
+             CHGVAR     VAR(&DAH01)    VALUE(%SST(*LDA 575 2))
+             CHGVAR     VAR(&IN03)     VALUE('0')
+
+             OVRDBF     FILE(GLAHLF01) SHARE(*YES)
+             OPNQRYF    FILE((GLAHLF01)) OPTION(*ALL) QRYSLT(' +
+                          AH01 *EQ %RANGE("' *CAT &DAH01  +
+                          *CAT '" "' *CAT &DAH01 *CAT '") +
+                        & WAH25 *EQ %RANGE("' *CAT &WAH25F +
+                          *CAT '" "' *CAT &WAH25T *CAT '") +
+                        & WAH10 *EQ %RANGE("' *CAT &WAH10F +
+                          *CAT '" "' *CAT &WAH10T *CAT '") +
+                        & AH02 *EQ %RANGE("' *CAT &WAH02F  +
+                          *CAT '" "' *CAT &WAH02T *CAT '") +
+                        & AH26 *EQ %RANGE("' *CAT &WAH26F  +
+                          *CAT '" "' *CAT &WAH26T *CAT '") +
+                        & AH17 *EQ %RANGE("' *CAT &WAH17F +
+                          *CAT '" "' *CAT &WAH17T *CAT '") +
+                        & AH20 *EQ " " +
+                        & AH19 *EQ " " +
+                        & AH18 *EQ " " ') KEYFLD(*FILE) MAPFLD((WAH25 +
+                          AH25 *CHAR 8) (WAH10 AH10 *CHAR 8))
+
+             IF         COND(&IN14) THEN(DO) /* POST-PF14 */
+                        OVRPRTF    FILE(GLA1402P) CPI(12)
+             CALL       PGM(GLA1402)
+                        CLOF       OPNID(GLAHLF01)
+                        DLTOVR     FILE(*ALL)
+
+                        RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+                        RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+                        RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+                        CHGVAR     VAR(&P6401I) VALUE('GLA1402P')
+                        CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+                        CALL  PGM(P64) PARM(&P6401I &$PENV +
+                         &P6403I &$PRTCD)
+                        ENDDO
+             ELSE       CMD(DO)               /* POST-ENTER */
+             CALL       PGM(GLA1401) PARM(&IN03)
+                        CLOF       OPNID(GLAHLF01)
+                        DLTOVR     FILE(*ALL)
+                        ENDDO
+
+             ENDPGM
+

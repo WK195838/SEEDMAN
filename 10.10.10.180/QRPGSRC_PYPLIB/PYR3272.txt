@@ -1,0 +1,136 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR1062                                     *
+     H*   AUTHER       : A1070 CHOIE                                 *
+     H*   CREATE DATE  : 79/07/11                                    *
+     H*   UPDATE DATE  : 88/11/26 A1274 EVA                          *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR1061C                                    *
+     H*   PURPOSE      :
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYENPF  IP  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR327P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     IEN0
+     I                                              EN01  L1
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I*
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 SEN01
+     I                                      503 504 EEN01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYEN     KLIST
+     C                     KFLD           EN01
+     C                     KFLD           EN02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100
+     C*
+     CL1                   EXSR RTN810
+     CLR 10                EXSR RTN890
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           EN01      CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C   40                MOVEL*BLANK    CM02
+|    C                     MOVELCM02      DCM02
+|    C                     SETON                     91
+|    C*
+|    C                     SETON                     1039
+|    C                     MOVEL'Y'       $DATA
+|    C                     Z-ADD*ZERO     PTO1
+|    C                     Z-ADD*ZERO     PTO2
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+|    C*
+|    C           EN01      CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM02
+|    C                     MOVELCM02      DCM02
+|    C                     CALL 'P31'
+|    C                     PARM EN05      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM '1'       P3104I  1
+|    C                     PARM '1'       P3105I  1
+|    C           DEN05     PARM           P3111O  80
+|    C*
+|    C                     WRITEPD1
+|    C*
+|    C                     SETOF                     91
+|    C*
+|    C                     ADD  1         PTO1
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK 1
+     C*==============================================================*
+03===C           RTN810    BEGSR
+|    C*
+|    C                     WRITEPT1
+|    C*
+|    C                     SETON                     91
+|    C                     ADD  PTO1      PTO2
+|    C                     Z-ADD*ZERO     PTO1
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR
+     C*==============================================================*
+04===C           RTN890    BEGSR
+|    C*
+|    C                     WRITEPT2
+|    C*
+|    C                     Z-ADD*ZERO     PTO2
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+05===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+

@@ -1,0 +1,166 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR1022                                     *
+     H*   AUTHER       : A1070 CHOIE                                 *
+     H*   CREATE DATE  : 79/07/05                                    *
+     H*   UPDATE DATE  : 90/07/13 KLAUS                              *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR1021C                                    *
+     H*   PURPOSE      :
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYTRJF01IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYJTPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR102P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E*                   W10     3   3 10
+     E*                   W08     5   5  6
+     ITRJF01
+     I                                              TR02  L1
+     I                                              EM041 L2
+     I                                              EM042 L2
+     I                                              EM043 L2
+     I                                              EM044 L2
+     I*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I*
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DTR01
+     I                                      503 509 DEM041
+     I                                      510 516 DEM042
+     I*                                     513 517 DTR021
+     I*                                     518 522 DTR022
+     I**                                    523 5280DTR041
+     I**                                    529 5340DTR042
+     I                                      535 535 DTR03
+     I                                      536 536 DTR03E
+     I                                      537 544 DTR021
+     I                                      545 552 DTR022
+     I                                      553 5600WTR041
+     I                                      561 5680WTR042
+     I                                      569 582 TR03N
+     I                                      601 6060DTR041
+     I                                      608 6130DTR042
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           KEYDP     KLIST
+     C                     KFLD           DP011
+     C                     KFLD           DP012
+     C                     KFLD           DP013
+     C                     KFLD           DP014
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C                     EXSR RTN100                     *WRITE PD1
+     C*
+     CL1                   SETON                     32
+     CL2                   SETON                     31
+     CLR 10                WRITEPE2
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C           DTR01     CHAINCM0                  40
+|    C   40                MOVE *BLANK    CM03
+|    C*
+|    C                     SETON                     103132
+|    C                     SETON                     39
+|    C                     MOVEL'Y'       $DATA
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+| 01-C           *INL2     IFEQ '1'
+|   C                     MOVELEM041     DP011
+|   C                     MOVELEM042     DP012
+|   C                     MOVELEM043     DP013
+|   C                     MOVELEM044     DP014
+|   C           KEYDP     CHAINDP0                  40
+|   C   40                MOVEL*BLANK    DP02
+|   C                     MOVELDP02      PDP021
+| 01-C                     END
+|    C*
+|    C*                    CALL 'P31'
+|    C*                    PARM TR04      P3101I  80
+|    C*                    PARM '2'       P3102I  1
+|    C*                    PARM '1'       P3103I  1
+|    C*                    PARM DFMT      P3104I  1
+|    C*                    PARM DTYPE     P3105I  1
+|    C*                    PARM           P3111O  80
+|    C                     Z-ADDTR04      PTR04
+|    C*
+|    C                     MOVELTR051     DP011
+|    C                     MOVELTR052     DP012
+|    C                     MOVELTR053     DP013
+|    C                     MOVELTR054     DP014
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C                     MOVELDP02      PDP022
+|    C*
+|    C                     MOVELTR061     DP011
+|    C                     MOVELTR062     DP012
+|    C                     MOVELTR063     DP013
+|    C                     MOVELTR064     DP014
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C                     MOVELDP02      PDP023
+|    C*
+|    C           TR07      CHAINJT0                  40
+|    C   40                MOVEL*BLANK    JT02
+|    C                     MOVELJT02      PJT022
+|    C*
+|    C           TR08      CHAINJT0                  40
+|    C   40                MOVEL*BLANK    JT02
+|    C                     MOVELJT02      PJT023
+|    C*
+| 02-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETON                     3132
+| 02-C                     END
+|    C*
+|    C                     WRITEPD1
+|    C*
+| 03-C           TR18      IFNE *BLANK
+|   C                     WRITEPD2
+| 03-C                     END
+|    C*
+|    C                     SETOF                     3132
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+03===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+

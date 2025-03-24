@@ -1,0 +1,210 @@
+      ****************************************************************
+      *   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+      * PROGRAM NAME : SAR0853                                       *
+      * AUTHER       : JONATHAN YEH                                  *
+      * CREATE DATE  : 103/03/14                                     *
+      * UPDATE DATE  :                                               *
+      * SYSTEM       :                                           *
+      * SUBSYSTEM    :銷售分析系統                                 *
+      * REMARK       :業務同仁銷售毛利報表(列印1)                *
+      *服務單號: NOTE:1030308    WEB:1030319                       *
+      *MODIFICATION                                                  *
+      * 00A需求單號: 1030588                                       *
+      * 00A 103/04/15 DEREK增加轉換成EXCEL功能                   *
+      ****************************************************************
+     FREWF100 IP  E           K        DISK
+     FMTMEPF  IF  E           K        DISK
+     FMTMCPF  IF  E           K        DISK
+ 00A+FSAR085F O   E           K        DISK
+     FSAR085P O   E             39     PRINTER
+     E*
+     IWF100
+     I                                              WFH02 L1
+     I                                              WFH01 L2
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      162 1620$EVR
+     I                                      125 1270$CPY
+     I                                      598 5990$LPRT
+      *業務員代號
+     I                                      601 606 DSD03S
+     I                                      607 612 DSD03E
+      *SELECT起迄日期
+      *YY/MM/DD
+     I                                      613 6180YMDS
+     I                                      619 6240YMDE
+     I                                      625 6300DSC39S
+     I                                      631 6360DSC39E
+     I                                      637 641 DSC04S
+     I                                      642 646 DSC04E
+     I                                      647 650 DSC05S
+     I                                      651 654 DSC05E
+     I                                      655 6600DSC08S
+     I                                      661 6660DSC08E
+     I                                      667 6670PRTOPT
+      *==============================================================*
+      *                    KEY LIST
+     C           KEYWF     KLIST
+     C                     KFLD           WFH02            客戶代號
+     C                     KFLD           WFH03            分店代號
+      *==============================================================*
+      *==============================================================*
+      *                    MAIN ROUTINE
+      *==============================================================*
+  01-C           *IN10     IFEQ '0'
+    C                     EXSR RTN010                     *HEADING
+    C                     SETON                     10
+  01-C                     END
+     C*
+     C                     EXSR RTN100                     *READE DETAIL
+     C*
+     CL1 10                EXSR RTN110                                 L
+     CL2 10                EXSR RTN200                                 L
+     CLR                   EXSR RTN300
+      *==============================================================*
+      *          RTN010....CHECK HEADING
+      *==============================================================*
+01===C           RTN010    BEGSR
+      *
+|    C                     WRITEPH1
+      *
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN100....READE DETAIL
+      *==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+     C                     Z-ADDWFH04     PFH04
+     C                     Z-ADDWFH05     PFH05
+     C                     Z-ADDWFH06     PFH06
+     C                     ADD  WFH07     PFH06
+|    C           WFH04     SUB  WFH05     PFTT1            *淨收入
+|    C                     SUB  WFH06     PFTT1            *淨收入
+|    C                     SUB  WFH07     PFTT1            *淨收入
+     C                     ADD  PFH04     TEMP01 100
+     C                     ADD  PFH05     TEMP02 100
+     C                     ADD  PFH06     TEMP03 122
+     C                     ADD  PFTT1     TEMP00 142
+     C                     ADD  PFH04     TEMP04 100
+     C                     ADD  PFH05     TEMP05 100
+     C                     ADD  PFH06     TEMP06 122
+     C                     ADD  PFTT1     TEMPTT 142
+     C                     ADD  PFH04     TEMP07 100
+     C                     ADD  PFH05     TEMP08 100
+     C                     ADD  PFH06     TEMP09 122
+     C                     ADD  PFTT1     TEMP10 142
+|    C*
+|    C*
+|    C   39                EXSR RTN900
+|    C                     SETOF                     20
+|    C*
+02===C                     ENDSR
+      *==============================================================*
+      *          RTN110....SUBTOT
+      *==============================================================*
+03===C           RTN110    BEGSR
+|    C*
+|    C           WFH01     CHAINMC0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     MOVEL*BLANKS   PFH01
+|   C                     ELSE
+|   C                     MOVELMC02      PFH01
+| 01-C                     END
+|    C*
+|    C           KEYWF     CHAINME0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     MOVEL*BLANKS   PFH03
+|   C                     ELSE
+|   C                     MOVELME04      PFH03
+| 01-C                     END
+|    C*
+     C                     MOVELWFH02     PFH02
+     C                     Z-ADDTEMP01    PFH04
+     C                     Z-ADDTEMP02    PFH05
+     C                     Z-ADDTEMP03    PFH06
+     C                     Z-ADDTEMP00    PFTT1
+|    C   39                EXSR RTN900
+|    C                     WRITEPD1
+ 00A+C                     EXSR RTN800
+     C                     Z-ADD0         TEMP01
+     C                     Z-ADD0         TEMP02
+     C                     Z-ADD0         TEMP03
+     C                     Z-ADD0         TEMP00
+|    C*
+|    C*
+03===C                     ENDSR
+      *==============================================================*
+      *          RTN200....SUBTOT
+      *==============================================================*
+04===C           RTN200    BEGSR
+|    C*
+|    C   39                EXSR RTN900
+|    C                     Z-ADDTEMP07    TFH04
+|    C                     Z-ADDTEMP08    TFH05
+|    C                     Z-ADDTEMP09    TFH06
+|    C                     Z-ADDTEMP10    TFTT1
+|    C                     WRITEPT1
+|    C                     Z-ADD0         TEMP07
+|    C                     Z-ADD0         TEMP08
+|    C                     Z-ADD0         TEMP09
+|    C                     Z-ADD0         TEMP10
+|    C                     SETON                     20
+|    C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN300....TOTAL
+      *==============================================================*
+05===C           RTN300    BEGSR
+|    C*
+| 01-C           *IN10     IFEQ '0'
+|   C                     WRITEPH1
+|   C                     WRITEPE3
+|   C                     WRITEPE2
+| 01-C                     ELSE
+|    C*
+|    C   39                EXSR RTN900
+|    C                     ADD  TEMP04    TFH04T
+|    C                     ADD  TEMP05    TFH05T
+|    C                     ADD  TEMP06    TFH06T
+|    C                     ADD  TEMPTT    TFTT2
+|    C                     WRITEPT2
+|    C                     Z-ADD0         TFH04T
+|    C                     Z-ADD0         TFH05T
+|    C                     Z-ADD0         TFH06T
+|    C                     Z-ADD0         TFTT2
+|    C                     Z-ADD0         TEMP04
+|    C                     Z-ADD0         TEMP05
+|    C                     Z-ADD0         TEMP06
+|    C                     Z-ADD0         TEMPTT
+|    C*
+|    C                     WRITEPE2
+     C                     END
+|    C*
+05===C                     ENDSR
+ 00A+C*==============================================================*
+ 00A+C*          RTN800....WRITE TO EXCEL
+ 00A+C*==============================================================*
+ 00A+C           RTN800    BEGSR
+ 00A+C*
+ 00A+C                     MOVELPFH01     SR8501    P      業務員名稱
+ 00A+C                     MOVELPFH02     SR8502    P      客戶代號
+ 00A+C                     MOVELPFH03     SR8503    P      客戶簡稱
+ 00A+C                     Z-ADDPFH04     SR8504           銷售金額
+ 00A+C                     Z-ADDPFH05     SR8505           銷退金額
+ 00A+C                     Z-ADDPFH06     SR8506           銷貨成本
+ 00A+C                     Z-ADDPFTT1     SR8507           毛利
+ 00A+C                     WRITESR850
+ 00A+C*
+ 00A+C                     ENDSR
+      *==============================================================*
+      *          RTN900....OVERFLOW
+      *==============================================================*
+06===C           RTN900    BEGSR
+      *
+|    C                     WRITEPE1
+|    C                     WRITEPH1
+|    C                     SETOF                     3920
+      *
+06===C                     ENDSR
+

@@ -1,0 +1,107 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM-ID   : CK_INSTALL                                */
+     /*    PROGRAM NAME : 票據管理系統安裝程式                    */
+     /*    AUTHOR       : A1062  JEANNY                             */
+     /*    CREATE DATE  : 1993.03.01                                */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       : 票據管理系統                            */
+     /***************************************************************/
+             PGM
+             DCLF       FILE(*LIBL/CK_INSTALD) RCDFMT(DSPD1)
+
+             CHGVAR     VAR(&DFMT)   VALUE(' ')
+             CHGVAR     VAR(&DTYPE)  VALUE(' ')
+             CHGVAR     VAR(&DGL)    VALUE(' ')
+             CHGVAR     VAR(&DCOMPN) VALUE(' ')
+             CHGVAR     VAR(&DHIGH)  VALUE(' ')
+             CHGVAR     VAR(&DUSER)  VALUE(' ')
+
+             SNDRCVF    DEV(*FILE) RCDFMT(DSPD1)
+             IF         COND(&IN03 *EQ '1') THEN(GOTO CMDLBL(INF03))
+
+     /*已安裝泛太總帳系統もももももももももももももももももももも */
+          IF         COND(&DGL *EQ 'Y') THEN(DO)
+     /*　　．刪除公司檔　　　　　　　　　　　　　　　　　　　　　 */
+             DLTF       FILE(CKFLIB/PT#APF)
+     /*　　．刪除成本中心檔　　　　　　　　　　　　　　　　　　　 */
+             DLTF       FILE(CKFLIB/PT#BPF)
+     /*　　．刪除共用資料區（日期格式，曆別）　　　　　　　　　　 */
+             DLTDTAARA  DTAARA(CKFLIB/PTDA01)
+     /*　　．複製代碼資料檔　　　　　　　　　　　　　　　　　　　 */
+             CPYF       FROMFILE(CKFLIB/PT#YPF) +
+                          TOFILE(GLFLIB/PT#YPF) FROMMBR(*ALL) +
+                          TOMBR(*FROMMBR) MBROPT(*ADD)
+             DLTF       FILE(CKFLIB/PT#YPF)
+     /*　　．複製代碼說明檔　　　　　　　　　　　　　　　　　　　 */
+             CPYF       FROMFILE(CKFLIB/PT#ZPF) +
+                          TOFILE(GLFLIB/PT#ZPF) FROMMBR(*ALL) +
+                          TOMBR(*FROMMBR) MBROPT(*ADD)
+             DLTF       FILE(CKFLIB/PT#ZPF)
+     /*　　．複製安全管制資料檔　　　　　　　　　　　　　　　　　 */
+             CPYF       FROMFILE(CKFLIB/S#SPPF) +
+                          TOFILE(GLFLIB/S#SPPF) FROMMBR(*ALL) +
+                          TOMBR(*FROMMBR) MBROPT(*ADD)
+             DLTF       FILE(CKFLIB/S#SPPF)
+     /*　　．刪除支援系統共用程式　　　　　　　　　　　　　　　　 */
+             DLTPGM     PGM(GLPLIB/PTM00*)
+             DLTPGM     PGM(CKPLIB/PTA11*)
+             DLTPGM     PGM(CKPLIB/PTI11*)
+             DLTPGM     PGM(CKPLIB/PTA12*)
+             DLTPGM     PGM(CKPLIB/PTI12*)
+             DLTPGM     PGM(CKPLIB/PTA13*)
+             DLTPGM     PGM(CKPLIB/PTI13*)
+             DLTPGM     PGM(CKPLIB/PTA14*)
+             DLTPGM     PGM(CKPLIB/PTI14*)
+             DLTPGM     PGM(CKPLIB/PTR1A*)
+     /*　　．更新使用者環境　　　　　　　　　　　　　　　　　　　 */
+             CHGUSRPRF  USRPRF(&DUSER) CURLIB(GLPLIB) +
+                          INLPGM(CKPLIB/ASM000C) INLMNU(*SIGNOFF) +
+                          TEXT('應用系統一般使用者') +
+                          DSPSGNINF(*NO) JOBD(CKFLIB/GLCKJOBD) +
+                          ATNPGM(*LIBL/ATN01)
+          ENDDO
+
+     /*未安裝泛太總帳系統もももももももももももももももももももも */
+          ELSE (DO)
+     /*　　．清除公司檔　　　　　　　　　　　　　　　　　　　　　 */
+             CLRPFM     FILE(CKFLIB/PT#APF)
+     /*　　．清除成本中心檔　　　　　　　　　　　　　　　　　　　 */
+             CLRPFM     FILE(CKFLIB/PT#BPF)
+     /*　　．設定共用資料區（日期格式，曆別）　　　　　　　　　　 */
+             CHGDTAARA  DTAARA(CKFLIB/PTDA01 (1 1)) VALUE(&DFMT)
+             CHGDTAARA  DTAARA(CKFLIB/PTDA01 (2 1)) VALUE(&DTYPE)
+     /*　　．更改畫面，報表之公司名稱　　　　　　　　　　　　　　 */
+             CHGMSGD    MSGID(US#9001) MSGF(PTFLIB/S#MF) MSG(&DCOMPN)
+             CHGMSGD    MSGID(US#9002) MSGF(PTFLIB/S#MF) MSG(&DCOMPN)
+     /*　　．設定最高權利使用者　　　　　　　　　　　　　　　　　 */
+             CHGDTAARA  DTAARA(CKFLIB/S#DA01 (1 10)) VALUE(&DHIGH)
+     /*　　．建立使用者環境　　　　　　　　　　　　　　　　　　　 */
+             CRTUSRPRF  USRPRF(&DUSER) CURLIB(CKPLIB) +
+                          INLPGM(CKPLIB/CKM000C) INLMNU(*SIGNOFF) +
+                          TEXT('票據系統一般使用者') +
+                          DSPSGNINF(*NO) JOBD(CKFLIB/CKJOBD) +
+                          ATNPGM(*LIBL/ATN01)
+     /*　　．清除安全管制程式　　　　　　　　　　　　　　　　　　 */
+             CLRPFM     FILE(CKFLIB/S#SDPF)
+             CLRPFM     FILE(CKFLIB/S#SUPF)
+          ENDDO
+
+    /* 清除檔案資料                                                */
+             CLRPFM     FILE(CKFLIB/CKHAPF)
+             CLRPFM     FILE(CKFLIB/CKHAPF1)
+             CLRPFM     FILE(CKFLIB/CKHAPF2)
+             CLRPFM     FILE(CKFLIB/CKHCPF)
+             CLRPFM     FILE(CKFLIB/CKHDPF)
+             CLRPFM     FILE(CKFLIB/CKHEPF)
+             CLRPFM     FILE(CKFLIB/CKHFPF)
+             CLRPFM     FILE(CKFLIB/CKHGPF)
+             CLRPFM     FILE(CKFLIB/PT#CPF)
+             CLRPFM     FILE(CKFLIB/PT#DPF)
+             CLRPFM     FILE(CKFLIB/PT#EPF)
+             CLRPFM     FILE(CKFLIB/PT#FPF)
+             CLRPFM     FILE(CKFLIB/PT#GPF)
+  INF03:
+             ENDPGM
+

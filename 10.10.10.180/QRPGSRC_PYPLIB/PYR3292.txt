@@ -1,0 +1,173 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR3292                                    *
+     H*    PROGRAM NAME :公司負擔成本總表-試算                   *
+     H*    AUTHOR       : DEREK                                      *
+     H*    CREATE DATE  : 103/06/27                                  *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYEMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYDWPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR329F O   E           K        DISK
+     FPYR329P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E*---------------------------------------------------------------
+     ILDA        UDS
+     I                                      125 1270$CPY
+     I                                      201 2080PDATE
+     I                                      203 2080DDATE
+     I                                      209 2160$C8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I                                      501 5040DYM
+     I                                      503 5040DMM
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      601 602 DEM011
+     I                                      603 604 DEM012
+     I                                      605 611 DEM041
+     I                                      612 618 DEM042
+     I                                      619 626 DEM021
+     I                                      627 634 DEM022
+     I                                      635 6420CDYMD
+     I                                      635 6400CDYM
+     I                                      635 6380CDYMYY
+     I                                      639 6400CDYMMM
+     I                                      641 6420CDYMDD
+     I                                      643 643 DHD04
+     I                                      644 644 DOP
+     I*
+     I            DS
+     I                                        1   7 O04
+     I                                        1   1 O041
+     I                                        2   2 O042
+     I                                        3   3 O043
+     I                                        4   7 O044
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYDW     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           CDYM
+     C                     KFLD           EM02
+     C*
+     C           KEYDP     KLIST
+     C                     KFLD           EM041            部門編號
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C*PRINT FILE HEADING
+     C                     EXSR RTN010                      HEADING
+     C*
+     C           *LOVAL    SETLLPYEMPF
+     C                     READ PYEMPF                   46
+     C           KEYDP     CHAINPYDPPF               40
+     C                     MOVELEM041     O041
+     C                     MOVELEM042     O042
+     C                     MOVELEM043     O043
+     C                     MOVELEM044     O044
+     C*
+  01-C           *IN46     DOWEQ*OFF
+    C*HEADING
+    C           *IN39     IFEQ '1'
+    C           EM01      CHAINSYCMPF               40
+    C                     WRITEPH1
+    C                     SETOF                     39
+    C                     ENDIF
+    C*
+    C*換部門
+  02-C           O041      IFNE EM041
+    C           O042      ORNE EM042
+    C           O043      ORNE EM043
+    C           O044      ORNE EM044
+    C                     WRITEPD1
+    C                     EXSR RTN300
+    C                     CLEARPD1
+    C*
+    C           KEYDP     CHAINPYDPPF               40
+    C                     MOVELEM041     O041
+    C                     MOVELEM042     O042
+    C                     MOVELEM043     O043
+    C                     MOVELEM044     O044
+  02-C                     ENDIF
+    C                     EXSR RTN200
+    C                     READ PYEMPF                   46
+  01-C                     ENDDO
+     C*
+     C                     EXSR RTN900                      PRINT END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010... PRINT FILE HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*帶出PRINT FILE HEADING資料
+|    C*
+|    C           DEM011    CHAINSYCMPF               40
+|    C                     WRITEPH1
+|    C                     SETOF                     39
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200... WRITE TO PRTF
+     C*==============================================================*
+02===C           RTN200    BEGSR
+|    C*
+|    C           KEYDW     CHAINDW0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C                     ADD  DW05      PDW05
+|   C                     ADD  DW07      PDW07
+|   C                     ADD  DW09      PDW09
+|   C                     ADD  DW05      PTO12
+|   C                     ADD  DW07      PTO14
+|   C                     ADD  DW09      PTO16
+| 01-C                     ENDIF
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN300... WRITE TO FILE
+     C*==============================================================*
+02===C           RTN300    BEGSR
+|    C*
+|    C                     MOVELEM01      WF01      P      公司
+|    C                     Z-ADDCDYM      WF02             統計年月
+|    C                     MOVELDP02      WF03      P      部門簡稱
+|    C                     Z-ADDPDW05     WF04             公司負擔健保
+|    C                     Z-ADDPDW07     WF05             公司負擔勞保
+|    C                     Z-ADDPDW09     WF06             企業提繳
+|    C                     WRITEWF0
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN900... PRINT ENDING
+     C*==============================================================*
+04===C           RTN900    BEGSR
+|    C*
+|    C                     WRITEPD1
+    C                     EXSR RTN300
+|    C                     WRITEPT2
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          *INZSR    INITIAL
+     C*==============================================================*
+05===C           *INZSR    BEGSR
+|    C*
+|    C                     MOVEL*ALL'='   LINE1
+|    C                     MOVEL*ALL'='   LINE2
+|    C                     MOVEL*ALL'-'   LINE4
+|    C                     MOVEL*ALL'='   LINE5
+|    C*
+05===C                     ENDSR
+

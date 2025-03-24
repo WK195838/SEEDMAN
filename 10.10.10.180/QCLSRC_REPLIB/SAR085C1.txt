@@ -1,0 +1,155 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    AUTHOR       : JONATHAN YEH                              */
+     /*    CREATE DATE  : 100/03/12                                 */
+     /*    UPDATE DATE  :                                           */
+     /*    PROGRAM NAME : SAR085C1                                  */
+     /*    SYSTEM       :                                       */
+     /*    SUBSYSTEM    :銷售分析系統                             */
+     /*    REMARK       :業務同仁銷售毛利報表(總表)             */
+     /*   服務單號: NOTE:1030308    WEB:1030319                   */
+     /*MODIFICATION                                                 */
+     /* 00A需求單號: 1030588                                      */
+     /* 00A 103/04/15 DEREK增加轉換成EXCEL功能                  */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&$EVR)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)   TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTID) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6601I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6602I) TYPE(*DEC)  LEN(1 0)
+             DCL        VAR(&P6603I) TYPE(*DEC)  LEN(3 0)
+             DCL        VAR(&P6604I) TYPE(*DEC)  LEN(2 0)
+
+             DCL        VAR(&YMDS) TYPE(*CHAR) LEN(6)
+             DCL        VAR(&YMDE) TYPE(*CHAR) LEN(6)
+             /*確認日期*/
+             DCL        VAR(&YMD8S)  TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YMD8E)  TYPE(*CHAR) LEN(8)
+             /*送貨日期*/
+             DCL        VAR(&YMD8S1) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&YMD8E1) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DSC04S) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DSC04E) TYPE(*CHAR) LEN(5)
+             DCL        VAR(&DSC05S) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DSC05E) TYPE(*CHAR) LEN(4)
+             DCL        VAR(&PRTOPT) TYPE(*CHAR) LEN(1)
+
+  /*00A+*/   DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+  /*00A+*/   DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             CPYF       FROMFILE(REWF100) TOFILE(QTEMP/REWF100) +
+                          CRTFILE(*YES)
+             MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/REWF100))
+
+             CHGVAR     VAR(&YMDS) VALUE(%SST(*LDA 613 6))
+             CHGVAR     VAR(&YMDE) VALUE(%SST(*LDA 619 6))
+             CHGVAR     VAR(&YMD8S)  VALUE(%SST(*LDA 850 8))
+             CHGVAR     VAR(&YMD8E)  VALUE(%SST(*LDA 858 8))
+             CHGVAR     VAR(&YMD8S1) VALUE(%SST(*LDA 866 8))
+             CHGVAR     VAR(&YMD8E1) VALUE(%SST(*LDA 874 8))
+             CHGVAR     VAR(&DSC04S) VALUE(%SST(*LDA 637 5))
+             CHGVAR     VAR(&DSC04E) VALUE(%SST(*LDA 642 5))
+             CHGVAR     VAR(&DSC05S) VALUE(%SST(*LDA 647 4))
+             CHGVAR     VAR(&DSC05E) VALUE(%SST(*LDA 651 4))
+             CHGVAR     VAR(&PRTOPT) VALUE(%SST(*LDA 667 1))
+
+  /*00A+*/   CHGVAR     VAR(&LIB)   VALUE('QTEMP')
+  /*00A+*/   CHGVAR     VAR(&FILE)  VALUE('SAR085F')
+
+  /*00A+*/   CPYF       FROMFILE(SAR085F) TOFILE(QTEMP/SAR085F) +
+                          CRTFILE(*YES)
+  /*00A+*/   MONMSG     MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/SAR085F))
+
+             OVRDBF     FILE(REWF100) TOFILE(QTEMP/REWF100) SHARE(*YES)
+             OVRPRTF    FILE(SAR085P) PAGESIZE(*N 198) CPI(15) +
+                        USRDTA('銷售毛利')
+
+             OVRDBF     FILE(SOSCPF) SHARE(*YES)
+             OVRDBF     FILE(SOSGPF) SHARE(*YES)
+
+     /* 1 */
+/*SKY*/      IF         COND(&YMD8S *NE ' ') THEN(DO)
+             OPNQRYF    FILE((SOSCPF)) QRYSLT(' MSC39 *EQ %RANGE("' +
+                          *CAT &YMD8S *CAT '" "' *CAT &YMD8E *CAT '") +
+                          & SC04 = %RANGE("' || &DSC04S || '"       +
+                                          "' || &DSC04E || '" )     +
+                          & SC05 = %RANGE("' || &DSC05S || '"       +
+                                          "' || &DSC05E || '" )     +
+                          & SC13 +
+                          *EQ "V" & SC35 *NE "T"  & SC03 *NE "S4" & +
+                          SC01A *NE "K" ') KEYFLD(*FILE) +
+                          MAPFLD((MSC39 SC39 *CHAR 8) (SC01A +
+                          '%SST(SC01 1 1)'))
+
+             OPNQRYF    FILE((SOSGPF)) QRYSLT(' MSG26 *EQ %RANGE("' +
+                          *CAT &YMD8S *CAT '" "' *CAT &YMD8E *CAT '") +
+                          & SG04 = %RANGE("' || &DSC04S || '"       +
+                                          "' || &DSC04E || '" )     +
+                          & SG05 = %RANGE("' || &DSC05S || '"       +
+                                          "' || &DSC05E || '" )     +
+                          & SG04A *NE "B" & SG01A *NE "K" & SG17 +
+                          *EQ "            "  ') KEYFLD(*FILE) +
+                          MAPFLD((MSG26 SG26 *CHAR 8) (SG01A +
+                          '%SST(SG01 1 1)') (SG04A '%SST(SG04 1 1)'))
+/*SKY*/                 ENDDO
+/*SKY*/      ELSE       CMD(DO)
+/*SKY*/      IF         COND(&YMD8S1 *NE ' ') THEN(DO)
+/*SKY +*/    OPNQRYF    FILE((SOSCPF)) QRYSLT(' MSC08 *EQ %RANGE("' +
+                        *CAT &YMD8S1 *CAT '" "' *CAT &YMD8E1 *CAT '") +
+                          & SC04 = %RANGE("' || &DSC04S || '"       +
+                                          "' || &DSC04E || '" )     +
+                          & SC05 = %RANGE("' || &DSC05S || '"       +
+                                          "' || &DSC05E || '" )     +
+                          & SC13 +
+                          *NE "*" & SC35 *NE "T"  & SC03 *NE "S4" & +
+                          SC01A *NE "K" ') KEYFLD(*FILE) +
+                          MAPFLD((MSC08 SC08 *CHAR 8) (SC01A +
+                          '%SST(SC01 1 1)'))
+
+             OPNQRYF    FILE((SOSGPF)) QRYSLT(' MSG26 *EQ %RANGE("' +
+                        *CAT &YMD8S1 *CAT '" "' *CAT &YMD8E1 *CAT '") +
+                          & SG04 = %RANGE("' || &DSC04S || '"       +
+                                          "' || &DSC04E || '" )     +
+                          & SG05 = %RANGE("' || &DSC05S || '"       +
+                                          "' || &DSC05E || '" )     +
+                          & SG04A *NE "B" & SG01A *NE "K" & SG17 +
+                          *EQ "            "  ') KEYFLD(*FILE) +
+                          MAPFLD((MSG26 SG26 *CHAR 8) (SG01A +
+                          '%SST(SG01 1 1)') (SG04A '%SST(SG04 1 1)'))
+/*SKY*/                   ENDDO
+/*SKY*/                   ENDDO
+
+
+
+             CALL       SAR0851
+             CALL       SAR0852
+
+  /*00A+*/   OVRDBF     FILE(SAR085F) TOFILE(QTEMP/SAR085F) SHARE(*YES)
+
+             IF         COND(&PRTOPT *NE '2') THEN(DO)
+             CALL       SAR0853
+                        ENDDO
+             ELSE       CMD(DO)
+             CALL       SAR0854
+                        ENDDO
+             CHGVAR     VAR(&P6601I) VALUE('SAR085P')
+
+             CLOF       OPNID(SOSCPF)
+             CLOF       OPNID(SOSGPF)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (162 1)) RTNVAR(&$EVR)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (598 2)) RTNVAR(&$PRTID)
+             CHGVAR     VAR(&P6602I) VALUE(&$EVR)
+             CHGVAR     VAR(&P6603I) VALUE(&$CPY)
+             CHGVAR     VAR(&P6604I) VALUE(&$PRTID)
+             CALL      PGM(P66) PARM(&P6601I &P6602I &P6603I &P6604I)
+
+   /*00A+*/  /*將SAR085F轉換成CSV FILE AND FTP TO PC */
+   /*00A+*/     CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

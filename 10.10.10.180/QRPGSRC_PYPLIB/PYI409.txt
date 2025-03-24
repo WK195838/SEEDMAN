@@ -1,0 +1,512 @@
+    H*
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYI409                                     *
+     H*    PROGRAM NAME :年度稅所得登錄作業查詢　                  *
+     H*    AUTHOR       : A1269                                      *
+     H*    CREATE DATE  : 88/10/21                                   *
+     H*    UPDATE DATE  : 90/07/18 A1274 EVA                         *
+     H*    SYSTEM       :　　　　　　　　　　　                    *
+     H****************************************************************
+     FPYEMPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYPHPF  IF  E           K        DISK
+     FPYHDPF  IF  E           K        DISK
+     F*PYPBLF01IF  E           K        DISK
+     FPYPBPF  IF  E           K        DISK
+     FPYI409D CF  E                    WORKSTN      KINFDS DSPFDS
+     F                                        RRN   KSFILE SFLSR
+     E*---------------------------------------------------------------*
+     E                    @A01        5  1               作業權利
+     E*                   @W01   10  10  1               CHECK DQC08
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I                                    B 378 3790#DRRN
+     I*TRAN DATE
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      201 2080$A8YMD
+     I                                      201 2040$A8Y
+     I                                      203 2080DDATE
+     I                                      203 2040DYMYY
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I*MONTH CHECK
+     I            DS
+     I                                        1   60PH03
+     I                                        1   40PH03Y
+     I                                        5   60PH03M
+     I                                        1   60HD03
+     I                                        1   60PB05
+     I            DS
+     I                                        1   1 WPH04
+     I                                        1   1 WHD04
+     I            DS
+     I                                        1   60WYYMM
+     I                                        1   40WYY
+     I                                        5   60WMM
+    I            DS
+    I                                        1   60WYYMM1
+    I                                        1   40WYY1
+    I                                        5   60WMM1
+     I            DS
+     I                                        1   40DYYMM
+     I                                        1   20DYY
+     I                                        3   40DMM
+     I            DS
+     I                                        1  62 EM031
+     I                                        1  19 EM032
+     I                                       33  44 EM033
+     I                                       45  51 EM034
+     I/COPY QDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN RRN       @DRCD            DSP REC NUM
+     C           *LIKE     DEFN RRN       @PRCD            PAGE REC
+     C           *LIKE     DEFN RRN       @LRRN            LAST REC NUM
+     C           *LIKE     DEFN RRN       @LPAGE           LAST PAGE
+     C           *LIKE     DEFN RRN       @PRRN            PROMPT USE
+    C           *LIKE     DEFN DPH17     DPH17W           固定收入
+    C           *LIKE     DEFN DHD06     DHD06W           固定所得
+    C           *LIKE     DEFN DPH17A    PH17WA           非固定收入
+    C           *LIKE     DEFN DHD06A    HD06WA           非固定所得
+     C           *LIKE     DEFN DPH17     TPH17            固定收入
+     C           *LIKE     DEFN DHD06     THD06            固定所得
+     C           *LIKE     DEFN DPH17A    TPH17A           非固定收入
+     C           *LIKE     DEFN DHD06A    THD06A           非固定所得
+     C           *NAMVAR   DEFN           PTDA01           TRAN DATE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C                     MOVEL'01'      WPM01   2
+     C           KEYPM     KLIST
+     C                     KFLD           WPM01
+     C                     KFLD           DPH01
+     C           KEYEM     KLIST                           CHAIN ER03
+     C                     KFLD           DPH01            公司編號
+     C                     KFLD           DPH02            員工編號
+     C           KEYPH     KLIST
+     C                     KFLD           DPH01            公司編號
+     C                     KFLD           DPH02            員工編號
+     C                     KFLD           WYYMM            年月
+     C           KEYPH1    KLIST
+     C                     KFLD           DPH01            公司編號
+     C                     KFLD           DPH02            員工編號
+     C                     KFLD           WPH03            DATE(YYYYMM)
+     C           KEYPB     KLIST
+     C                     KFLD           DPH01            公司編號
+     C                     KFLD           DPH02            員工編號
+     C                     KFLD           WYY              DATE(YYYY)
+     C*
+     C                     MOVEL'1'       WPH04
+     C                     MOVEL*BLANK    WHD05   2
+     C           KEYHD     KLIST
+     C                     KFLD           DPH01            公司編號
+     C                     KFLD           DPH02            員工編號
+     C                     KFLD           PH03             DATE(YYYYMM)
+     C                     KFLD           WPH04             TYPE(HIDE)
+     C                     KFLD           WHD05             TYPE(HIDE)
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N99                EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+    C           SCID      CASEQ'SC02'    R2000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     IN   PTDA01
+     C                     MOVE 'SC01'    SCID    4
+|    C* FUN AUT
+|    C                     MOVE $INQ      @A01,5
+|    C*
+|    C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C*
+|    C                     Z-ADD5         DOPT
+|    C                     MOVEL*BLANK    DPH01
+|    C                     MOVEL*BLANK    DPH02
+|   C*                    Z-ADD01        DMM
+|   C                     Z-ADD12        DMM
+|    C                     Z-ADDDYMYY     DYY
+|    C*--------------------------------------------------------------*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     DPH17
+|    C                     Z-ADD*ZERO     DHD06
+|    C                     Z-ADD*ZERO     DPH17A
+|    C                     Z-ADD*ZERO     DHD06A
+|   C                     Z-ADD*ZERO     DPH17W
+|   C                     Z-ADD*ZERO     PH17WA
+|   C                     Z-ADD*ZERO     DHD06W
+|   C                     Z-ADD*ZERO     HD06WA
+|   C                     Z-ADD*ZERO     TPH17             固定收入
+|   C                     Z-ADD*ZERO     THD06             固定所得
+|   C                     Z-ADD*ZERO     TPH17A            非固定收
+|   C                     Z-ADD*ZERO     THD06A            非固定所
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+|   C                     EXSR R1E00
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *PRE-SC02
+|   C                     MOVEL'SC02'    SCID
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C*
+|    C* CHK FUN AUT
+| 01-C           @A01,DOPT IFNE 'Y'
+|   C                     MOVEL'UPT2150' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*
+| 02-C           DPH01     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DPH01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C                     PARM '2'       CM004O  1         日期格式
+|    C                     PARM '1'       CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+| 03-C           CM099O    IFEQ 'N'
+|   C                     SETON                     6099
+|   C                     MOVEL'US#0099' ERRID
+|   C                     MOVEL'S#MF'    ERRF
+| 03-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*  ---DYYMM CHECK---
+| 04-C*          DYYMM     IFEQ *ZERO
+    C           DYY       IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 04-C                     END
+|    C   99                GOTO E1B00
+| 04C           DYYMM     ADD  200000    WYYMM
+    C                     SUB  1         WYY
+     C*
+    C           WYY       ADD  1         WYY1
+    C                     Z-ADD1         WMM1
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....INIT 'SC02'
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+|    C                     EXSR R1CC0                      *INIT SFL
+|    C                     EXSR R1CE0                      *READ DETAIL
+    C                     Z-ADDWYYMM1    WYYMM
+|   C                     EXSR R1CE0                      *READ DETAIL
+|    C*SFLDSP
+| 01-C           @LRRN     IFGT 0
+|   C                     Z-ADD1         DRRN
+|   C                     SETON                     50    *SFLDSP
+| 01*C                     ELSE
+|   C                     SETON                     99    *NO DTA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 01-C                     END
+|    C*
+|    C* RELEASE FILE (ADD & INQUIRY)++++++++++++++++++++++++++++++++++*
+| 02-C           DOPT      IFEQ 5                          *INQ
+|   C           *LOVAL    SETLLPH0                        *HEAD FILE
+| 02-C                     END
+|    C*
+04===C                     ENDSR
+     C*
+     C* << ADD : SUBFILE HEAD DATA INITAILIZE>>
+     C*=============================================================*
+     C*          R1CC0 ....SUBFILE INIT
+     C*=============================================================*
+05===C           R1CC0     BEGSR
+|    C* SFL SETTING ++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD12        @PRCD            *PGE RCD
+|    C                     Z-ADD10        @SFTOP  20       *SFL TOP LIN
+|    C                     Z-ADD21        @SFBOT  20       *SFL BOT LIN
+|    C                     Z-ADD0         @LNUM   20       *明細行數
+|    C* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD0         DRRN
+|    C                     Z-ADD0         RRN
+|    C                     Z-ADD0         @LRRN            *LAST RRN
+|    C                     Z-ADD0         @DRCD            *DSP RCD
+|    C*
+|    C                     SETOF                     51    *SFLDSPCTL
+|    C                     SETON                     52    *SFLCLR
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     SETOF                     50    *SFLDSP
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1CD0 ....SFL DATA INIT
+     C*==============================================================*
+06===C           R1CD0     BEGSR
+|    C*
+|    C                     SETOF                     54    *54 FOR BLANK LOOP
+|    C                     Z-ADD@LRRN     RRN
+|    C*
+|    C           @LRRN     DIV  @PRCD     @LPAGE
+|    C                     ADD  1         @LPAGE
+|    C           @LPAGE    MULT @PRCD     @DRCD
+|    C*
+| 01-C           RRN       DOWLT@DRCD
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+| 01-C                     END
+|    C*
+|    C                     Z-ADDRRN       @LRRN
+|    C                     Z-ADDRRN       DRRN
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R1CE0 ....DETAIL DATA TO SFL
+     C*==============================================================*
+07===C           R1CE0     BEGSR
+|    C*
+|    C                     SETON                     54    *54
+|   C                     MOVEL*BLANK    TOT
+|  C                     Z-ADD*ZERO     DPH17W
+|  C                     Z-ADD*ZERO     PH17WA
+|  C                     Z-ADD*ZERO     DHD06W
+|  C                     Z-ADD*ZERO     HD06WA
+|    C*------------------------------------------------------------***
+     C                     MOVEL'2'       FLAG    1
+|    C           KEYPH     SETLLPH0
+|    C           KEYEM     READEPH0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C*
+| 02-C           PH03Y     IFEQ WYY
+| 02-C           PH04      ANDEQ'1'
+|   C                     EXSR R1CE1
+     C           PH03M     IFEQ 12
+|   C                     EXSR R1CE2
+     C                     MOVEL'1'       FLAG
+     C                     END
+    C           PH03Y     IFEQ WYY1
+    C           PH03M     ANDEQ12
+|   C                     Z-ADD*ZERO     DPH17
+|   C                     Z-ADD*ZERO     DHD06
+    C                     END
+|   C                     ADD  1         RRN
+     C                     ADD  DPH17     TPH17            固定收入
+     C                     ADD  DHD06     THD06            固定所得
+     C                     ADD  DPH17A    TPH17A           非固定收入
+     C                     ADD  DHD06A    THD06A           非固定所得
+|   C                     WRITESFLSR
+| 02-C                     END
+|   C*
+|   C           KEYEM     READEPH0                      46
+| 01-C                     END
+|    C*------------------------------------------------------------***
+|    C                     Z-ADD*ZERO     DPH17
+|    C                     Z-ADD*ZERO     DHD06
+|    C                     Z-ADD*ZERO     DPH17A
+|    C                     Z-ADD*ZERO     DHD06A
+     C*
+     C           FLAG      IFEQ '2'
+|   C                     EXSR R1CE2
+     C           PH17WA    IFNE 0
+|  C                     MOVEL'獎金：'TOT       P
+|   C           PB03      MULT 100       WPH03   60
+|   C                     ADD  12        WPH03
+     C                     Z-ADDWPH03     DPH03
+|   C                     Z-ADDPH17WA    DPH17A
+|   C                     Z-ADDHD06WA    DHD06A
+     C                     ADD  DPH17     TPH17            固定收入
+     C                     ADD  DHD06     THD06            固定所得
+     C                     ADD  DPH17A    TPH17A           非固定收入
+     C                     ADD  DHD06A    THD06A           非固定所得
+|   C                     ADD  1         RRN
+    C                     SETON                     88     DPH03 ND
+|   C                     WRITESFLSR
+    C                     SETOF                     88     DPH03 DSP
+     C                     END
+     C                     END
+|    C*------------------------------------------------------------***
+| 05-C           RRN       IFNE 0
+    C           WYY       ANDEQWYY1
+|   C                     MOVEL'合計：'TOT       P
+|   C                     Z-ADDTPH17     DPH17            固定收入
+|   C                     Z-ADDTHD06     DHD06            固定所得
+|   C                     Z-ADDTPH17A    DPH17A           非固定收入
+|   C                     Z-ADDTHD06A    DHD06A           非固定所得
+|   C*                    Z-ADD*ZERO     DPH03
+|   C                     ADD  1         RRN
+    C                     SETON                     88     DPH03 ND
+|   C                     WRITESFLSR
+    C                     SETOF                     88     DPH03 DSP
+| 05-C                     END
+|    C*
+|    C                     Z-ADDRRN       @LRRN
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1CE1 ....DETAIL DATA TO SFL
+     C*==============================================================*
+08===C           R1CE1     BEGSR
+|    C*
+|    C* << OTHER FILE FIELD TO SFLSR >>
+|    C                     MOVE *BLANK    EM03
+|    C                     MOVE *BLANK    EM031
+|    C           KEYEM     CHAINEM0                  40
+|    C                     MOVEL*BLANK    PB04
+|    C                     Z-ADDPH03      DPH03
+|    C                     Z-ADDPH03      WPH03
+|    C*固定收入
+|    C                     Z-ADDPH17      DPH17
+    C           PH03Y     IFEQ WYY1
+    C           PH03M     ANDEQ12
+|   C                     Z-ADD*ZERO     DPH17
+|   C                     Z-ADD*ZERO     DHD06
+    C                     END
+|    C                     ADD  DPH17     DPH17W
+|    C*-----------------------------------------------------------***
+|    C*所得稅合計：固定所得稅＋非固定所得稅
+|    C                     Z-ADD*ZERO     DHD06
+|    C*
+|    C           KEYPM     CHAINPM0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+|   C                     MOVELPM318     WHD05     P      固定所得稅
+|   C           KEYHD     CHAINHD0                  41
+| 02-C           *IN41     IFEQ '0'
+|   C                     Z-ADDHD06      DHD06
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*加班所得稅
+|   C                     MOVEL'57'      WHD05     P      固定所得稅
+|   C           KEYHD     CHAINHD0                  41
+| 02-C           *IN41     IFEQ '0'
+|   C                     ADD  HD06      DHD06
+| 02-C                     END
+|   C*
+    C           PH03Y     IFEQ WYY1
+    C           PH03M     ANDEQ12
+|   C                     Z-ADD*ZERO     DPH17
+|   C                     Z-ADD*ZERO     DHD06
+    C                     END
+|    C                     ADD  DHD06     DHD06W
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R1CE2 ....WRITE PYPBPF
+     C*==============================================================*
+08===C           R1CE2     BEGSR
+     C*
+|    C           KEYPB     SETLLPB0
+|    C           KEYEM     READEPB0                      45
+| 03-C           *IN45     DOWEQ'0'
+     C           PB96      IFNE *ZERO
+|   C*
+| 04-C           PB03      IFEQ WYY
+    C           WYY       ANDEQWYY1
+|   C                     ADD  PB06      DPH17A
+|   C                     ADD  PB08      DHD06A
+| 04-C                     END
+|   C*
+| 04-C                     END
+|   C           KEYEM     READEPB0                      45
+| 03-C                     END
+|    C*
+|  C*                    Z-ADDDPH17A    PH17WA
+|  C*                    Z-ADDDHD06A    HD06WA
+|  C                     ADD  DPH17A    PH17WA
+|  C                     ADD  DHD06A    HD06WA
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢
+     C*==============================================================*
+09===C           R1E00     BEGSR
+|    C*
+|    C*員工編號DPH02
+| 01-C           #FLD      IFEQ 'DPH02 '
+|   C                     CALL 'PYI101'
+|   C                     PARM DPH01     P101I1  2         公司別
+|   C           DPH02     PARM DPH02     P101I2  8         員工　
+|   C                     PARM           @RTNC   2          FUN KEY
+| 01-C                     END
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 .... 'SC02' SCREEN MAIN ROUTINE
+     C*==============================================================*
+10===C           R2000     BEGSR
+|    C*
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD#DRRN     DRRN
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+| 02-C*          *IN25     IFEQ '1'                        *NEXT PAGE
+|   C*
+| 03-C           *IN12     IFEQ '1'                        *PREVIOUS
+|   C                     MOVEL'SC01'    SCID
+|   C                     GOTO E2000
+| 03-C                     END
+| 02-C*                    END
+|    C*
+| 04-C           *IN99     IFEQ '0'                        *CHK OK
+|   C                     MOVE 'SC01'    SCID
+| 04-C                     END
+|    C*
+10===C           E2000     ENDSR
+

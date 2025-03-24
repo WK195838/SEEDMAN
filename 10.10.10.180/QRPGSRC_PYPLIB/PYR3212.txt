@@ -1,0 +1,360 @@
+     H****************************************************************/
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   */
+     H*                                                              */
+     H*    PROGRAM-ID   : PYR3212                                    */
+     H*    PROGRAM NAME :薪資所得扣繳稅額繳款書－工作地點          */
+     H*    AUTHOR       : A1274 EVA                                  */
+     H*    CREATE DATE  : 90/04/12                                   */
+     H*    UPDATE DATE  : 90/05/16 A1274 EVA                         */
+     H*    SYSTEM       :人事薪資系統                              */
+     H****************************************************************/
+     FPYEMPF  IP  E           K        DISK
+     FPYPHPF  IF  E           K        DISK
+     FPYHDPF  IF  E           K        DISK
+     FPYTBLF03IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYR321WFO   E                    DISK
+     I*--------------------------------------------------------------**
+     IEM0
+     I                                              EM01  L1
+     I                                              EM130 L1
+     ILDA        UDS
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      128 129 $PRTID
+     I                                      152 161 $USERN
+     I                                      162 162 $EVR
+     I*
+     I                                      501 502 DPH01
+     I                                      541 5450DYM
+     I                                      546 5470DMM
+     I                                      507 508 DPH01T
+     I                                      509 5160WYMD
+     I                                      509 5140WYM
+     I                                      513 5140WMM
+     I                                      515 5160WPH01T
+     I                                      520 527 DPH021
+     I                                      528 535 DPH022
+     I                                      550 550 DSEL
+     I                                      551 5560KYM
+     I*
+     I            DS
+     I                                        1   60PH03
+     I                                        1   60PH031
+     I                                        1   60PH032
+     I                                        3   60PH03W
+     I                                        3   60PH031W
+     I                                        3   60PH032W
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY
+     C*==============================================================*
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           EM01
+     C*
+     C           KEYPH     KLIST                           *SYPHPF
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WYM
+     C                     KFLD           KHD04   1
+     C*
+     C           KEYHD     KLIST                           *SYPHPF
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WYM
+     C                     KFLD           KHD04   1
+     C                     KFLD           PM318
+     C*
+     C           KEYEM     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C*
+     C                     MOVEL*BLANK    WEM02  10
+     C           KEYTB     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           WYM
+     C                     KFLD           WEM02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     EXSR RTN100
+     C*
+     CL1 10                EXSR RTN200
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DPH01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C*
+|    C                     MOVEL'1'       KHD04
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... ACCOUNT
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     MOVELDPH01     W321AA            公司代號
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DYM       P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           WYM       PARM           P3911O  60
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DYM       P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '2'       P3905I  1
+|    C           KYM       PARM           P3911O  60
+|    C*
+|    C*------------------------------------------------------------***
+|    C***薪資部份(PYPHPF,PYHDPF)
+|    C*　說明：按人事基本資料設定中所得扣繳EM101的設定值而來
+|    C*　　　　１．一般
+|    C*　　　　２．１０％
+|    C*　　　　３．２０％
+|    C*　　　　４．固定金額
+|    C*　　　　５．６％
+|    C*
+|    C           KEYPH     CHAINPH0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C*
+|   C*固定薪資按扣繳稅額表扣繳
+|   C*免扣繳
+| 02-C           EM101     IFEQ '1'
+|   C           EM101     OREQ '4'
+|   C*
+|   C           KEYHD     CHAINHD0                  41
+| 03-C           *IN41     IFEQ '0'
+|   C                     ADD  1         W32111           固定扣繳
+|   C                     ADD  PH17      W32113
+|   C                     ADD  PH27      W32113
+|   C                     SUB  PH28      W32113
+|   C                     SUB  PH29      W32113
+|   C                     ADD  HD06      W32114
+| 03*C                     ELSE
+|   C                     ADD  1         W32151           免扣繳
+|   C                     ADD  PH17      W32153
+|   C                     ADD  PH27      W32153
+|   C                     SUB  PH28      W32153
+|   C                     SUB  PH29      W32153
+| 03-C                     END
+| 02-C                     END
+|   C*
+|   C*６％扣繳
+| 04-C           EM101     IFEQ '5'
+|   C                     ADD  PH17      W32123
+|   C                     ADD  PH27      W32123
+|   C                     SUB  PH28      W32123
+|   C                     SUB  PH29      W32123
+|   C*
+|   C           KEYHD     CHAINHD0                  41
+| 05-C           *IN41     IFEQ '0'
+|   C                     ADD  HD06      W32124
+| 05-C                     END
+|   C*
+|   C                     ADD  1         W32121
+| 04-C                     END
+|   C*
+|   C*１０％扣繳
+| 06-C           EM101     IFEQ '2'
+|   C                     ADD  PH17      W32133
+|   C                     ADD  PH27      W32133
+|   C                     SUB  PH28      W32133
+|   C                     SUB  PH29      W32133
+|   C*
+|   C           KEYHD     CHAINHD0                  41
+| 07-C           *IN41     IFEQ '0'
+|   C                     ADD  HD06      W32134
+| 07-C                     END
+|   C*
+|   C                     ADD  1         W32131
+| 06-C                     END
+|   C*
+|   C*２０％扣繳
+| 08-C           EM101     IFEQ '3'
+|   C                     ADD  PH17      W32143
+|   C                     ADD  PH27      W32143
+|   C                     SUB  PH28      W32143
+|   C                     SUB  PH29      W32143
+|   C*
+|   C           KEYHD     CHAINHD0                  41
+| 09-C           *IN41     IFEQ '0'
+|   C                     ADD  HD06      W32144
+| 09-C                     END
+|   C*
+|   C                     ADD  1         W32141
+| 08-C                     END
+|   C*
+| 01-C                     END
+|    C*
+|    C*------------------------------------------------------------***
+|    C***其他所得課稅資料檔(PYTBPF)
+|    C*
+|    C                     MOVELEM02      WEM02     P
+|    C           KEYTB     SETLLTB0
+|    C           KEYTB     READETB0                      41
+| 10-C           *IN41     DOWEQ'0'
+|   C*
+|   C*５１：租賃
+| 11-C           TB04      IFEQ '51'
+|   C                     ADD  TB07      W321A3  80
+|   C                     ADD  TB08      W321A4  80
+|   C                     ADD  1         W321A1  40
+| 11-C                     END
+|   C*
+|   C*５Ｘ：其他利息(5A/5B/5C/5D/5E)
+| 12-C           TB04      IFEQ '5A'
+|   C           TB04      ANDEQ'5B'
+|   C           TB04      ANDEQ'5C'
+|   C           TB04      ANDEQ'5D'
+|   C           TB04      ANDEQ'5E'
+|   C                     ADD  TB07      W321B3  80
+|   C                     ADD  TB08      W321B4  80
+|   C                     ADD  1         W321B1  40
+| 12-C                     END
+|   C*
+|   C*５３：權利金
+| 13-C           TB04      IFEQ '53'
+|   C                     ADD  TB07      W321C3  80
+|   C                     ADD  TB08      W321C4  80
+|   C                     ADD  1         W321C1  40
+| 13-C                     END
+|   C*
+|   C*５４：盈餘
+| 14-C           TB04      IFEQ '54'
+|   C                     ADD  TB07      W321D3  80
+|   C                     ADD  TB08      W321D4  80
+|   C                     ADD  1         W321D1  40
+| 14-C                     END
+|   C*
+|   C*９Ａ：執行業務報酬
+| 15-C           TB04      IFEQ '9A'
+|   C                     ADD  TB07      W321E3  80
+|   C                     ADD  TB08      W321E4  80
+|   C                     ADD  1         W321E1  40
+| 15-C                     END
+|   C*
+|   C*９Ｂ：稿費
+| 16-C           TB04      IFEQ '9B'
+|   C                     ADD  TB07      W321F3  80
+|   C                     ADD  TB08      W321F4  80
+|   C                     ADD  1         W321F1  40
+| 16-C                     END
+|   C*
+|   C*９１：競技競賽及機會中獎獎金
+| 17-C           TB04      IFEQ '91'
+|   C                     ADD  TB07      W321G3  80
+|   C                     ADD  TB08      W321G4  80
+|   C                     ADD  1         W321G1  40
+| 17-C                     END
+|   C*
+|   C*９２：其他所得
+| 18-C           TB04      IFEQ '92'
+|   C                     ADD  TB07      W321H3  80
+|   C                     ADD  TB08      W321H4  80
+|   C                     ADD  1         W321H1  40
+| 18-C                     END
+|   C*
+|   C           KEYTB     READETB0                      41
+| 10-C                     END
+|    C*------------------------------------------------------------***
+|    C*
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200... ACCOUNT
+     C*==============================================================*
+03===C           RTN200    BEGSR
+|    C*
+|    C                     Z-ADDKYM       W32112
+|    C                     Z-ADDKYM       W32122
+|    C                     Z-ADDKYM       W32132
+|    C                     Z-ADDKYM       W32142
+|    C                     Z-ADDKYM       W32152
+|    C                     Z-ADDKYM       W321A2
+|    C                     Z-ADDKYM       W321B2
+|    C                     Z-ADDKYM       W321C2
+|    C                     Z-ADDKYM       W321D2
+|    C                     Z-ADDKYM       W321E2
+|    C                     Z-ADDKYM       W321F2
+|    C                     Z-ADDKYM       W321G2
+|    C                     Z-ADDKYM       W321H2
+|    C*
+|    C                     MOVELEM130     W321PA
+|    C*
+|    C                     WRITEW321
+|    C*------------------------------------------------------------***
+|    C*INIT. FIELDS
+|    C                     Z-ADD*ZERO     W32111
+|    C                     Z-ADD*ZERO     W32113
+|    C                     Z-ADD*ZERO     W32114
+|    C                     Z-ADD*ZERO     W32121
+|    C                     Z-ADD*ZERO     W32123
+|    C                     Z-ADD*ZERO     W32124
+|    C                     Z-ADD*ZERO     W32131
+|    C                     Z-ADD*ZERO     W32133
+|    C                     Z-ADD*ZERO     W32134
+|    C                     Z-ADD*ZERO     W32141
+|    C                     Z-ADD*ZERO     W32143
+|    C                     Z-ADD*ZERO     W32144
+|    C                     Z-ADD*ZERO     W32151
+|    C                     Z-ADD*ZERO     W32153
+|    C                     Z-ADD*ZERO     W32154
+|    C                     Z-ADD*ZERO     W321A1
+|    C                     Z-ADD*ZERO     W321A3
+|    C                     Z-ADD*ZERO     W321A4
+|    C                     Z-ADD*ZERO     W321B1
+|    C                     Z-ADD*ZERO     W321B3
+|    C                     Z-ADD*ZERO     W321B4
+|    C                     Z-ADD*ZERO     W321C1
+|    C                     Z-ADD*ZERO     W321C3
+|    C                     Z-ADD*ZERO     W321C4
+|    C                     Z-ADD*ZERO     W321D1
+|    C                     Z-ADD*ZERO     W321D3
+|    C                     Z-ADD*ZERO     W321D4
+|    C                     Z-ADD*ZERO     W321E1
+|    C                     Z-ADD*ZERO     W321E3
+|    C                     Z-ADD*ZERO     W321E4
+|    C                     Z-ADD*ZERO     W321F1
+|    C                     Z-ADD*ZERO     W321F3
+|    C                     Z-ADD*ZERO     W321F4
+|    C                     Z-ADD*ZERO     W321G1
+|    C                     Z-ADD*ZERO     W321G3
+|    C                     Z-ADD*ZERO     W321G4
+|    C                     Z-ADD*ZERO     W321H1
+|    C                     Z-ADD*ZERO     W321H3
+|    C                     Z-ADD*ZERO     W321H4
+|    C*------------------------------------------------------------***
+|    C*
+03===C                     ENDSR
+

@@ -1,0 +1,298 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA904                                     *
+     H*    PROGRAM NAME :勞健保及勞退保額調整報表                  *
+     H*    AUTHOR       : A1445 HONDA                                *
+     H*    CREATE DATE  : 2005/12/15                                 *
+     H*    UPDATE DATE  : 2005/12/15                                 *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FPYA904D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*
+     I*LOCAL DATA AREA
+     ILDA        UDS
+     I                                      101 110 $USER
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      152 161 $USERN
+     I                                      173 176 $COR
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*程式使用
+     I                                      511 512 LDACMS
+     I                                      513 514 LDACME
+     I                                      515 521 LDADPS
+     I                                      522 528 LDADPE
+     I                                      529 538 LDAEMS
+     I                                      539 548 LDAEME
+     I                                      549 554 LDADYM
+     I                                      555 555 LDADOP
+     I            DS
+     I                                        1   60DS6DYM
+     I                                        1   6 ZONEYM
+     I            DS
+     I                                        1   40DSDYM
+     I                                        1   20DSDYY
+     I                                        3   40DSDMM
+     I            DS
+     I                                        1   80DSDATE
+     I                                        1   60DSYM
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*          IDENTIFY A PARAMETER LIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           *IN03     PARM *IN03     IN03    1
+     C           *IN10     PARM *IN10     IN10    1
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C   10                EXSR R0200                      *INIT MSG.
+     C  N10                EXSR R0100                      *INIT VALUE
+     C*
+     C                     MOVEL*BLANK    @PRT    1        *PRINT
+  01-C           *IN03     DOUEQ'1'
+    C           @PRT      OREQ 'Y'
+    C                     EXSR R1000                      *SCRN
+  01-C                     END
+     C*
+     C   03                SETON                     LR
+     C                     RETRN
+     C*==============================================================*
+     C*          R0100 ....SCREEN INIT VALUE SET
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     SETON                     1027
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C*---------------------------------------------------------------
+     C                     MOVEL*BLANK    DLO011
+     C                     MOVEL*ALL'9'   DLO012
+     C                     MOVEL*BLANK    DLO021
+     C                     MOVEL*ALL'9'   DLO022
+     C                     MOVEL*BLANK    DLO051
+     C                     MOVEL*ALL'9'   DLO052
+|    C                     Z-ADD$A8YMD    DSDATE
+|    C                     Z-ADDDSYM      DYM
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* CHK AUT
+|    C                     SETON                     32
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ....INITIAL VALUE
+     C*==============================================================*
+02===C           R0200     BEGSR
+|    C*
+|    C                     IN   LDA
+|    C                     SETON                     2799  報表格式  SSAGE
+|    C*
+| 01-C           $PENV     IFNE '2'                        NOT-BATCH
+|   C           $DATA     ANDEQ'N'                        NO-DATA
+|   C                     MOVEL'UPT2050' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     GOTO E0200
+| 01-C                     END
+|    C*
+| 02-C           $PENV     IFEQ '0'                        INQUIRY
+|   C                     MOVEL'UPT2142' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 02-C                     END
+|    C*
+| 03-C           $PENV     IFEQ '1'                        ON-LINE
+|   C                     MOVEL'UPT2140' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 03-C                     END
+|    C*
+| 04-C           $PENV     IFEQ '2'                        BATCH
+|   C                     MOVEL'UPT2110' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+| 04-C                     END
+|    C*
+02===C           E0200     ENDSR
+     C*===============================================================*
+     C*          R1000  ...SCREEN MAIN PROCESS
+     C*===============================================================*
+03===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C                     Z-ADD*ZERO     #LIN
+|    C                     Z-ADD*ZERO     #COL
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      .CHECK      ?
+|    C*
+| 02-C           *IN99     IFEQ *ZERO
+|   C* 轉西元年月並搬   年月至LDA   LDADYM 6
+|   C           DYM       ADD  200000    DS6DYM
+|   C                     MOVELZONEYM    LDADYM           *LDA LDADYM
+|   C*
+|   C                     MOVELDLO011    LDACMS           *LDA LDACMS
+|   C                     MOVELDLO012    LDACME           *LDA LDACME
+|   C                     MOVELDLO021    LDAEMS           *LDA LDAEMS
+|   C                     MOVELDLO022    LDAEME           *LDA LDAEME
+|   C                     MOVELDLO051    LDADPS           *LDA LDADPS
+|   C                     MOVELDLO052    LDADPE           *LDA LDADPE
+|   C                     MOVELDLO13     LDADOP           *LDA LDADOP
+|   C*
+|   C                     SETOF                     27
+|   C                     SETON                     28    .執行中
+|   C                     WRITEDSPD1
+|   C                     SETOF                     28
+|   C*
+|   C                     MOVEL'Y'       @PRT
+|   C                     OUT  LDA
+| 02-C                     END
+|    C*
+03===C           E1000     ENDSR
+     C*===============================================================*
+     C*          R1B00  ...CHECK DATA FROM SCREEN KEY-IN
+     C*===============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C*----------------------------------------------------------------
+|    C*  公司不得為空白
+| 01-C*          DLO011    IFEQ *BLANK
+|   C*                    MOVEL'UPT0010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6199
+| 01-C*                    END
+|    C*  99                GOTO E1B00
+| 02-C           DLO012    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C*----------------------------------------------------------------
+|    C*公司編號起迄值檢核
+| 03-C           DLO011    IFGT DLO012
+|   C                     MOVEL'UPT1011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C*UPT0030---> 反白欄位資料輸入錯誤
+|   C                     SETON                     616299
+|   C                     GOTO E1B00
+| 03-C                     END
+|    C*----------------------------------------------------------------
+|    C*  部門不得為空白
+| 04-C*          DLO051    IFEQ *BLANK
+|   C*                    MOVEL'UPT0010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6399
+| 04-C*                    END
+|    C   99                GOTO E1B00
+| 05-C           DLO052    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*----------------------------------------------------------------
+|    C*部門號碼起迄值檢核
+| 06-C           DLO051    IFGT DLO052
+|   C                     MOVEL'UPT1011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C*UPT0030---> 反白欄位資料輸入錯誤
+|   C                     SETON                     636499
+|   C                     GOTO E1B00
+| 06-C                     END
+|    C*
+|    C*----------------------------------------------------------------
+|    C*  員工不得為空白
+| 07-C*          DLO021    IFEQ *BLANK
+|   C*                    MOVEL'UPT0010' ERRID
+|   C*                    MOVEL'PTMF'    ERRF
+|   C*                    SETON                     6199
+| 07-C*                    END
+|    C*  99                GOTO E1B00
+| 08-C           DLO022    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*----------------------------------------------------------------
+|    C*員工號碼起迄值檢核
+| 09-C           DLO021    IFGT DLO022
+|   C                     MOVEL'UPT1011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C*UPT0030---> 反白欄位資料輸入錯誤
+|   C                     SETON                     656699
+|   C                     GOTO E1B00
+| 09-C                     END
+|    C*----------------------------------------------------------------
+|    C*  年月不得為空白
+| 10-C           DYM       IFEQ 0
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6799
+| 10-C                     END
+|    C   99                GOTO E1B00
+|    C* 搬  年月至DS作切割年月比對用
+|    C                     Z-ADDDYM       DSDYM
+|    C*----------------------------------------------------------------
+|    C* 檢查年月格式 西元年月4Y 0
+|    C*----------------------------------------------------------------
+|    C*
+| 11-C           DSDYY     IFLT 1
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 11-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*
+| 12-C           DSDMM     IFGT 12
+|   C           DSDMM     ORLT 1
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 12-C                     ENDIF
+|    C   99                GOTO E1B00
+|    C*
+|    C*----------------------------------------------------------------
+|    C*  列印類別不得為空白
+| 13-C           DLO13     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6899
+|   C*
+| 14-C           DLO13     IFNE 'Y'
+|   C           DLO13     ANDNE'N'
+|   C           DLO13     ANDNE'A'
+|   C                     MOVEL'UPT0030' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6899
+| 14-C                     END
+|   C*
+| 13-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C* CHK FUN AUT
+|    C*          $PENV     IFNE '2'
+|    C*          $INQ      ANDNE'Y'
+|    C*                    MOVEL'UPT2150' ERRID
+|    C*                    MOVEL'PTMF'    ERRF
+|    C*                    SETON                     99
+|    C*                    END
+|    C*  99                GOTO E1B00
+|    C*
+04===C           E1B00     ENDSR
+

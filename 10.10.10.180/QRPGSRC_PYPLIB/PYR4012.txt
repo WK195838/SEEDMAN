@@ -1,0 +1,201 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR4012                                     *
+     H*   AUTHER       : A1138 DAVID.                                *
+     H*   CREATE DATE  : 81/03/06                                    *
+     H*   UPDATE DATE  : 89/02/21 A1274 EVA                          *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR4011C                                    *
+     H*   PURPOSE      :                                             *
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYPBJF06IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     F* PYSSPF  IF  E           K        DISK
+     FPYR401P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    ARA     5   5 10
+     E*---------------------------------------------------------------
+     IPBJF01
+     I                                              PB04  L5
+     I                                              EM041 L4
+     I                                              EM042 L3
+     I                                              EM043 L2
+     I                                              EM044 L1
+     I*
+     I           UDS
+     I                                      187 1920DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DPB01
+     I                                      503 5050DPB051
+     I                                      541 5440WPB051
+     I                                      517 518 DPB041
+     I                                      519 520 DPB042
+     I                                      603 609 DEM041
+     I                                      610 616 DEM042
+     I                                      531 538 DPB021
+     I                                      561 568 DPB022
+     C*---------------------------------------------------------------
+     C           KEYSS     KLIST
+     C                     KFLD           CM13
+     C                     KFLD           PB04
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           DP014
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*-----------*
+     C*獎金名稱 *
+     C*-----------*
+     C                     MOVEL*BLANK    DSS02  10
+  01-C           *INL5     IFEQ '1'
+  01-C           PB04      IFEQ '01'
+    C                     MOVEAARA,1     DSS02
+  01-C                     END
+  01-C           PB04      IFEQ '02'
+    C                     MOVEAARA,2     DSS02
+  01-C                     END
+  01-C           PB04      IFEQ '03'
+    C                     MOVEAARA,3     DSS02
+  01-C                     END
+  01-C           PB04      IFEQ '04'
+    C                     MOVEAARA,4     DSS02
+  01-C                     END
+    C                     MOVELDSS02     SS02
+    C**         KEYSS     CHAINSS0                  40
+    C** 40                MOVEL*BLANK    SS02
+    C                     SETON                     39
+  01-C                     END
+     C*-----------*
+     C*部門名稱 *
+     C*-----------*
+  02-C           *INL2     IFEQ '1'
+    C                     MOVEL*BLANK    DP014
+    C           KEYDP     CHAINDP0                  40
+    C   40                MOVEL*BLANK    DP02
+    C*                    MOVELDP02      PDP02H
+    C                     SETOF                     40
+    C*                    SETON                     39
+  02-C                     END
+     C*
+     C                     EXSR RTN100
+     C*
+     CL1                   EXSR RTN890
+     CL5                   EXSR RTN891
+     CLR                   EXSR RTN892
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*-----------*
+|    C*公司名稱 *
+|    C*-----------*
+|    C           DPB01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C                     SETON                     103971
+|    C                     MOVEL'Y'       $DATA
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+     C                     Z-ADD*ZERO     QPB11
+|    C                     MOVELEM044     DP014
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+     C                     ADD  PB06      DPB06
+|    C                     ADD  PB08      DPB08
+     C           PB06      SUB  PB08      QPB11   70
+     C                     ADD  QPB11     DPB11
+|    C                     ADD  PB12      DPB12
+     C                     ADD  PB06F     DPB06F
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR
+     C*==============================================================*
+03===C           RTN890    BEGSR
+|    C*
+|    C                     WRITEPD1
+|    C*
+|    C*                    SETOF                     71
+|    C                     ADD  DPB06     PT12
+|    C                     ADD  DPB08     PT13
+|    C                     ADD  DPB12     PT17
+     C                     ADD  DPB06F    PT16
+     C                     ADD  DPB11     PT18
+|    C*
+|    C                     Z-ADD*ZERO     QPB11
+|    C                     Z-ADD*ZERO     DPB06
+|    C                     Z-ADD*ZERO     DPB08
+|    C                     Z-ADD*ZERO     DPB12
+|    C                     Z-ADD*ZERO     DPB06F
+|    C                     Z-ADD*ZERO     DPB11
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN891... LEVEL BREAK LR FIELD CLEAR
+     C*==============================================================*
+04===C           RTN891    BEGSR
+|    C*
+     C                     SETON                     71
+     C                     WRITEPT1
+|    C*
+|    C                     ADD  PT12      PT32
+|    C                     ADD  PT13      PT33
+|    C                     ADD  PT17      PT37
+     C                     ADD  PT16      PT36
+     C                     ADD  PT18      PT38
+|    C*
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT17
+|    C                     Z-ADD*ZERO     PT16
+|    C                     Z-ADD*ZERO     PT18
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN892... LEVEL BREAK LR
+     C*==============================================================*
+03===C           RTN892    BEGSR
+|    C*
+|    C                     WRITEPT3
+|    C*
+|    C                     WRITEPE2
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+05===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+**
+年終獎金夏季獎金紅利　　其他
+

@@ -1,0 +1,649 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA221                                     *
+     H*    PROGRAM NAME :排班資料拷貝                              *
+     H*    AUTHOR       : A1336 KLAUS                                *
+     H*    CREATE DATE  : 91/07/11                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     F****************************************************************
+     F*PYT2LF01IF  E           K        DISK                      A
+     FPYT2LF02IF  E           K        DISK
+     F            T20                               KRENAMET2L2
+     FPYT2LF03IF  E           K        DISK
+     F            T20                               KRENAMET2L3
+     FPYT2LF04IF  E           K        DISK                      A
+     F            T20                               KRENAMET2L4
+     FPYDPPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     F*PYEMPF  IF  E           K        DISK
+     FPYEMLF07IF  E           K        DISK
+     F            EM0                               KRENAMEEML7
+     FPYA221D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     I/COPY PYDDSSRC,PYPMDS01
+     I*DATA AREA
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      111 1160$CHYMD
+     I                                      152 161 $USERN
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I            DS
+     I                                        1   7 T206
+     I                                        1   1 T2061
+     I                                        2   2 T2062
+     I                                        3   3 T2063
+     I                                        4   7 T2064
+     I            DS
+     I                                        1   7 DT206F
+     I                                        1   1 T2061F
+     I                                        2   2 T2062F
+     I                                        3   3 T2063F
+     I                                        4   7 T2064F
+     I            DS
+     I                                        1   7 DT206T
+     I                                        1   1 T2061T
+     I                                        2   2 T2062T
+     I                                        3   3 T2063T
+     I                                        4   7 T2064T
+     I            DS
+     I                                        1   7 EM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEY1F     KLIST                           T2L3        TLL
+     C                     KFLD           DT201F           公司
+     C                     KFLD           WT203F           年月
+     C           KEY2F     KLIST                           T2L2        TLL
+     C                     KFLD           DT201F           公司
+     C                     KFLD           DT206F           部門
+     C                     KFLD           WT203F           年月
+     C           KEY3F     KLIST                           T2L4        TLL
+     C                     KFLD           DT201F           公司
+     C                     KFLD           DT206F           部門
+     C                     KFLD           DT202F           員工
+     C                     KFLD           WT203F           年月
+     C           KEY1T     KLIST                                       TLL
+     C                     KFLD           DT201T           公司
+     C           KEY2T     KLIST                                       TLL
+     C                     KFLD           DT201T           公司
+     C                     KFLD           T2061T           部門
+     C                     KFLD           T2062T           部門
+     C                     KFLD           T2063T           部門
+     C                     KFLD           T2064T           部門
+     C           KEY3T     KLIST                           *NEXT REC SETLL
+     C                     KFLD           DT201T           公司
+     C                     KFLD           T2061T           部門
+     C                     KFLD           T2062T           部門
+     C                     KFLD           T2063T           部門
+     C                     KFLD           T2064T           部門
+     C                     KFLD           DT202T           員工
+     C           KEY4T     KLIST                           *NEXT REC SETLL
+     C                     KFLD           DT201T           公司
+     C                     KFLD           DT206T           部門
+     C                     KFLD           DT202T           員工
+     C                     KFLD           WT203T           年月
+     C           KEYDPF    KLIST
+     C                     KFLD           T2061F
+     C                     KFLD           T2062F
+     C                     KFLD           T2063F
+     C                     KFLD           T2064F
+     C           KEYDPT    KLIST                           *NEXT REC SETLL
+     C                     KFLD           T2061T
+     C                     KFLD           T2062T
+     C                     KFLD           T2063T
+     C                     KFLD           T2064T
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DT201F
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C           *LIKE     DEFN T203      WT203F
+     C           *LIKE     DEFN T203      WT203T
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C***                  Z-ADD1         DOPT
+|    C                     MOVEL*BLANK    DT201F
+|    C                     MOVEL*BLANK    DT206F
+|    C                     MOVEL*BLANK    DT202F
+|    C                     Z-ADD*ZERO     DT203F
+|    C                     MOVEL*BLANK    DT201T
+|    C                     MOVEL*BLANK    DT206T
+|    C                     MOVEL*BLANK    DT202T
+|    C                     Z-ADD*ZERO     DT203T
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+|    C                     Z-ADD*ZERO     WW01    30       *判斷CPY
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+| 02-C           *IN04     IFEQ '1'
+|   C                     EXSR R1E00                      .PROMPT
+|   C                     GOTO E1000
+| 02-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C           *IN14     ANDEQ'1'
+|   C                     EXSR R1C00                      *拷貝選擇
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+03===C           R1B00     BEGSR
+|    C* 公司
+| 01-C           DT201F    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 01-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DT201F    CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C*存在否？(Y-存在有權利N-存在無權利*BLANK-不存在)
+|    C*
+| 02-C           DT206F    IFNE *BLANK
+|   C           KEYDPF    CHAINDP0                  40
+| 03-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 03-C                     END
+| 02-C                     END
+|    C   99                GOTO E1B00
+|    C* DATA CHECK *--------------------------------------------------*
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+| 04-C           *IN40     IFEQ '1'
+|   C                     Z-ADD*ZERO     PM201
+|   C                     Z-ADD*ZERO     PM202
+|   C                     Z-ADD*ZERO     PM205
+|   C                     Z-ADD*ZERO     PM206
+|   C                     MOVEL*BLANK    PM207
+| 04-C                     END
+|    C*
+|    C*排班年月
+| 05-C           DT203F    IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 05-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P38'
+|    C                     PARM DT203F    P3801I  60
+|    C                     PARM DFMT      P3802I  1
+|    C                     PARM DTYPE     P3803I  1
+|    C                     PARM           P3801O  60
+|    C                     PARM           P3811O  1
+| 06-C           P3811O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6299
+| 06-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DT203F    P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           WT203F    PARM           P3911O  60
+|    C*--------------------------------------------------------------
+| 07-C           DT201T    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 07-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 08-C           DT206T    IFNE *BLANK
+|   C           KEYDPT    CHAINDP0                  40
+| 09-C           *IN40     IFEQ '1'
+|   C                     MOVEL'UPT2010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 09-C                     END
+| 08-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C*排班年月
+| 10-C           DT203T    IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 10-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P38'
+|    C                     PARM DT203T    P3801I  60
+|    C                     PARM DFMT      P3802I  1
+|    C                     PARM DTYPE     P3803I  1
+|    C                     PARM           P3801O  60
+|    C                     PARM           P3811O  1
+| 11-C           P3811O    IFEQ 'N'
+|   C                     MOVEL'UPT0040' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 11-C                     END
+|    C   99                GOTO E1B00
+|    C*
+|    C                     CALL 'P39'
+|    C                     PARM DT203T    P3901I  60
+|    C                     PARM DFMT      P3902I  1
+|    C                     PARM DTYPE     P3903I  1
+|    C                     PARM '2'       P3904I  1
+|    C                     PARM '1'       P3905I  1
+|    C           WT203T    PARM           P3911O  60
+|    C*--------------------------------------------------------------
+| 12-C           DT203T    IFLE PM202
+|   C           DT203T    ORLE PM206
+|   C                     MOVEL'UMI0540' ERRID
+|   C                     MOVEL'CEMF'    ERRF
+|   C                     SETON                     6699
+| 12-C                     END
+|    C   99                GOTO E1B00
+|    C*
+| 13-C           WT203T    IFLT WT203F
+|   C                     MOVEL'UPT0041' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     626699
+| 13-C                     END
+|    C   99                GOTO E1B00
+|    C*--------------------------------------------------------------
+|    C*
+| 14-C           DT206F    IFEQ *BLANK
+|   C           DT202F    ANDEQ*BLANK
+|   C*
+| 15-C           DT206T    IFNE *BLANK
+|   C           DT202T    ORNE *BLANK
+|   C                     MOVEL'UPT0011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     656899
+| 15*C                     ELSE
+| 16-C           DT201F    IFNE DT201T
+|   C                     MOVEL'UPT5021' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6499
+| 16-C                     END
+|   C   99                GOTO E1B00
+|   C*
+| 17-C           DT203F    IFGT DT203T
+|   C                     MOVEL'UPT5020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 17-C                     END
+|   C   99                GOTO E1B00
+|   C*
+| 15-C                     END
+| 14-C                     END
+|    C   99                GOTO E1B00
+|    C*----------------------------------------------------------------
+| 18-C           DT206F    IFNE *BLANK
+|   C           DT202F    ANDEQ*BLANK
+|   C*
+| 19-C           DT206T    IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6599
+| 19-C                     END
+|   C   99                GOTO E1B00
+|   C*
+| 20-C           DT202T    IFNE *BLANK
+|   C                     MOVEL'UPT0011' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6899
+| 20-C                     END
+|   C   99                GOTO E1B00
+|   C*
+| 21-C           DT201F    IFNE DT201T
+|   C           DT206F    ORNE DT206T
+|   C                     MOVEL'UPT5022' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     646599
+| 21-C                     END
+|   C   99                GOTO E1B00
+|   C*
+| 22-C           DT203F    IFGT DT203T
+|   C                     MOVEL'UPT5020' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6699
+| 22-C                     END
+|   C   99                GOTO E1B00
+|   C*
+| 18-C                     END
+|    C*
+03===C           E1B00     ENDSR
+     C*==============================================================*
+     C*          R1C00 ....拷貝選擇
+     C*==============================================================*
+04===C           R1C00     BEGSR
+|    C*
+| 01-C           DT201F    IFNE *BLANK
+|   C           DT203F    ANDNE*ZERO
+|   C*1---------------------------------------------------------------
+|   C*公司＋部門＋員工＋排班年月
+| 02-C           DT206F    IFNE *BLANK
+|   C           DT202F    ANDNE*BLANK
+|   C           KEY3F     SETLLT2L4
+|   C           KEY3F     READET2L4                     46
+| 03-C           *IN46     DOWEQ'0'
+|   C                     MOVELT205      T205F  62 P
+|   C                     EXSR R1C10
+|   C           KEY3F     READET2L4                     46
+| 03-C                     END
+| 02-C                     END
+|   C*2---------------------------------------------------------------
+|   C*公司＋部門＋排班年月
+| 04-C           DT206F    IFNE *BLANK
+|   C           DT202F    ANDEQ*BLANK
+|   C           KEY2F     SETLLT2L2
+|   C           KEY2F     READET2L2                     46
+| 05-C           *IN46     DOWEQ'0'
+|   C                     MOVELT205      T205F
+|   C                     EXSR R1C20
+|   C           KEY2F     READET2L2                     46
+| 05-C                     END
+| 04-C                     END
+|   C*3---------------------------------------------------------------
+|   C*公司＋排班年月
+| 06-C           DT206F    IFEQ *BLANK
+|   C           DT202F    ANDEQ*BLANK
+|   C           KEY1F     SETLLT2L3
+|   C           KEY1F     READET2L3                     46
+| 07-C           *IN46     DOWEQ'0'
+|   C                     MOVELT205      T205F
+|   C                     EXSR R1C30
+|   C           KEY1F     READET2L3                     46
+| 07-C                     END
+| 06-C                     END
+|   C*
+| 01-C                     END
+|    C*----------------------------------------------------------------
+|    C           WW01      IFEQ *ZERO
+|    C                     MOVEL'UPT2144' ERRID
+|    C                     MOVEL'PTMF'    ERRF             沒有資料
+|    C                     SETON                     99
+|    C                     ELSE
+|    C                     MOVEL'UPT2142' ERRID
+|    C                     MOVEL'PTMF'    ERRF             作業完成
+|    C                     SETON                     99
+| 01-C                     END
+|    C*----------------------------------------------------------------
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....拷貝（公司＋部門＋員工＋排班年月）
+     C*==============================================================*
+05===C           R1C10     BEGSR
+|    C*
+| 01-C           DT201T    IFNE *BLANK                     公司
+|   C           DT203T    ANDNE*ZERO                      年月
+|   C*----------------------------------------------------------------
+| 02-C           DT206T    IFNE *BLANK                     部門
+|   C           DT202T    ANDNE*BLANK                     員工
+|   C                     EXSR R1C11
+| 02-C                     END
+|   C*----------------------------------------------------------------
+| 03-C           DT206T    IFNE *BLANK                     部門
+|   C           DT202T    ANDEQ*BLANK
+|   C                     EXSR R1C12
+| 03-C                     END
+|   C*----------------------------------------------------------------
+| 04-C           DT206T    IFEQ *BLANK
+|   C           DT202T    ANDEQ*BLANK
+|   C                     EXSR R1C13
+| 04-C                     END
+| 01-C                     END
+|    C*----------------------------------------------------------------
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C11 ....試用特定員工
+     C*==============================================================*
+06===C           R1C11     BEGSR
+|    C*
+|    C           KEY3T     SETLLEML7
+|    C           KEY3T     READEEML7                     46
+| 01-C           *IN46     DOWEQ'0'
+|   C           EM19      IFEQ 0
+|   C           EM104     ANDEQ'Y'
+|   C*
+|   C           KEY4T     CHAINT2L4                 40
+|   C                     EXSR R1D00                      拷貝
+|   C           *IN40     IFEQ '1'
+|   C                     WRITET2L4
+|   C                     Z-ADD1         WW01
+| 01-C                     END
+| 01-C                     END
+|   C*
+|   C           KEY3T     READEEML7                     46
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R1C12 ....試用全部門
+     C*==============================================================*
+07===C           R1C12     BEGSR
+|    C*
+|    C           KEY2T     SETLLEML7
+|    C           KEY2T     READEEML7                     46
+| 01-C           *IN46     DOWEQ'0'
+|   C           EM19      IFEQ 0
+|   C           EM104     ANDEQ'Y'
+|   C*
+|   C           KEY4T     CHAINT2L4                 40
+|   C                     EXSR R1D00                      拷貝
+|   C           *IN40     IFEQ '1'
+|   C                     WRITET2L4
+|   C                     Z-ADD1         WW01
+| 01-C                     END
+| 01-C                     END
+|   C*
+|   C           KEY2T     READEEML7                     46
+| 01-C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1C13 ....試用到全公司
+     C*==============================================================*
+08===C           R1C13     BEGSR
+|    C*
+|    C           KEY1T     SETLLEML7
+|    C           KEY1T     READEEML7                     46
+| 01-C           *IN46     DOWEQ'0'
+|   C           EM19      IFEQ 0
+|   C           EM104     ANDEQ'Y'
+|   C*
+|   C           KEY4T     CHAINT2L4                 40
+|   C                     EXSR R1D00                      拷貝
+|   C           *IN40     IFEQ '1'
+|   C                     WRITET2L4
+|   C                     Z-ADD1         WW01
+| 01-C                     END
+| 01-C                     END
+|   C*
+|   C           KEY1T     READEEML7                     46
+| 01-C                     END
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*          R1C20 ....拷貝（公司＋部門＋排班年月）
+     C*==============================================================*
+09===C           R1C20     BEGSR
+|    C*
+|    C           KEY2T     SETLLEML7
+|    C           KEY2T     READEEML7                     46
+| 01-C           *IN46     DOWEQ'0'
+|   C           EM19      IFEQ 0
+|   C           EM104     ANDEQ'Y'
+|   C*
+|   C           KEY4T     CHAINT2L4                 40
+|   C                     EXSR R1D00                      拷貝
+|   C           *IN40     IFEQ '1'
+|   C                     WRITET2L4
+|   C                     Z-ADD1         WW01
+| 01-C                     END
+| 01-C                     END
+|   C*
+|   C           KEY2T     READEEML7                     46
+| 01-C                     END
+|    C*
+09===C                     ENDSR
+     C*==============================================================*
+     C*          R1C30 ....拷貝（公司＋排班年月）
+     C*==============================================================*
+10===C           R1C30     BEGSR
+|    C*
+|    C           KEY1T     SETLLEML7
+|    C           KEY1T     READEEML7                     46
+| 01-C           *IN46     DOWEQ'0'
+|   C           EM19      IFEQ 0
+|   C           EM104     ANDEQ'Y'
+|   C*
+|   C           KEY4T     CHAINT2L4                 40
+|   C                     EXSR R1D00                      拷貝
+|   C           *IN40     IFEQ '1'
+|   C                     WRITET2L4
+|   C                     Z-ADD1         WW01
+| 01-C                     END
+| 01-C                     END
+|   C*
+|   C           KEY1T     READEEML7                     46
+| 01-C                     END
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*          R1D00 ....拷貝PROCESS
+     C*==============================================================*
+11===C           R1D00     BEGSR
+|    C*ITEM
+|    C                     MOVELDT201T    T201             公司編號
+|    C                     MOVELEM02      T202             員工編號
+|    C                     Z-ADDWT203T    T203             排班年月
+|    C                     MOVELT205F     T205             內容
+|    C                     MOVELEM04      T206             部門代碼
+|    C                     Z-ADD0         T296             考勤確認日
+|    C                     Z-ADD$A8YMD    T297             記錄更新日
+|    C                     TIME           T298             記錄更新時
+|    C                     MOVEL$USER     T299             使用者代號
+|    C*
+11===C                     ENDSR
+     C*==============================================================*
+     C*          R1E00 ....欄位查詢 (PF04 : CALL SUB-PROGRAM)
+     C*==============================================================*
+12===C           R1E00     BEGSR
+|    C*
+|    C           #CSR      DIV  256       #LIN             *LINE
+|    C                     MVR            #COL             *COLUMN
+|    C*
+|    C*公司編號DT201F
+| 01-C           #LIN      IFEQ 6
+|   C           #COL      ANDGE19
+|   C           #COL      ANDLE20
+|   C                     CALL 'PYI517'
+|   C           DT201F    PARM DT201F    I517I1  2         公司別
+|   C                     PARM           @RTNC   2          FUN KEY
+| 01-C                     END
+|    C*
+|    C*部門編號DT206F
+| 02-C           #LIN      IFEQ 7
+|   C           #COL      ANDGE19
+|   C           #COL      ANDLE23
+|   C                     CALL 'PYI512'
+|   C           DT206F    PARM DT206F    I512I1  5         部門代碼
+|   C                     PARM           @RTNC   2          FUN KEY
+| 02-C                     END
+|    C*
+|    C*員工編號DT202F
+| 03-C           #LIN      IFEQ 8
+|   C           #COL      ANDGE19
+|   C           #COL      ANDLE26
+|   C                     CALL 'PYI101'
+|   C                     PARM DT201F    P101I1  2         公司別
+|   C           DT202F    PARM DT202F    P101I2  8         員工　
+|   C                     PARM           @RTNC   2          FUN KEY
+| 03-C                     END
+|    C*----------------------------------------------------------------
+|    C*公司編號DT201T
+| 04-C           #LIN      IFEQ 12
+|   C           #COL      ANDGE19
+|   C           #COL      ANDLE20
+|   C                     CALL 'PYI517'
+|   C           DT201T    PARM DT201T    I517I1  2         公司別
+|   C                     PARM           @RTNC   2          FUN KEY
+| 04-C                     END
+|    C*
+|    C*部門編號DT206T
+| 05-C           #LIN      IFEQ 13
+|   C           #COL      ANDGE19
+|   C           #COL      ANDLE23
+|   C                     CALL 'PYI512'
+|   C           DT206T    PARM DT206T    I512I1  5         部門代碼
+|   C                     PARM           @RTNC   2          FUN KEY
+| 05-C                     END
+|    C*
+|    C*員工編號DT202T
+| 06-C           #LIN      IFEQ 14
+|   C           #COL      ANDGE19
+|   C           #COL      ANDLE26
+|   C                     CALL 'PYI101'
+|   C                     PARM DT201T    P101I1  2         公司別
+|   C           DT202T    PARM DT202T    P101I2  8         員工　
+|   C                     PARM           @RTNC   2          FUN KEY
+| 06-C                     END
+|    C*
+12===C           E1E00     ENDSR
+     C*==============================================================*
+

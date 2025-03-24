@@ -1,0 +1,129 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYS3061                                    *
+     H*    PROGRAM NAME :計算加班時薪基準                          *
+     H*    AUTHOR       : A1336   KLAUS LAI                          *
+     H*    CREATE DATE  : 91/12/26                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYEMPF  IF  E           K        DISK
+     FPYSHPF  IF  E           K        DISK
+     FPYSDPF  IF  E           K        DISK
+     FPYPYPF  IF  E           K        DISK
+     FPYPDPF  IF  E           K        DISK
+     FPYPD1LF2IF  E           K        DISK
+     E*---------------------------------------------------------------*
+     I            DS
+     I                                        1   80SYM
+     I                                        1   60YYMM
+     I/COPY PYDDSSRC,PYEMDS01
+     C*==============================================================*
+     C*                    *ENTRY PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C                     PARM           SI1     2        公司編號
+     C                     PARM           SI2     8        員工編號
+     C                     PARM           SI3     60       計薪年月
+     C                     PARM           SI4     80       加班日期
+     C                     PARM           SO1     70       薪資基準
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYSH     KLIST
+     C                     KFLD           SI1              公司編號
+     C                     KFLD           SI2              員工編號
+     C                     KFLD           SI4              加班日期
+     C           KEYEM     KLIST
+     C                     KFLD           SI1              公司編號
+     C                     KFLD           SI2              員工編號
+     C           KEYSH1    KLIST
+     C                     KFLD           SI1              公司編號
+     C                     KFLD           SI2              員工編號
+     C*
+     C           KEYPD1    KLIST
+     C                     KFLD           SI1              公司編號
+     C                     KFLD           EM135            組別　　　
+     C           KEYPDB    KLIST
+     C                     KFLD           SI1              公司編號
+     C                     KFLD           SI2              員工編號
+     C                     KFLD           PD102            薪項
+     C           KEYSD     KLIST
+     C                     KFLD           SH01             公司編號
+     C                     KFLD           SH02             員工編號
+     C                     KFLD           SH03             調薪日
+     C                     KFLD           PD102
+     C*==============================================================*
+     C*                    *MAIN ROUTINE
+     C*==============================================================*
+     C                     Z-ADD0         SO1
+     C                     Z-ADDSI4       SYM     80
+     C*
+     C                     EXSR RTN105
+     C                     EXSR RTN200                     .COMPUTE
+     C*
+     C                     SETON                       LR
+     C                     RETRN
+     C*==============================================================*
+     C*   RTN105... GET 本月本薪
+     C*==============================================================*
+01===C           RTN105    BEGSR
+|    C*
+|    C*加班日、請假日大於調薪日－用調薪後的薪資
+|    C*                  反之－用調薪前的薪資
+|    C           KEYSH     SETGTSH0
+|    C           KEYSH1    READESH0                      46
+|    C*
+| 01-C           *IN46     IFEQ '0'
+|   C           SI4       ANDGESH03
+|   C                     Z-ADDSH08      SO1
+|   C                     MOVEL'Y'       SWSH    1 P      .有調薪
+| 01*C                     ELSE
+|   C           KEYSH1    CHAINPY0                  40
+|   C                     Z-ADDPY03      SO1
+|   C                     MOVEL'N'       SWSH    1 P      .未調薪
+| 01-C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN200... 薪資固定項目－本月底薪資
+     C*==============================================================*
+02===C           RTN200    BEGSR
+|    C*
+     C           KEYEM     CHAINEM0                  40
+     C           *IN40     IFEQ '0'
+|    C*
+| 01-C           SWSH      IFEQ 'N'                        .未調薪
+|   C*
+|   C*以基準檔之項目金額計算PYPD1PF
+|   C*
+|   C           KEYPD1    SETLLPD10
+|   C           KEYPD1    READEPD10                     46
+| 02-C           *IN46     DOWEQ'0'
+|   C*
+|   C           KEYPDB    CHAINPD0                  45
+|   C  N45                ADD  PD04      SO1
+|   C*
+|   C           KEYPD1    READEPD10                     46
+| 02-C                     END
+|   C*
+| 01*C                     ELSE                            .有調薪
+|   C*
+|   C           KEYPD1    SETLLPD10
+|   C           KEYPD1    READEPD10                     46
+| 04-C           *IN46     DOWEQ'0'
+|   C*
+|   C           KEYSD     CHAINSD0                  45
+|   C  N45                ADD  SD06      SO1
+|   C*
+|   C           KEYPD1    READEPD10                     46
+| 04-C                     END
+|   C*
+| 01-C                     END
+|    C*
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+

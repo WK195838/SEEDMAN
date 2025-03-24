@@ -1,0 +1,485 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : CKR440                                     *
+     H*    PROGRAM NAME :銀行帳戶收支日報表                        *
+     H*    AUTHOR       : A1152   ANGY                               *
+     H*    CREATE DATE  : 81/10/03                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FCKHAJF02IF  E           K        DISK
+     F*PA#APF  IF  E           K        DISK
+     FPT#XPF  IF  E           K        DISK
+     FCKHBLF01IF  E           K        DISK
+     FCKHDLF01IF  E           K        DISK
+     FCKHFLF04IF  E           K        DISK
+     FCKR440P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      209 2160$C8YMD
+     I                                      201 2080$A8YMD
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      173 176 $COR
+     I                                      219 219 $PENV
+     I                                      220 229 $PRTNM
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 HA02F
+     I                                      505 506 HA02T
+     I                                      509 514 HA16F
+     I                                      515 520 HA16T
+     I                                      521 5280HA15F
+     I                                      529 5360HA15T
+     I*
+     I            DS
+     I                                        1  14 HA16
+     I                                        9  14 HA161
+     I/COPY QRPGSRC,PT#XDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C* DEFINE KEY BREAK SAVE KEY ++++++++++++++++++++++++++++++++++++
+     C           *NAMVAR   DEFN           PTDA01
+     C           *LIKE     DEFN HA15      SHA15            .L1 KEY
+     C           *LIKE     DEFN HA01      SHA01            .L2 KEY
+     C           *LIKE     DEFN HA16      SHA16            .L3 KEY
+     C           *LIKE     DEFN HA02      SHA02            .L4 KEY
+     C           *LIKE     DEFN #X01      D#X03
+     C*
+     C           *LIKE     DEFN HA02      #B001I
+     C           *LIKE     DEFN HA02      #C001I
+     C           *LIKE     DEFN HA04      #C002I
+     C           *LIKE     DEFN HA02      #D001I
+     C           *LIKE     DEFN HA04      #D002I
+     C           *LIKE     DEFN HA02      #E001I
+     C           *LIKE     DEFN HA13      #E002I
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYHAJ    KLIST                           *MAIN FILE
+     C                     KFLD           HA02F
+     C           KEYHD3    KLIST
+     C                     KFLD           HA02
+     C                     KFLD           HA161
+     C           KEYHF     KLIST
+     C                     KFLD           HF03
+     C                     KFLD           HF02
+     C           KEY#X3    KLIST                           .CHAIN #X0
+     C                     KFLD           D#X03
+     C                     KFLD           HA02F
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      .INIT
+     C*
+     C                     EXSR R0200                      .MAIN
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ... INITIAL PROCESS
+     C*==============================================================*
+     C           R0100     BEGSR
+     C*
+     C                     SETON                     39
+     C                     IN   PTDA01
+     C*
+     C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+     C                     CALL 'P31'
+     C                     PARM $A8YMD    P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM $PFMT     P3104I  1
+     C                     PARM $PTYPE    P3105I  1
+     C           PDATE     PARM           P3101O  80
+     C*
+     C                     MOVE HA16F     PHA16F
+     C                     MOVE HA16T     PHA16T
+     C                     MOVEL'CK'      D#X03
+     C           KEY#X3    CHAIN#X0                  40
+     C                     CALL 'P31'
+     C                     PARM HA15F     P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           PHA15F    PARM           P3101O  80
+     C*
+     C                     CALL 'P31'
+     C                     PARM HA15T     P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           PHA15T    PARM           P3101O  80
+     C*
+     C*CLEAR TOTAL FIELD
+     C                     Z-ADD*ZERO     PT11
+     C                     Z-ADD*ZERO     PT12
+     C                     Z-ADD*ZERO     PT21
+     C                     Z-ADD*ZERO     PT22
+     C                     Z-ADD*ZERO     PT31
+     C                     Z-ADD*ZERO     PT32
+     C                     Z-ADD*ZERO     THA10  110
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R0200 ... MAIN PROCESS  (GET DATA)
+     C*==============================================================*
+     C           R0200     BEGSR
+     C*
+     C* GET DATA +++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           KEYHAJ    SETLLCKHAJF02
+     C                     READ CKHAJF02                 42
+     C*
+     C           *IN42     DOWEQ'0'                        .EOF
+     C* END OF SELECT DATA +++++++++++++++++++++++++++++++++++++++++++
+     C           HA02      ANDLEHA02T                      .EOK
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     EXSR R2000                      .DETAIL
+     C* GET DATA +++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     READ CKHAJF02                 42
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     END
+     C*
+     C           *IN10     IFEQ '1'                        .HAS DATA
+     C* LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++++
+     C                     EXSR R7900                      .WRITE送款
+     C                     EXSR R8200                       .L2 TOTAL
+     C                     EXSR R8300                       .L3 TOTAL
+     C                     EXSR R8900                       .L4 TOTAL
+     C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     ELSE                            .NO DATA
+     C                     EXSR R8999                       .LR NO DATA
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+     C           R2000     BEGSR
+     C*
+     C*+<<DATA SELECT>>++++++++++++++++++++++++++++++++++++++++++++++++
+     C           HA161     IFGT HA16T                      .EOK
+     C           HA161     ORLT HA16F
+     C                     GOTO E2000
+     C                     END
+     C           HA15      IFLT HA15F
+     C           HA15      ORGT HA15T
+     C                     GOTO E2000
+     C                     END
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C* FIRST FECORD
+     C           *IN10     IFEQ '0'
+     C* LEVEL BREAK INIT PROCESS ++++++++++++++++++++++++++++++++++++++
+     C                     EXSR R7100                      .L1 INIT
+     C                     EXSR R7200                      .L2 INIT
+     C                     EXSR R7300                      .L3 INIT
+     C                     EXSR R7400                      .L4 INIT
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     SETON                     10
+     C                     END
+     C*
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* LEVEL BREAK COMP & PROCESS
+     C           HA02      IFNE SHA02                       .L4 BREAK
+     C                     EXSR R7900                      .WRITE送款
+     C                     EXSR R8200                       .L2 TOTAL
+     C                     EXSR R8300                       .L3 TOTAL
+     C                     EXSR R8900                       .L4 TOTAL
+     C                     EXSR R7100                       .L1 INIT
+     C                     EXSR R7200                       .L2 INIT
+     C                     EXSR R7300                       .L3 INIT
+     C                     EXSR R7400                       .L4 INIT
+     C                     END
+     C*
+     C           HA16      IFNE SHA16                       .L3 BREAK
+     C                     EXSR R7900                      .WRITE送款
+     C                     EXSR R8200                       .L2 TOTAL
+     C                     EXSR R8300                       .L3 TOTAL
+     C                     EXSR R7100                       .L1 INIT
+     C                     EXSR R7200                       .L2 INIT
+     C                     EXSR R7300                       .L3 INIT
+     C                     END
+     C*
+     C           HA01      IFNE SHA01                       .L2 BREAK
+     C                     EXSR R7900                      .WRITE送款
+     C                     EXSR R8200                       .L2 TOTAL
+     C                     EXSR R7100                       .L1 INIT
+     C                     EXSR R7200                       .L2 INIT
+     C                     END
+     C*
+     C           HA15      IFNE SHA15                       .L2 BREAK
+     C                     EXSR R7900                      .WRITE送款
+     C                     EXSR R7100                       .L1 INIT
+     C                     END
+     C*
+     C*+<<DETAIL DATA SET>>
+     C           HA01      IFEQ '1'
+     C           HA01      OREQ '3'
+     C           HA01      OREQ '5'
+|   C                     MOVEL'收'    P#A03
+|   C                     ELSE
+|   C                     MOVEL'付'    P#A03
+| 02-C                     END
+|    C*
+     C*
+     C                     MOVEL*BLANK    P#04
+     C           HA01      IFEQ '1'
+     C*客戶檔
+     C                     CALL 'CKS#C0'
+     C                     PARM HA02      #C001I
+     C                     PARM HA04      #C002I
+     C           P#04      PARM           #C003O 10
+     C                     PARM           #C004O 42
+     C                     PARM           #C005O 10
+     C                     PARM           #C098O 50
+     C                     PARM           #C099O  1
+     C                     END
+     C*
+     C                     MOVELHA03      PHA03
+     C*
+     C           HA01      IFEQ '2'
+     C*廠商檔
+     C           KEYHF     CHAINCKHFLF04             40
+     C           *IN40     IFEQ '0'
+     C                     MOVELHF77      #D003O
+     C                     ELSE
+     C                     CALL 'CKS#D0'
+     C                     PARM HA02      #D001I
+     C                     PARM HA04      #D002I
+     C                     PARM           #D003O 18
+     C                     PARM           #D004O 42
+     C                     PARM           #D005O 62
+     C                     PARM           #D098O 50
+     C                     PARM           #D099O  1
+     C                     END
+     C*
+     C                     CALL 'P65'
+     C                     PARM #D003O    P6501I 80
+     C                     PARM 10        P6502I  30
+     C           P#04      PARM           P6511O 80
+     C                     PARM           P6512O 80
+     C                     END
+     C*
+     C           HA01      IFEQ '1'
+     C           HA01      OREQ '3'
+     C           HA01      OREQ '5'
+     C                     Z-ADDHA10      PHA101
+     C                     ELSE
+     C                     Z-ADD0         PHA101
+     C                     END
+     C*
+     C           HA01      IFEQ '2'
+     C           HA01      OREQ '4'
+     C           HA01      OREQ '6'
+     C                     Z-ADDHA10      PHA102
+     C                     ELSE
+     C                     Z-ADD0         PHA102
+     C                     END
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C           *IN39     IFEQ '1'
+     C                     WRITEPH1
+     C                     SETOF                     39
+     C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+     C                     SETON                     313233
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     END
+     C*
+     C           HA01      IFNE '1'
+     C           HA25      ORNE '2'
+     C                     WRITEPD1
+     C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+     C                     SETOF                     313233
+     C*
+     C                     ELSE
+     C                     ADD  HA10      THA10
+     C                     END
+     C* ACCUMULATE TOTAL
+     C                     ADD  PHA101    PT11
+     C                     ADD  PHA102    PT12
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C           E2000     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+     C           R7100     BEGSR
+     C*
+     C* LEVEL BREAK KEY SAVE & FIELD PRINTED CONTROL
+     C                     CALL 'P31'
+     C                     PARM HA15      P3101I  80
+     C                     PARM '2'       P3102I  1
+     C                     PARM '1'       P3103I  1
+     C                     PARM #X101     P3104I  1
+     C                     PARM #X102     P3105I  1
+     C           PHA15     PARM           P3101O  80
+     C*
+     C                     Z-ADDHA15      SHA15
+     C                     SETON                     33
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R7200 ... LEVEL BREAK 2 :INIT PROCESS
+     C*==============================================================*
+     C           R7200     BEGSR
+     C*
+     C*LEVEL BREAK INIT DATA SET
+     C           HA01      IFEQ '1'
+     C           HA01      OREQ '3'
+     C           HA01      OREQ '5'
+|   C                     MOVEL'收'    P#A03
+|   C                     ELSE
+|   C                     MOVEL'付'    P#A03
+| 02-C                     END
+|    C*
+|    C*
+     C*
+     C* LEVEL BREAK KEY SAVE & FIELD PRINTED CONTROL
+     C                     MOVELHA01      SHA01
+     C                     SETON                     32
+     C* << IF THIS KEY BREAK SKIP PAGE THEN SETON >>
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R7300 ... LEVEL BREAK 3 :INIT PROCESS
+     C*==============================================================*
+     C           R7300     BEGSR
+     C*
+     C*
+     C           KEYHD3    CHAINHD0                  40
+     C     N40   HD03      CHAINHB0                  40
+     C           *IN40     IFEQ '0'
+     C                     MOVELHB02      PHB02
+     C                     ELSE
+     C                     MOVEL*BLANK    PHB02
+     C                     END
+     C*
+     C                     MOVELHA16      SHA16
+     C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+     C                     SETON                     31
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R7400 ... LEVEL BREAK 4 :INIT PROCESS
+     C*==============================================================*
+     C           R7400     BEGSR
+     C*
+     C                     MOVEL*BLANK    PCONAM
+     C*公司檔
+     C                     CALL 'CKS#B0'
+     C                     PARM HA02      #B001I
+     C                     PARM           #B002O 16
+     C           PCONAM    PARM           #B003O 34
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C*
+     C                     MOVELHA02      PHA02
+     C                     MOVELHA02      SHA02
+     C*
+     C*
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* << IF THIS KEY BREAK SKIP PAGE THEN SETON >>------------------
+     C                     SETON                     39
+     C*---------------------------------------------------------------
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R7900 ... WRITE '送款'
+     C*==============================================================*
+     C           R7900     BEGSR
+     C*
+     C           THA10     IFNE *ZERO
+     C                     SETON                     32
+     C                     MOVEL'送款'  P#A03
+     C                     MOVEL*BLANK    P#04
+     C                     MOVEL*BLANK    PHA03
+     C                     Z-ADDTHA10     PHA101
+     C                     Z-ADD*ZERO     PHA102
+     C                     WRITEPD1
+     C                     Z-ADD*ZERO     THA10
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R8200 ... LEVEL BREAK 2
+     C*==============================================================*
+     C           R8200     BEGSR
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* << TOTAL LINE DATA PREPARE >>
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           SHA01     IFEQ '1'
+     C           SHA01     OREQ '2'
+     C                     WRITEPT1
+     C                     END
+     C*
+     C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+     C                     ADD  PT11      PT21
+     C                     ADD  PT12      PT22
+     C                     Z-ADD*ZERO     PT11
+     C                     Z-ADD*ZERO     PT12
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R8300 ... LEVEL BREAK 3
+     C*==============================================================*
+     C           R8300     BEGSR
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* << TOTAL LINE DATA PREPARE >>
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     WRITEPT2
+     C*
+     C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+     C                     ADD  PT21      PT31
+     C                     ADD  PT22      PT32
+     C                     Z-ADD*ZERO     PT21
+     C                     Z-ADD*ZERO     PT22
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK L4 -- HAS DATA
+     C*==============================================================*
+     C           R8900     BEGSR
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C* << TOTAL LINE DATA PREPARE >>
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C                     WRITEPT3
+     C*
+     C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+     C                     Z-ADD*ZERO     PT31
+     C                     Z-ADD*ZERO     PT32
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+     C           R8999     BEGSR
+     C*
+     C                     MOVEL*BLANK    PCONAM
+     C*公司檔
+     C                     CALL 'CKS#B0'
+     C                     PARM HA02F     #B001I
+     C                     PARM           #B002O 16
+     C           PCONAM    PARM           #B003O 34
+     C                     PARM           #B098O 50
+     C                     PARM           #B099O  1
+     C*
+     C                     WRITEPH1
+     C*
+     C                     WRITEPE9
+     C*
+     C                     ENDSR
+

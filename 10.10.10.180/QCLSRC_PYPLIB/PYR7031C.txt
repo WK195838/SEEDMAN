@@ -1,0 +1,52 @@
+             PGM
+             DCL        VAR(&DTD02)    TYPE(*CHAR) LEN(4)
+             DCL        VAR(&WTD01)    TYPE(*CHAR) LEN(4)
+             DCL        VAR(&DTD031)   TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DTD032)   TYPE(*CHAR) LEN(7)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DTD02)    VALUE(%SST(*LDA 521 4))
+             CHGVAR     VAR(&WTD01)    VALUE(%SST(*LDA 531 4))
+             CHGVAR     VAR(&DTD031)   VALUE(%SST(*LDA 506 7))
+             CHGVAR     VAR(&DTD032)   VALUE(%SST(*LDA 513 7))
+
+             OVRDBF     FILE(PYTDPF) SHARE(*YES)
+             OPNQRYF    FILE((PYTDPF)) QRYSLT('    +
+                         TD96 *NE 0  *AND +
+                        (TD02 *EQ "' || &DTD02 || '")  *AND  +
+                       (CTD01 *EQ "' || &WTD01 || '")  *AND  +
+                       CTD03 *EQ %RANGE("' || &DTD031 || '" +
+                                        "' || &DTD032 || '")') +
+                         KEYFLD((TD03))      +
+                         MAPFLD((CTD01 TD01 *CHAR 4) +
+                                (CTD03 TD03 *CHAR 7))
+             OVRPRTF    FILE(PYR703P) PAGESIZE(33 198) LPI(6) +
+                          CPI(15) OVRFLW(29)
+             CALL       PYR7032
+             OVRPRTF    FILE(PYR7033P) PAGESIZE(33 198) LPI(6) +
+                          CPI(15) OVRFLW(29)
+             CALL       PYR7033
+             CLOF       OPNID(PYTDPF)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('PYR703P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('PYR7033P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             ENDPGM
+

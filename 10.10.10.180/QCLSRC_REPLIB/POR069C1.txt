@@ -1,0 +1,114 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /*                                                             */
+     /*    PROGRAM NAME : POR069C1                                  */
+     /*    AUTHOR       : DEREK                                     */
+     /*    CREATE DATE  : 104/07/31                                 */
+     /*    UPDATE DATE  :                                           */
+     /*    SYSTEM       :人頭馬匯東                               */
+     /*    SUBSYSTEM    :採購系統                                 */
+     /*    REMARK       :進貨金額及交際費用報表                   */
+     /***************************************************************/
+     /* 00A需求單號: 1050386                                       */
+     /* 00A 2016/07/29 SHARON交際費項目調整                      */
+     /****************************************************************/
+             PGM
+
+             DCL        VAR(&$EVR)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)   TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTID) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6601I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6602I) TYPE(*DEC)  LEN(1 0)
+             DCL        VAR(&P6603I) TYPE(*DEC)  LEN(3 0)
+             DCL        VAR(&P6604I) TYPE(*DEC)  LEN(2 0)
+             DCL        VAR(&LIB)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&FILE)  TYPE(*CHAR) LEN(10)
+
+             DCL        VAR(&DCOMPS) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DCOMPE) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&FDATES) TYPE(*CHAR) LEN(8)
+             DCL        VAR(&FDATEE) TYPE(*CHAR) LEN(8)
+
+             CHGVAR     VAR(&DCOMPS) VALUE(%SST(*LDA 601 2))
+             CHGVAR     VAR(&DCOMPE) VALUE(%SST(*LDA 603 2))
+             CHGVAR     VAR(&FDATES) VALUE(%SST(*LDA 619 8))
+             CHGVAR     VAR(&FDATEE) VALUE(%SST(*LDA 627 8))
+             CHGVAR     VAR(&LIB)   VALUE('QTEMP')
+    /*00B    CHGVAR     VAR(&FILE)  VALUE('POR069PF') */
+    /*00B*/  CHGVAR     VAR(&FILE)  VALUE('POR069PF1')
+
+  /*00A*/    CHKOBJ     OBJ(QTEMP/POR069PF) OBJTYPE(*FILE)
+             MONMSG     MSGID(CPF9801) EXEC(CRTPF +
+                          FILE(QTEMP/POR069PF) SIZE(*NOMAX)) /*00A*/
+  /*00B*/    CHKOBJ     OBJ(QTEMP/POR069PF1) OBJTYPE(*FILE)
+             MONMSG     MSGID(CPF9801) EXEC(CRTPF +
+                          FILE(QTEMP/POR069PF1) SIZE(*NOMAX)) /*00B*/
+  /*00A*/    CHKOBJ     OBJ(QTEMP/POR069LF) OBJTYPE(*FILE)
+             MONMSG     MSGID(CPF9801) EXEC(CRTLF +
+                          FILE(QTEMP/POR069LF)) /*00A*/
+  /*00B*/    CLRPFM     FILE(QTEMP/POR069PF1)
+  /*00A*/    CLRPFM     FILE(QTEMP/POR069PF)
+  /*00A*//*  CPYF       FROMFILE(POR069PF) TOFILE(QTEMP/POR069PF) +
+    00A                   CRTFILE(*YES)  */
+  /*00A*//*  MONMSG     MSGID(CPF2817) EXEC(CLRPFM +
+    00A                   FILE(QTEMP/POR069PF))  */
+
+  /*交際費*/
+             OVRDBF     FILE(POR069PF) TOFILE(QTEMP/POR069PF) +
+                          SHARE(*YES)
+             OVRDBF     FILE(SOSCPF) SHARE(*YES)
+             OPNQRYF    FILE((SOSCPF)) QRYSLT('SC01 *EQ %RANGE("' +
+                          *CAT &DCOMPS *CAT '" "' *CAT &DCOMPE *CAT +
+                          '") & SC39 *EQ %RANGE(' *CAT &FDATES *CAT +
+                          ' ' *CAT &FDATEE *CAT ') & (SC35 *EQ "T" +
+                          *OR SC35 *EQ "V" *OR SC35 *EQ "N") & SC03 +
+                          *EQ "S4" & (SC10 *EQ "F1" *OR SC10 *EQ +
+                          "01") & SC01L *NE "W" ') KEYFLD(*FILE) +
+                          MAPFLD((SC01L '%SST(SC01 1 1)' *CHAR 1))
+
+             CALL       PGM(POR0691)
+
+             CLOF       OPNID(SOSCPF)
+             DLTOVR     FILE(*ALL)
+
+  /*交際費-試飲退回 */  /* 00A START */
+             OVRDBF     FILE(POR069PF) TOFILE(QTEMP/POR069PF) +
+                          SHARE(*YES)
+             OVRDBF     FILE(POR069LF) TOFILE(QTEMP/POR069LF) +
+                          SHARE(*YES)
+             OVRDBF     FILE(SOSNPF) SHARE(*YES)
+             OPNQRYF    FILE((SOSNPF)) QRYSLT('SN01 *EQ %RANGE("' +
+                          *CAT &DCOMPS *CAT '" "' *CAT &DCOMPE *CAT +
+                          '") & SN06 *EQ %RANGE(' *CAT &FDATES *CAT +
+                          ' ' *CAT &FDATEE *CAT ') & (SN10 *EQ "T" +
+                          *OR SN10 *EQ "V" *OR SN10 *EQ "N") & SN03 +
+                          *GE "Y0000" & SN03 *LE "Y9999" +
+                          & SN02A *EQ "R3" ') +
+                          KEYFLD(*FILE) MAPFLD((SN02A '%SST(SN02 3 +
+                          2)' *CHAR 2))
+
+             CALL       PGM(POR0692)
+
+             CLOF       OPNID(SOSNPF)
+             DLTOVR     FILE(*ALL)
+     /* 00A END */
+
+             RTVDTAARA  DTAARA(*LDA (162 1)) RTNVAR(&$EVR)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (598 2)) RTNVAR(&$PRTID)
+          /* CHGVAR     VAR(&P6601I) VALUE('POR067P')  */
+          /* CHGVAR     VAR(&P6602I) VALUE(&$EVR)      */
+          /* CHGVAR     VAR(&P6603I) VALUE(&$CPY)      */
+          /* CHGVAR     VAR(&P6604I) VALUE(&$PRTID)    */
+          /* CALL       PGM(P66) PARM(&P6601I &P6602I &P6603I &P6604I) */
+
+    /*00B*/  CPYF       FROMFILE(QTEMP/POR069PF) +
+                          TOFILE(QTEMP/POR069PF1) MBROPT(*REPLACE) +
+                          CRTFILE(*NO) /*00B*/
+    /*00B*/             MONMSG     MSGID(CPF2817)
+
+             /*將POR069PF轉換成CSV FILE AND FTP TO PC */
+                CALL       PGM(ECL100C) PARM(&LIB &FILE)
+
+             ENDPGM
+

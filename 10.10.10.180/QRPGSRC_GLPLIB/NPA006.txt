@@ -1,0 +1,244 @@
+     H****************************************************************
+     A*   人頭馬寰盛洋酒股份有限公司－版權所有    TEL:8773-9099    *
+     A*                                                              *
+     A*    PROGRAM-ID   : NPA006                                     *
+     A*    PROGRAM NAME : 產生新年度A&P CODE代碼                 *
+     A*    AUTHOR       : MICHELLE                                   *
+     A*    CREATE DATE  : 2002.03.01                                 *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       : 產品促銷預算                             *
+     A*    REMARK       : 以前一年度為基準，拷貝到新的預算年度     *
+     F****************************************************************
+     FNPNAPF  IF  E           K        DISK
+     FNPNALF  UF  E           K        DISK                      A
+     F            NA0                               KRENAMENA0L
+     FNPA006D CF  E                    WORKSTN      KINFDS DSPFDS
+     E*---------------------------------------------------------------*
+     E*                   @A01        5  1               作業權利
+     E*---------------------------------------------------------------*
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*CURSOR POSTITON
+     IDSPFDS      DS
+     I                                    B 370 3710#CSR
+     I*LOCAL DATA AREA
+     I           UDS
+     I                                      101 110 $USER
+     I                                      119 1240$EGMDY
+     I                                      135 135 $ADD
+     I                                      136 136 $UPD
+     I                                      137 137 $DLT
+     I                                      138 138 $INQ
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      209 2160$C8YMD
+     I*WORK LOCAL DATA AREA
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYNA     KLIST                           *SETLL ND0
+     C                     KFLD           DNA01
+     C                     KFLD           WNA02   3
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR R0100                      *INITIAL
+     C*
+  01-C           *IN03     DOWEQ'0'
+  02-C           SCID      CASEQ'SC01'    R1000
+  02-C                     END
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          R0100 ....INITIAL VALUE
+     C*==============================================================*
+01===C           R0100     BEGSR
+|    C*
+|    C                     MOVE 'SC01'    SCID    4
+|    C*
+     C                     IN   PTDA01
+     C*
+     C* SC01 FIELD INITIALIZE *--------------------------------------*
+|    C                     Z-ADD1         DOPT
+|    C                     MOVEL$A8YMD    DNA01
+|    C                     MOVEL'D'       DNA04
+|    C*--------------------------------------------------------------*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R1000 ....'SC01' SCREEN MAIN ROUTINE
+     C*==============================================================*
+02===C           R1000     BEGSR
+|    C*
+|    C                     EXFMTDSPD1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'                        *END
+|   C                     GOTO E1000
+| 01-C                     END
+|    C*
+|    C                     EXSR R1B00                      *SCR CHK
+|    C*
+| 03-C           *IN99     IFEQ '0'                        *SCR CHK OK
+|   C                     EXSR R1C00                      *拷貝選擇
+| 03-C                     END
+|    C*
+02===C           E1000     ENDSR
+     C*==============================================================*
+     C*          R1B00 .... 'SC01' SCREEN CHECK
+     C*==============================================================*
+04===C           R1B00     BEGSR
+|    C*
+|    C* DATA CHECK *--------------------------------------------------*
+|    C*
+| 03-C           DNA01     IFEQ *ZERO
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6099
+| 03-C                     END
+|    C   99                GOTO E1B00
+     C*
+| 03-C           DNA04     IFEQ *BLANK
+|   C                     MOVEL'UPT0010' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     6199
+| 03-C                     END
+|    C   99                GOTO E1B00
+     C*
+     C           DNA01     SUB  1         WNA01   40
+     C*
+04===C           E1B00     ENDSR
+     C*
+     C*==============================================================*
+     C*          R1C00 ....拷貝選擇
+     C*==============================================================*
+05===C           R1C00     BEGSR
+|    C*
+| 01-C           *IN14     IFEQ '1'                        拷貝作業
+     C*
+|   C           DOPT      CASEQ1         R1C10
+|   C           DOPT      CASEQ2         R1C20
+| 01*C           DOPT      CASEQ3         R1C30
+|   C                     END
+     C*
+     C           *IN99     IFEQ '0'
+|   C                     MOVEL'UPT2142' ERRID
+|   C                     MOVEL'PTMF'    ERRF
+|   C                     SETON                     99
+     C                     END
+     C*
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R1C10 ....不存在WRITE,存在　放棄拷貝
+     C*==============================================================*
+|    C*
+     C           R1C10     BEGSR
+     C*
+     C           WNA01     SETLLNA0
+     C           WNA01     READENA0                      49
+     C           *IN49     DOWEQ'0'
+     C                     MOVELNA02      WNA02
+     C           KEYNA     CHAINNA0L                 50
+     C           *IN50     IFEQ '1'
+     C*
+|    C                     EXSR R1D00                      拷貝
+     C                     WRITENA0L
+     C                     END
+     C           WNA01     READENA0                      49
+     C                     END
+|    C*
+06===C           E1C10     ENDSR
+     C*==============================================================*
+     C*  R1C20 ....不存在WRITE,存在　覆蓋－無須確認
+     C*==============================================================*
+07===C           R1C20     BEGSR
+     C*
+     C           WNA01     SETLLNA0
+     C           WNA01     READENA0                      49
+     C           *IN49     DOWEQ'0'
+     C                     MOVELNA02      WNA02
+     C           KEYNA     CHAINNA0L                 50
+     C           *IN50     IFEQ '1'
+     C*
+|    C                     EXSR R1D00                      拷貝
+     C                     WRITENA0L
+     C                     ELSE
+|    C                     EXSR R1D00                      拷貝
+     C                     UPDATNA0L
+     C                     END
+     C           WNA01     READENA0                      49
+     C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*  R1C30 ....不存在WRITE,存在　覆蓋－逐筆確認
+     C*==============================================================*
+07===C           R1C30     BEGSR
+|    C*
+     C           WNA01     SETLLNA0
+     C           WNA01     READENA0                      49
+     C                     MOVE *BLANKS   CALL
+     C           *IN49     DOWEQ'0'
+     C                     MOVELNA02      WNA02
+     C           KEYNA     CHAINNA0L                 50
+     C           *IN50     IFEQ '1'
+     C*
+|    C                     EXSR R1D00                      拷貝
+     C                     WRITENA0L
+     C                     ELSE
+     C                     EXSR R1C31                      逐筆確認
+     C                     END
+     C           WNA01     READENA0                      49
+     C                     END
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R1C31 ....逐筆確認是否拷貝PROCESS
+     C*==============================================================*
+12===C           R1C31     BEGSR
+|    C*
+     C           CALL      IFNE 'Y'
+     C                     MOVEL' '       COVE
+     C                     MOVEL' '       CALL
+     C                     MOVELDNA01     CNA01   4
+     C           CNA01     CAT  '-'       W5      5
+     C                     MOVELNA02      XNA02   3
+     C           W5        CAT  XNA02     W8      8
+     C           W8        CAT  '-'       W9      9
+     C           W9        CAT  DNA04     DCAT
+|    C                     EXFMTDSPD2
+     C           COVE      IFEQ 'Y'
+     C                     EXSR R1D00                      拷貝
+     C                     UPDATNA0L
+     C                     END
+     C                     ELSE                            全部覆蓋
+     C                     EXSR R1D00                      無須確認
+     C                     UPDATNA0L
+     C                     END
+     C*
+     C                     ENDSR
+     C*==============================================================*
+     C*          R1D00 ....拷貝PROCESS
+     C*==============================================================*
+12===C           R1D00     BEGSR
+|    C*
+|    C                     MOVELDNA01     NA01
+|    C                     MOVELWNA02     NA02
+|    C                     MOVELDNA04     NA04
+|    C                     TIME           NA97
+|    C                     Z-ADD$A8YMD    NA98
+|    C                     MOVEL$USER     NA99
+|    C*
+12===C                     ENDSR
+     C*==============================================================*
+

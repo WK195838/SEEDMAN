@@ -1,0 +1,69 @@
+             PGM
+
+             DCL        VAR(&D01)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&D02)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&D03)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&D04)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&F01)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&F02)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&$EVR)   TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)   TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTID) TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6601I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6602I) TYPE(*DEC)  LEN(1 0)
+             DCL        VAR(&P6603I) TYPE(*DEC)  LEN(3 0)
+             DCL        VAR(&P6604I) TYPE(*DEC)  LEN(2 0)
+
+             CHGVAR     VAR(&D01)   VALUE(%SST(*LDA 613 2))
+             CHGVAR     VAR(&D02)   VALUE(%SST(*LDA 615 2))
+             CHGVAR     VAR(&D03)   VALUE(%SST(*LDA 627 1))
+             CHGVAR     VAR(&D04)   VALUE(%SST(*LDA 628 1))
+             CHGVAR     VAR(&F01)   VALUE(%SST(*LDA 631 8))
+             CHGVAR     VAR(&F02)   VALUE(%SST(*LDA 639 8))
+     /**** WFJL10PF ****/
+             CPYF       FROMFILE(WFJL10PF) TOFILE(QTEMP/WFJL10PF) +
+                          CRTFILE(*YES)
+             MONMSG   MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/WFJL10PF))
+             OVRDBF   FILE(WFJL10PF) TOFILE(QTEMP/WFJL10PF) SHARE(*YES)
+
+     /**** WFJL10LF ****/
+             CRTDUPOBJ  OBJ(WFJL10LF) FROMLIB(REFLIB) OBJTYPE(*ALL) +
+                          TOLIB(QTEMP)
+             MONMSG     MSGID(CPD2104 CPF2130)
+             OVRDBF   FILE(WFJL10LF) TOFILE(QTEMP/WFJL10LF) SHARE(*YES)
+     /**** WFPC01PF ****/
+             CPYF       FROMFILE(WFPC01PF) TOFILE(QTEMP/WFPC01PF) +
+                          CRTFILE(*YES)
+             MONMSG   MSGID(CPF2817) EXEC(CLRPFM FILE(QTEMP/WFPC01PF))
+             OVRDBF   FILE(WFPC01PF) TOFILE(QTEMP/WFPC01PF) SHARE(*YES)
+
+             OVRDBF     FILE(PCCALF01) SHARE(*YES)
+             OPNQRYF    FILE((PCCALF01)) OPTION(*ALL) QRYSLT('CA01 +
+                          *EQ %RANGE("' *CAT &D01 *CAT '" "' *CAT +
+                          &D02 *CAT '") & CA17 *EQ %RANGE("' *CAT +
+                          &D03 *CAT '" "' *CAT &D04 *CAT '") & CA29 +
+                          *EQ %RANGE(' *CAT &F01 *CAT ' ' *CAT &F02 +
+                          *CAT ') & CA18 *NE "V" & CA18 *NE "@" & +
+                          CA20 *NE "V" ') KEYFLD(*FILE)
+
+   /*產生暫存檔及傳票*/
+             CALL       PCB0022
+
+             CLOF       OPNID(PCCALF01)
+   /*銷貨收入明細報表*/
+             RTVDTAARA  DTAARA(*LDA (162 1)) RTNVAR(&$EVR)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (598 2)) RTNVAR(&$PRTID)
+             OVRPRTF    FILE(PCB0023P) PAGESIZE(*N 198) CPI(15) +
+                          USRDTA('零用傳票')
+             CALL       PCB0023
+             CHGVAR     VAR(&P6601I) VALUE('PCB0023P')
+             CHGVAR     VAR(&P6602I) VALUE(&$EVR)
+             CHGVAR     VAR(&P6603I) VALUE(&$CPY)
+             CHGVAR     VAR(&P6604I) VALUE(&$PRTID)
+             CALL       PGM(P66) PARM(&P6601I &P6602I &P6603I &P6604I)
+
+             DLTOVR     FILE(*ALL)
+
+             ENDPGM
+

@@ -1,0 +1,320 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR2212                                     *
+     H*   AUTHER       : A1278 ROBERT                                *
+     H*   CREATE DATE  : 88/07/30                                    *
+     H*   UPDATE DATE  : 88/10/28 A1274 EVA                          *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR2211C                                    *
+     H*   PURPOSE      :
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYPYPF  IF  E           K        DISK
+     FPYTRPF  IF  E           K        DISK
+     FPYSHPF  IF  E           K        DISK
+     FPYJTPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYTXLF03IF  E           K        DISK
+     FPYR221P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E                    SEL         8  1
+     E                    AA          8  8 0
+     E                    BB          8  8 0D
+     E*---------------------------------------------------------------
+     I              '留職復職人員'      C         SORT1
+     IEM0
+     I                                              EM041 L4
+     I                                              EM042 L3
+     I                                              EM043 L2
+     I                                              EM044 L1
+     I*
+     I            DS
+     I                                        1   8 SEL
+     I                                        1   1 SEL1
+     I                                        2   2 SEL2
+     I                                        3   3 SEL3
+     I                                        4   4 SEL4
+     I                                        5   5 SEL5
+     I                                        6   6 SEL6
+     I                                        7   7 SEL7
+     I                                        8   8 SEL8
+     I*
+     ILDA        UDS
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      201 2080$A8YMD
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I                                      601 607 DEM041
+     I                                      508 514 DEM042
+     I                                      513 520 DEM021
+     I                                      532 539 DEM022
+     I                                      523 523 DYN
+     I                                      530 530 EM1101
+     I                                      531 531 EM1102
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*---------------------------------------------------------------
+     C           KEYPY     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C           KEYSH     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           AA,I
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C           KEYDP1    KLIST
+     C                     KFLD           TR051
+     C                     KFLD           TR052
+     C                     KFLD           TR053
+     C                     KFLD           TR054
+     C           KEYDP2    KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C           KEYTR     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           EM21
+     C           KEYTR1    KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C           KEYTR2    KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           AA,I
+     C*留職復職人員
+     C                     MOVEL'D'       K031    1 P
+     C                     MOVEL'2'       K032    1 P
+     C           KEYTX     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           K031
+     C                     KFLD           K032
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+     C                     MOVEL'Y'       $DATA
+     C                     MOVEL*BLANK    SEL
+     C                     MOVELEM031     EM031C
+     C*
+     C                     MOVEL*BLANK    JOB1
+     C                     MOVEL*BLANK    JOB2
+     C                     MOVEL*BLANK    DEP1
+     C                     MOVEL*BLANK    DEP2
+     C                     MOVEL*BLANK    DESC
+     C                     Z-ADD*ZERO     SH07
+     C                     Z-ADD*ZERO     SH08
+     C                     Z-ADD*ZERO     KEM13
+     C*
+     C                     Z-ADDEM13      AA,1
+     C*
+  01-C           $A8YMD    IFGE EM20
+    C                     Z-ADDEM20      AA,2
+  01*C                     ELSE
+    C                     Z-ADD*ZERO     AA,2
+  01-C                     END
+     C*
+     C                     Z-ADDEM22      AA,3
+     C*
+     C           KEYTR     CHAINTR0                  40
+  02-C           *IN40     IFEQ '0'
+    C           TR03      ANDEQ'3'
+    C                     Z-ADDTR04      AA,5
+  02*C                     ELSE
+    C                     Z-ADDEM21      AA,4
+  02-C                     END
+     C*
+     C                     Z-ADDEM17      AA,6
+     C                     Z-ADDEM19      AA,7
+     C*
+     C           KEYTX     CHAINTX0                  40    復職日期
+  03-C           *IN40     IFEQ '0'
+    C                     Z-ADDTX04      AA,8
+  03*C                     ELSE
+    C                     Z-ADDEM18      AA,8
+  03-C                     END
+     C*
+     C                     Z-ADDAA        BB
+     C                     SORTABB
+     C                     Z-ADDBB,1      LOKAA   80
+     C*
+     C                     Z-ADD*ZERO     I       10
+     C                     SETON                     45
+  04-C           *IN45     DOWEQ'1'
+    C           I         ANDLT8
+    C                     ADD  1         I
+    C           LOKAA     LOKUPAA,I                     45
+    C   45                MOVEL'V'       SEL,I
+  04-C                     END
+     C*
+     C                     EXSR RTN100
+     C*
+     CLR 10                EXSR RTN890
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL GET HEADING
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           *NAMVAR   DEFN *LDA      LDA
+|    C                     IN   *NAMVAR
+|    C           DEM01     CHAINCM0                  40
+|    C                     MOVE CM14      DFMT
+|    C                     MOVE CM15      DTYPE
+|    C*
+|    C                     SETON                     1039
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     Z-ADD*ZERO     I
+|    C                     SETON                     45
+| 01-C           *IN45     DOWEQ'1'
+|   C           I         ANDLT8
+|   C                     ADD  1         I
+|   C           'V'       LOKUPSEL,I                    45
+|   C*
+|   C*含到職日期及復職日期
+| 02-C   45                SELEC
+|   C           I         WHEQ 1                          到職日
+|   C           EM05      CHAINJT0                  40
+|   C  N40                MOVELJT02      JOB1
+|   C           KEYDP     CHAINDP0                  40
+|   C  N40                MOVELDP02      DEP1
+|   C           KEYPY     CHAINPY0                  40
+|   C  N40                Z-ADDPY03      SH07
+|   C*
+|   C                     EXSR RTN101
+|   C*
+|   C*留職停薪說明
+|   C           I         WHEQ 2                          到職日
+|   C           EM05      CHAINJT0                  40
+|   C  N40                MOVELJT02      JOB1
+|   C           KEYDP     CHAINDP0                  40
+|   C  N40                MOVELDP02      DEP1
+|   C           KEYPY     CHAINPY0                  40
+|   C  N40                Z-ADDPY03      SH07
+| 03-C           AA,8      IFNE 0
+|   C                     MOVELSORT1     DESC
+| 03-C                     END
+|   C*
+|   C                     EXSR RTN101
+|   C*
+|   C           I         WHEQ 2                          試用期滿
+|   C           EM05      CHAINJT0                  40
+|   C  N40                MOVELJT02      JOB1
+|   C           KEYDP     CHAINDP0                  40
+|   C  N40                MOVELDP02      DEP1
+|   C           KEYPY     CHAINPY0                  40
+|   C  N40                Z-ADDPY03      SH07
+|   C                     EXSR RTN101
+|   C*
+|   C           I         WHEQ 3                          調薪
+|   C           KEYSH     CHAINSH0                  40
+|   C                     EXSR RTN101
+|   C*
+|   C           I         WHEQ 4                          晉升職務
+|   C           KEYTR2    CHAINTR0                  40
+|   C           TR07      CHAINJT0                  40
+|   C  N40                MOVELJT02      JOB1
+|   C           TR08      CHAINJT0                  40
+|   C  N40                MOVELJT02      JOB2
+|   C           KEYDP1    CHAINDP0                  40
+|   C  N40                MOVELDP02      DEP1
+|   C           KEYDP2    CHAINDP0                  40
+|   C  N40                MOVELDP02      DEP2
+|   C           KEYPY     CHAINPY0                  40
+|   C  N40                Z-ADDPY03      SH07
+|   C           KEYPY     CHAINPY0                  40
+|   C  N40                Z-ADDPY03      SH07
+|   C                     EXSR RTN101
+|   C*
+|   C           I         WHEQ 5                          調職
+|   C           KEYTR2    CHAINTR0                  40
+|   C           TR07      CHAINJT0                  40
+|   C  N40                MOVELJT02      JOB1
+|   C           TR08      CHAINJT0                  40
+|   C  N40                MOVELJT02      JOB2
+|   C           KEYDP1    CHAINDP0                  40
+|   C  N40                MOVELDP02      DEP1
+|   C           KEYDP2    CHAINDP0                  40
+|   C  N40                MOVELDP02      DEP2
+|   C           KEYPY     CHAINPY0                  40
+|   C  N40                Z-ADDPY03      SH07
+|   C                     EXSR RTN101
+|   C*
+|   C           I         WHEQ 6                          停薪留職
+|   C           KEYPY     CHAINPY0                  40
+|   C  N40                Z-ADDPY03      SH07
+|   C                     EXSR RTN101
+|   C*
+|   C           I         WHEQ 7                          辭職
+|   C           KEYPY     CHAINPY0                  40
+|   C  N40                Z-ADDPY03      SH07
+|   C                     EXSR RTN101
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM EM13      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM DFMT      P3104I  1
+|    C                     PARM DTYPE     P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    KEM13
+|    C*
+|    C                     WRITEPH1
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN101... 日期轉換
+     C*==============================================================*
+03===C           RTN101    BEGSR
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM AA,I      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM DFMT      P3104I  1
+|    C                     PARM DTYPE     P3105I  1
+|    C                     PARM           P3111O  80
+|    C                     Z-ADDP3111O    EDATE
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR --- HAS DATA
+     C*==============================================================*
+04===C           RTN890    BEGSR
+|    C*
+|    C*
+04===C           END890    ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+05===C           RTN899    BEGSR
+|    C*
+|    C                     MOVEL'N'       $DATA
+|    C*
+05===C           END899    ENDSR
+

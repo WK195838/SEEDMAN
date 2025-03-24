@@ -1,0 +1,237 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA7041                                    *
+     H*    PROGRAM NAME :所得稅扣繳申報核定　                      *
+     H*    AUTHOR       :                                            *
+     H*    CREATE DATE  : 81/03/18                                   *
+     H*    UPDATE DATE  : 89/03/14 A1274 EVA                         *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FSYCMPF  IF  E           K        DISK
+     FSYFAPF  UF  E           K        DISK
+     FPYA704D CF  E                    WORKSTN
+     E*---------------------------------------------------------------*
+     ILDA        UDS
+     I                                      203 2080DDATE
+     I                                      203 2040DAA
+     I                                      203 2060DBB
+     I                                      101 110 $USER
+     I                                      139 139 $RMK01
+     I                                      201 2080$A8YMD
+     I*
+     I                                      507 516 $TDEV
+     I                                      517 5230DFA04F
+     I                                      524 5300DFA04T
+     I                                      531 5370DFA04N
+     I*
+     I                                      541 544 DTD02
+     I                                      545 5480WTD01
+     I                                      549 5540WTD16
+     I                                      555 555 DSEL
+     I                                      556 556 DOPT
+     I                                      600 601 DTD11
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN *LDA      LDA
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INI. RTN.
+     C*
+  01-C           *IN03     DOWEQ'0'
+    C                     EXSR RTN100                     *MAIN
+  01-C                     END
+     C*
+     C                     SETON                     LR
+     C*==============================================================*
+     C*          RTN010....INITIAL ROUTINE
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     IN   *NAMVAR
+|    C*
+|    C                     MOVEL*BLANK    DTD11
+|    C                     MOVEL*BLANK    DTD02
+|    C                     Z-ADDDAA       DTD01
+|    C                     Z-ADDDBB       DTD16
+|    C                     MOVEL'1'       DSEL
+|    C                     MOVEL'N'       DOPT
+|    C                     MOVEL*BLANK    $TDEV
+|    C*@                   MOVEL'TAP01'   $TDEV
+|    C                     Z-ADD*ZERO     DFA04F
+|    C                     Z-ADD*ZERO     DFA04T
+|    C                     Z-ADD*ZERO     DFA04N
+|    C*
+|    C                     SETON                     97
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100.... MAIN ROUTINE
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C*
+|    C                     EXFMTDSPC1
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+| 01-C           *IN03     IFEQ '1'
+|   C                     GOTO END100
+| 01-C                     END
+|    C*
+| 01-C           *IN07     IFEQ '1'
+     C                     CALL 'PYA704C2'
+| 02-C                     END
+|    C*
+|    C                     EXSR RTN110                     *CHK SCREEN1
+|    C*
+|    C                     SETON                     97
+| 02-C           *IN99     IFEQ '0'
+|   C           *IN13     ANDEQ'1'
+|   C                     EXSR RTN120                     *PROCESS
+| 02-C                     END
+|    C*
+02===C           END100    ENDSR
+     C*==============================================================*
+     C*          RTN110....CHECK SCREEN1
+     C*==============================================================*
+03===C           RTN110    BEGSR
+|    C*
+| 01-C           DTD02     IFEQ *BLANK
+|   C                     SETON                     609599
+| 01*C                     ELSE
+|   C           DTD02     CHAINFA0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     SETON                     609299
+| 02-C                     END
+| 01-C                     END
+|    C   99                GOTO END110
+     C*
+| 01-C           DTD11     IFEQ *BLANK
+|   C                     SETON                     6399
+| 01*C                     ELSE
+|   C           DTD11     CHAINCM0                  40
+| 02-C           *IN40     IFEQ '1'
+|   C                     SETON                     6399
+| 02-C                     END
+| 01-C                     END
+|    C   99                GOTO END110
+|    C*
+| 03-C           DTD01     IFEQ *ZERO
+|   C                     SETON                     619599
+| 03-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C*
+| 04-C           DTD16     IFEQ *ZERO
+|   C                     SETON                     629599
+| 04-C                     END
+|    C   99                GOTO END110
+|    C*
+| 05-C           DTD16     IFNE *ZERO
+|   C                     CALL 'P38'
+|   C                     PARM DTD16     P3801I  60
+|   C                     PARM '1'       P3802I  1
+|   C                     PARM '1'       P3803I  1
+|   C                     PARM           P3801O  60
+|   C                     PARM           P3811O  1
+| 06-C           P3811O    IFEQ 'N'
+|   C                     SETON                     629699
+| 06-C                     END
+|   C   99                GOTO END110
+|   C*
+|   C                     CALL 'P39'
+|   C                     PARM DTD16     P3901I  60
+|   C                     PARM '1'       P3902I  1
+|   C                     PARM '1'       P3903I  1
+|   C                     PARM '2'       P3904I  1
+|   C                     PARM '1'       P3905I  1
+|   C                     PARM           P3911O  60
+|   C                     Z-ADDP3911O    WTD16
+| 05-C                     END
+|    C*
+|    C*@         $TDEV     IFEQ *BLANK
+|    C*@                   MOVEL'TAP01'   $TDEV
+|    C*@                   END
+|    C*
+|    C*重新處理需有特殊受權
+| 07-C           $RMK01    IFNE 'Y'
+|   C           DOPT      ANDEQ'Y'
+|   C                     SETON                     639499
+| 07-C                     END
+|    C   99                GOTO END110
+|    C*
+|    C**         DOPT      IFEQ 'N'
+|    C**         DSEL      ANDEQ'1'
+|    C**         FA04      ANDNE*ZERO
+|    C**                   SETON                     606162
+|    C**                   SETON                     9199
+|    C**                   END
+|    C** 99                GOTO END110
+|    C*
+| 08-C           DOPT      IFEQ '2'
+|   C           DOPT      OREQ '3'
+| 09-C           FA04      IFEQ *ZERO
+|   C                     SETON                     629099
+| 09-C                     END
+| 08-C                     END
+|    C*
+03===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN120.... PROCESS
+     C*==============================================================*
+04===C           RTN120    BEGSR
+|    C*
+|    C                     SETOF                     97
+|    C                     SETON                     96
+|    C                     WRITEDSPC1
+|    C                     Z-ADD*ZERO     DFA04F
+|    C                     Z-ADD*ZERO     DFA04T
+|    C                     Z-ADD*ZERO     DFA04N
+|    C*
+|    C                     CALL 'P82'
+|    C                     PARM DTD01     P8201I  40
+|    C                     PARM '1'       P8202I  1
+|    C                     PARM '1'       P8203I  1
+|    C                     PARM '2'       P8204I  1
+|    C                     PARM '1'       P8205I  1
+|    C                     PARM           P8211O  40
+|    C                     MOVELP8211O    WTD01
+|    C*
+|    C                     OUT  LDA
+| 01-C           DSEL      IFEQ '1'
+|   C                     CALL 'PYA7041C'                 .核定
+| 01-C                     END
+|    C*
+| 02-C           DSEL      IFEQ '2'
+|   C                     CALL 'PYA7042C'                 .磁帶 E
+|   C*****                CALL 'PYA7043C'                 .磁帶 C
+| 02-C                     END
+|    C* EASON 拿掉此部分判斷
+| 03-C*          DSEL      IFEQ '3'
+|   C*                    CALL 'PYA7043C'                 .磁帶 C
+| 03-C*                    END
+|    C*
+|    C                     IN   *NAMVAR
+| 04-C           DSEL      IFNE '1'
+|   C           FA04      ADD  1         DFA04N
+|   C                     Z-ADD0         DFA04F
+|   C                     Z-ADDFA04      DFA04T
+| 04*C                     ELSE
+|   C                     Z-ADDDFA04T    FA04
+|   C                     Z-ADD$A8YMD    FA97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     FA98
+|   C                     MOVEL$USER     FA99
+| 04-C                     END
+|    C                     UPDATFA0
+|    C*
+|    C                     SETON                     9398
+|    C                     SETOF                     96
+|    C*
+04===C                     ENDSR
+

@@ -1,0 +1,880 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYA3062                                     *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYA3062C                                    *
+     H*   PURPOSE      :上期薪資計算
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYPWPF  O   E           K        DISK                      A
+     FPYWDPF  UF  E           K        DISK                      A
+     FPYPYPF  IF  E           K        DISK
+     FPYPDPF  IF  E           K        DISK
+     F*PYPHPF  IF  E           K        DISK
+     FPYSHPF  IF  E           K        DISK
+     FPYSDPF  IF  E           K        DISK
+     F*PYOSPF  IF  E           K        DISK
+     FPYSSPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYTAPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     E*---------------------------------------------------------------
+     E                    A1         48  2               .薪資項目
+     E                    A2         48  7 0             .項目金額
+     E*
+     E                    B1         48  2               .固定項目
+     E                    B2         48  7 0             .調薪前
+     E                    B3         48  7 0             .調薪後
+     E                    B4         48  7 0             .項目金額
+     E*---------------------------------------------------------------
+     I/COPY PYDDSSRC,PYPMDS01
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DPW01
+     I*                                     503 5060DPW03
+     I                                      507 507 DPW04
+     I                                      511 5160WPW03
+     I                                      603 6070DPW03
+     I*
+     I            DS
+     I                                        1   80WNYMD
+     I                                        1   60WNYM
+     I                                        1   40WNY
+     I                                        5   60WNM
+     I                                        7   80WND
+     I*
+     I            DS
+     I                                        1   80EM13
+     I                                        1   60EM13YM
+     I                                        7   80EM13D
+     I*
+     I            DS
+     I                                        1   80WFYMD
+     I                                        1   60WFYM
+     I                                        7   80WFYD
+     I*
+     I            DS
+     I                                        1   80EM19
+     I                                        1   60EM19YM
+     I                                        7   80EM19D
+     I*
+     I            DS
+     I                                        1   80EM17
+     I                                        1   60EM17YM
+     I                                        7   80EM17D
+     I*
+     I            DS
+     I                                        1   80EM951
+     I                                        1   60EM951Y
+     I*
+     I            DS
+     I                                        1   2 EM06
+     I                                        1   20EM061
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN SH03      KSH03
+     C           *LIKE     DEFN SH03      SH03M
+     C           *LIKE     DEFN PW05      PW05M
+     C           *LIKE     DEFN WD05      #WD05
+     C           *LIKE     DEFN WD06      #WD06
+     C           *LIKE     DEFN EM10      #EM10
+     C           *LIKE     DEFN PD03      WPD03
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DPW01
+     C           KEYPY     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C           KEYSH     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           KSH03
+     C           KEYSD     KLIST
+     C                     KFLD           SH01
+     C                     KFLD           SH02
+     C                     KFLD           SH03
+     C           KEYWD     KLIST
+     C                     KFLD           WD01
+     C                     KFLD           WD03
+     C                     KFLD           WD04
+     C                     KFLD           WD02
+     C                     KFLD           WD05
+     C           KEYSS     KLIST
+     C                     KFLD           CM13
+     C                     KFLD           #WD05
+     C           KEYPD     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WPD03
+     C*PYLVLF02
+     C           KEYLV1    KLIST
+     C                     KFLD           EM01             公司
+     C                     KFLD           EM02             員工
+     C                     KFLD           WPW03            計薪年月
+     C*PYOVLF01
+     C           KEYOV     KLIST
+     C                     KFLD           EM01
+     C                     KFLD           EM02
+     C                     KFLD           WPW03            計薪年月
+     C*          KEYPH     KLIST
+     C*                    KFLD           EM01
+     C*                    KFLD           EM02
+     C*                    KFLD           WPW03
+     C*                    KFLD           PH04
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     .INIT
+     C*
+     C                     EXSR RTN020                     .DATA SEL.
+     C*
+     C                     Z-ADD0         I1      20       .INDEX-PAY
+     C                     MOVEL*BLANK    A1
+     C                     MOVEL*ZERO     A2
+  01-C           SWEM      IFEQ 'Y'
+    C                     EXSR RTN025                     .CLEAR PW
+    C                     EXSR RTN030                     .EM DATA
+    C                     EXSR RTN040                     .MAIN
+  01-C                     END
+     C*
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     SETON                     10
+|    C*
+|    C*                    MOVEL'2'       PH04             .下期
+|    C*GET PAYROLL PARAMETER
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C*GET PAYROLL PARAMETER
+|    C           DPW01     CHAINCM0                  40
+|    C*
+|    C*GET THIS MONTH FIRST DATE (WFYMD)
+|    C                     Z-ADDWPW03     WFYMD   80
+|    C                     MULT 100       WFYMD
+|    C                     Z-ADD1         WFYD
+|    C*
+|    C*GET THIS MONTH MIDDLE NEXT DATE (WHYMD)
+|    C                     MOVELWPW03     WHYMD   80
+|    C                     MOVE '16'      WHYMD
+|    C*
+|    C*GET THIS MONTH LAST DATE (WTYMD)
+|    C                     MOVELWPW03     WTYMD   80
+|    C*
+|    C                     CALL 'P34'
+|    C                     PARM WPW03     P3401I  60
+|    C                     PARM '2'       P3403I  1
+|    C                     PARM '1'       P3404I  1
+|    C                     PARM           P3411O  1
+|    C                     PARM           P3412O  20
+|    C                     MOVE P3412O    WTYMD
+|    C*
+|    C*二月份未滿30天日數計算
+|    C                     MOVE WTYMD     WM2A    20
+| 01-C           WM2A      IFLT 30
+|   C           30        SUB  WM2A      WM2A
+| 01*C                     ELSE
+|   C                     Z-ADD*ZERO     WM2A
+| 01-C                     END
+|    C*
+|    C*GET NEXT MONTH FIRST DATE(WNYMD)
+|    C                     Z-ADDWPW03     WNYM
+|    C                     ADD  1         WNM
+| 02-C           WNM       IFGT 12
+|   C                     ADD  1         WNY
+|   C                     SUB  12        WNM
+| 02-C                     END
+|    C                     Z-ADD01        WND
+|    C*TAX
+|    C           '0'       CHAINTA0                  40
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN020... DATA SELECT (SWEM)
+     C*==============================================================*
+02===C           RTN020    BEGSR
+|    C*
+|    C                     MOVEL'Y'       SWEM    1
+|    C*離職
+| 01-C           EM19      IFNE *ZERO
+|   C           EM19YM    ANDLEWPW03
+|   C                     MOVEL'N'       SWEM
+| 01-C                     END
+|    C*留職
+| 02-C           EM11      IFEQ 'R'
+|   C           EM17YM    ANDLEWPW03
+|   C                     MOVEL'N'       SWEM
+| 02-C                     END
+|    C*長病
+| 03-C           EM11      IFEQ 'S'
+|   C           EM951Y    ANDLEWPW03
+|   C                     MOVEL'N'       SWEM
+| 03-C                     END
+|    C*當月新進員工不給薪
+| 04-C           EM13YM    IFEQ WFYM
+     C*          EM13D     ANDNE1
+|   C                     MOVEL'N'       SWEM
+| 04-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN025... CLEAR PW FIELD
+     C*==============================================================*
+03===C           RTN025    BEGSR
+|    C*
+|    C                     MOVELEM01      PW01
+|    C                     MOVELEM02      PW02
+|    C                     Z-ADDWPW03     PW03
+|    C                     MOVELDPW04     PW04
+|    C                     Z-ADD*ZERO     PW05
+|    C                     Z-ADD*ZERO     PW07
+|    C                     Z-ADD*ZERO     PW14
+|    C                     Z-ADD*ZERO     PW15
+|    C                     Z-ADD*ZERO     PW16
+|    C                     Z-ADD*ZERO     PW17
+|    C                     Z-ADD*ZERO     PW18
+|    C                     Z-ADD*ZERO     PW19
+|    C                     MOVELEM11      PW20
+|    C                     Z-ADD*ZERO     PW22
+|    C                     Z-ADD*ZERO     PW24
+|    C                     Z-ADD*ZERO     PW26
+|    C                     Z-ADD*ZERO     PW27
+|    C                     Z-ADD*ZERO     PW28
+|    C                     Z-ADD*ZERO     PW29
+|    C                     Z-ADD*ZERO     PW30
+|    C                     Z-ADD*ZERO     PW31
+|    C                     Z-ADD*ZERO     PW32
+|    C                     Z-ADD*ZERO     PW33
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN030... GET EMPLOYEE DATA
+     C*==============================================================*
+04===C           RTN030    BEGSR
+|    C*
+|    C*GET薪資主檔
+|    C           KEYPY     CHAINPY0                  40
+|    C*  40                Z-ADD*ZERO     PY03
+     C* N40                Z-ADDPY03      DPY03   70
+     C           *IN40     IFEQ '1'
+|    C                     Z-ADD*ZERO     PY03
+     C                     ELSE
+     C           EM100     IFEQ '1'                        *月薪
+     C                     Z-ADDPY03      DPY03   70
+     C                     ELSE                              *日薪
+     C           PY03      MULT PM102     DPY03   70
+     C                     END
+     C                     END
+|    C*GET薪制(#EM10)
+|    C                     EXSR RTN201
+|    C*################################################################
+|    C*上期薪資資料
+|    C*          KEYPH     CHAINPH0                  40
+| 01-C*          *IN40     IFEQ '1'
+|   C*                    Z-ADD*ZERO     PH30
+|   C*                    Z-ADD*ZERO     PH17
+| 01-C*                    END
+|    C*
+|    C*上期借支PM312,DPW30
+|    C                     Z-ADD*ZERO     DPW30   70
+|    C                     Z-ADD*ZERO     ARATE   21
+| 02-C           #EM10     IFEQ '1'                        下期全薪
+|   C                     Z-ADD1         ARATE
+| 02-C                     END
+| 01-C           #EM10     IFEQ '2'                        上期半薪
+|   C                     Z-ADD0.5       ARATE   21
+| 01-C                     END
+| 03-C           #EM10     IFEQ '3'                        上期全薪
+|   C                     Z-ADD1         ARATE
+| 03-C                     END
+     C           DPY03     MULT ARATE     DPW30            半薪
+     C*
+| 02-C           DPW30     IFNE *ZERO
+|   C                     MOVELPM312     #WD05
+|   C                     Z-ADDDPW30     #WD06
+|   C                     EXSR RTN250
+| 02-C                     END
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          RTN040... MAIN PROCESS
+     C*==============================================================*
+05===C           RTN040    BEGSR
+|    C*
+|    C*                    MOVEL'N'       SWSAL   1        無薪資
+|    C*
+|    C*GET本薪與調薪前薪資(PW05,PW05M,SH03M)
+|    C                     EXSR RTN105
+|    C*
+|    C*GET工作日數＆計算實領本薪-- PW07 & PM301
+|    C                     EXSR RTN115
+|    C*
+|    C*****************************************************************
+|    C*薪定項目---> PYWDPF, PW16-PW18, PW27-PW30
+|    C                     EXSR RTN165
+|    C*
+|    C*獎金所得稅(PM311)
+|    C*911029              EXSR RTN170
+|    C*-------------
+| 01-C           SWSAL     IFEQ 'Y'
+     C                     Z-ADDDPW30     PW30
+|   C                     Z-ADD$A8YMD    PW97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     PW98
+|   C                     MOVEL$USER     PW99
+|   C                     WRITEPW0
+| 01-C                     END
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*   RTN105... GET 本月本薪- PW05
+     C*             GET 本調薪前薪資 -PW05M,日期=SH03M
+     C*==============================================================*
+06===C           RTN105    BEGSR
+|    C*
+|    C*本月底薪資
+|    C                     MOVEL'N'       SWSH    1        .未調薪
+|    C*                    Z-ADDPY03      PW05             .底薪
+     C           EM100     IFEQ '1'
+     C                     Z-ADDPY03      PW05             .月薪
+     C                     END
+     C           EM100     IFEQ '2'
+|    C           PY03      MULT PM102     PW05             .日薪
+     C                     END
+|    C*
+|    C                     Z-ADDWTYMD     KSH03
+|    C           KEYSH     SETGTSH0
+|    C           KEYPY     READESH0                      40
+|    C*
+| 01-C           *IN40     IFEQ '0'
+|   C           SH06      ANDNE*ZERO
+     C           EM100     IFEQ '1'
+|   C                     Z-ADDSH07      PW05             .月薪
+| 01-C                     END
+     C           EM100     IFEQ '2'
+|    C           SH07      MULT PM102     PW05             .日薪
+| 01-C                     END
+|   C                     MOVEL'Y'       SWSH
+| 01-C                     END
+|    C*
+|    C                     EXSR RTN260                     .固定項目
+|    C*----
+|    C*本月調薪（一個月最多調薪一次）
+|    C                     MOVEL'N'       SWSH             .未調薪
+|    C*                    Z-ADDWFYMD     KSH03
+|    C*          KEYSH     SETGTSH0
+|    C*          KEYPY     READESH0                      40
+|    C*
+|    C*          *IN40     IFEQ '0'
+|    C*          SH03      ANDLEWTYMD
+|    C*          SH06      ANDNE*ZERO
+|    C*                    MOVEL'Y'       SWSH
+|    C*                    END
+|    C*調薪前
+|    C*          SWSH      IFEQ 'N'
+|    C                     Z-ADDPW05      PW05M
+|    C                     Z-ADD*ZERO     SH03M
+|    C*                    ELSE
+|    C*                    Z-ADDSH07      PW05M
+|    C*                    Z-ADDSH03      SH03M            .調薪日期
+|    C*                    EXSR RTN270                     .固定項目
+|    C*                    END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*   RTN115... 工作日數，實領本薪計算PW07,PM301
+     C*==============================================================*
+07===C           RTN115    BEGSR
+|    C*
+|    C*工作天數
+|    C                     EXSR RTN240                     .工作天數
+|    C*
+|    C           PW07      IFLE *ZERO
+|    C                     Z-ADD*ZERO     PW07
+|    C                     GOTO END115
+|    C                     END
+|    C*
+|    C*應工作天數#PM102,發薪比例#SALR
+| 01-C           #EM10     IFEQ '2'                        上期半薪
+|   C**911031             Z-ADD15        #PM102  20
+|   C                     Z-ADD0.5       #SALR   21
+| 01-C                     END
+| 02-C           #EM10     IFEQ '1'                        董監事顧問－全薪
+|   C**911031             Z-ADDPM102     #PM102
+|   C                     Z-ADD1         #SALR
+| 02-C                     END
+| 03-C           #EM10     IFEQ '3'                        上期全薪
+|   C**911031             Z-ADDPM102     #PM102
+|   C                     Z-ADD*ZERO     #SALR
+| 03-C                     END
+|    C*實領本薪
+|    C*伙食津貼
+|    C*911029              MOVELPM314     WPD03
+|    C*911029    KEYPD     CHAINPD0                  40
+|    C*911029    *IN40     IFEQ '0'
+|    C*911029              ADD  PD04      PW05M
+|    C*911029              END
+|    C*交通津貼
+|    C*911029              MOVELPM323     WPD03
+|    C*911029    KEYPD     CHAINPD0                  40
+|    C*911029    *IN40     IFEQ '0'
+|    C*911029              ADD  PD04      PW05M
+|    C*911029              END
+|    C*職務津貼
+|    C*911029              MOVELPM302     WPD03
+|    C*911029    KEYPD     CHAINPD0                  40
+|    C*911029    *IN40     IFEQ '0'
+|    C*911029              ADD  PD04      PW05M
+|    C*911029              END
+|    C*專業津貼
+|    C*911029              MOVELPM306     WPD03
+|    C*911029    KEYPD     CHAINPD0                  40
+|    C*911029    *IN40     IFEQ '0'
+|    C*911029              ADD  PD04      PW05M
+|    C*911029              END
+|    C*
+|    C                     ADD  1         I1
+|    C                     MOVELPM301     A1,I1            .項目
+|    C**911031   PW07      IFEQ #PM102
+|    C           PW05M     MULT #SALR     A2,I1     H
+|    C**911031             Z-ADDPW05M     A2,I1     H
+|    C**911031             ELSE
+|    C**911031   PW05M     MULT PW07      WAMT      H
+|    C**911031   WAMT      DIV  PM102     A2,I1     H
+|    C**911031             END
+|    C*
+|    C*本月調薪金額追加
+| 04-C           SH03M     IFNE *ZERO
+|   C           SH03M     ANDLT#YMDT                      .計薪止日
+|   C*
+|   C                     CALL 'P32'
+|   C                     PARM SH03M     P3201I  80
+|   C                     PARM #YMDT     P3202I  80
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3211O  90
+|   C*
+|   C           PW05      SUB  PW05M     WAMT   259
+|   C           WAMT      DIV  PM102     WAMT      H
+|   C                     MULT P3211O    WAMT
+|   C                     ADD  WAMT      A2,I1     H
+| 04-C                     END
+|    C*
+|    C                     EXSR RTN280                     .固定項目
+|    C*
+07===C           END115    ENDSR
+     C*==============================================================*
+     C*   RTN165... GET 薪資固定項目
+     C*==============================================================*
+08===C           RTN165    BEGSR
+|    C*
+|    C*固定項目
+|    C                     Z-ADD1         K1      20
+| 01-C           K1        DOWLEIB
+|   C*
+| 02-C           B1,K1     IFNE *BLANK
+|   C           B4,K1     ANDNE*ZERO
+|   C                     MOVELB1,K1     #WD05
+|   C                     Z-ADDB4,K1     #WD06
+|   C                     EXSR RTN250
+| 02-C                     END
+|   C*
+|   C                     ADD  1         K1
+| 01-C                     END
+|    C*
+|    C*變動項目
+|    C*911029    KEYOS     SETLLOS0
+|    C*911029    KEYOS     READEOS0                      42
+|    C*
+|    C*911029    *IN42     DOWEQ'0'
+|    C*
+|    C*911029              MOVELOS05      #WD05
+|    C*911029              Z-ADDOS06      #WD06
+|    C*911029              EXSR RTN250
+|    C*
+|    C*911029    KEYOS     READEOS0                      42
+|    C*911029              END
+|    C*
+|    C*系統設定
+|    C                     Z-ADD1         K1      20
+| 03-C           K1        DOWLEI1
+|   C*
+| 04-C           A1,K1     IFNE *BLANK
+|   C           A2,K1     ANDNE*ZERO
+|   C                     MOVELA1,K1     #WD05
+|   C                     Z-ADDA2,K1     #WD06
+|   C                     EXSR RTN250
+| 04-C                     END
+|   C*
+|   C                     ADD  1         K1
+| 03-C                     END
+|    C*
+08===C                     ENDSR
+     C*==============================================================*
+     C*   RTN170... 計算獎金所得稅 & PYPWPF
+     C*==============================================================*
+09===C           RTN170    BEGSR
+|    C*
+|    C           PW27      SUB  PW29      WAMT
+| 01-C           WAMT      IFLE *ZERO
+|   C                     GOTO END170
+| 01-C                     END
+|    C*
+|    C*獎金稅=非固定薪資所得X獎金稅率
+|    C*不足最低稅額不扣
+|    C           WAMT      MULT TA07      #WD06     H
+| 02-C           #WD06     IFLT TA08
+|   C                     Z-ADD*ZERO     #WD06
+| 02-C                     END
+|    C*
+| 03-C           #WD06     IFNE *ZERO
+|   C                     MOVELPM311     #WD05
+|   C                     EXSR RTN250
+| 03-C                     END
+|    C*
+09===C           END170    ENDSR
+     C*==============================================================*
+     C*   RTN201... GET 某月底薪制-#EM10
+     C*==============================================================*
+10===C           RTN201    BEGSR
+|    C*
+|    C*計薪當時薪制
+|    C                     MOVELEM10      #EM10
+|    C*
+10===C                     ENDSR
+     C*==============================================================*
+     C*   RTN240... 工作日數計算PW07
+     C*==============================================================*
+11===C           RTN240    BEGSR
+|    C*
+| 01-C           #EM10     IFEQ '3'                        .無半月薪
+|   C                     Z-ADD*ZERO     PW07
+|   C                     GOTO END240
+| 01-C                     END
+|    C*
+|    C                     Z-ADDWFYMD     #YMDF   80       .計薪起日
+| 02-C           #EM10     IFEQ '2'                        .上期半薪
+|   C                     Z-ADDWHYMD     #YMDT   80
+| 02*C                     ELSE                            .下期全薪
+|   C                     Z-ADDWNYMD     #YMDT            .計薪止日
+| 02-C                     END
+|    C*
+|    C*本期工作日數
+| 03-C           #EM10     IFEQ '2'                        .上期半薪
+|   C                     Z-ADD15        PW07             .15 DAYS
+| 03*C                     ELSE                            .下期全薪
+|   C                     Z-ADDPM102     PW07             .30 DAYS
+| 03-C                     END
+|    C*
+|    C*本月新進人員も工作天數－到職日至月底日も
+| 04-C           EM13      IFGT WFYMD
+|   C                     Z-ADDEM13      #YMDF
+|   C*
+|   C                     CALL 'P32'
+|   C                     PARM EM13      P3201I  80
+|   C                     PARM #YMDT     P3202I  80
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3211O  90
+|   C*
+|   C                     Z-ADDP3211O    PW07
+|   C**                   ADD  WM2A      PW07             .二月份
+| 04-C                     END
+|    C*
+|    C*離職人員も工作日數計算－計薪起日至離職日間天數も
+| 05-C           EM19      IFNE *ZERO
+|   C           EM19      ANDLT#YMDT
+|   C*
+|   C*離職日＜＝計薪起日，工作日數＝０
+| 06-C           EM19      IFLE #YMDF
+|   C                     Z-ADD*ZERO     PW07
+|   C                     Z-ADDEM19      #YMDT
+|   C                     GOTO END240
+| 06*C                     ELSE
+|   C*
+|   C                     CALL 'P32'
+|   C                     PARM #YMDF     P3201I  80
+|   C                     PARM EM19      P3202I  80
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3211O  90
+|   C*
+|   C                     Z-ADDP3211O    PW07
+|   C                     Z-ADDEM19      #YMDT
+| 06-C                     END
+| 05-C                     END
+|    C*
+|    C*本期間留職人員も工作日數計算－計薪起日至留職日間天數も
+| 07-C           EM11      IFEQ 'R'
+|   C           EM17      ANDLT#YMDT
+|   C*
+|   C*留職日＜＝計薪起日，工作日數＝０
+| 08-C           EM17      IFLE #YMDF
+|   C                     Z-ADD*ZERO     PW07
+|   C                     Z-ADDEM17      #YMDT
+|   C                     GOTO END240
+| 08*C                     ELSE
+|   C*
+|   C                     CALL 'P32'
+|   C                     PARM #YMDF     P3201I  80
+|   C                     PARM EM17      P3202I  80
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3211O  90
+|   C*
+|   C                     Z-ADDP3211O    PW07
+|   C                     Z-ADDEM17      #YMDT
+| 08-C                     END
+| 07-C                     END
+|    C*
+|    C*本期間長病人員も工作日數計算－計薪起日至留職日間天數も
+| 09-C           EM11      IFEQ 'S'
+|   C           EM951     ANDLT#YMDT
+|   C*
+|   C*留職日＜＝計薪起日，工作日數＝０
+| 10-C           EM951     IFLE #YMDF
+|   C                     Z-ADD*ZERO     PW07
+|   C                     Z-ADDEM951     #YMDT
+|   C                     GOTO END240
+| 10*C                     ELSE
+|   C                     CALL 'P32'
+|   C                     PARM #YMDF     P3201I  80
+|   C                     PARM EM951     P3202I  80
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3211O  90
+|   C*
+|   C                     Z-ADDP3211O    PW07
+|   C                     Z-ADDEM951     #YMDT
+| 10-C                     END
+| 09-C                     END
+|    C*
+|    C*本期間留職停薪日數扣除
+| 11-C           EM11      IFNE 'R'
+|   C           EM18      ANDGT#YMDF
+|   C           EM17      ANDLT#YMDT
+|   C*
+| 12-C           EM17      IFGE #YMDF
+|   C                     Z-ADDEM17      P3201I
+| 12*C                     ELSE
+|   C                     Z-ADD#YMDF     P3201I
+| 12-C                     END
+| 13-C           EM18      IFLT #YMDT
+|   C                     Z-ADDEM18      P3202I
+| 13*C                     ELSE
+|   C                     Z-ADD#YMDT     P3202I
+| 13-C                     END
+|   C                     CALL 'P32'
+|   C                     PARM           P3201I  80
+|   C                     PARM           P3202I  80
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3211O  90
+|   C*
+|   C                     SUB  P3211O    PW07
+| 11-C                     END
+|    C*
+|    C*本期間長病停薪日數扣除
+| 14-C           EM11      IFNE 'S'
+|   C           EM952     ANDGT#YMDF
+|   C           EM951     ANDLT#YMDT
+|   C*
+| 15-C           EM951     IFGE #YMDF
+|   C                     Z-ADDEM951     P3201I
+| 15*C                     ELSE
+|   C                     Z-ADD#YMDF     P3201I
+| 15-C                     END
+| 16-C           EM952     IFLT #YMDT
+|   C                     Z-ADDEM952     P3202I
+| 16*C                     ELSE
+|   C                     Z-ADD#YMDT     P3202I
+| 16-C                     END
+|   C                     CALL 'P32'
+|   C                     PARM           P3201I  80
+|   C                     PARM           P3202I  80
+|   C                     PARM '2'       P3203I  1
+|   C                     PARM '1'       P3204I  1
+|   C                     PARM           P3211O  90
+|   C*
+|   C                     SUB  P3211O    PW07
+| 14-C                     END
+|    C*
+11===C           END240    ENDSR
+     C*==============================================================*
+     C*          RTN250... 薪資項目
+     C*==============================================================*
+12===C           RTN250    BEGSR
+|    C*---
+| 01-C           #WD06     IFEQ *ZERO
+|   C                     GOTO END250
+| 01-C                     END
+|    C*
+|    C           KEYSS     CHAINSS0                  40
+|    C*
+| 02-C           SS17      IFEQ ' '                        .非下期
+|   C                     GOTO END250
+| 02-C                     END
+     C*
+| 08-C           SS17      IFEQ 'A'
+|   C                     ADD  #WD06     PW30             .上期借支
+| 09-C           SS04      IFEQ 'B'                        .減項
+|   C                     ADD  #WD06     PW18             .免稅減項
+| 09*C                     ELSE
+|   C                     ADD  #WD06     PW16             .免稅加項
+| 09-C                     END
+|   C*
+| 08*C                     ELSE
+| 10-C           SS04      IFEQ 'B'                        .減項
+|   C*
+| 11-C           SS03      IFEQ 'N'                        .免稅
+|   C                     ADD  #WD06     PW18
+| 11*C                     ELSE                            .應稅
+| 12-C           SS11      IFEQ '1'                        .固定
+|   C                     ADD  #WD06     PW28
+| 12*C                     ELSE                            .非固定
+|   C                     ADD  #WD06     PW29
+| 12-C                     END
+| 11-C                     END
+|   C*
+| 10*C                     ELSE                            .加項
+|   C*
+| 13-C           SS03      IFEQ 'N'                        .免稅
+|   C                     ADD  #WD06     PW16
+| 13*C                     ELSE                            .應稅
+| 14-C           SS11      IFEQ '1'                        .固定
+|   C                     ADD  #WD06     PW17
+| 14*C                     ELSE                            .非固定
+|   C                     ADD  #WD06     PW27
+| 14-C                     END
+| 13-C                     END
+|   C*
+| 10-C                     END
+| 08-C                     END
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     MOVEL'Y'       SWSAL   1        .有薪
+|    C*
+|    C                     MOVELPW01      WD01             公司
+|    C                     MOVELPW02      WD02             員工
+|    C                     MOVELPW03      WD03             年月
+|    C                     MOVELPW04      WD04             期別
+|    C                     MOVEL#WD05     WD05             薪資項目
+|    C           KEYWD     CHAINWD0                  40
+|    C*
+| 15-C           *IN40     IFEQ '0'
+|   C                     ADD  #WD06     WD06             薪資金額
+|   C                     UPDATWD0
+| 15*C                     ELSE
+|   C                     Z-ADD#WD06     WD06
+|   C                     WRITEWD0
+| 15-C                     END
+|    C*
+12===C           END250    ENDSR
+     C*==============================================================*
+     C*   RTN260... 薪資固定項目－本月底薪資
+     C*==============================================================*
+13===C           RTN260    BEGSR
+|    C*
+|    C                     MOVEL*BLANK    B1
+|    C                     MOVEL*ZERO     B2
+|    C                     MOVEL*ZERO     B3
+|    C                     MOVEL*ZERO     B4
+|    C                     Z-ADD*ZERO     IB      20       .固定數
+|    C*
+| 01-C           SWSH      IFEQ 'N'                        .未調薪
+|   C*
+|   C           KEYPY     SETLLPD0
+|   C           KEYPY     READEPD0                      42
+| 02-C           *IN42     DOWEQ'0'
+|   C                     ADD  1         IB
+|   C                     MOVELPD03      B1,IB
+|   C                     Z-ADDPD04      B3,IB
+|   C           KEYPY     READEPD0                      42
+| 02-C                     END
+|   C*
+| 01*C                     ELSE                            .有調薪
+|   C           KEYSD     SETLLSD0
+|   C           KEYSD     READESD0                      42
+| 03-C           *IN42     DOWEQ'0'
+|   C*
+| 04-C           SD05      IFNE *ZERO
+|   C                     ADD  1         IB
+|   C                     MOVELSD04      B1,IB
+|   C                     Z-ADDSD05      B3,IB
+| 04-C                     END
+|   C*
+|   C           KEYSD     READESD0                      42
+| 03-C                     END
+|   C*
+| 01-C                     END
+|    C*
+13===C                     ENDSR
+     C*==============================================================*
+     C*   RTN270... 薪資固定項目－調薪前薪資
+     C*==============================================================*
+14===C           RTN270    BEGSR
+|    C*
+|    C           KEYSD     SETLLSD0
+|    C           KEYSD     READESD0                      42
+|    C*
+| 01-C           *IN42     DOWEQ'0'
+|   C*
+| 02-C           SD05      IFNE *ZERO
+|   C                     Z-ADD1         I2      20
+|   C           SD04      LOKUPB1,I2                    40
+|   C*
+| 03-C           *IN40     IFEQ '0'
+|   C                     ADD  1         IB
+|   C                     MOVELSD04      B1,IB
+|   C                     Z-ADDSD05      B2,IB
+| 03*C                     ELSE
+|   C                     Z-ADDSD05      B2,I2
+| 03-C                     END
+|   C*
+| 02-C                     END
+|   C           KEYSD     READESD0                      42
+| 01-C                     END
+|    C*
+14===C                     ENDSR
+     C*==============================================================*
+     C*   RTN280... 薪資固定項目－本月應給付
+     C*==============================================================*
+15===C           RTN280    BEGSR
+|    C*
+|    C                     Z-ADD1         I2
+| 01-C           I2        DOWLEIB
+|   C*
+| 02-C           SH03M     IFEQ *ZERO                      .未調薪
+|   C                     Z-ADDB3,I2     B2,I2
+| 02-C                     END
+|   C*
+|   C**911031   PW07      IFEQ #PM102
+|   C           B2,I2     MULT #SALR     B4,I2     H
+|   C**911031             ELSE
+|   C**911031   B2,I2     MULT PW07      WAMT
+|   C**911031   WAMT      DIV  PM102     B4,I2     H
+|   C**911031             END
+|   C*
+|   C*本月調薪金額追加
+| 03-C           SH03M     IFNE *ZERO                      .破月調薪
+|   C           SH03M     ANDLT#YMDT                      .計薪止日
+|   C           B3,I2     SUB  B2,I2     WAMT
+|   C           WAMT      DIV  PM102     WAMT      H
+|   C                     MULT P3211O    WAMT
+|   C                     ADD  WAMT      B4,I2     H
+| 03-C                     END
+|   C*
+|   C                     ADD  1         I2
+| 01-C                     END
+|    C*
+15===C                     ENDSR
+

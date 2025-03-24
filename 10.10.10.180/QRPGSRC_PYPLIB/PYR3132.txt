@@ -1,0 +1,370 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : PYR3132                                    *
+     H*    PROGRAM NAME :保費明細表－薪資                          *
+     H*    AUTHOR       : A1184                                      *
+     H*    CREATE DATE  : 85/04/08                                   *
+     H*    UPDATE DATE  : 90/04/16 A1274 EVA                         *
+     H*    SYSTEM       : B&Q                                        *
+     H****************************************************************
+     FPYEMPF  IP  E                    DISK
+     FPYPHPF  IF  E           K        DISK
+     F*PYPBLF01IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYHDPF  IF  E           K        DISK
+     FPYCDLF01IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYE1PF  IF  E           K        DISK
+     FPYE4PF  IF  E           K        DISK
+     FPYTAPF  IF  E           K        DISK
+     FPYR313P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     IEM0
+     I                                              EM041 L1
+     I                                              EM042 L1
+     I                                              EM043 L1
+     I                                              EM044 L1
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DEM01
+     I                                      623 629 DEM04F
+     I                                      630 636 DEM04T
+     I                                      513 520 DEM02F
+     I                                      521 528 DEM02T
+     I                                      529 5340WPH03
+     I                                      535 5390DPH03
+     I                                      540 5410DPHD
+     I            DS
+     I                                        1   80WYMD
+     I                                        1   40WNY
+     I                                        5   60WNM
+     I                                        1   60WNYM
+     I                                        7   80WND
+     I            DS
+     I                                        1   7 DEM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DEM01
+     C           KEYHD     KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C                     KFLD           PH03
+     C                     KFLD           PH04
+     C                     KFLD           KHD05   2
+     C           KEYE1     KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C                     KFLD           WYMD
+     C           KEYE1R    KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C* PYPHPF
+     C                     MOVEL'1'       WPH04   1
+     C           KEYPH     KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C                     KFLD           WPH03
+     C                     KFLD           WPH04
+     C* PYPBPF
+     C           KEYPB     KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C                     KFLD           WPH03
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C   L1                EXSR R7100
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     CL1 10                EXSR R8100
+     CLR 10                EXSR R8900
+     C*
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C*參數檔
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C*健保費率檔
+|    C           '0'       CHAINE40                  40
+|    C*勞保費率
+|    C           '0'       CHAINTA0                  40
+|    C*
+|    C                     Z-ADD01        WND
+|    C                     Z-ADDWPH03     WNYM
+| 01-C           WNM       IFEQ 12
+|   C                     ADD  1         WNY
+|   C                     Z-ADD01        WNM
+| 01*C                     ELSE
+|   C                     ADD  1         WNM
+| 01-C                     END
+|    C*
+|    C*GET表頭公司別
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C                     MOVE CM14      DFMT
+|    C                     MOVE CM15      DTYPE
+|    C*
+|    C*CLEAR TOTAL FIELD
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT14
+|    C                     Z-ADD*ZERO     PT15
+|    C                     Z-ADD*ZERO     PT16
+|    C                     Z-ADD*ZERO     PT17
+|    C                     Z-ADD*ZERO     PT18
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C                     Z-ADD*ZERO     PT24
+|    C                     Z-ADD*ZERO     PT25
+|    C                     Z-ADD*ZERO     PT26
+|    C                     Z-ADD*ZERO     PT27
+|    C                     Z-ADD*ZERO     PT28
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*勞保費 ( PYPHPF, PYPBPF )
+|    C           KEYPH     CHAINPH0                  40
+| 01-C           *IN40     IFEQ '0'
+|   C           PH19      MULT TA12      EM23C     H
+|   C*
+|   C                     MOVELPM310     KHD05
+|   C           KEYHD     CHAINHD0                  41
+| 02-C           *IN41     IFEQ '1'
+|   C                     Z-ADD0         EM23P
+| 02*C                     ELSE
+|   C                     Z-ADDHD06      EM23P
+| 02-C                     END
+| 01-C                     END
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*健保費 ( PYHDPF, PYPBPF )
+|    C                     Z-ADD0         E105C
+|    C                     Z-ADD0         E105P
+|    C                     Z-ADD0         E105
+|    C*
+|    C                     MOVELPM319     KHD05
+|    C           KEYHD     CHAINHD0                  40
+| 03-C           *IN40     IFEQ '0'
+|   C                     Z-ADDHD06      E105P
+| 03-C                     END
+|    C*
+|    C*GET到本月底投保狀況
+|    C           KEYE1     SETGTE10
+|    C           KEYE1R    REDPEE10                      46
+| 04-C           *IN46     IFEQ '0'
+     C           E104      ANDNE'3'
+     C           E104      ANDNE'9'
+|   C*
+|   C           1         ADD  E404      E105A   93
+|   C                     MULT E105      E105A
+|   C                     MULT E401      E105A     H
+|   C*
+| 05-C           E108      IFEQ 'B'                        員工全額自付
+|   C                     Z-ADD*ZERO     E105C
+| 05*C                     ELSE
+|   C           E105A     MULT E403      E105C     H      公司負擔
+| 05-C                     END
+|   C*
+| 04*C                     ELSE
+|   C                     Z-ADD0         E105
+| 04-C                     END
+|    C*
+|    C*
+|    C*                    Z-ADD*ZERO     AA      70
+|    C*          KEYPB     SETLLPB0
+|    C*          KEYPB     READEPB0                      42
+| 06-C*          *IN42     DOWEQ'0'
+|   C*
+| 07-C*          PB09      IFNE 0
+|   C*                    ADD  PB09      EM23P
+|   C*          EM23      MULT TA09      AA        H
+| 07-C*                    END
+|   C*
+| 08-C*          PB10      IFNE 0
+|   C*                    ADD  PB10      E105P
+| 08-C*                    END
+|   C*
+|   C*          KEYPB     READEPB0                      42
+| 06-C*                    END
+|    C*
+|    C*                    ADD  AA        EM23C
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*團保費
+|    C*                    MOVELPM332     KHD05
+|    C*          KEYHD     CHAINHD0                  40
+|    C*          *IN40     IFEQ '1'
+|    C*                    Z-ADD0         EM292
+|    C*                    ELSE
+|    C*                    Z-ADDHD06      EM292
+|    C*                    END
+|    C*-------------------------------------------------------------***
+|    C*勞保職災
+|    C                     MOVELPM336     KHD05
+|    C                     Z-ADD0         FLD01
+|    C           KEYHD     SETLLCD0
+|    C           KEYHD     READECD0                      40
+| 09-C           *IN40     DOWEQ'0'
+|   C                     ADD  CD06      FLD01
+|   C           KEYHD     READECD0                      40
+| 09-C                     END
+|    C*-------------------------------------------------------------***
+|    C*勞保墊償
+|    C                     MOVELPM337     KHD05
+|    C                     Z-ADD0         FLD02
+|    C           KEYHD     SETLLCD0
+|    C           KEYHD     READECD0                      40
+| 10-C           *IN40     DOWEQ'0'
+|   C                     ADD  CD06      FLD02
+|   C           KEYHD     READECD0                      40
+| 10-C                     END
+|    C*-------------------------------------------------------------***
+|    C*
+| 11-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETON                     31
+| 11-C                     END
+|    C*
+| 12-C           EM23P     IFGT 0
+|   C           E105P     ORGT 0
+|   C           EM292     ORGT 0
+|   C                     WRITEPD1
+|   C*
+|   C                     SETOF                     31
+|   C*
+|   C                     ADD  1         PT11
+|   C                     ADD  E105C     PT12
+|   C                     ADD  E105P     PT13
+|   C                     ADD  EM23C     PT14
+|   C                     ADD  EM23P     PT15
+|   C                     ADD  EM292     PT16
+|   C                     ADD  FLD01     PT17
+|   C                     ADD  FLD02     PT18
+|   C*
+|   C*                    Z-ADD0         AA
+|   C                     Z-ADD0         E105P
+|   C                     Z-ADD0         EM23P
+|   C*
+| 12-C                     END
+|    C*
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+03===C           R7100     BEGSR
+|    C*
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+|    C* BREAK CONTROL FOR FIELD PRINTED
+|    C                     SETON                     31
+|    C*
+|    C* << IF THIS KEY BREAK SKIP PAGE THEN SETON >>-------------------
+|    C***                  SETON                     39
+|    C*----------------------------------------------------------------
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+04===C           R8100     BEGSR
+|    C*
+|    C           PT11      IFGT 0
+|    C                     WRITEPT1
+|    C                     END
+|    C*
+|    C* << ACCUMULATE & CLEAR >>
+|    C                     ADD  PT11      PT21
+|    C                     ADD  PT12      PT22
+|    C                     ADD  PT13      PT23
+|    C                     ADD  PT14      PT24
+|    C                     ADD  PT15      PT25
+|    C                     ADD  PT16      PT26
+|    C                     ADD  PT17      PT27
+|    C                     ADD  PT18      PT28
+|    C*
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT14
+|    C                     Z-ADD*ZERO     PT15
+|    C                     Z-ADD*ZERO     PT16
+|    C                     Z-ADD*ZERO     PT17
+|    C                     Z-ADD*ZERO     PT18
+|    C*
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+05===C           R8900     BEGSR
+|    C*
+|    C                     WRITEPT2
+|    C*
+|    C* << ACCUMULATE & CLEAR >>
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C                     Z-ADD*ZERO     PT24
+|    C                     Z-ADD*ZERO     PT25
+|    C                     Z-ADD*ZERO     PT26
+|    C                     Z-ADD*ZERO     PT27
+|    C                     Z-ADD*ZERO     PT28
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+06===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R1000
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+06===C                     ENDSR
+

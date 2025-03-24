@@ -1,0 +1,577 @@
+     A****************************************************************
+     A*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     A*                                                              *
+     A*    PROGRAM-ID   : GLR2A011                                   *
+     A*    USED PRTF-ID : GLR2A0P＝總分類帳日計表                  *
+     A*    PROGRAM NAME : 分類帳                                   *
+     A*    AUTHOR       :  A1149    MAY                              *
+     A*    CREATE DATE  :  1992.11.13                                *
+     A*    UPDATE DATE  :                                            *
+     A*    SYSTEM       : 泛太總帳                                 *
+     A****************************************************************
+     FGLWF02  IP  E           K        DISK
+     FGLAAPF  IF  E           K        DISK
+     FGLAKPF  IF  E           K        DISK
+     FGLAFPF  IF  E           K        DISK
+     FGLAILF07IF  E           K        DISK
+     FPT#BPF  IF  E           K        DISK
+     FGLR2A0P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     E*<<欄位代碼>> W0203A - W0207A
+     E                    @FA         5  2
+     E*<<欄位內容>> W0203  - W0207
+     E                    @F          5 20
+     E*<<欄位說明>> PW0203A - PW0207A
+     E                    @PA         5 20
+     E*<<代碼說明DESC>> PW0203 - PW0207
+     E                    @P          5 20
+     E*<<各期科目餘額>> AI11 - AI23
+     E                    @@         13 13 2
+     E*---------------------------------------------------------------
+     IGLWF02R
+     I                                              W0208 L1
+     I                                              W0201 L2
+     I                                              W0202 L2
+     I                                              W0203AL2
+     I                                              W0204AL2
+     I                                              W0205AL2
+     I                                              W0206AL2
+     I                                              W0207AL2
+     I                                              W0203 L2
+     I                                              W0204 L2
+     I                                              W0205 L2
+     I                                              W0206 L2
+     I                                              W0207 L2
+     I*DATA AREA
+     IPTDA01      DS
+     I                                        1   1 $PFMT
+     I                                        2   2 $PTYPE
+     I*
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      211 2160$C6YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DAH01
+     I                                      503 503 DOPT
+     I                                      504 511 DAH04S
+     I                                      512 519 DAH04E
+     I                                      520 5270DATE
+     I                                      528 5350P006O1
+     I                                      536 5430P006O2
+     I                                      544 544 P006O3
+     I                                      545 545 P006O4
+     I                                      554 554 DFLD
+     I                                      555 555 WAI24S
+     I                                      556 556 WAI24E
+     IGLDA01      DS
+     I                                        1  16 WTEXT
+     I                                        1   8 DA01
+     I            DS
+     I                                        1  33 CHGPGM
+     I                                        1   2 CHK01
+     I                                        3  22 CHK02
+     I                                       23  32 CHK03
+     I                                       33  33 CHK04
+     I              '含追溯分攤'        C         CNST1
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C           *NAMVAR   DEFN           GLDA01
+     C           *LIKE     DEFN AI02      WYEAR
+     C           *LIKE     DEFN AI03      KAI03
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYAA     KLIST
+     C                     KFLD           DAA01   2
+     C                     KFLD           DAA02   2
+     C           KEYAI     KLIST
+     C                     KFLD           WAI01   2
+     C                     KFLD           WAI03   8
+     C                     KFLD           WAI02   40
+     C           KEYAF     KLIST
+     C                     KFLD           WAI01   2
+     C                     KFLD           KAI03
+     C           KEYAIF    KLIST
+     C                     KFLD           WAI01   2
+     C                     KFLD           KAI03
+     C                     KFLD           AK13
+     C           KEYAIE    KLIST
+     C                     KFLD           WAI01   2
+     C                     KFLD           KAI03
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*+ LEVEL BREAK INIT PROCESS +++++++++++++++++++++++++++++++++++
+     C   L1                EXSR R7100
+     C   L2                EXSR R7200
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     C*+ LEVEL BREAK PROCESS ++++++++++++++++++++++++++++++++++++++++
+     CL1 10                EXSR R8100
+     CL2 10                EXSR R8200
+     CLR 10                EXSR R8900
+     C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+     C                     IN   GLDA01
+|    C                     SETON                     10
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C           DAH01     CHAINAK0                  40
+| 01-C           *IN40     IFEQ '1'
+|   C                     MOVEL*BLANKS   AK11
+|   C                     MOVEL*BLANKS   AK09
+| 01-C                     END
+|    C*
+     C                     MOVEL*BLANK    PFLD
+     C           DFLD      IFEQ 'Y'
+     C                     MOVELCNST1     PFLD
+     C                     END
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C*
+| 02-C           W0213     IFNE *BLANKS
+|   C                     EXSR R2A00
+|   C                     WRITEPH2
+| 02-C                     END
+|   C*
+|   C                     WRITEPH3
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*<< 日期PW0208 >>
+|    C                     CALL 'P31'
+|    C                     PARM W0208     P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C           PW0208    PARM           P3101O  80
+|    C*
+|    C*<< 借貸方金額　PW0210 , PW0211 >>
+|    C                     ADD  W0210     PW0210
+|    C                     ADD  W0211     PW0211
+|    C*<<餘額C >>
+| 03-C           W0214     IFEQ '1'
+|   C           W0210     SUB  W0211     W#C    132
+|   C*******    W#C       MULT W0215     W#C
+|   C                     ADD  W#C       C
+| 03*C                     ELSE
+|   C*
+|   C           W0211     SUB  W0210     W#C
+|   C******     W#C       MULT W0215     W#C
+|   C                     ADD  W#C       C
+| 03-C                     END
+|    C*
+|    C* BREAK CONTROL FOR FIELD PRINTED +++++++++++++++++++++++++++++++
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     ADD  W0210     TW0210
+|    C                     ADD  W0211     TW0211
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R2A00 ... WRITE PH2 (CONTROL)
+     C*==============================================================*
+03===C           R2A00     BEGSR
+|    C*
+| 01-C                     DO   5         WI      30
+|   C*
+|   C           31        ADD  WI        IN      20
+| 02-C           @FA,WI    IFNE *BLANK
+|   C                     MOVE '1'       *IN,IN
+| 02*C                     ELSE
+|   C                     MOVE '0'       *IN,IN
+| 02-C                     END
+|   C*
+| 01-C                     END
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+04===C           R7100     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD*ZERO     PW0210
+|    C                     Z-ADD*ZERO     PW0211
+|    C*----------------------------------------------------------------
+04===C                     ENDSR
+     C*==============================================================*
+     C*          R7200 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+05===C           R7200     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C* SCREEN INIT VALUE SET *+++++++++++++++++++++++++++++++++++++++
+|    C                     CALL 'P31'
+|    C                     PARM $A8YMD    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM $PFMT     P3104I  1
+|    C                     PARM $PTYPE    P3105I  1
+|    C           PDATE     PARM           P3101O  80
+|    C*
+|    C*
+|    C*<< #B16 >>
+|    C           W0201     CHAIN#B0                  40
+|    C   40                MOVEL*BLANKS   #B16
+|    C*<< @LDA >>
+| 01-C*          P006O4    IFEQ 'Y'
+|   C*                    MOVELDA01      @LDA
+| 01*C*                    ELSE
+|   C*                    MOVEL*BLANKS   @LDA
+| 01-C*                    END
+|    C* UPDATE BY IVORY
+| 01-C           P006O4    IFEQ 'Y'
+|   C                     MOVEL*BLANK    @LDA
+| 01*C                     ELSE
+|   C                     MOVELDA01      @LDA
+| 01-C                     END
+|    C*
+|    C*<< 會計科目 >>
+|    C                     MOVELW0202     PW0202
+|    C                     MOVELW0216     PW0216
+|    C*<< 會計期間PYMD >>
+|    C                     CALL 'P31'
+|    C                     PARM P006O1    P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C           PP06O1    PARM           P3101O  80
+|    C*
+|    C                     CALL 'P31'
+|    C                     PARM DATE      P3101I  80
+|    C                     PARM '2'       P3102I  1
+|    C                     PARM '1'       P3103I  1
+|    C                     PARM AK11      P3104I  1
+|    C                     PARM AK09      P3105I  1
+|    C           PYMD      PARM           P3101O  80
+|    C*
+|    C*<< GET 表頭資料ＡW020-系列之值>>
+|    C                     MOVEA*BLANKS   @FA
+|    C                     MOVEL*BLANKS   @F
+|    C*
+|    C                     MOVELW0203A    @FA,1
+|    C                     MOVELW0204A    @FA,2
+|    C                     MOVELW0205A    @FA,3
+|    C                     MOVELW0206A    @FA,4
+|    C                     MOVELW0207A    @FA,5
+|    C                     MOVELW0203     @F,1
+|    C                     MOVELW0204     @F,2
+|    C                     MOVELW0205     @F,3
+|    C                     MOVELW0206     @F,4
+|    C                     MOVELW0207     @F,5
+|    C*
+| 02-C                     DO   5         I       20
+|   C                     MOVEL*BLANKS   DAA01
+|   C                     MOVEL*BLANKS   DAA02
+|   C                     MOVELW0201     DAA01
+|   C                     MOVEL@FA,I     DAA02
+|   C*
+|   C           KEYAA     CHAINAA0                  40
+| 03-C           *IN40     IFEQ '0'
+|   C                     MOVELAA03      @PA,I
+|   C*
+| 04-C           AA04      IFEQ *BLANKS
+|   C                     MOVEL@F,I      @P,I
+| 04*C                     ELSE
+|   C*
+|   C                     MOVELW0201     CHK01
+|   C                     MOVEL@F,I      CHK02
+|   C                     MOVELAA05      CHK03
+|   C                     MOVEL'0'       CHK04
+|   C*
+|   C                     CALL AA04
+|   C                     PARM           CHGPGM
+|   C                     PARM           TORN    1
+|   C                     PARM           DESC   20
+|   C*
+|   C                     MOVELDESC      @P,I
+| 04-C                     END
+| 03-C                     END
+|   C*
+| 02-C                     END
+|    C*
+|    C*
+|    C                     MOVEL@P,1      PW0203
+|    C                     MOVEL@P,2      PW0204
+|    C                     MOVEL@P,3      PW0205
+|    C                     MOVEL@P,4      PW0206
+|    C                     MOVEL@P,5      PW0207
+|    C                     MOVEL@PA,1     P0203A
+|    C                     MOVEL@PA,2     P0204A
+|    C                     MOVEL@PA,3     P0205A
+|    C                     MOVEL@PA,4     P0206A
+|    C                     MOVEL@PA,5     P0207A
+|    C*
+|    C*<<上期餘額>>
+|    C                     MOVEL*BLANKS   WAI01
+|    C                     Z-ADD*ZERO     WAI02
+|    C                     MOVEL*BLANKS   WAI03
+|    C*
+|    C                     CALL 'GLS005'
+|    C                     PARM W0201     P005I1  2
+|    C                     PARM W0208     P005I2  80
+|    C                     PARM 'F'       P005I3  1
+|    C                     PARM           P005O1  40
+|    C                     PARM           P005O2  20
+|    C                     PARM           P005O3  1
+|    C                     PARM           P005O4  1
+|    C*
+|    C                     MOVELW0201     WAI01
+|    C                     Z-ADDP005O1    WAI02
+|    C                     MOVELW0202     WAI03
+|    C                     Z-ADD*ZERO     B
+|    C*
+|    C           KEYAI     SETLLAI0
+|    C           KEYAI     READEAI0                      46
+| 05-C           *IN46     DOWEQ'0'
+|   C*
+     C*----------AI24      IFLT WAI24S
+     C*          AI24      ORGT WAI24E
+|   C*                    GOTO #TAG
+| 07-C*------------------  END
+|   C*
+| 07-C           W0203A    IFNE *BLANKS
+|   C           W0203A    IFNE AI04A
+|   C           W0203     ORNE AI04
+|   C                     GOTO #TAG
+| 07-C                     END
+| 07-C                     END
+|   C*
+| 08-C           W0204A    IFNE *BLANKS
+|   C           W0204A    IFNE AI05A
+|   C           W0204     ORNE AI05
+|   C                     GOTO #TAG
+| 08-C                     END
+| 08-C                     END
+|   C*
+| 09-C           W0205A    IFNE *BLANKS
+|   C           W0205A    IFNE AI06A
+|   C           W0205     ORNE AI06
+|   C                     GOTO #TAG
+| 09-C                     END
+| 09-C                     END
+|   C*
+| 10-C           W0206A    IFNE *BLANKS
+|   C           W0206A    IFNE AI07A
+|   C           W0206     ORNE AI07
+|   C                     GOTO #TAG
+| 10-C                     END
+| 10-C                     END
+|   C*
+| 11-C           W0207A    IFNE *BLANKS
+|   C           W0207A    IFNE AI08A
+|   C           W0207     ORNE AI08
+|   C                     GOTO #TAG
+| 11-C                     END
+| 11-C                     END
+|   C*
+|   C                     MOVEA*ZERO     @@
+|   C                     Z-ADD*ZERO     D
+|   C*
+|   C                     Z-ADDAI11      @@,1
+|   C                     Z-ADDAI12      @@,2
+|   C                     Z-ADDAI13      @@,3
+|   C                     Z-ADDAI14      @@,4
+|   C                     Z-ADDAI15      @@,5
+|   C                     Z-ADDAI16      @@,6
+|   C                     Z-ADDAI17      @@,7
+|   C                     Z-ADDAI18      @@,8
+|   C                     Z-ADDAI19      @@,9
+|   C                     Z-ADDAI20      @@,10
+|   C                     Z-ADDAI21      @@,11
+|   C                     Z-ADDAI22      @@,12
+|   C                     Z-ADDAI23      @@,13
+|   C*
+|   C           P005O2    SUB  1         K       20
+| 12-C                     DO   K         J       20
+|   C                     ADD  @@,J      D      132
+| 12-C                     END
+|   C*
+|   C                     ADD  AI10      B
+|   C                     ADD  D         B
+|   C*
+|   C           #TAG      TAG
+|   C           KEYAI     READEAI0                      46
+| 05-C                     END
+|    C*
+|    C*<<未年結餘額>>
+|    C                     MOVELW0202     KAI03
+     C           KEYAF     CHAINAF0                  40
+  01-C           *IN40     IFEQ '1'
+  01-C           AF05      ORNE '1'
+    C                     GOTO #TAG3
+  01-C                     END
+     C*
+     C           P005O1    SUB  1         WYEAR
+  03-C           AK13      IFEQ 0
+    C           AK13      ORGE WYEAR
+    C                     GOTO #TAG3
+  03-C                     END
+     C*
+     C                     Z-ADDP005O1    WYEAR
+|    C                     MOVELW0202     KAI03
+     C                     EXSR R7210
+     C*
+     C           W0202     IFEQ AK04
+     C                     MOVE AK05      KAI03
+     C                     EXSR R7210
+     C                     END
+|    C*
+|    C           #TAG3     TAG
+|    C                     Z-ADDB         C
+|    C*
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << IF THIS KEY BREAK SKIP PAGE THEN SETON >>-------------------
+|    C                     SETON                     39
+|    C*----------------------------------------------------------------
+|    C*
+04===C           E7200     ENDSR
+     C*==============================================================*
+     C*          R7210 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+05===C           R7210     BEGSR
+|    C*
+|    C           KEYAIF    SETGTAI0
+|    C           KEYAIE    READEAI0                      46
+| 05-C           *IN46     DOWEQ'0'
+    C           AI02      ANDLTWYEAR
+|   C*
+     C*-------   AI24      IFLT WAI24S
+     C*          AI24      ORGT WAI24E
+|   C*                    GOTO #TAG2
+| 07-C*--------------      END
+|   C*
+| 07-C           W0203A    IFNE *BLANKS
+|   C           W0203A    IFNE AI04A
+|   C           W0203     ORNE AI04
+|   C                     GOTO #TAG2
+| 07-C                     END
+| 07-C                     END
+|   C*
+| 08-C           W0204A    IFNE *BLANKS
+|   C           W0204A    IFNE AI05A
+|   C           W0204     ORNE AI05
+|   C                     GOTO #TAG2
+| 08-C                     END
+| 08-C                     END
+|   C*
+| 09-C           W0205A    IFNE *BLANKS
+|   C           W0205A    IFNE AI06A
+|   C           W0205     ORNE AI06
+|   C                     GOTO #TAG2
+| 09-C                     END
+| 09-C                     END
+|   C*
+| 10-C           W0206A    IFNE *BLANKS
+|   C           W0206A    IFNE AI07A
+|   C           W0206     ORNE AI07
+|   C                     GOTO #TAG2
+| 10-C                     END
+| 10-C                     END
+|   C*
+| 11-C           W0207A    IFNE *BLANKS
+|   C           W0207A    IFNE AI08A
+|   C           W0207     ORNE AI08
+|   C                     GOTO #TAG2
+| 11-C                     END
+| 11-C                     END
+|   C*
+|   C                     ADD  AI10      B
+|   C                     ADD  AI11      B
+|   C                     ADD  AI12      B
+|   C                     ADD  AI13      B
+|   C                     ADD  AI14      B
+|   C                     ADD  AI15      B
+|   C                     ADD  AI16      B
+|   C                     ADD  AI17      B
+|   C                     ADD  AI18      B
+|   C                     ADD  AI19      B
+|   C                     ADD  AI20      B
+|   C                     ADD  AI21      B
+|   C                     ADD  AI22      B
+|   C                     ADD  AI23      B
+|   C*
+|    C           #TAG2     TAG
+|   C           KEYAIE    READEAI0                      46
+| 05-C                     END
+     C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK == L1
+     C*==============================================================*
+06===C           R8100     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     C           W0210     IFNE 0
+     C           W0211     ORNE 0
+|    C                     WRITEPD1
+     C                     END
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8200 ... LEVEL BREAK == L2
+     C*==============================================================*
+06===C           R8200     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADDC         SUM
+|    C                     WRITEPT1
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C                     Z-ADD*ZERO     TW0210
+|    C                     Z-ADD*ZERO     TW0211
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+07===C           R8900     BEGSR
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C* << TOTAL LINE DATA PREPARE >>
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+|    C* << ACCUMULATE & CLEAR >>+++++++++++++++++++++++++++++++++++++++
+|    C*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+08===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R7200
+|    C*
+|    C                     WRITEPH1
+|    C                     WRITEPH3
+|    C*
+|    C                     WRITEPE9
+|    C*
+08===C                     ENDSR
+

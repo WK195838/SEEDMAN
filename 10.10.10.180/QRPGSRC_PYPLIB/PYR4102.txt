@@ -1,0 +1,354 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYR4102                                    *
+     H*    PROGRAM NAME :離職人員特休結算表                        *
+     H*    AUTHOR       : A1336 KLAUS                                *
+     H*    CREATE DATE  : 91/10/18                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資管理系統                          *
+     H****************************************************************
+     FPYLTJF03IP  E           K        DISK
+     FPYLTPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     F*PYPMPF  IF  E           K        DISK
+     F*PYDPPF  IF  E           K        DISK
+     FPYVAPF  IF  E           K        DISK
+     FPYPSPF  IF  E           K        DISK
+     FPYPYPF  IF  E           K        DISK
+     FPYPDPF  IF  E           K        DISK
+     FPYPD1PF IF  E           K        DISK
+     FPYR410P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     ILTJF03
+     I                                              LT01  L1
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      141 141 $RMK03
+     I                                      152 161 $USERN
+     I                                      173 174 $COR
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I*                                     506 510 DEM04S
+     I*                                     511 515 DEM04E
+     I                                      521 528 DEM02S
+     I*                                     531 538 DEM02E
+     I                                      541 5470DAY
+     I                                      548 5550WDAY
+     I                                      548 5510WYY
+     I*
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM004O    DFMT
+     C           *LIKE     DEFN CM005O    DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C*          KEYDP     KLIST
+     C*                    KFLD           EM041
+     C*                    KFLD           EM042
+     C*                    KFLD           EM043
+     C*                    KFLD           EM044
+     C*
+     C                     MOVEL'01'      KPM01   2
+     C           KEYPM     KLIST
+     C                     KFLD           KPM01
+     C                     KFLD           DEM01
+     C           KEYPY     KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           EM02             員工編號
+     C           KEYPDA    KLIST
+     C                     KFLD           EM01             公司編號
+     C                     KFLD           EM02             員工編號
+     C                     KFLD           PD102            薪資項目
+     C           KEYPS     KLIST
+     C                     KFLD           EM06             職等編號
+     C                     KFLD           EM07             職級編號
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      .DETAIL
+     CL1 10                EXSR R8100                      .L1
+     C*
+     CLR 10                EXSR R8900
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C*
+|    C                     CALL 'PYSCM0'
+|    C                     PARM DEM01     CM001I  2         公司代號
+|    C                     PARM           CM002O 22         公司名稱
+|    C                     PARM           CM003O 32         代碼說明
+|    C           DFMT      PARM           CM004O  1         日期格式
+|    C           DTYPE     PARM           CM005O  1         日期曆別
+|    C                     PARM           CM098O 50         備用欄
+|    C                     PARM           CM099O  1         存在否？
+|    C*
+|    C*公司名稱
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C                     MOVEL'Y'       $DATA
+|    C*--------------------------------------------------------------*
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+|    C*部門名稱
+|    C*          KEYDP     CHAINDP0                  40
+| 02-C*          *IN40     IFEQ '0'
+|   C*                    MOVELDP02      PDP02
+| 02*C*                    ELSE
+|   C*                    MOVEL*BLANK    PDP02
+| 02-C*                    END
+| 09-C*
+|   C                     CALL 'P31'
+|   C                     PARM EM13      P3101I  80
+|   C                     PARM '2'       P3102I  1
+|   C                     PARM '1'       P3103I  1
+|   C                     PARM DFMT      P3104I  1
+|   C                     PARM DTYPE     P3105I  1
+|   C                     PARM           P3101O  80
+|   C                     Z-ADDP3101O    DEM13
+|    C*----------------------------------------------------------------
+|    C                     Z-ADD0         WMM     40       工作總月數
+|    C                     CALL 'P33'
+|    C                     PARM EM13      P3301I  80       到職日
+|    C                     PARM WDAY      P3302I  80       離職日
+|    C                     PARM '2'       P3303I  1
+|    C                     PARM '1'       P3304I  1
+|    C           WMM       PARM           P3311O  70       相距月數
+|    C                     PARM           P3312O  20       相距日數
+|    C                     ADD  1         WMM              工作總月數
+|    C*計算留職停薪月份總數
+|    C                     Z-ADD0         KMM     40
+| 03-C           EM261     IFNE 0
+|   C           EM261     DIV  30        KMM
+|   C*須扣除留職停薪時段才是工作總月數
+|   C           WMM       SUB  KMM       WMM
+| 03-C                     END
+|    C*
+|    C                     Z-ADD*ZERO     WRKY    40
+|    C                     Z-ADD*ZERO     WRKM    20
+|    C           WMM       DIV  12        WRKY             工作年數
+|    C                     MVR            WRKM             工作月數
+|    C*
+|    C*滿WRKY年者．其年資認定落在前一年的１２月
+| 04-C           WRKM      IFEQ 0
+|   C           WRKY      SUB  1         WRKY
+|   C                     Z-ADD12        WRKM
+| 04-C                     END
+|    C*
+|    C*911212S KLAUS ++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*計算勞基法規定之歷年來年假總和
+|   C*
+|   C                     Z-ADD0         YEAR    40
+|   C                     Z-ADD0         DATE    41
+|   C*
+|   C           YEAR      DOUGTWRKY
+|   C                     Z-ADD0         HDAY    31
+|   C*
+|    C           YEAR      CHAINVA0                  40
+| 05-C           *IN40     IFEQ '0'
+|   C*
+| 06-C                     SELEC
+|   C           WRKM      WHEQ 1
+|   C                     Z-ADDVA02      HDAY
+|   C           WRKM      WHEQ 2
+|   C                     Z-ADDVA03      HDAY
+|   C           WRKM      WHEQ 3
+|   C                     Z-ADDVA04      HDAY
+|   C           WRKM      WHEQ 4
+|   C                     Z-ADDVA05      HDAY
+|   C           WRKM      WHEQ 5
+|   C                     Z-ADDVA06      HDAY
+|   C           WRKM      WHEQ 6
+|   C                     Z-ADDVA07      HDAY
+|   C           WRKM      WHEQ 7
+|   C                     Z-ADDVA08      HDAY
+|   C           WRKM      WHEQ 8
+|   C                     Z-ADDVA09      HDAY
+|   C           WRKM      WHEQ 9
+|   C                     Z-ADDVA10      HDAY
+|   C           WRKM      WHEQ 10
+|   C                     Z-ADDVA11      HDAY
+|   C           WRKM      WHEQ 11
+|   C                     Z-ADDVA12      HDAY
+|   C           WRKM      WHEQ 12
+|   C                     Z-ADDVA13      HDAY
+| 06-C                     END
+| 05-C                     END
+|   C*
+|   C                     ADD  HDAY      DATE             歷年年假總和
+|   C                     ADD  1         YEAR
+|   C*
+| 05-C                     END
+|    C*----------------------------------------------------------------
+|    C*計算永光歷年來給予之年假總和
+|    C                     Z-ADD0         ELDAY   41
+|    C           KEYPY     SETLLLT0
+|    C           KEYPY     READELT0                      46
+|    C           *IN46     DOWEQ'0'
+|    C                     ADD  LT10      ELDAY
+|    C           KEYPY     READELT0                      46
+|    C                     END
+|    C*
+|    C*91/12/26
+|    C*勞基法總年假
+|    C                     Z-ADDDATE      DAY1
+|    C                     Z-ADDDATE      XX01    11
+     C           XX01      MULT 8         HOUR1
+|    C*在職總年假
+|    C                     Z-ADDELDAY     DAY2
+|    C                     Z-ADDDATE      XX02    11
+     C           XX02      MULT 8         HOUR2
+|    C*911212E KLAUS ++++++++++++++++++++++++++++++++++++++++++++++++++
+|    C*****************************************************************
+|    C*LT10=本年度年假
+|    C*LT11=本年已休－天 LT13=去年遞延－天 LT17=去年預借－天
+|    C*LT12=本年已休－時 LT14=去年遞延－時 LT18=去年預借－時
+|    C                     Z-ADD0         CCC     41
+|    C           LT12      DIV  8         CCC
+|    C                     ADD  LT11      CCC              本年已休天
+|    C*
+|    C                     Z-ADD0         BBB     41
+|    C           LT14      DIV  8         BBB
+|    C                     ADD  LT13      BBB              去年遞延天
+|    C*
+|    C                     Z-ADD0         EEE     41
+|    C           LT18      DIV  8         EEE
+|    C                     ADD  LT17      EEE              去年預借天
+|    C*****************************************************************
+|    C*離職特休結算公式＝勞基法之總年假－永光歷年給之總年假＋判斷值
+|    C*判斷值說明：Ａ今年年假Ｂ去年遞延　Ｃ本年已休　Ｅ去年已預借
+     C*Ａ＋Ｂ－Ｃ＝Ｄ
+     C* IF Ｂ＞０，若Ｄ＞＝ＡTHEN MOVE ＡTO判斷值(VALUE)
+     C*            若Ｄ＜　ＡTHEN MOVE ＤTO判斷值
+     C* IF Ｂ＝０，THEN判斷值＝Ａ－Ｅ－Ｃ
+     C*
+     C                     Z-ADD0         DDD     41
+     C                     Z-ADD0         VALUE   41
+     C           LT10      ADD  BBB       DDD
+     C                     SUB  CCC       DDD
+     C*
+     C           BBB       IFGT 0
+     C           DDD       IFGE LT10
+     C                     Z-ADDLT10      VALUE
+     C                     ELSE
+     C                     Z-ADDDDD       VALUE
+     C                     END
+     C                     END
+     C*
+     C           BBB       IFEQ 0
+     C           LT10      SUB  EEE       VALUE
+     C                     SUB  CCC       VALUE
+     C                     END
+     C*----------------------------------------------------------------
+|    C*離職特休結算公式＝勞基法之總年假－永光歷年給之總年假＋判斷值
+     C*
+     C                     ADD  DATE      VALUE
+     C                     SUB  ELDAY     VALUE
+     C*----------------------------------------------------------------
+     C                     Z-ADDLT10      TDD
+     C                     Z-ADDLT10      HHH     11
+     C           HHH       MULT 8         THH
+|    C*----------------------------------------------------------------
+|    C*計算出應發代金之計算基準金額：
+|    C*以基準檔之項目金額計算
+     C*
+|    C                     Z-ADD*ZERO     SAR     70
+|    C                     Z-ADD*ZERO     HMNY    81       日薪
+|    C                     Z-ADD*ZERO     TMNY    70
+|    C*
+|    C           KEYPY     CHAINPYPYPF               40
+| 07-C           *IN40     IFEQ '0'
+|   C                     Z-ADDPY03      SAR              本薪
+| 07-C                     END
+|    C*
+|    C           EM01      SETLLPD10
+|    C           EM01      READEPD10                     46
+| 08-C           *IN46     DOWEQ'0'
+|   C*
+|   C                     SETOF                     45
+|   C           KEYPDA    CHAINPD0                  45
+|   C  N45                ADD  PD04      SAR
+|   C*
+    C*領生產獎金者以績效獎金代替
+  16-C           EM133     IFEQ 'A'
+    C           EM133     OREQ 'B'
+    C           KEYPS     CHAINPS0                  40
+    C  N40                ADD  PS10      SAR
+| 08-C                     END
+    C*
+|   C           EM01      READEPD10                     46
+| 08-C                     END
+|    C*-------------------------------------------------------------***
+|    C*(薪項加總）／３０＊剩餘天數＝休假代金
+|    C           SAR       DIV  30        HMNY             日薪
+|    C           HMNY      MULT VALUE     TMNY      H      折發金額
+|    C*----------------------------------------------------------------
+|    C*
+|    C                     WRITEPD1
+|    C                     ADD  1         TT11
+|    C                     ADD  TMNY      TT12
+|    C*
+|    C*
+02===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK L1        公司合計
+     C*==============================================================*
+03===C           R8100     BEGSR
+|    C*
+|    C                     WRITEPT1
+|    C                     SETON                     39
+|    C*
+|    C                     Z-ADD*ZERO     TT11
+|    C                     Z-ADD*ZERO     TT12
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR --- HAS DATA
+     C*==============================================================*
+04===C           R8900     BEGSR
+|    C*
+|    C                     WRITEPE1
+|    C*
+04===C           E8900     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+05===C           R8999     BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+05===C           E8999     ENDSR
+     C*==============================================================*
+

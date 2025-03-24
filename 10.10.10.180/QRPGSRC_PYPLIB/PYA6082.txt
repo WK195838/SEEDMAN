@@ -1,0 +1,170 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM ID   : PYA6082                                    *
+     H*    PROGRAM NAME :年度補助金設定批次處理　　                *
+     H*    AUTHOR       : A1328 JEFFREY                              *
+     H*    CREATE DATE  : 90/02/14                                   *
+     H*    UPDATE DATE  : 90/03/22 A1274 EVA                         *
+     H*    SYSTEM       :人事薪資系統                              *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYGHPF  O   E           K        DISK
+     FPYERLF03O   E           K        DISK
+     I*-------------------------------------------------------------**
+     IPTDA01      DS
+     I                                        1   1 DFMT
+     I                                        2   2 DTYPE
+     I           UDS
+     I                                      101 110 $USER
+     I                                      152 161 $USERN
+     I                                      201 2080$A8YMD
+     I                                      211 2160DDATE
+     I*
+     I                                      501 502 DEM01
+     I                                      503 5090DMNY
+     I                                      510 5120DYEAR
+     I            DS
+     I                                        1   80WYMD
+     I                                        1   40WYY
+     I                                        5   80WMD
+     I            DS
+     I                                        1   70WGH04
+     I                                        6   70WGH042
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PTDA01
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+     C*PYERLF03
+     C                     MOVEL'2'       WER04   1        員工給福委會
+     C                     MOVEL'A1'      WER06   2        收支項目
+     C           KEYER     KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           WYEAR
+     C                     KFLD           WER04
+     C                     KFLD           WER06
+     C                     KFLD           EM02
+     C*PYGHPF
+     C           KEYGH     KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C                     KFLD           WYEAR
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C*
+     C                     EXSR R2000                      MAIN
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     IN   PTDA01
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C*離職員工不設定
+| 01-C           EM19      IFNE *ZERO
+|   C                     GOTO E2000
+| 01-C                     END
+|    C*
+|    C*福利年度迄值：（福利年度＋１）０３３１
+|    C                     Z-ADD*ZERO     WYMD
+|    C                     Z-ADD*ZERO     WGH05   60       在職天數
+|    C*
+|    C           DYEAR     ADD  1911      WYEAR   40
+|    C*WANG      DYEAR     ADD  1         WYY
+|    C           WYEAR     ADD  1         WYY
+|    C* JADI MODIFY        Z-ADD0331      WMD
+|    C                     Z-ADD0401      WMD
+|    C*
+|    C*計算在職天數
+|    C                     CALL 'P32'
+|    C                     PARM EM13      P3201I  80
+|    C                     PARM WYMD      P3202I  80
+|    C                     PARM '2'       P3203I  1
+|    C                     PARM '1'       P3204I  1
+|    C                     PARM           P3211O  90
+|    C                     Z-ADDP3211O    WGH05
+|    C*
+|    C*在職天數滿一年者．年度補助金全額發放
+|    C                     Z-ADD*ZERO     WGH04            福利金額
+|    C*
+| 02-C           WGH05     IFGE 365
+|   C                     Z-ADDDMNY      WGH04
+|   C                     GOTO TAG
+| 02-C                     END
+|    C*
+|    C*在職天數不滿一年者．年度補助金按比例發放
+|    C*金額算到百元．個位十位以下金額無條件捨去
+| 03-C           WGH05     IFLT 365
+|   C           DMNY      MULT WGH05     WGH04
+|   C           WGH04     DIV  365       WGH04     H
+|   C                     Z-ADD0         WGH042
+|   C                     GOTO TAG
+| 03-C                     END
+|    C*
+|    C*-------------------------------------------------------------***
+|    C           TAG       TAG
+|    C*-------------------------------------------------------------***
+|    C                     EXSR R2100                      PYGHPF
+|    C                     EXSR R2200                      PYERPF
+|    C*-------------------------------------------------------------***
+|    C*
+02===C           E2000     ENDSR
+     C*==============================================================*
+     C*          R2100 ... WRITE DATA TO PYGHPF
+     C*==============================================================*
+03===C           R2100     BEGSR
+|    C*
+|    C*          KEYGH     CHAINGH0                  40
+|    C*          *IN40     IFEQ '1'
+|    C                     MOVELDEM01     GH01
+|    C                     MOVELEM02      GH02
+|    C                     Z-ADDWYEAR     GH03
+|    C                     Z-ADDWGH04     GH04
+|    C                     Z-ADDWGH05     GH05
+|    C                     Z-ADDEM13      GH06
+|    C                     Z-ADDEM19      GH07
+|    C                     Z-ADD$A8YMD    GH97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     GH98
+|    C                     MOVEL$USER     GH99
+|    C                     WRITEGH0
+|    C*                    END
+|    C*
+03===C           E2100     ENDSR
+     C*==============================================================*
+     C*          R2200 ... WRITE DATA TO PYERPF
+     C*==============================================================*
+04===C           R2200     BEGSR
+|    C*
+|    C*          KEYER     CHAINER0                  40
+|    C*          *IN40     IFEQ '1'
+|    C                     MOVELDEM01     ER01
+|    C                     MOVELEM02      ER02
+|    C                     Z-ADD$A8YMD    ER03
+|    C                     MOVELWER04     ER04
+|    C                     Z-ADDWGH04     ER05
+|    C                     MOVELWER06     ER06
+|    C                     Z-ADDWYEAR     ER07
+|    C                     Z-ADD$A8YMD    ER97
+|    C                     TIME           WTIME  120
+|    C                     MOVELWTIME     ER98
+|    C                     MOVEL$USER     ER99
+|    C                     WRITEER0
+|    C*                    END
+|    C*
+04===C           E2200     ENDSR
+     C*==============================================================*
+

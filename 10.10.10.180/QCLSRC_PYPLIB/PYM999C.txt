@@ -1,0 +1,67 @@
+     /***************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250   */
+     /***************************************************************/
+             PGM
+             DCL        VAR(&$USER)  TYPE(*CHAR) LEN(10)
+             DCL        VAR(&S0101I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&S0102I) TYPE(*CHAR) LEN(10)
+             DCL        VAR(&S0101O) TYPE(*CHAR) LEN(1)
+             DCL        VAR(&LMSG)   TYPE(*CHAR) LEN(6)
+             DCL        VAR(&DEM)    TYPE(*CHAR) LEN(1)
+             DCLF       FILE(*LIBL/PYM999D) RCDFMT(DSPC1)
+
+             CALL       PGM(L@S004) PARM('PY' '01' &LMSG)
+             CHGVAR     VAR(&$USER)  VALUE(%SST(*LDA 101 10))
+             CHGVAR     VAR(&DDATE)  VALUE(%SST(*LDA 203 6))
+             CHGDTAARA  DTAARA(*LDA (187 6)) VALUE(%SST(*LDA 111 6))
+             CHGVAR     VAR(&$USERN) VALUE(%SST(*LDA 152 10))
+             CHGVAR     VAR(&S0101I) VALUE(&$USER)
+
+             CHGVAR     VAR(&IN31) VALUE('0')
+             CHGVAR     VAR(&IN32) VALUE('0')
+             IF         COND(&LMSG *NE 'A' & &LMSG *NE 'W') +
+                          THEN(CHGVAR VAR(&IN32) VALUE('1'))
+             IF         COND(&LMSG *EQ 'W') THEN(CHGVAR +
+                          VAR(&IN31) VALUE('1'))
+
+             OVRMSGF    MSGF(QCPFMSG) TOMSGF(*LIBL/PTMF)
+             SETATNPGM  PGM(PTPLIB/ATN01)
+
+  START:
+             SNDRCVF    DEV(*FILE) RCDFMT(DSPC1)
+             IF         COND(&IN03) THEN(RETURN)
+             IF         COND(&IN32) THEN(GOTO START)
+             CHGVAR     VAR(&IN98) VALUE('0')
+
+             IF         COND(&DOPID *EQ '01') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('PYM100C'))
+             IF         COND(&DOPID *EQ '02') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('PYM200C'))
+             IF         COND(&DOPID *EQ '03') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('PYM300C'))
+             IF         COND(&DOPID *EQ '04') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('PYM400C'))
+             IF         COND(&DOPID *EQ '05') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('PYM700C'))
+             IF         COND(&DOPID *EQ '06') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('PYM600C'))
+             IF         COND(&DOPID *EQ '07') THEN(CHGVAR +
+                          VAR(&S0102I) VALUE('PYM800C'))
+
+             IF         COND(&DOPID *EQ '07') THEN(DO)
+             RTVDTAARA  DTAARA(PYDA05 (1 1)) RTNVAR(&DEM)
+             IF         COND(&DEM *EQ 'Y') THEN(DO)
+             CHGVAR     VAR(&IN97) VALUE('1')
+             GOTO START
+             ENDDO
+             ENDDO
+
+             GOTO       CHKAUT
+
+  CHKAUT:    CALL       PGM(S#S01) PARM(&S0101I &S0102I &S0101O)
+             IF         COND(&S0101O = 'Y') THEN(CALL PGM(&S0102I))
+             ELSE       CMD(CHGVAR VAR(&IN98) VALUE('1'))
+             GOTO       START
+
+             ENDPGM
+

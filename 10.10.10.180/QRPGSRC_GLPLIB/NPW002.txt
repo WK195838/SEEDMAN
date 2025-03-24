@@ -1,0 +1,232 @@
+      *================================================================
+      * CODE | AUTHOR |  DATE  | DESCRIPTION
+      *----------------------------------------------------------------
+      *      |        |        |
+      *----------------------------------------------------------------
+      *================================================================
+     FNPNGPF  IF  E           K        DISK
+     FNPW002D CF  E                    WORKSTN
+     F                                        RRN   KSFILE SFLSR
+     C*==============================================================*
+     C*                    PLIST
+     C*==============================================================*
+     C           *ENTRY    PLIST
+     C           DBGN1     PARM           PARM1   6
+     C*==============================================================*
+     C*                    DEFINE ROUTINE
+     C*==============================================================*
+     C*
+     C           *LIKE     DEFN DBGN1     OBGN1            *START KEY
+     C*  FOR SUBFILE (PGM CONTROL)
+     C           *LIKE     DEFN DBGN1     KUP1                         OM
+     C           *LIKE     DEFN DBGN1     KDN1                         OM
+      *SFL FIELD
+     C           *LIKE     DEFN RRN       WRRN
+     C           *LIKE     DEFN RRN       WPRCD
+     C*==============================================================*
+     C*                    KLIST
+     C*==============================================================*
+      *SCREEN SETLL KEY
+     C           KEYBGN    KLIST
+     C                     KFLD           DBGN1
+      *FILE SETGT KEY
+     C           KEYUP     KLIST
+     C                     KFLD           KUP1
+     C           KEYDN     KLIST
+     C                     KFLD           KDN1
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C                     EXSR RTN010                     *INIT
+     C                     EXSR RTN110                     *INIT SFL
+     C                     EXSR RTN120                     *READ DATA
+     C                     EXSR RTN140                     *EXFMT
+     C*
+  01-C           *IN03     DOWEQ'0'                        *03    OFF
+    C*
+  02-C           *IN25     IFEQ '1'
+      *IN25(ROLLUP)
+    C           KEYDN     SETGTNG0
+    C                     EXSR RTN110
+    C                     EXSR RTN120
+  02*C                     ELSE
+  03-C           *IN26     IFEQ '1'
+      *IN26(ROLLDOWN)
+    C           KEYUP     SETLLNG0
+    C                     EXSR RTN110
+    C                     EXSR RTN130
+  03*C                     ELSE
+      *ENTER
+  04-C           DBGN1     IFNE OBGN1
+     C                     EXSR RTN010
+      *FOR SETLL¤¤¤å
+     C           DBGN1     IFEQ *BLANKS
+     C                     MOVEL*LOVAL    DBGN1
+     C                     END
+      *KEEP SCREEN SETLL KEY
+    C                     MOVELDBGN1     OBGN1
+    C                     MOVELDBGN1     KUP1
+    C                     MOVELDBGN1     KDN1
+      *
+    C           KEYBGN    SETLLNG0
+    C                     EXSR RTN110
+    C                     EXSR RTN120
+  04*C                     ELSE
+      *READC GET DATA
+    C                     EXSR RTN170
+  04-C                     END
+  03-C                     END
+  02-C                     END
+    C  N03                EXSR RTN140
+    C*
+  01-C                     END
+     C*
+     C                     SETON                     LR
+      *==============================================================*
+      *          RTN010....INITTAL FIELDS
+      *==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+     C           KEYBGN    SETLLNG0
+|     *
+01===C                     ENDSR
+      *==============================================================*
+      *          RTN110....INITTAL SFL
+      *==============================================================*
+01===C           RTN110    BEGSR
+      *SFL
+|    C                     Z-ADD0         RRN
+|    C                     Z-ADD0         WRRN
+|    C                     Z-ADD10        WPRCD
+|    C                     SETOF                     53
+|    C                     SETON                     52
+|    C                     WRITESFLCR
+|    C                     SETOF                     52
+|     *
+01===C                     ENDSR
+      *=========================================================*
+      *          RTN120 .. READ DATA TO SFL
+      *=========================================================*
+02===C           RTN120    BEGSR
+|    C*
+|    C                     READ NG0                      46
+| 01-C           *IN46     IFEQ '0'
+      *KEEP SETLL KEY
+|   C                     EXSR RTN810
+| 01-C                     END
+|    C*
+| 02-C           *IN46     DOWEQ'0'
+|   C           RRN       ANDLTWPRCD
+      *
+      *GET DATA
+|   C                     EXSR RTN121
+|   C                     ADD  1         RRN
+|   C                     WRITESFLSR
+      *KEEP SETGT KEY
+|   C                     EXSR RTN820
+      *
+|    C                     READ NG0                      46
+| 02-C                     END
+|    C*
+| 03-C           RRN       IFLT WPRCD
+      *BOTOM
+|   C                     SETON                     9753
+| 03-C                     END
+|    C*
+02===C                     ENDSR
+      *==============================================================*
+      *          RTN121....GATA DATA TO SFL
+      *==============================================================*
+03===C           RTN121    BEGSR
+|    C*
+03===C                     ENDSR
+      *=========================================================*
+      *          RTN130 .. READP DATA TO SFL
+      *=========================================================*
+04===C           RTN130    BEGSR
+|    C*
+|    C                     Z-ADDWPRCD     RRN
+|    C*
+|    C                     READPNG0                      46
+| 01-C           *IN46     IFEQ '0'
+      *KEEP SETGT KEY
+|   C                     EXSR RTN820
+| 01-C                     END
+|    C*
+| 02-C           *IN46     DOWEQ'0'
+|   C           RRN       ANDGT0
+|   C                     SUB  1         RRN
+      *
+      *KEEP SETLL KEY
+|   C                     EXSR RTN810
+      *
+|    C                     READPNG0                      46
+| 02-C                     END
+|    C*
+| 03-C           RRN       IFEQ 0
+|   C           KEYUP     SETLLNG0
+| 03*C                     ELSE
+|   C           *LOVAL    SETLLNG0
+      *PAGE TOP
+| 04-C           RRN       IFEQ WPRCD
+|   C                     SETON                     98
+| 04-C                     END
+      *
+| 03-C                     END
+|    C                     EXSR RTN110
+|    C                     EXSR RTN120
+|    C*
+04===C                     ENDSR
+      *==============================================================*
+      *          RTN140... EXFMT SFL                                 *
+      *==============================================================*
+05===C           RTN140    BEGSR
+|    C*
+| 01-C           RRN       IFGT *ZEROS
+|   C                     SETON                     50    *SFLDSP
+| 01*C                     ELSE
+|   C                     SETON                     96    *NODATA
+| 01-C                     END
+|    C*
+|    C                     SETON                     51    *SFLDSPCTL
+|    C                     WRITEDSPC1
+|    C                     EXFMTSFLCR
+|    C                     SETOF                     5051
+|    C                     MOVEA*ALL'0'   *IN,60
+|    C*
+05===C                     ENDSR
+      *==============================================================*
+      *          RTN170... READC GET DATA                            *
+      *==============================================================*
+06===C           RTN170    BEGSR
+|    C*
+| 01-C           RRN       IFGT *ZEROS
+|   C                     READCSFLSR                    47
+| 02-C           *IN47     DOWEQ'0'
+|   C           *IN03     ANDEQ'0'
+| 03-C           DOPT      IFEQ '/'
+|   C                     MOVELNG02      PARM1
+|   C                     SETON                     03
+| 03-C                     END
+|   C                     READCSFLSR                    47
+| 02-C                     END
+| 01-C                     END
+|    C*
+06===C                     ENDSR
+      *==============================================================*
+      *          RTN810... KEEY SETLL KEY                            *
+      *==============================================================*
+07===C           RTN810    BEGSR
+|    C*
+|    C                     MOVELNG02      KUP1
+|    C*
+07===C                     ENDSR
+      *==============================================================*
+      *          RTN820... KEEY SETGT KEY                            *
+      *==============================================================*
+08===C           RTN820    BEGSR
+|    C*
+|    C                     MOVELNG02      KDN1
+|    C*
+08===C                     ENDSR
+

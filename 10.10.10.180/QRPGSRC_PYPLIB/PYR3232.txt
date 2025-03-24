@@ -1,0 +1,592 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    *
+     H*                                                              *
+     H*    PROGRAM ID   : PYR3232                                    *
+     H*    PROGRAM NAME :保費明細表－標準                          *
+     H*    AUTHOR       : A1274 EVA                                  *
+     H*    CREATE DATE  : 90/01/15                                   *
+     H*    UPDATE DATE  : 90/12/25 A1336 KLAUS                       *
+     H*    SYSTEM       :                                            *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FPYPMPF  IF  E           K        DISK
+     FPYE1PF  IF  E           K        DISK
+     FPYE2PF  IF  E           K        DISK
+     FPYE4PF  IF  E           K        DISK
+     FPYTAPF  IF  E           K        DISK
+     FPYL2PF  IF  E           K        DISK
+     FPT#YPF  IF  E           K        DISK
+     FPYTXLF04IF  E           K        DISK
+     FPYR323P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     IEM0
+     I                                              EM041 L1
+     I                                              EM042 L1
+     I                                              EM043 L1
+     I                                              EM044 L1
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      210 2160DDATE
+     I                                      125 1270$CPY
+     I                                      138 138 $INQ
+     I                                      201 2080$A8YMD
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I* PROGRAM USE DATA DEFINE ++++++++++++++++++++++++++++++++++++++
+     I                                      501 502 DEM01
+     I                                      603 609 DEM04F
+     I                                      610 616 DEM04T
+     I                                      513 520 DEM02F
+     I                                      521 528 DEM02T
+     I                                      529 5340WPH03
+     I                                      535 5390DPH03
+     I                                      540 5410DPHD
+     I            DS
+     I                                        1   80WYMD
+     I                                        1   40WNY
+     I                                        5   60WNM
+     I                                        1   60WNYM
+     I                                        7   80WND
+     I            DS
+     I                                        1   3 K#Y03
+     I                                        1   10K#Y031
+     I                                        3   30K#Y032
+     I            DS
+     I                                        1   7 DEM04
+     I                                        1   1 EM041
+     I                                        2   2 EM042
+     I                                        3   3 EM043
+     I                                        4   7 EM044
+     I            DS
+     I                                        1   80EM13
+     I                                        1   60EM13YM
+     I                                        7   80EM13D
+     I            DS
+     I                                        1   80EM19
+     I                                        1   60EM19YM
+     I                                        7   80EM19D
+     I/COPY PYDDSSRC,PYPMDS01
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *LIKE     DEFN CM14      DFMT
+     C           *LIKE     DEFN CM15      DTYPE
+     C*==============================================================*
+     C*                    KEY LIST
+     C*==============================================================*
+     C           KEYDP     KLIST
+     C                     KFLD           EM041
+     C                     KFLD           EM042
+     C                     KFLD           EM043
+     C                     KFLD           EM044
+     C           KEYPM     KLIST
+     C                     KFLD           PM01
+     C                     KFLD           DEM01
+     C           KEYE1     KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C                     KFLD           WYMD
+     C           KEYE1R    KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C* PYPYPF
+     C           KEYPY     KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C           KEY#Y     KLIST
+     C                     KFLD           #Y01
+     C                     KFLD           #Y02
+     C           KEYE2     KLIST
+     C                     KFLD           E101
+     C                     KFLD           E102
+     C                     KFLD           E103
+     C* PYTXLF04
+     C           KEYTX     KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C                     KFLD           WYMD1   80
+     C           KEYTXR    KLIST
+     C                     KFLD           DEM01
+     C                     KFLD           EM02
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR R1000
+     C   L1                EXSR R7100
+     C*
+     C                     EXSR R2000                      .DETAIL
+     C*
+     CL1 10                EXSR R8100
+     CLR 10                EXSR R8900
+     C*
+     CLRN10                EXSR R8999
+     C*==============================================================*
+     C*          R1000 ... INITIAL PROCESS
+     C*==============================================================*
+01===C           R1000     BEGSR
+|    C*
+|    C                     SETON                     1039
+|    C*參數檔
+|    C                     MOVEL'01'      PM01
+|    C           KEYPM     CHAINPM0                  40
+|    C   40                MOVE *ZERO     PM03
+|    C*
+|    C*TAX
+|    C           '0'       CHAINTA0                  40
+|    C*健保參數
+|    C                     READ E40                      40
+|    C*勞保參數
+|    C                     READ L20                      40
+|    C*
+|    C*日期控制
+|    C                     Z-ADD*ZERO     #YMDF   80       .計算起日
+|    C                     Z-ADD*ZERO     #YMDT   80       .計算止日
+|    C                     Z-ADD*ZERO     WFYMD   80       .計算起日
+|    C                     Z-ADD*ZERO     WNYMD   80       .計算止日
+|    C                     Z-ADD*ZERO     WYMD1   80       .計算止日
+|    C*
+|    C*901225S MARK BY KLAUS ***************************************
+|    C*每月工作天數一律以３０天計算                      *YH USE ONLY
+|    C*                    Z-ADD01        WND
+|    C*                    Z-ADDWPH03     WNYM
+|    C*                    Z-ADDWYMD      WFYMD            計算起日
+|    C*          WYMD      ADD  29        WNYMD            計算止日
+|    C*
+|    C*          WNM       IFEQ 12
+|    C*                    ADD  1         WNY
+|    C*                    Z-ADD01        WNM
+|    C*                    ELSE
+|    C*                    ADD  1         WNM
+|    C*                    END
+|    C*901225E
+|    C*901225S ADD BY KLAUS
+|    C*GET THIS MONTH FIRST DATE (WFYMD)  YYYYMM01
+|    C                     MOVE '01'      WFYMD
+|    C                     MOVELWPH03     WFYMD   80
+|    C*
+|    C*GET THIS MONTH LAST DATE (WTYMD)
+|    C                     MOVELWPH03     WTYMD   80
+|    C*
+|    C*每月工作天數一律以３０天計算                      *YH USE ONLY
+|    C                     MOVE 30        WTYMD
+|    C*
+|    C*二月份未滿30天日數計算
+|    C                     MOVE WTYMD     WM2A    20
+| 01-C           WM2A      IFLT 30
+|   C           30        SUB  WM2A      WM2A
+| 01*C                     ELSE
+|   C                     Z-ADD*ZERO     WM2A
+| 01-C                     END
+|    C*
+|    C*GET NEXT MONTH FIRST DATE(WNYMD)
+|    C                     Z-ADDWPH03     WNYM
+|    C                     Z-ADD01        WND
+|    C                     Z-ADDWYMD      WYMD1
+|    C                     ADD  1         WNM
+| 02-C           WNM       IFGT 12
+|   C                     ADD  1         WNY
+|   C                     SUB  12        WNM
+| 02-C                     END
+|    C                     Z-ADDWYMD      WNYMD
+|    C*901225E---------------------------------------------------------
+|    C*
+|    C*GET表頭公司別
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C                     MOVE CM14      DFMT
+|    C                     MOVE CM15      DTYPE
+|    C*
+|    C*CLEAR TOTAL FIELD
+|    C                     Z-ADD*ZERO     PT1A
+|    C                     Z-ADD*ZERO     PT1B
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT14
+|    C                     Z-ADD*ZERO     PT15
+|    C                     Z-ADD*ZERO     PT16
+|    C                     Z-ADD*ZERO     PT17
+|    C                     Z-ADD*ZERO     PT18
+|    C                     Z-ADD*ZERO     PT2A
+|    C                     Z-ADD*ZERO     PT2B
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C                     Z-ADD*ZERO     PT24
+|    C                     Z-ADD*ZERO     PT25
+|    C                     Z-ADD*ZERO     PT26
+|    C                     Z-ADD*ZERO     PT27
+|    C                     Z-ADD*ZERO     PT28
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          R2000 ... DETAIL
+     C*==============================================================*
+02===C           R2000     BEGSR
+|    C*
+|    C*先計算健保費：因需GET健保本人補助碼
+|    C*健保費-PM319, PW24, PW25
+|    C                     EXSR R2100
+|    C*
+|    C*勞保費-PM310, PW19, PW22
+|    C                     EXSR R2200
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+|   C                     SETON                     31
+| 01-C                     END
+|    C*
+| 02-C           EM23P     IFGT 0
+|   C           EM23C     ORGT 0
+|   C           E105P     ORGT 0
+|   C           E105C     ORGT 0
+|   C           EM292     ORGT 0
+|   C                     WRITEPD1
+|   C*
+|   C                     SETOF                     31
+|   C*
+|   C                     ADD  1         PT11
+|   C                     ADD  E105C     PT12
+|   C                     ADD  E105P     PT13
+|   C                     ADD  EM23C     PT14
+|   C                     ADD  EM23P     PT15
+|   C                     ADD  EM292     PT16
+|   C                     ADD  FLD01     PT17
+|   C                     ADD  FLD02     PT18
+|   C*
+|   C*累計勞／健保投保人數
+|   C********   E105P     IFNE 0                          健保
+| 03-C           E105C     IFNE 0                          健保－公司
+|   C                     ADD  1         PT1A
+|   C                     ADD  1         PT2A
+| 03-C                     END
+|   C*
+|   C********   EM23P     IFNE 0                          勞保
+| 04-C           EM23C     IFNE 0                          勞保－公司
+|   C                     ADD  1         PT1B
+|   C                     ADD  1         PT2B
+| 04-C                     END
+|   C*
+|   C                     Z-ADD0         E105
+|   C                     Z-ADD0         E105C
+|   C                     Z-ADD0         E105P
+|   C                     Z-ADD0         EM23
+|   C                     Z-ADD0         EM23C
+|   C                     Z-ADD0         EM23P
+|   C                     Z-ADD0         EM292
+|   C                     Z-ADD0         FLD01
+|   C                     Z-ADD0         FLD02
+|   C*
+| 02-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          R2100 ...健保費-PM319, PW24, PW25
+     C*==============================================================*
+03===C           R2100     BEGSR
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*先計算健保費：因需GET健保本人補助碼
+|    C* GET到本月底之投保狀況
+|    C*
+|    C                     Z-ADD0         E105C            公司負擔
+|    C                     Z-ADD0         E105P            員工負擔
+|    C                     Z-ADD0         E105             健保投保額
+|    C*
+|    C           KEYE1     SETGTE10
+|    C           KEYE1R    REDPEE10                      40
+|    C   40                GOTO E2100                      無投保
+|    C*
+| 01-C           E106      IFEQ 0                          全部停保
+|   C                     GOTO E2100
+| 01-C                     END
+|    C*
+|    C                     Z-ADDWFYMD     #YMDF   80       .計算起日
+|    C                     Z-ADDWNYMD     #YMDT   80       .計算止日
+|    C*離職，當月不計
+| 02-C           EM19      IFNE *ZERO
+|   C           EM19YM    ANDLEWPH03
+|   C                     GOTO E2100
+| 02-C                     END
+|    C*
+|    C*退保，當月不計
+| 03-C           E104      IFEQ '9'                        退保
+|   C           E103      ANDLT#YMDT
+|   C                     GOTO E2100
+| 03-C                     END
+|    C*
+|    C*計算健保補助款－本人
+|    C                     MOVEL*BLANK    M#Y03   3        本人－補助
+|    C                     Z-ADD*ZERO     WE108   54       本人－補助
+|    C                     Z-ADD0         WINSR   54       補助總額
+|    C*
+| 04-C           E108      IFNE *BLANK                     有補助
+|   C                     MOVEL'INSR'    #Y01      P
+|   C                     MOVELE108      #Y02      P
+|   C           KEY#Y     CHAIN#Y0                  40
+| 05-C           *IN40     IFEQ '0'
+|   C                     MOVEL#Y03      M#Y03            本人
+|   C                     MOVEL#Y03      K#Y03
+| 06-C           K#Y03     IFNE 'ALL'                      顧主
+|   C           E107      ANDEQ*BLANK                     未停保
+|   C           K#Y032    ANDNE0
+|   C           K#Y031    DIV  K#Y032    WE108   54H
+|   C                     Z-ADDWE108     WINSR   54H
+| 06-C                     END
+| 05-C                     END
+| 04-C                     END
+|    C*
+|    C*計算健保補助款－眷屬
+| 07-C           M#Y03     IFNE 'ALL'                      顧主
+|   C           KEYE2     SETLLE20
+|   C           KEYE2     READEE20                      46
+| 08-C           *IN46     DOWEQ'0'
+| 09-C           E211      IFNE *BLANK                     補助
+|   C           E205      ANDEQ*BLANK                     未停保
+|   C                     MOVEL'INSR'    #Y01      P
+|   C                     MOVELE211      #Y02      P
+|   C           KEY#Y     CHAIN#Y0                  40
+| 10-C           *IN40     IFEQ '0'
+|   C                     MOVEL#Y03      K#Y03
+| 11-C           K#Y03     IFNE 'ALL'                      非顧主
+|   C           K#Y032    ANDNE0
+|   C           K#Y031    DIV  K#Y032    WE211   54H
+|   C                     ADD  WE211     WINSR   54H
+| 11-C                     END
+| 10-C                     END
+| 09-C                     END
+|   C           KEYE2     READEE20                      46
+| 08-C                     END
+| 07-C                     END
+|    C*
+|    C*健保費＝投保額Ｘ費率
+|    C*公司負擔：(1+E404)*E403*E401*E105
+|    C*員工負擔：E401*E105*E402*補助扣減ㄉ資料
+|    C*
+|    C           E105      MULT E401      KPW24   94
+|    C*
+|    C           E404      ADD  1         AA      94
+|    C           AA        MULT E403      BB      94
+|    C           KPW24     MULT BB        E105C     H
+|    C*
+|    C                     Z-ADDE106      KPW26   10
+|    C*最多六人投保
+| 12-C           E106      IFGT E405
+|   C                     Z-ADDE405      KPW26
+| 12-C                     END
+|    C*
+| 13-C           KPW24     IFGT *ZERO
+|   C*
+| 14-C           M#Y03     IFNE 'ALL'                      顧主
+|   C           KPW24     MULT E402      WAMTX   70H
+| 14*C                     ELSE
+|   C                     Z-ADDKPW24     WAMTX
+| 14-C                     END
+|   C*補助扣減
+|   C                     Z-ADD0         WAMT    94
+|   C           KPW26     SUB  WINSR     WAMT
+| 15-C           WAMT      IFLT 0
+|   C                     Z-ADD0         WAMT
+| 15-C                     END
+|   C*
+|   C           WAMTX     MULT WAMT      E105P     H      員工負擔
+| 13-C                     END
+|    C*
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*
+03===C           E2100     ENDSR
+     C*==============================================================*
+     C*          R2200 ...勞保費-PM310, PW19, PW22
+     C*==============================================================*
+04===C           R2200     BEGSR
+|    C*
+|    C*-------------------------------------------------------------***
+|    C*勞保費-PM310, PW19, PW22
+|    C*未投保
+| 01-C           EM14      IFEQ *ZERO
+|   C           EM14      ORGT WTYMD
+|   C                     GOTO E2200
+| 01-C                     END
+|    C*
+|    C                     Z-ADDWFYMD     #YMDF   80
+|    C*
+|    C*本月新進人員
+|    C*EM13=到職日期
+|    C*          EM13YM    IFEQ WNYM
+|    C*                    Z-ADDEM13      #YMDF
+|    C*                    END
+|    C*EM14=勞保投保日期
+| 02-C           EM14      IFGT #YMDF
+|   C                     Z-ADDEM14      #YMDF
+| 02-C                     END
+|    C*#YMDT=計算止日
+|    C                     Z-ADDWNYMD     #YMDT   80       .計算止日
+|    C*EM19=離職日期
+| 03-C           EM19      IFNE *ZERO
+|   C           EM19      ANDLT#YMDT
+|   C                     Z-ADDEM19      #YMDT
+| 03-C                     END
+|    C*EM16=勞保退保日期
+| 04-C           EM16      IFNE *ZERO
+|   C           EM16      ANDLT#YMDT
+|   C                     Z-ADDEM16      #YMDT
+| 04-C                     END
+|    C*
+| 05-C           #YMDT     IFLE #YMDF
+|   C                     GOTO E2200
+| 05-C                     END
+|    C*
+|    C*勞保費
+|    C*
+|    C           KEYTX     SETGTTX0
+|    C           KEYTXR    REDPETX0                      40
+|    C   40                GOTO E2200                      無投保
+|    C*
+| 06-C           TX032     IFEQ '3'                        勞保退保
+|   C                     GOTO E2200
+| 06-C                     END
+|    C*
+|    C*勞保費  EM23=勞保投保金額 L201=勞保費率 PM102=一月工作天數
+|    C                     Z-ADD0         WAMT    94
+|    C           TX05      MULT L201      WAMT
+|    C                     Z-ADDPM102     P3211O
+|    C*
+|    C*---------------------------------------------------------------
+|    C* 1.本月新進員工
+|   C*
+|   C           EM13YM    IFEQ WPH03
+|   C           EM19      ANDEQ0
+|   C                     Z-ADDEM13      #YMDF
+|   C           WTYMD     SUB  #YMDF     P3211O
+|   C           P3211O    ADD  1         P3211O  90
+     C                     END
+|   C*
+|   C* 2.離職員工
+|   C           EM13YM    IFNE WPH03
+|   C           EM19YM    ANDEQWPH03
+|   C           EM19D     SUB  1         P3211O
+     C                     END
+|   C*
+|   C* 3.本月新進且離職員工
+|   C           EM13YM    IFEQ WPH03
+|   C           EM19YM    ANDEQWPH03
+|   C           EM19      SUB  EM13      P3211O
+| 07-C                     END
+|   C*
+|    C*901228E KLAUS---------------------------------------------------
+|    C           WAMT      MULT P3211O    WAMT
+|    C           WAMT      DIV  PM102     WAMT
+|    C*
+|    C                     Z-ADDWAMT      KPW19   93H
+| 10-C           KPW19     IFGT *ZERO
+|   C*
+|   C*扣補助．不考慮補助狀況
+|   C                     Z-ADD1         WAMT
+|   C********** WAMT      MULT L202      WAMT
+|   C           KPW19     MULT L202      EM23P     H      員工負擔
+|   C           KPW19     MULT L202      WEM23P  94       員工負擔
+|   C           KPW19     MULT L204      EM23C     H      公司負擔
+|   C           KPW19     MULT L205      FLD01     H      職災金額
+|   C           KPW19     MULT L203      FLD02     H      墊償金額
+|   C*
+| 11-C           DEM01     IFEQ 'YM'
+|   C*中殘員工
+| 12-C           EM02      IFEQ '93410'
+|   C           EM02      OREQ '95416'
+|   C           EM02      OREQ '96611'
+|   C           WEM23P    MULT 0.75      EM23P     H
+| 12-C                     END
+|   C*重殘員工
+| 13-C           EM02      IFEQ '93812'
+|   C           WEM23P    MULT 0         EM23P     H
+| 13-C                     END
+|   C*
+| 11-C                     END
+|   C*
+| 10-C                     END
+|    C*-------------------------------------------------------------***
+|    C*
+04===C           E2200     ENDSR
+     C*==============================================================*
+     C*          R7100 ... LEVEL BREAK 1 :INIT PROCESS
+     C*==============================================================*
+05===C           R7100     BEGSR
+|    C*
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+|    C* BREAK CONTROL FOR FIELD PRINTED
+|    C                     SETON                     31
+|    C*
+|    C* << IF THIS KEY BREAK SKIP PAGE THEN SETON >>-------------------
+|    C***                  SETON                     39
+|    C*----------------------------------------------------------------
+|    C*
+05===C                     ENDSR
+     C*==============================================================*
+     C*          R8100 ... LEVEL BREAK 1
+     C*==============================================================*
+06===C           R8100     BEGSR
+|    C*
+|    C                     WRITEPT1
+|    C*
+|    C* << ACCUMULATE & CLEAR >>
+|    C                     ADD  PT11      PT21
+|    C                     ADD  PT12      PT22
+|    C                     ADD  PT13      PT23
+|    C                     ADD  PT14      PT24
+|    C                     ADD  PT15      PT25
+|    C                     ADD  PT16      PT26
+|    C                     ADD  PT17      PT27
+|    C                     ADD  PT18      PT28
+|    C*
+|    C                     Z-ADD*ZERO     PT1A
+|    C                     Z-ADD*ZERO     PT1B
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT12
+|    C                     Z-ADD*ZERO     PT13
+|    C                     Z-ADD*ZERO     PT14
+|    C                     Z-ADD*ZERO     PT15
+|    C                     Z-ADD*ZERO     PT16
+|    C                     Z-ADD*ZERO     PT17
+|    C                     Z-ADD*ZERO     PT18
+|    C*
+06===C                     ENDSR
+     C*==============================================================*
+     C*          R8900 ... LEVEL BREAK LR -- HAS DATA
+     C*==============================================================*
+07===C           R8900     BEGSR
+|    C*
+|    C                     WRITEPT2
+|    C*
+|    C* << ACCUMULATE & CLEAR >>
+|    C                     Z-ADD*ZERO     PT2A
+|    C                     Z-ADD*ZERO     PT2B
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT22
+|    C                     Z-ADD*ZERO     PT23
+|    C                     Z-ADD*ZERO     PT24
+|    C                     Z-ADD*ZERO     PT25
+|    C                     Z-ADD*ZERO     PT26
+|    C                     Z-ADD*ZERO     PT27
+|    C                     Z-ADD*ZERO     PT28
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          R8999 ... LEVEL BREAK LR -- NO DATA
+     C*==============================================================*
+08===C           R8999     BEGSR
+|    C*
+|    C                     EXSR R1000
+|    C*
+|    C                     WRITEPH1
+|    C*
+|    C                     WRITEPE9
+|    C*
+08===C                     ENDSR
+

@@ -1,0 +1,280 @@
+     H****************************************************************
+     H*   PROGRAM NAME : PYR1072                                     *
+     H*   AUTHER       : A1070 CHOIE                                 *
+     H*   CREATE DATE  : 79/07/11                                    *
+     H*   UPDATE DATE  :                                             *
+     H*   SYSTEM       : MIRS                                        *
+     H*   SUBSYSTEM    :人事薪資系統                               *
+     H*   PROCEDURE    : PYR1071C                                    *
+     H*   PURPOSE      :
+     H*   INDICATORS   :                                             *
+     H****************************************************************
+     FPYEMPF  IP  E           K        DISK
+     FPYDPPF  IF  E           K        DISK
+     FSYCMPF  IF  E           K        DISK
+     FPYR107P O   E             39     PRINTER
+     E*---------------------------------------------------------------
+     IEM0
+     I                                              EM041 L3
+     I                                              EM042 L2
+     I                                              EM043 L1
+     I*
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I*
+     I                                      501 502 DEM01
+     I                                      503 509 DEM041
+     I                                      510 516 DEM042
+     I*                                     513 5160DYM
+     I                                      517 5220WDYM
+     I                                      523 523 DFMT
+     I                                      524 524 DTYPE
+     I                                      601 6040DYM
+     I*
+     IPYDA01      DS
+     I                                        1 256 PYDA
+     I                                        2   30PYD012
+     I                                        4   50PYD013
+     I*
+     I            DS
+     I                                        1   80EM201
+     I                                        1   40EM201Y
+     I                                        5   60EM201M
+     I                                        7   80EM201D
+     I                                        1   60WYM1
+     I*
+     I            DS
+     I                                        1   80EM202
+     I                                        1   40EM202Y
+     I                                        5   60EM202M
+     I                                        7   80EM202D
+     I                                        1   60WYM2
+     I*
+     I            DS
+     I                                        1   80EM203
+     I                                        1   60WYM3
+     C*---------------------------------------------------------------
+     C           KEYDP     KLIST
+     C                     KFLD           DP011
+     C                     KFLD           DP012
+     C                     KFLD           DP013
+     C                     KFLD           DP014
+     C*==============================================================*
+     C*                    DEFN
+     C*==============================================================*
+     C           *NAMVAR   DEFN           PYDA01
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010
+     C*
+  01-C           *INL1     IFEQ '1'
+    C                     MOVELEM041     DP011
+    C                     MOVELEM042     DP012
+    C                     MOVELEM043     DP013
+    C                     MOVEL*BLANK    DP014
+    C           KEYDP     CHAINDP0                  40
+    C   40                MOVEL*BLANK    DP02
+    C*                    MOVELDP02      PDP02H
+    C*                    SETON                     39
+  01-C                     END
+     C*DATA SELECT
+     C                     EXSR RTN050
+     C*
+  02-C           SWDT      IFEQ 'Y'
+    C                     EXSR RTN100
+  02-C                     END
+     C*
+     C*L1 10                EXSR RTN810
+     C*L2 10                EXSR RTN820
+     C*L3 10                EXSR RTN830
+     CLR 10                EXSR RTN890
+     CLRN10                EXSR RTN899
+     C*==============================================================*
+     C*          RTN010... INITIAL
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C           DEM01     CHAINCM0                  40
+|    C   40                MOVEL*BLANK    CM03
+|    C*
+|    C                     SETON                     39
+|    C                     Z-ADD*ZERO     PT11
+|    C                     Z-ADD*ZERO     PT21
+|    C                     Z-ADD*ZERO     PT31
+|    C                     Z-ADD*ZERO     PT41
+|    C*
+|    C                     IN   PYDA01
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN050... DATA SELECT
+     C*==============================================================*
+02===C           RTN050    BEGSR
+|    C*
+|    C                     MOVEL'N'       SWDT    1
+|    C                     Z-ADDEM20      EM201
+|    C                     Z-ADDEM20      EM202
+|    C                     Z-ADDEM20      EM203
+|    C*
+|    C*@         EM10      IFEQ '3'
+|    C*
+|    C*@                   Z-ADDEM13      EM201
+|    C*@                   Z-ADDEM13      EM202
+|    C*
+|    C*@         PYD012    DIV  12        WYEAR   20
+|    C*@                   MVR            WMTH    20
+|    C*@                   ADD  WYEAR     EM201Y
+|    C*@                   ADD  WMTH      EM201M
+|    C*@         EM201M    IFGT 12
+|    C*@                   SUB  12        EM201M
+|    C*@                   ADD  1         EM201Y
+|    C*@                   END
+|    C*
+|    C*@         PYD013    DIV  12        WYEAR
+|    C*@                   MVR            WMTH
+|    C*@                   ADD  WYEAR     EM202Y
+|    C*@                   ADD  WMTH      EM202M
+|    C*@         EM202M    IFGT 12
+|    C*@                   SUB  12        EM202M
+|    C*@                   ADD  1         EM202Y
+|    C*@                   END
+|    C*
+|    C*@                   END
+|    C*
+|    C*
+| 01-C           WYM1      IFEQ WDYM
+|   C           WYM2      OREQ WDYM
+|   C           WYM3      OREQ WDYM
+|   C                     MOVEL'Y'       SWDT
+|   C                     SETON                     10
+|   C                     MOVEL'Y'       $DATA
+| 01-C                     END
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... DETAIL
+     C*==============================================================*
+03===C           RTN100    BEGSR
+|    C*
+|    C                     MOVELEM041     DP011
+|    C                     MOVELEM042     DP012
+|    C                     MOVELEM043     DP013
+|    C                     MOVELEM044     DP014
+|    C           KEYDP     CHAINDP0                  40
+|    C           KEYDP     CHAINDP0                  40
+|    C   40                MOVEL*BLANK    DP02
+|    C*
+|    C*          WYM3      IFEQ WDYM
+|    C*                    MOVEL'***'     PEM201
+|    C*                    ELSE
+|    C*          WYM2      IFEQ WDYM
+|    C*                    MOVEL'** '     PEM201
+|    C*                    ELSE
+|    C*                    MOVEL'*  '     PEM201
+|    C*                    END
+|    C*                    END
+|    C*
+| 01-C           *IN39     IFEQ '1'
+|   C                     WRITEPH1
+|   C                     SETOF                     39
+| 01-C                     END
+|    C*
+|    C*                    CALL 'P31'
+|    C*                    PARM EM13      P3101I  80
+|    C*                    PARM '2'       P3102I  1
+|    C*                    PARM '1'       P3103I  1
+|    C*                    PARM DFMT      P3104I  1
+|    C*                    PARM DTYPE     P3105I  1
+|    C*                    PARM           P3111O  80
+|    C                     Z-ADDEM13      PEM13
+|    C*
+|    C*                    CALL 'P31'
+|    C*                    PARM EM20      P3101I  80
+|    C*                    PARM '2'       P3102I  1
+|    C*                    PARM '1'       P3103I  1
+|    C*                    PARM DFMT      P3104I  1
+|    C*                    PARM DTYPE     P3105I  1
+|    C*                    PARM           P3111O  80
+|    C                     Z-ADDEM20      PEM20
+|    C*
+|    C                     WRITEPD1
+|    C*
+|    C*                    ADD  1         PT11
+|    C                     ADD  1         PT41
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK 1
+     C*==============================================================*
+04===C           RTN810    BEGSR
+|    C*
+| 01-C           PT11      IFEQ 0
+|   C                     GOTO END810
+| 01-C                     END
+|    C*
+|    C                     WRITEPT1
+|    C*
+|    C                     ADD  PT11      PT21
+|    C                     Z-ADD*ZERO     PT11
+|    C*
+04===C           END810    ENDSR
+     C*==============================================================*
+     C*          RTN820... LEVEL BREAK 2
+     C*==============================================================*
+05===C           RTN820    BEGSR
+|    C*
+| 01-C           PT21      IFEQ 0
+|   C                     GOTO END820
+| 01-C                     END
+|    C*
+|    C                     WRITEPT2
+|    C*
+|    C                     ADD  PT21      PT31
+|    C                     Z-ADD*ZERO     PT21
+|    C*
+05===C           END820    ENDSR
+     C*==============================================================*
+     C*          RTN830... LEVEL BREAK 3
+     C*==============================================================*
+06===C           RTN830    BEGSR
+|    C*
+| 01-C           PT31      IFEQ 0
+|   C                     GOTO END830
+| 01-C                     END
+|    C*
+|    C                     WRITEPT3
+|    C*
+|    C                     ADD  PT31      PT41
+|    C                     Z-ADD*ZERO     PT31
+|    C*
+06===C           END830    ENDSR
+     C*==============================================================*
+     C*          RTN890... LEVEL BREAK LR
+     C*==============================================================*
+07===C           RTN890    BEGSR
+|    C*
+|    C                     WRITEPT4
+|    C*
+|    C                     Z-ADD*ZERO     PT41
+|    C*
+07===C                     ENDSR
+     C*==============================================================*
+     C*          RTN899... LEVEL BREAK LR --- NO DATA
+     C*==============================================================*
+08===C           RTN899    BEGSR
+|    C*
+| 01-C           $PENV     IFNE '2'
+|   C                     MOVEL'N'       $DATA
+| 01*C                     ELSE
+|   C                     EXSR RTN010
+|   C                     WRITEPH1
+|   C                     WRITEPE9
+| 01-C                     END
+|    C*
+08===C                     ENDSR
+

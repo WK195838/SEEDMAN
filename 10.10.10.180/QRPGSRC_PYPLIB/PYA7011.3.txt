@@ -1,0 +1,247 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA7011                                    *
+     H*    PROGRAM NAME :薪資媒體轉存作業　　　                    *
+     H*    AUTHOR       : A1084 CHARLES                              *
+     H*    CREATE DATE  : 79/07/17                                   *
+     H*    UPDATE DATE  : 89/03/15 A1274 EVA                         *
+     H*    UPDATE DATE  : 96/05/28 A1491 EASON                      *
+     H*                   不轉存BT處理，BS檔內要遞延的都不轉存 *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYPYJF03IP  E           K        DISK
+     FPYPBPF  IF  E           K        DISK
+     FPYPHPF  UF  E           K        DISK
+     F*+CLOUD 不轉存BT處理
+     FPYBSPF  IF  E           K        DISK
+     F*PYBCPF  IF  E           K        DISK
+     FPYBTPF  O   E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I/COPY QDDSSRC,PYPMDS01
+     I*
+     I           UDS
+     I                                      101 110 $USER
+     I                                      211 2160DDATE
+     I                                      201 2080$A8YMD
+     I*
+     I                                      501 502 DPY01
+     I                                      503 505 DBT061
+     I                                      522 522 DBT03
+     I*
+     I                                      571 5780HBT04
+     I                                      571 5760WBT04
+     I                                      577 5780DBT05
+     I                                      580 5830WPB03
+     I                                      584 585 DPB04
+     I*
+     I                                      601 6050DPH03
+     I                                      606 6110WPH03
+     I                                      623 6280DBT045
+     I                                      623 6240DYY
+     I                                      625 6260DMM
+     I                                      623 6260DYM
+     I                                      627 6280DBT05S
+     I*
+     I            DS
+     I                                        1   60KPH03
+     I                                        1   40KPH03Y
+     I                                        5   60KPH03M
+     C*---------------------------------------------------------------
+     C           *LIKE     DEFN PH04      KPH04
+     C*---------------------------------------------------------------
+     C           KEYPH     KLIST
+     C                     KFLD           PY01             公司編號
+     C                     KFLD           PY02             員工編號
+     C                     KFLD           WPH03            年月
+     C                     KFLD           KPH04            期別
+     C           KEYPB     KLIST
+     C                     KFLD           PY01
+     C                     KFLD           PY02
+     C                     KFLD           WPB03
+     C                     KFLD           DPB04
+     C                     KFLD           WBT04
+     C                     KFLD           DBT05
+     C*+CLOUD 2007/05/30
+     C           KEYBS     KLIST
+     C                     KFLD           PY01             公司編號
+     C                     KFLD           PY02             員工編號
+     C                     KFLD           BS04             狀態
+     C                     MOVEL'O'       BS04
+     C           KEYPH1    KLIST
+     C                     KFLD           PY01             公司編號
+     C                     KFLD           PY02             員工編號
+     C                     KFLD           BS06             起始年月
+     C           KEYPH2    KLIST
+     C                     KFLD           PY01             公司編號
+     C                     KFLD           PY02             員工編號
+     C*+CLOUD 2007/05/30
+     C*          KEYBC     KLIST
+     C*                    KFLD           PY01
+     C*                    KFLD           BT02
+     C*                    KFLD           BT03
+     C*                    KFLD           BT04
+     C*                    KFLD           BT05
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     .INIT
+     C*
+     C                     EXSR RTN020                     .MAIN
+     C                     SETOF                     41
+     C*==============================================================*
+     C*          RTN010... INITIAL PROCESS
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     Z-ADDWBT04     KPH03
+|    C*
+|    C                     MOVELDBT03     KPH04            .所得類別
+|    C*
+|    C                     SETON                     10
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*                    MAIN PROCESS
+     C*==============================================================*
+02===C           RTN020    BEGSR
+|    C*
+|    C                     MOVELPY01      BT01             公司編號
+|    C                     MOVELPY02      BT02             員工編號
+|    C                     MOVELDBT03     BT03             所得類別
+|    C                     Z-ADDWBT04     BT04             存入月份
+|    C                     Z-ADDDBT05     BT05             存入日期
+|    C*
+|    C*          KEYBC     CHAINBC0                  40
+|    C* N40                GOTO END020                     不轉存
+|    C*
+|    C*+CLOUD 不轉存
+|    C           KEYBS     CHAINBS0                  40
+| 01-C           *IN40     IFEQ '0'
+| 02-C           WPH03     IFGE BS06                       遞延起始
+|   C           WPH03     ANDLEBS07                       遞延截止
+|   C                     GOTO END020                     不轉存
+| 02-C                     ENDIF
+| 01-C                     ENDIF
+|    C*
+|    C                     MOVELPY04      BT061            總行
+|    C                     MOVELPY05      BT062            分行
+|    C                     MOVELPY06      BT07             存入帳號
+|    C                     Z-ADD*ZERO     BT08             存入金額
+|    C*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+| 03-C           DBT03     IFEQ '1'                        下期薪
+|   C           DBT03     OREQ '2'                        上期薪
+|   C                     EXSR RTN100
+| 03-C                     END
+|    C*
+| 04-C           DBT03     IFEQ '4'
+|   C                     EXSR RTN200                     .獎金
+| 04-C                     END
+|    C*
+|    C*延遲發放
+|    C*
+|    C           KEYBS     CHAINBS0                  40
+| 05-C           *IN40     IFEQ '0'
+| 05-C           BS03      IFEQ BT04
+| 05-C           BS05      ANDEQDBT03
+|   C                     EXSR RTN110
+| 05-C                     ENDIF
+| 05*C                     ELSE
+|   C                     Z-ADD0         BS03
+| 05-C                     ENDIF
+|    C*
+| 06-C           BT08      IFGT *ZERO
+|   C                     Z-ADDWPH03     BT11
+|   C                     Z-ADD$A8YMD    BT97
+|   C                     TIME           WTIME  120
+|   C                     MOVELWTIME     BT98
+|   C                     MOVEL$USER     BT99
+|   C                     WRITEBT0
+| 06-C                     END
+|   C*+CLOUD
+| 07-C           BS03      IFNE BT04
+|   C           KEYPH     CHAINPH0                  40
+|   C  N40                Z-ADDHBT04     PH96
+|   C  N40                UPDATPH0
+| 07-C                     END
+|   C*+CLOUD
+|   C*
+|    C*
+02===C           END020    ENDSR
+     C*==============================================================*
+     C*          RTN100... 薪資所得
+     C*==============================================================*
+03===C           RTN100    BEGSR
+|    C*
+|    C           KEYPH     CHAINPH0                  40
+|    C   40                GOTO END100
+|    C*
+|    C                     Z-ADDPH16      BT08
+|    C                     ADD  PH17      BT08
+|    C                     SUB  PH18      BT08
+|    C                     ADD  PH27      BT08
+|    C                     SUB  PH28      BT08
+|    C                     SUB  PH29      BT08
+|    C*
+03===C           END100    ENDSR
+     C*==============================================================*
+     C*          RTN110... 延遲發放薪資所得
+     C*==============================================================*
+04===C           RTN110    BEGSR
+|    C*
+|    C                     Z-ADD0         TBT08   70
+|    C           KEYPH1    SETLLPH0
+|    C           KEYPH2    READEPH0                      46
+| 01-C           *IN46     DOWEQ'0'
+|   C*
+| 02-C           PH03      IFGE BS06                       遞延起始
+|   C           PH03      ANDLEBS07                       遞延截止
+|   C                     Z-ADDPH16      BT08
+|   C                     ADD  PH17      BT08
+|   C                     SUB  PH18      BT08
+|   C                     ADD  PH27      BT08
+|   C                     SUB  PH28      BT08
+|   C                     SUB  PH29      BT08
+|   C                     ADD  BT08      TBT08
+|   C*
+|   C                     Z-ADDHBT04     PH96
+|   C                     UPDATPH0
+|   C*
+| 02-C                     ENDIF
+|   C*
+| 02-C           PH03      IFEQ BS03                       補發年月
+|   C                     Z-ADDPH16      BT08
+|   C                     ADD  PH17      BT08
+|   C                     SUB  PH18      BT08
+|   C                     ADD  PH27      BT08
+|   C                     SUB  PH28      BT08
+|   C                     SUB  PH29      BT08
+|   C                     ADD  BT08      TBT08
+|   C*
+|   C                     Z-ADDHBT04     PH96
+|   C                     UPDATPH0
+|   C*
+| 02-C                     ENDIF
+|   C*
+|   C           KEYPH2    READEPH0                      46
+| 01-C                     ENDDO
+|    C                     Z-ADDTBT08     BT08
+|    C*
+04===C           END110    ENDSR
+     C*==============================================================*
+     C*          RTN200... 獎金所得
+     C*==============================================================*
+05===C           RTN200    BEGSR
+|    C*
+|    C           KEYPB     CHAINPB0                  41
+|    C   41                GOTO END200
+|    C*
+| 01-C           PB96      IFNE *ZERO
+|   C                     ADD  PB06      BT08
+|   C                     ADD  PB06F     BT08
+|   C                     SUB  PB08      BT08
+|   C                     SUB  PB11      BT08
+| 01-C                     END
+|    C*
+05===C           END200    ENDSR
+

@@ -1,0 +1,73 @@
+     /****************************************************************/
+     /*   泛太資訊科技開發股份有限公司－版權所有    TEL:7313250    */
+     /*                                                              */
+     /*    PROGRAM-ID   : PYR3422C                                   */
+     /*    PROGRAM NAME :綜合福利金發放明細表　                    */
+     /*    AUTHOR       : A1326 SANTOS                               */
+     /*    CREATE DATE  : 90/03/21                                   */
+     /*    UPDATE DATE  :                                            */
+     /*    SYSTEM       :人事薪資系統                              */
+     /****************************************************************/
+             PGM
+             DCL        VAR(&DEM01)    TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DEM041)   TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DEM042)   TYPE(*CHAR) LEN(7)
+             DCL        VAR(&DEM021)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DEM022)   TYPE(*CHAR) LEN(8)
+             DCL        VAR(&DGD071)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DGD072)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&DYEAR)    TYPE(*CHAR) LEN(3)
+             DCL        VAR(&WGD091)   TYPE(*CHAR) LEN(6)
+             DCL        VAR(&WGD092)   TYPE(*CHAR) LEN(6)
+             DCL        VAR(&WYEAR)    TYPE(*CHAR) LEN(4)
+
+             DCL        VAR(&$PENV)    TYPE(*CHAR) LEN(1)
+             DCL        VAR(&$CPY)     TYPE(*CHAR) LEN(3)
+             DCL        VAR(&$PRTCD)   TYPE(*CHAR) LEN(2)
+             DCL        VAR(&P6401I)   TYPE(*CHAR) LEN(10)
+             DCL        VAR(&P6403I)   TYPE(*DEC)  LEN(3 0)
+
+             CHGVAR     VAR(&DEM01)    VALUE(%SST(*LDA 501 2))
+             CHGVAR     VAR(&DEM041)   VALUE(%SST(*LDA 613 7))
+             CHGVAR     VAR(&DEM042)   VALUE(%SST(*LDA 620 7))
+             CHGVAR     VAR(&DEM021)   VALUE(%SST(*LDA 513 8))
+             CHGVAR     VAR(&DEM022)   VALUE(%SST(*LDA 521 8))
+             CHGVAR     VAR(&DGD071)   VALUE(%SST(*LDA 530 2))
+             CHGVAR     VAR(&DGD072)   VALUE(%SST(*LDA 532 2))
+             CHGVAR     VAR(&DYEAR)    VALUE(%SST(*LDA 534 3))
+             CHGVAR     VAR(&WGD091)   VALUE(%SST(*LDA 550 6))
+             CHGVAR     VAR(&WGD092)   VALUE(%SST(*LDA 556 6))
+             CHGVAR     VAR(&WYEAR)    VALUE(%SST(*LDA 601 4))
+
+             OVRDBF     FILE(PYGDJF01) SHARE(*YES)
+
+             OPNQRYF    FILE((PYGDJF01)) QRYSLT(' +
+                            GD01 *EQ "' *CAT &DEM01 *CAT '" +
+                          & GD02 *EQ %RANGE("' *CAT &DEM021 *CAT '" +
+                                            "' *CAT &DEM022 *CAT '") +
+                          & CEM04 *EQ %RANGE("' *CAT &DEM041 *CAT '" +
+                                            "' *CAT &DEM042 *CAT '") +
+                          & GD07 *EQ %RANGE("' *CAT &DGD071 *CAT '" +
+                                            "' *CAT &DGD072 *CAT '") +
+                          & GD09 *EQ %RANGE(' *CAT &WGD091 *CAT ' +
+                                            ' *CAT &WGD092 *CAT ') +
+                          & GD04 *EQ ' *CAT &WYEAR *CAT ' ') +
+                         KEYFLD((EM130) (GD01) (EM041) (EM042) (EM043) +
+                          (EM044) (GD02) (GD09) (GD04) (GD07)) +
+                          MAPFLD( (CEM04 'EM041 *CAT EM042 *CAT +
+                          EM043 *CAT EM044'))
+
+             OVRPRTF    FILE(PYR342P) PAGESIZE(*N 132) CPI(12)
+             CALL       PGM(PYR3422)
+             CLOF       OPNID(PYGDJF01)
+             DLTOVR     FILE(*ALL)
+
+             RTVDTAARA  DTAARA(*LDA (219 1)) RTNVAR(&$PENV)
+             RTVDTAARA  DTAARA(*LDA (125 3)) RTNVAR(&$CPY)
+             RTVDTAARA  DTAARA(*LDA (217 2)) RTNVAR(&$PRTCD)
+             CHGVAR     VAR(&P6401I) VALUE('PYR342P')
+             CHGVAR     VAR(&P6403I) VALUE(&$CPY)
+             CALL       PGM(P64) PARM(&P6401I &$PENV &P6403I &$PRTCD)
+
+             ENDPGM
+

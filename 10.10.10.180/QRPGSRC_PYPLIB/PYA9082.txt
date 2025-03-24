@@ -1,0 +1,135 @@
+     H****************************************************************
+     H*   泛太資訊科技開發股份有限公司－版權所有    TEL:27313250   *
+     H*                                                              *
+     H*    PROGRAM-ID   : PYA9072                                    *
+     H*    PROGRAM NAME :勞健保及勞退保額調整報表                  *
+     H*    AUTHOR       : A1445 HONDA                                *
+     H*    CREATE DATE  : 95/03/17                                   *
+     H*    UPDATE DATE  :                                            *
+     H*    SYSTEM       :人事薪資                                  *
+     H****************************************************************
+     FPYLPPF  IP  E           K        DISK
+     FPYLOPF  IF  E           K        DISK
+     FPYEMPF  IF  E           K        DISK
+     FPYA908WFUF  E           K        DISK                      A
+     E*---------------------------------------------------------------
+     I*<LEVEL BREAK> L1 LP02員工編號
+     ILP0
+     I                                              LP02  L1
+     I*
+     I           UDS
+     I                                      203 2080DDATE
+     I                                      125 1270$CPY
+     I                                      217 218 $PRTCD
+     I                                      219 219 $PENV
+     I                                      500 500 $DATA
+     I* USER DEFINE
+     I                                      501 502 DLP01
+     I                                      503 503 DELYN
+     I                                      511 516 LP03M
+     I                                      511 5160DLP03M
+    C*==============================================================*
+    C*                    DEFN
+    C*==============================================================*
+    C*=============================================================
+    C*                    PARM LIST
+    C*=============================================================
+    C*==============================================================*
+     C*==============================================================*
+     C*                    KEY  LIST
+     C*==============================================================*
+     C           KEYEM     KLIST                           *PYEMPF
+     C                     KFLD           LP01             公司
+     C                     KFLD           EM02             員工
+     C           KEYWF     KLIST                           *PYEMPF
+     C                     KFLD           WLP03            生效年月
+     C                     KFLD           WLP01            公司
+     C                     KFLD           WLP02            員工編號
+     C                     KFLD           WLP04            發薪年月
+     C           KEYLO     KLIST                           *PYEMPF
+     C                     KFLD           WLP01            公司
+     C                     KFLD           WLP02            員工
+     C                     KFLD           WLP03            生效年月
+     C*==============================================================*
+     C*                    MAIN ROUTINE
+     C*==============================================================*
+     C  N10                EXSR RTN010                     *INITIAL
+     C                     EXSR RTN100                     *WR WORKFILE
+     CL1 10                EXSR RTN810                     *L1  BREAK
+     C*==============================================================*
+     C*          RTN010... INITIAL
+     C*==============================================================*
+01===C           RTN010    BEGSR
+|    C*
+|    C                     MOVEL*BLANK    WLP01   2
+|    C                     MOVEL*BLANK    WLP02   8
+|    C                     Z-ADD*ZERO     WLP03   60
+|    C                     Z-ADD*ZERO     WLP04   60
+|    C* WKSUM用來暫存每個員工的三個月加總的薪資
+|    C                     Z-ADD*ZERO     WKSUM   80
+|    C* *IN11用來決定是否搬LP02N員工姓名
+|    C                     SETON                     11
+|    C                     SETON                     10
+|    C           *LOVAL    SETLLWF0
+|    C*
+01===C                     ENDSR
+     C*==============================================================*
+     C*          RTN100... 轉檔   FROM PYLOPF
+     C*==============================================================*
+02===C           RTN100    BEGSR
+|    C* *IN11 *ON時才會暫存該員工之暫存KEY
+| 01-C           *IN11     IFEQ *ON
+|   C*--------------------------------------------------------------
+|   C*取姓名後，將*IN11 SETOFF
+|   C                     SETOF                     11
+|   C                     MOVELLP01      WLP01   2
+|   C                     MOVELLP02      WLP02   8
+|   C                     Z-ADDLP03      WLP03   60
+|   C* - - - - - - - - - - - - - - - - - - - - - - - - -
+| 01-C                     END
+|    C*取員工姓名
+     C                     MOVELLP02      EM02
+|    C           KEYEM     CHAINPYEMPF               40
+|    C  N40                MOVELEM03      LP02N
+|    C* - - - - - - - - - - - - - - - - - - - - - - - - -
+|    C*計算每月薪資總額＝本薪＋職務加給＋其他津貼＝LPSUM
+|    C           LP05      ADD  LP06      LPSUM
+|    C                     ADD  LP07      LPSUM
+|    C                     ADD  LPSUM     WKSUM   80
+|    C* - - - - - - - - - - - - - - - - - - - - - - - - -
+|    C                     WRITEWF0                        WR WORKFILE
+|    C                     Z-ADDLP04      WLP04   60
+|    C                     CLEARWF0                        WR WORKFILE
+|    C*
+02===C                     ENDSR
+     C*==============================================================*
+     C*          RTN810... LEVEL BREAK 1 員工不同時
+     C*==============================================================*
+03===C           RTN810    BEGSR
+|    C*該員工處理過後SETON *IN11下一個員工會取姓名
+|    C*--------------------------------------------------------------
+|    C*讀該員工最後一個計薪月的工作檔紀錄填入平均薪資及正確投保額
+|    C           KEYWF     CHAINWF0                  40
+| 01-C           *IN40     IFEQ *OFF
+|   C*
+|   C           KEYLO     CHAINPYLOPF               41
+| 02-C           *IN41     IFEQ *OFF
+|   C                     Z-ADDLO10      LPPAY
+|   C*                    Z-ADDLO15      LPSUM
+| 02-C                     END
+|   C*
+|   C           WKSUM     DIV  3         LPAVG     H
+|   C                     UPDATWF0
+|   C                     CLEARWF0
+|   C*
+| 01-C                     END
+|    C                     Z-ADD*ZERO     WKSUM
+|    C                     SETON                     11
+|    C                     MOVEL*BLANK    WLP01   2
+|    C                     MOVEL*BLANK    WLP02   8
+|    C                     Z-ADD*ZERO     WLP03   60
+|    C                     Z-ADD*ZERO     WLP04   60
+|    C*
+03===C                     ENDSR
+     C*==============================================================*
+
