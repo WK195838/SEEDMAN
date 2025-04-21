@@ -1,0 +1,1616 @@
+關於寄賣出貨單在庫存報表中的處理邏輯，我將為您解析如下：
+
+## 寄賣出貨單庫存處理邏輯
+
+1. **寄賣出貨的基本特性**
+   - 寄賣出貨是指貨品所有權仍屬於供應商，但實體已移至客戶端
+   - 在出貨管理系統中，這類型交易有特殊標識（可能是在BA05或其他欄位中有特定代碼）
+
+2. **庫存計算差異**
+   - 普通出貨：完全減少庫存數量
+   - 寄賣出貨：從實際庫存減少，但計入「寄賣庫存」項目
+   - 系統需追蹤寄賣品項的實際位置與狀態
+
+3. **報表處理邏輯**
+   - 當提取W2BBPF明細檔數據時，需檢查該筆交易的類型
+   - 寄賣出貨的項目應標記區別，可能使用特殊狀態碼或欄位值
+   - 將寄賣項目納入特殊計算公式：「實際庫存 = 總庫存 - 已出貨 + 寄賣出貨」
+
+4. **數據關聯處理**
+   - 需關聯W2BAPF (出貨單主檔) 以確認出貨類型
+   - 若出貨單為寄賣類型，所有關聯明細均視為寄賣項目
+   - 庫存報表需額外設計「寄賣在外」欄位以反映此類型庫存
+
+5. **寄賣結算處理**
+   - 當寄賣品被客戶確認購買時，系統應轉換記錄狀態
+   - 從「寄賣庫存」移出，完全確認為已售出
+   - 此時可能會產生新的財務記錄，但不再影響庫存數據
+
+6. **期末處理特殊邏輯**
+   - 寄賣品在期末庫存報表中應計入企業資產
+   - 寄賣報表的期末結算與一般庫存有不同的處理流程
+   - 系統需生成特殊的「寄賣庫存明細報表」以供管理參考
+
+這種處理邏輯確保了企業能夠清楚追蹤寄賣出貨的庫存狀態，既不錯誤地減少資產價值，也能反映實際的庫存分佈情況。透過適當的標識與計算公式，系統可以生成準確的庫存報表，同時滿足財務與物流管理的需求。
+
+## 『R1D3』寄賣送貨數量庫存處理問題分析
+
+目前系統將『R1D3』寄賣送貨數量直接自庫存扣除，而不考慮實際寄賣出貨日期，這導致了庫存管理的不準確性。以下是解決此問題的處理步驟：
+
+1. **問題本質分析**
+   - 寄賣出貨應視為特殊庫存類型，不應直接扣減主庫存
+   - 需追蹤寄賣日期以正確反映各時間點的庫存狀態
+
+2. **系統修改步驟**
+   - 在W2BAPF (出貨單主檔) 中增加寄賣標識欄位
+   - 更新出貨處理程序，區分普通出貨與寄賣出貨
+   - 建立寄賣庫存追蹤專用資料表，記錄寄賣日期
+
+3. **庫存計算邏輯調整**
+   - 修改庫存計算公式：「實際庫存 = 總庫存 - 一般出貨 - (未確認的寄賣出貨)」
+   - 對於『R1D3』類型的寄賣品，應保留實際寄賣日期
+   - 報表生成時按照寄賣日期進行正確的庫存計算
+
+4. **庫存報表新增項目**
+   - 新增「寄賣庫存」欄位，顯示當前在外寄賣數量
+   - 新增「寄賣日期」欄位，記錄實際寄賣出貨日期
+   - 提供「寄賣庫存明細報表」功能，按日期查詢寄賣狀態
+
+5. **資料修正步驟**
+   - 識別現有『R1D3』類型的寄賣記錄
+   - 補充實際寄賣日期資訊（若有歷史資料可查）
+   - 重新計算歷史庫存數據，確保報表準確性
+
+6. **操作流程調整**
+   - 出貨登記時，明確區分寄賣出貨與一般出貨
+   - 寄賣品出貨時，必須填寫預計歸還/結算日期
+   - 在庫存盤點時，將寄賣品列為特殊類別進行管理
+
+7. **監控與追蹤機制**
+   - 建立寄賣庫存異動通知流程
+   - 定期核對寄賣品實際狀態與系統記錄
+   - 設置長期未處理寄賣品的預警機制
+
+透過上述步驟，系統將能正確處理『R1D3』類型的寄賣出貨，不再直接扣除庫存，而是將其視為特殊的庫存形式進行管理。這樣既能反映實際庫存狀況，又能追蹤寄賣品的流向與歸屬，大幅提升庫存管理的準確性與效率。
+# 『R1D3』寄賣出貨處理系統修改方案
+
+## 需修改的程式及編號
+
+1. **W2BAPF相關程式**
+   - **W2BA01** - 出貨主檔維護程式
+   - **W2BA02** - 出貨單建立程式
+   - **W2BA05** - 出貨狀態處理程式
+
+2. **W2BBPF相關程式**
+   - **W2BB01** - 出貨明細維護程式
+   - **W2BB03** - 產品出貨登錄程式
+
+3. **庫存相關程式**
+   - **W2IV01** - 庫存主檔處理程式
+   - **W2IV05** - 庫存異動程式
+   - **W2IV08** - 庫存報表生成程式
+
+4. **新增程式**
+   - **W2CS01** - 寄賣庫存專用主檔程式
+   - **W2CS02** - 寄賣庫存報表程式
+
+## 修改步驟及內容
+
+### 第一階段：資料結構調整
+
+1. **修改W2BAPF主檔結構**
+   - 新增欄位 **BA13** (寄賣標識，1位元文字)
+   - 新增欄位 **BA14** (寄賣類型，如"R1D3"，5位元文字)
+   - 新增欄位 **BA15** (預計結算日期，8位元數值)
+
+2. **建立寄賣庫存專用檔案 (W2CSPF)**
+   - **CS01** - 寄賣出貨參照號 (主鍵1)
+   - **CS02** - 產品編號 (主鍵2)
+   - **CS03** - 寄賣日期
+   - **CS04** - 寄賣數量
+   - **CS05** - 客戶代號
+   - **CS06** - 預期歸還日期
+   - **CS07** - 已結算數量
+   - **CS08** - 寄賣狀態 (O=開放、C=已結算、R=已歸還)
+
+### 第二階段：程式修改
+
+1. **修改 W2BA01/W2BA02 (出貨主檔維護)**
+   - 新增寄賣相關欄位的輸入與顯示
+   - 增加寄賣類型選項，包括"R1D3"
+   - 修改保存邏輯，確保寄賣資訊正確儲存
+
+2. **修改 W2BB01/W2BB03 (出貨明細處理)**
+   - 讀取主檔寄賣標識，調整處理邏輯
+   - 對寄賣類型的出貨，生成對應的寄賣庫存記錄
+   - 修改數量計算邏輯，寄賣不直接減少主庫存
+
+3. **修改 W2IV01/W2IV05 (庫存處理)**
+   - 調整庫存扣減邏輯，區分一般出貨與寄賣出貨
+   - 增加「寄賣庫存」計算欄位
+   - 修改庫存查詢，顯示實際庫存與寄賣在外數量
+
+4. **建立 W2CS01 (寄賣庫存維護)**
+   - 實現寄賣庫存的新增、修改、結算功能
+   - 提供寄賣庫存狀態查詢與追蹤
+   - 與主庫存系統整合，確保數據一致性
+
+5. **建立 W2CS02 (寄賣報表程式)**
+   - 生成寄賣庫存明細報表
+   - 提供按日期、客戶、產品的寄賣狀況查詢
+   - 設計預警機制，標示逾期未結算的寄賣品
+
+### 第三階段：資料轉換與測試
+
+1. **資料識別與轉換**
+   - 開發臨時程式 **W2TEMP01**，識別現有『R1D3』寄賣記錄
+   - 建立資料轉換批次 **W2BATCH01**，填充新增欄位
+   - 生成初始寄賣庫存檔案
+
+2. **功能測試**
+   - 對修改後的出貨程式進行測試
+   - 驗證寄賣出貨不再直接扣減庫存
+   - 測試庫存報表顯示的準確性
+
+3. **整合測試**
+   - 測試寄賣出貨的全流程
+   - 驗證寄賣結算對庫存的影響
+   - 確認報表數據的一致性
+
+### 第四階段：上線與使用者培訓
+
+1. **程式部署**
+   - 按順序部署修改後的程式
+   - 執行資料轉換批次
+   - 驗證系統運行狀態
+
+2. **使用者培訓**
+   - 培訓出貨作業人員使用新的寄賣功能
+   - 培訓庫存管理人員解讀新的報表
+   - 提供操作手冊與常見問題解答
+
+## 實施時程建議
+
+1. **規劃與分析** - 1週
+   - 詳細審查現有程式
+   - 確認修改範圍與影響
+
+2. **程式修改** - 3週
+   - 資料結構調整 (1週)
+   - 程式修改與新增 (2週)
+
+3. **測試與轉換** - 2週
+   - 單元測試 (1週)
+   - 整合測試與資料轉換 (1週)
+
+4. **上線與培訓** - 1週
+   - 系統上線 (2天)
+   - 使用者培訓 (3天)
+
+透過以上修改，系統將能正確處理『R1D3』寄賣出貨，實現準確的庫存管理與報表生成，解決目前直接扣減庫存的問題。
+
+# W2BA01 出貨主檔維護程式修改 (IBM RPG)
+
+以下是針對 W2BA01 出貨主檔維護程式的 IBM RPG 修改內容，主要增加寄賣相關欄位的處理：
+
+```
+      * 修改 W2BA01 - 出貨主檔維護程式
+      * 增加寄賣標識、寄賣類型及預計結算日期欄位
+      
+     F* 檔案定義區段修改
+     FBAUPD    UF A E           K DISK                  
+     F                                     RENAME(BAREC:BAREC2)
+     F* 增加寄賣庫存檔案參照
+     FCSPF     IF   E           K DISK    
+     F                                     RENAME(CSREC:CSREC1)
+
+     D* 數據結構定義增加
+     D BAREC2         DS                  
+     D  BA01                 1      8  0  
+     D  BA02                 9     13     
+     D  BA03                14     25     
+     D  BA04                26     36  2  
+     D  BA05                37     37     
+     D  BA06                38     39     
+     D  BA07                40    167     
+     D  BA08                168   169     
+     D  BA09                170   179     
+     D  BA10                180   180     
+     D  BA11                181   195     
+     D  BA12                196   200     
+     D* 新增寄賣相關欄位
+     D  BA13                201   201     
+     D  BA14                202   206     
+     D  BA15                207   214  0  
+     D  BAXX                215   222  0  
+     D  BAYY                223   228  0  
+     D  BAZZ                229   238     
+
+     D* 寄賣庫存結構定義
+     D CSREC1         DS                  
+     D  CS01                 1     12     
+     D  CS02                13     21     
+     D  CS03                22     29  0  
+     D  CS04                30     37  0  
+     D  CS05                38     47     
+     D  CS06                48     55  0  
+     D  CS07                56     63  0  
+     D  CS08                64     64     
+
+     D* 工作變數定義
+     D wBA13           S              1A   INZ
+     D wBA14           S              5A   INZ
+     D wBA15           S              8P 0 INZ
+     D ConsignFlag     S              1A   INZ('N')
+     D i               S             10I 0
+     
+     C* 程式主體
+     C     *ENTRY        PLIST
+     C                   PARM                    OPTYPE           1
+     C                   PARM                    BAKEY           25
+     
+     C* 根據操作類型分流
+     C     OPTYPE        CASEQ     'A'           ADD
+     C                   CASEQ     'U'           UPDATE
+     C                   CASEQ     'D'           DELETE
+     C                   CASEQ     'I'           INQUIRY
+     C                   ENDCS
+
+     C* 新增記錄處理
+     C     ADD           TAG
+     C* 原有程式邏輯...
+     
+     C* 新增寄賣相關螢幕輸入處理
+     C     EXFMT         BASCRN1
+     C     *IN03         IFEQ      *ON
+     C                   RETURN
+     C                   ENDIF
+     
+     C* 處理寄賣標識
+     C                   EXSR      PRCCONSGN
+     
+     C* 更新記錄處理
+     C     UPDATE        TAG
+     C                   CHAIN     BAKEY         BAREC
+     C                   IFEQ      *IN61         *OFF
+     C* 原有程式邏輯...
+     
+     C* 更新寄賣相關欄位
+     C                   EXSR      PRCCONSGN
+     C                   ENDIF
+     
+     C* 查詢記錄處理
+     C     INQUIRY       TAG
+     C                   CHAIN     BAKEY         BAREC
+     C                   IFEQ      *IN61         *OFF
+     C                   MOVE      BA13          wBA13
+     C                   MOVE      BA14          wBA14
+     C                   MOVE      BA15          wBA15
+     C                   MOVE      'Y'           ConsignFlag
+     C                   ENDIF
+     C                   EXFMT     BASCRN1
+     
+     C* 刪除記錄處理
+     C     DELETE        TAG
+     C* 原有程式邏輯...
+     
+     C* 處理寄賣標識子程序
+     C     PRCCONSGN     BEGSR
+     C* 檢查寄賣標識
+     C     ConsignFlag   IFEQ      'Y'
+     C                   MOVE      'Y'           BA13
+     C                   MOVE      wBA14         BA14
+     C                   MOVE      wBA15         BA15
+     C                   ELSE
+     C                   MOVE      'N'           BA13
+     C                   MOVE      *BLANKS       BA14
+     C                   Z-ADD     0             BA15
+     C                   ENDIF
+     C                   ENDSR
+     
+     C* 結束程式
+     C                   SETON                                        LR
+     
+     
+      ** 以下為螢幕顯示檔案定義 (BASCRND) **
+      
+     A          R BASCRN1                   
+     A            BA01           8  0B  6  2TEXT('出貨日期')
+     A            BA02           5   B  6 15TEXT('出貨地點')
+     A            BA03          12   B  6 25TEXT('訂單編號')
+     A            BA04          11  2B  7  2TEXT('總金額')
+     A            BA05           1   B  7 20TEXT('狀態')
+     A            BA06           2   B  7 25TEXT('幣別')
+     A            BA07         128   B  8  2TEXT('備註')
+     A            BA08           2   B  9  2TEXT('未出數量')
+     A            BA09          10   B  9 15TEXT('區號人員')
+     A            BA11          15   B 10  2TEXT('VIP客戶-區號')
+     A            BA12           5   B 10 25TEXT('VIP客戶-代號')
+     A* 新增寄賣相關欄位顯示
+     A            ConsignFlag    1   B 11  2TEXT('寄賣標識')
+     A                                 11  4'(Y/N)'
+     A            wBA14          5   B 11 15TEXT('寄賣類型')
+     A                                 11 21'(R1D3等)'
+     A            wBA15          8  0B 11 30TEXT('預計結算日期')
+     A                                 11 42'(YYYYMMDD)'
+     A* 原有功能按鈕
+     A                                 22  2'F3=離開'
+     A                                 22 12'F5=重新整理'
+     A  03                             22 30'F12=取消'
+```
+
+## 修改說明
+
+1. **檔案定義部分**
+   - 增加 BAREC2 結構中的 BA13 (寄賣標識)、BA14 (寄賣類型) 和 BA15 (預計結算日期) 欄位
+   - 新增參照寄賣庫存檔案 CSPF
+
+2. **資料結構定義**
+   - BAREC2 資料結構擴展，增加新欄位
+   - 新增寄賣庫存結構定義 CSREC1
+   - 新增工作變數用於處理寄賣相關資訊
+
+3. **處理邏輯修改**
+   - 在查詢功能中增加寄賣相關欄位的顯示
+   - 新增/修改記錄時處理寄賣資訊
+   - 加入 PRCCONSGN 子程序專門處理寄賣標識相關邏輯
+
+4. **螢幕顯示修改**
+   - 在 BASCRN1 顯示格式中新增寄賣標識、寄賣類型和預計結算日期欄位
+   - 增加欄位說明提示
+
+這些修改使 W2BA01 程式能夠處理和維護『R1D3』類型的寄賣出貨資訊，為後續的寄賣庫存處理提供基礎。使用者現在可以在出貨主檔維護程式中直接標識寄賣出貨，並輸入相關資訊。
+
+# W2BA02 出貨單建立程式修改 (IBM RPG)
+
+以下是針對 W2BA02 出貨單建立程式的 IBM RPG 修改內容，主要處理寄賣出貨單的建立邏輯：
+
+```
+      * 修改 W2BA02 - 出貨單建立程式
+      * 增加寄賣出貨處理邏輯
+      
+     F* 檔案定義區段
+     FBAPF     UF A E           K DISK                  
+     F                                     RENAME(BAREC:BAREC1)
+     FBBPF     UF A E           K DISK                  
+     F                                     RENAME(BBREC:BBREC1)
+     F* 新增寄賣庫存檔案
+     FCSPF     UF A E           K DISK                  
+     F                                     RENAME(CSREC:CSREC1)
+     FORDSRC   IF   E           K DISK                  
+     F                                     RENAME(ORDREC:ORDREC1)
+     FIVTPF    IF   E           K DISK                  
+     F                                     RENAME(INVREC:INVREC1)
+
+     D* 資料結構定義
+     D BAREC1         DS                  
+     D  BA01                 1      8  0  
+     D  BA02                 9     13     
+     D  BA03                14     25     
+     D  BA04                26     36  2  
+     D  BA05                37     37     
+     D  BA06                38     39     
+     D  BA07                40    167     
+     D  BA08                168   169     
+     D  BA09                170   179     
+     D  BA10                180   180     
+     D  BA11                181   195     
+     D  BA12                196   200     
+     D* 新增寄賣欄位
+     D  BA13                201   201     
+     D  BA14                202   206     
+     D  BA15                207   214  0  
+     D  BAXX                215   222  0  
+     D  BAYY                223   228  0  
+     D  BAZZ                229   238     
+
+     D BBREC1         DS                  
+     D  BB01                 1     12     
+     D  BB02                13     18  0  
+     D  BB03                19     27     
+     D  BB04                28     35  0  
+     D  BB05                36     43  0  
+     D  BB06                44     51  0  
+     D  BB07                52     62  2  
+     D  BB08                63     71  2  
+     D  BB08A               72     80  2  
+     D  BB08B               81     89  2  
+     D  BB09                90     90     
+     D  BB10                91    218     
+     D  BB11                219   219     
+     D  BBXX                220   227  0  
+     D  BBYY                228   233  0  
+     D  BBZZ                234   243     
+
+     D* 寄賣庫存資料結構
+     D CSREC1         DS                  
+     D  CS01                 1     12     
+     D  CS02                13     21     
+     D  CS03                22     29  0  
+     D  CS04                30     37  0  
+     D  CS05                38     47     
+     D  CS06                48     55  0  
+     D  CS07                56     63  0  
+     D  CS08                64     64     
+
+     D* 訂單與庫存資料結構
+     D ORDREC1        DS                  
+     D* 訂單結構定義...
+     
+     D INVREC1        DS                  
+     D* 庫存結構定義...
+
+     D* 工作變數定義
+     D IsConsign       S              1A   INZ('N')
+     D ConsignType     S              5A   INZ
+     D SettleDate      S              8P 0 INZ
+     D CSKey           S             12A   INZ
+     D CSCount         S             10I 0 INZ
+     D i               S             10I 0
+     D CurDate         S              8P 0
+     D CurTime         S              6P 0
+     D CurUser         S             10A
+     
+     C* 程式主體
+     C     *ENTRY        PLIST
+     C                   PARM                    ORDNUM          12
+     C                   PARM                    SHPLOC           5
+     C                   PARM                    SHPDATE          8
+     C                   PARM                    CONSFLAG         1
+     C                   PARM                    CONSTYPE         5
+     C                   PARM                    SETTLDTE         8
+     
+     C* 取得當前日期時間與使用者
+     C                   TIME                    CurDate
+     C                   TIME                    CurTime
+     C                   MOVE      USRPRF        CurUser
+
+     C* 初始化寄賣標識
+     C     CONSFLAG      IFNE      *BLANKS
+     C                   MOVE      CONSFLAG      IsConsign
+     C                   ELSE
+     C                   MOVE      'N'           IsConsign
+     C                   ENDIF
+     
+     C* 初始化寄賣類型和結算日期
+     C     IsConsign     IFEQ      'Y'
+     C                   MOVE      CONSTYPE      ConsignType
+     C                   MOVE      SETTLDTE      SettleDate
+     C                   ENDIF
+     
+     C* 取得訂單資料
+     C     ORDNUM        CHAIN     ORDSRC
+     C                   IFEQ      *IN61         *ON
+     C                   RETURN
+     C                   ENDIF
+     
+     C* 建立出貨單主檔
+     C                   CLEAR                   BAREC1
+     C                   MOVE      SHPDATE       BA01
+     C                   MOVE      SHPLOC        BA02
+     C                   MOVE      ORDNUM        BA03
+     C* 原有程式邏輯...
+     
+     C* 新增寄賣相關欄位處理
+     C     IsConsign     IFEQ      'Y'
+     C                   MOVE      'Y'           BA13
+     C                   MOVE      ConsignType   BA14
+     C                   MOVE      SettleDate    BA15
+     C                   ELSE
+     C                   MOVE      'N'           BA13
+     C                   MOVE      *BLANKS       BA14
+     C                   Z-ADD     0             BA15
+     C                   ENDIF
+     
+     C* 填入更新資訊
+     C                   MOVE      CurDate       BAXX
+     C                   MOVE      CurTime       BAYY
+     C                   MOVE      CurUser       BAZZ
+     
+     C* 寫入出貨單主檔
+     C                   WRITE                   BAREC1
+     
+     C* 處理訂單明細轉出貨單明細
+     C* 原有程式邏輯...
+     
+     C* 增加寄賣庫存處理
+     C     IsConsign     IFEQ      'Y'
+     C                   EXSR      CONSIGNPROC
+     C                   ENDIF
+     
+     C* 結束程式
+     C                   SETON                                        LR
+     
+     C* 寄賣庫存處理子程序
+     C     CONSIGNPROC   BEGSR
+     C* 讀取出貨單明細
+     C     BA03          SETLL     BBPF
+     C     BA03          READE     BBPF                                 61
+     C     *IN61         DOWEQ     *OFF
+     
+     C* 建立寄賣庫存記錄
+     C                   CLEAR                   CSREC1
+     C* 產生寄賣庫存編號 BA01+BA02+順序號
+     C                   Z-ADD     1             CSCount
+     C                   MOVE      BA01          CS01
+     C                   CAT       BA02:0        CS01
+     C                   CAT       CSCount       CS01
+     
+     C                   MOVE      BB03          CS02
+     C                   MOVE      BA01          CS03
+     C                   MOVE      BB05          CS04
+     C* 客戶代號從訂單取得
+     C                   MOVE      BA11          CS05
+     C                   CAT       BA12:0        CS05
+     C                   MOVE      BA15          CS06
+     C                   Z-ADD     0             CS07
+     C                   MOVE      'O'           CS08
+     
+     C* 寫入寄賣庫存檔
+     C                   WRITE                   CSREC1
+     
+     C* 庫存處理 - 寄賣品不立即減庫存
+     C     BB03          CHAIN     IVTPF
+     C                   IFEQ      *IN61         *OFF
+     C* 更新寄賣庫存標識與數量
+     C* 此處程式邏輯因應庫存系統而異...
+     C                   ENDIF
+     
+     C* 處理下一筆明細
+     C                   ADD       1             CSCount
+     C     BA03          READE     BBPF                                 61
+     C                   ENDDO
+     C                   ENDSR
+```
+
+## 修改說明
+
+1. **檔案與資料結構擴展**
+   - 擴展 BAREC1 結構，增加 BA13 (寄賣標識)、BA14 (寄賣類型) 和 BA15 (預計結算日期)
+   - 新增寄賣庫存檔案 CSPF 及其資料結構 CSREC1
+   - 保留原有的訂單與庫存檔案參照
+
+2. **程式參數擴展**
+   - 增加三個輸入參數：CONSFLAG (寄賣標識)、CONSTYPE (寄賣類型) 和 SETTLDTE (結算日期)
+   - 這些參數用於從調用程序傳入寄賣相關資訊
+
+3. **寄賣標識處理邏輯**
+   - 初始化處理增加對寄賣標識、類型和結算日期的處理
+   - 在建立出貨單主檔時，根據寄賣標識填入相應欄位
+
+4. **寄賣庫存處理**
+   - 新增 CONSIGNPROC 子程序專門處理寄賣庫存
+   - 對每一筆出貨明細建立對應的寄賣庫存記錄
+   - 生成唯一的寄賣庫存編號
+   - 記錄相關的產品、數量、客戶和日期資訊
+   - 設置初始寄賣狀態為 'O' (開放)
+
+5. **庫存處理邏輯修改**
+   - 針對寄賣出貨，不立即從主庫存扣減
+   - 而是在寄賣庫存系統中記錄相關資訊
+   - 為庫存報表提供正確的寄賣資訊來源
+
+這些修改使 W2BA02 程式能夠正確處理『R1D3』類型的寄賣出貨情況，建立適當的出貨單記錄，同時在寄賣庫存系統中登記詳細資訊，避免直接從庫存中扣除寄賣出貨數量，為庫存報表提供正確的數據基礎。
+
+# W2BA05 出貨狀態處理程式修改 (IBM RPG)
+
+以下是針對 W2BA05 出貨狀態處理程式的 IBM RPG 修改內容，主要處理寄賣出貨的狀態變更邏輯：
+
+```
+      * 修改 W2BA05 - 出貨狀態處理程式
+      * 增加寄賣出貨狀態處理邏輯
+      
+     F* 檔案定義區段
+     FBAPF     UF A E           K DISK                  
+     F                                     RENAME(BAREC:BAREC1)
+     FBBPF     UF A E           K DISK                  
+     F                                     RENAME(BBREC:BBREC1)
+     F* 新增寄賣庫存檔案
+     FCSPF     UF A E           K DISK                  
+     F                                     RENAME(CSREC:CSREC1)
+     F* 新增歷史檔案
+     FBEPF     UF A E           K DISK                  
+     F                                     RENAME(BEREC:BEREC1)
+     FBFPF     UF A E           K DISK                  
+     F                                     RENAME(BFREC:BFREC1)
+     F* 庫存主檔
+     FIVTPF    UF A E           K DISK                  
+     F                                     RENAME(INVREC:INVREC1)
+     
+     D* 資料結構定義
+     D BAREC1         DS                  
+     D  BA01                 1      8  0  
+     D  BA02                 9     13     
+     D  BA03                14     25     
+     D  BA04                26     36  2  
+     D  BA05                37     37     
+     D  BA06                38     39     
+     D  BA07                40    167     
+     D  BA08                168   169     
+     D  BA09                170   179     
+     D  BA10                180   180     
+     D  BA11                181   195     
+     D  BA12                196   200     
+     D* 新增寄賣欄位
+     D  BA13                201   201     
+     D  BA14                202   206     
+     D  BA15                207   214  0  
+     D  BAXX                215   222  0  
+     D  BAYY                223   228  0  
+     D  BAZZ                229   238     
+
+     D BBREC1         DS                  
+     D* 明細檔結構定義...
+
+     D* 寄賣庫存資料結構
+     D CSREC1         DS                  
+     D  CS01                 1     12     
+     D  CS02                13     21     
+     D  CS03                22     29  0  
+     D  CS04                30     37  0  
+     D  CS05                38     47     
+     D  CS06                48     55  0  
+     D  CS07                56     63  0  
+     D  CS08                64     64     
+
+     D* 歷史檔案結構
+     D BEREC1         DS                  
+     D* 歷史主檔結構定義...
+     
+     D BFREC1         DS                  
+     D* 歷史明細結構定義...
+
+     D* 庫存結構
+     D INVREC1        DS                  
+     D* 庫存結構定義...
+
+     D* 工作變數定義
+     D wBAKey          S             25A   INZ
+     D wStatus         S              1A   INZ
+     D wPrevStatus     S              1A   INZ
+     D IsConsign       S              1A   INZ('N')
+     D DoInvAdj        S              1A   INZ('Y')
+     D CurDate         S              8P 0
+     D CurTime         S              6P 0
+     D CurUser         S             10A
+     D i               S             10I 0
+     D CSPrefix        S             13A   INZ
+     
+     C* 程式主體
+     C     *ENTRY        PLIST
+     C                   PARM                    BAKEY           25
+     C                   PARM                    NEWSTAT          1
+     C                   PARM                    INVADJ           1
+     
+     C* 取得當前日期時間與使用者
+     C                   TIME                    CurDate
+     C                   TIME                    CurTime
+     C                   MOVE      USRPRF        CurUser
+     
+     C* 初始化參數
+     C                   MOVE      BAKEY         wBAKey
+     C                   MOVE      NEWSTAT       wStatus
+     C                   MOVE      INVADJ        DoInvAdj
+     
+     C* 讀取出貨單主檔
+     C     wBAKey        CHAIN     BAPF
+     C                   IFEQ      *IN61         *ON
+     C                   RETURN
+     C                   ENDIF
+     
+     C* 保存原狀態
+     C                   MOVE      BA05          wPrevStatus
+     
+     C* 檢查是否為寄賣出貨
+     C                   MOVE      'N'           IsConsign
+     C     BA13          IFEQ      'Y'
+     C                   MOVE      'Y'           IsConsign
+     C                   ENDIF
+     
+     C* 處理狀態變更
+     C     wStatus       IFEQ      'E'           # 結案處理
+     C                   EXSR      CLOSESHIPMT
+     C                   ELSE
+     C     wStatus       IFEQ      'P'           # 處理中
+     C                   EXSR      PROCSHIPMT
+     C                   ENDIF
+     C                   ENDIF
+     
+     C* 更新主檔狀態
+     C                   MOVE      wStatus       BA05
+     C                   MOVE      CurDate       BAXX
+     C                   MOVE      CurTime       BAYY
+     C                   MOVE      CurUser       BAZZ
+     C                   UPDATE                  BAREC1
+     
+     C* 結束程式
+     C                   SETON                                        LR
+     
+     C* 出貨單結案處理
+     C     CLOSESHIPMT   BEGSR
+     C* 檢查前置狀態
+     C     wPrevStatus   IFNE      'E'
+     
+     C* 更新明細狀態
+     C     BA03          SETLL     BBPF
+     C     BA03          READE     BBPF                                 61
+     C     *IN61         DOWEQ     *OFF
+     C* 更新明細狀態為已結案
+     C                   MOVE      'C'           BB09
+     C                   UPDATE                  BBREC1
+     
+     C* 處理庫存調整
+     C     DoInvAdj      IFEQ      'Y'
+     C     IsConsign     IFEQ      'N'           # 非寄賣出貨正常扣庫存
+     C                   EXSR      ADJINVENTORY
+     C                   ELSE                    # 寄賣出貨特殊處理
+     C                   EXSR      CONSIGNINV
+     C                   ENDIF
+     C                   ENDIF
+     
+     C* 處理下一筆明細
+     C     BA03          READE     BBPF                                 61
+     C                   ENDDO
+     
+     C* 建立歷史記錄
+     C                   EXSR      CREATEHIST
+     
+     C                   ENDIF
+     C                   ENDSR
+     
+     C* 出貨處理中狀態處理
+     C     PROCSHIPMT    BEGSR
+     C* 檢查前置狀態
+     C     wPrevStatus   IFNE      'P'
+     
+     C* 更新明細狀態
+     C     BA03          SETLL     BBPF
+     C     BA03          READE     BBPF                                 61
+     C     *IN61         DOWEQ     *OFF
+     C* 更新明細狀態為處理中
+     C                   MOVE      'B'           BB09
+     C                   UPDATE                  BBREC1
+     
+     C* 處理下一筆明細
+     C     BA03          READE     BBPF                                 61
+     C                   ENDDO
+     
+     C                   ENDIF
+     C                   ENDSR
+     
+     C* 一般庫存調整處理
+     C     ADJINVENTORY  BEGSR
+     C* 原有庫存扣減邏輯...
+     C                   ENDSR
+     
+     C* 寄賣庫存處理
+     C     CONSIGNINV    BEGSR
+     C* 建立寄賣庫存查詢前綴
+     C                   MOVE      BA01          CSPrefix
+     C                   CAT       BA02:0        CSPrefix
+     
+     C* 尋找相應的寄賣庫存記錄
+     C     CSPrefix      SETLL     CSPF
+     C     CSPrefix      READE     CSPF                                 61
+     C     *IN61         DOWEQ     *OFF
+     
+     C* 檢查產品編號是否匹配
+     C     CS02          IFEQ      BB03
+     
+     C* 找到匹配的寄賣記錄，更新狀態
+     C     wStatus       IFEQ      'E'           # 結案時
+     C* 根據寄賣類型決定處理方式
+     C     BA14          IFEQ      'R1D3'        # R1D3類型
+     C* R1D3類型的特殊處理邏輯
+     C                   MOVE      'C'           CS08  # 更新為已結算
+     C                   MOVE      CS04          CS07  # 設定已結算數量
+     C                   ELSE                    # 其他類型
+     C                   MOVE      'C'           CS08
+     C                   ENDIF
+     
+     C* 根據寄賣結算狀態調整實際庫存
+     C* 此處可依據業務需求決定是否實際扣減庫存
+     C* 例如：已結算的寄賣品才實際扣減庫存
+     C                   ENDIF
+     
+     C* 更新寄賣庫存記錄
+     C                   UPDATE                  CSREC1
+     C                   ENDIF
+     
+     C* 處理下一筆寄賣記錄
+     C     CSPrefix      READE     CSPF                                 61
+     C                   ENDDO
+     C                   ENDSR
+     
+     C* 建立歷史記錄處理
+     C     CREATEHIST    BEGSR
+     C* 歷史記錄建立邏輯...
+     C* 根據是否為寄賣出貨，在歷史記錄中增加標識
+     C                   ENDSR
+```
+
+## 修改說明
+
+1. **檔案與資料結構擴展**
+   - 增加寄賣庫存檔案 CSPF 及其資料結構
+   - 擴展 BAREC1 結構，包含寄賣相關欄位
+   - 保留原有的歷史檔案與庫存檔案參照
+
+2. **狀態變更處理邏輯擴展**
+   - 增加寄賣出貨標識檢查
+   - 根據寄賣標識決定後續處理流程
+   - 保持原有的狀態變更主流程（O→P→E）
+
+3. **結案處理邏輯調整**
+   - 在 CLOSESHIPMT 子程序中區分寄賣與非寄賣出貨
+   - 非寄賣出貨按原邏輯處理庫存調整
+   - 寄賣出貨則通過 CONSIGNINV 子程序特別處理
+
+4. **寄賣庫存特殊處理**
+   - 新增 CONSIGNINV 子程序專門處理寄賣出貨的結案邏輯
+   - 根據寄賣庫存前綴（出貨日期+地點）查找相關寄賣記錄
+   - 針對『R1D3』類型的寄賣出貨進行特殊處理
+   - 更新寄賣庫存記錄的狀態與結算數量
+   - 根據業務需求決定是否實際扣減庫存
+
+5. **處理中狀態邏輯**
+   - 保持原有的處理中（P）狀態處理邏輯
+   - 僅更新明細狀態，不涉及庫存處理
+
+6. **歷史記錄處理**
+   - 在建立歷史記錄時考慮寄賣標識
+   - 確保歷史記錄能夠反映出是否為寄賣出貨
+
+這些修改使 W2BA05 程式能夠正確處理寄賣出貨的狀態變更，特別是：
+
+- 維持原有的出貨狀態流程：開放(O) → 處理中(P) → 結案(E)
+- 區分寄賣出貨與一般出貨的庫存處理邏輯
+- 針對『R1D3』類型的寄賣出貨進行特殊處理
+- 確保寄賣出貨不會在流程中間階段就直接扣減庫存
+- 建立完整的寄賣庫存記錄，支援庫存報表的正確顯示
+
+通過這些修改，系統將能夠正確管理寄賣出貨的整個生命週期，避免錯誤地從庫存中扣除寄賣品數量，同時提供準確的報表數據。
+
+# W2BB01 出貨明細維護程式修改 (IBM RPG)
+
+以下是針對 W2BB01 出貨明細維護程式的 IBM RPG 修改內容，主要增加寄賣相關處理邏輯：
+
+```
+      * 修改 W2BB01 - 出貨明細維護程式
+      * 增加寄賣出貨明細處理邏輯
+      
+     F* 檔案定義區段
+     FBAPF     IF   E           K DISK                  
+     F                                     RENAME(BAREC:BAREC1)
+     FBBPF     UF A E           K DISK                  
+     F                                     RENAME(BBREC:BBREC1)
+     F* 新增寄賣庫存檔案
+     FCSPF     UF A E           K DISK                  
+     F                                     RENAME(CSREC:CSREC1)
+     F* 產品主檔
+     FPDTPF    IF   E           K DISK                  
+     F                                     RENAME(PDTREC:PDTREC1)
+     F* 庫存主檔
+     FIVTPF    IF   E           K DISK                  
+     F                                     RENAME(INVREC:INVREC1)
+
+     D* 資料結構定義
+     D BAREC1         DS                  
+     D  BA01                 1      8  0  
+     D  BA02                 9     13     
+     D  BA03                14     25     
+     D  BA04                26     36  2  
+     D  BA05                37     37     
+     D  BA06                38     39     
+     D  BA07                40    167     
+     D  BA08                168   169     
+     D  BA09                170   179     
+     D  BA10                180   180     
+     D  BA11                181   195     
+     D  BA12                196   200     
+     D* 新增寄賣欄位
+     D  BA13                201   201     
+     D  BA14                202   206     
+     D  BA15                207   214  0  
+     D  BAXX                215   222  0  
+     D  BAYY                223   228  0  
+     D  BAZZ                229   238     
+
+     D BBREC1         DS                  
+     D  BB01                 1     12     
+     D  BB02                13     18  0  
+     D  BB03                19     27     
+     D  BB04                28     35  0  
+     D  BB05                36     43  0  
+     D  BB06                44     51  0  
+     D  BB07                52     62  2  
+     D  BB08                63     71  2  
+     D  BB08A               72     80  2  
+     D  BB08B               81     89  2  
+     D  BB09                90     90     
+     D  BB10                91    218     
+     D  BB11                219   219     
+     D  BBXX                220   227  0  
+     D  BBYY                228   233  0  
+     D  BBZZ                234   243     
+
+     D* 寄賣庫存資料結構
+     D CSREC1         DS                  
+     D  CS01                 1     12     
+     D  CS02                13     21     
+     D  CS03                22     29  0  
+     D  CS04                30     37  0  
+     D  CS05                38     47     
+     D  CS06                48     55  0  
+     D  CS07                56     63  0  
+     D  CS08                64     64     
+
+     D* 產品與庫存資料結構
+     D PDTREC1        DS                  
+     D* 產品結構定義...
+     
+     D INVREC1        DS                  
+     D* 庫存結構定義...
+
+     D* 工作變數定義
+     D wBBKey          S             18A   INZ
+     D wBBOp           S              1A   INZ
+     D wPrevQty        S              8P 0 INZ
+     D wNewQty         S              8P 0 INZ
+     D IsConsign       S              1A   INZ('N')
+     D ConsignType     S              5A   INZ
+     D CSPrefix        S             13A   INZ
+     D CSKey           S             21A   INZ
+     D CSFound         S              1A   INZ('N')
+     D CSCount         S             10I 0 INZ
+     D CurDate         S              8P 0
+     D CurTime         S              6P 0
+     D CurUser         S             10A
+     
+     C* 程式主體
+     C     *ENTRY        PLIST
+     C                   PARM                    BBKEY           18
+     C                   PARM                    OPTYPE           1
+     C                   PARM                    NEWQTY           8 0
+     
+     C* 取得當前日期時間與使用者
+     C                   TIME                    CurDate
+     C                   TIME                    CurTime
+     C                   MOVE      USRPRF        CurUser
+
+     C* 初始化參數
+     C                   MOVE      BBKEY         wBBKey
+     C                   MOVE      OPTYPE        wBBOp
+     C                   MOVE      NEWQTY        wNewQty
+     
+     C* 解析主鍵 - 訂單編號和項次
+     C                   MOVE      %SUBST(wBBKey:1:12) BB01
+     C                   MOVE      %SUBST(wBBKey:13:6)  BB02
+     
+     C* 讀取出貨明細
+     C     wBBKey        CHAIN     BBPF
+     C                   IFEQ      *IN61         *ON
+     C                   RETURN
+     C                   ENDIF
+     
+     C* 記住原數量
+     C                   MOVE      BB05          wPrevQty
+     
+     C* 檢查對應的出貨主檔是否為寄賣出貨
+     C     BB01          CHAIN     BAPF
+     C                   IFEQ      *IN61         *ON
+     C                   MOVE      'N'           IsConsign
+     C                   ELSE
+     C     BA13          IFEQ      'Y'
+     C                   MOVE      'Y'           IsConsign
+     C                   MOVE      BA14          ConsignType
+     C                   ENDIF
+     C                   ENDIF
+     
+     C* 根據操作類型處理
+     C     wBBOp         CASEQ     'A'           ADD
+     C                   CASEQ     'U'           UPDATE
+     C                   CASEQ     'D'           DELETE
+     C                   CASEQ     'I'           INQUIRY
+     C                   ENDCS
+     
+     C* 結束程式
+     C                   SETON                                        LR
+     
+     C* 新增明細處理
+     C     ADD           TAG
+     C* 原有新增明細邏輯...
+     
+     C* 增加寄賣庫存處理
+     C     IsConsign     IFEQ      'Y'
+     C                   EXSR      ADDCONSIGN
+     C                   ENDIF
+     C                   RETURN
+     
+     C* 更新明細處理
+     C     UPDATE        TAG
+     C* 檢查數量是否變更
+     C     wNewQty       IFNE      wPrevQty
+     
+     C* 更新出貨數量
+     C                   MOVE      wNewQty       BB05
+     
+     C* 重新計算未出數量
+     C                   SUB       BB05          BB04
+     C                   ADD       BB06          BB04
+     
+     C* 填入更新資訊
+     C                   MOVE      CurDate       BBXX
+     C                   MOVE      CurTime       BBYY
+     C                   MOVE      CurUser       BBZZ
+     
+     C* 更新明細記錄
+     C                   UPDATE                  BBREC1
+     
+     C* 處理寄賣庫存更新
+     C     IsConsign     IFEQ      'Y'
+     C                   EXSR      UPDCONSIGN
+     C                   ENDIF
+     
+     C                   ENDIF
+     C                   RETURN
+     
+     C* 刪除明細處理
+     C     DELETE        TAG
+     C* 原有刪除邏輯...
+     
+     C* 處理寄賣庫存刪除
+     C     IsConsign     IFEQ      'Y'
+     C                   EXSR      DELCONSIGN
+     C                   ENDIF
+     C                   RETURN
+     
+     C* 查詢明細處理
+     C     INQUIRY       TAG
+     C* 原有查詢邏輯...
+     C                   RETURN
+     
+     C* 新增寄賣庫存處理子程序
+     C     ADDCONSIGN    BEGSR
+     C* 建立寄賣庫存查詢前綴 (出貨日期+地點)
+     C                   MOVE      BA01          CSPrefix
+     C                   CAT       BA02:0        CSPrefix
+     
+     C* 檢查是否已存在相應的寄賣庫存記錄
+     C     CSPrefix      SETLL     CSPF
+     C     CSPrefix      READE     CSPF                                 61
+     C     *IN61         DOWEQ     *OFF
+     
+     C* 檢查產品編號是否匹配
+     C     CS02          IFEQ      BB03
+     C                   MOVE      'Y'           CSFound
+     C                   ENDIF
+     
+     C* 處理下一筆寄賣記錄
+     C     CSPrefix      READE     CSPF                                 61
+     C                   ENDDO
+     
+     C* 如果沒有找到匹配記錄，創建新的寄賣庫存記錄
+     C     CSFound       IFEQ      'N'
+     
+     C* 建立寄賣庫存記錄
+     C                   CLEAR                   CSREC1
+     C* 產生寄賣庫存編號 BA01+BA02+序號
+     C                   Z-ADD     1             CSCount
+     C                   MOVE      BA01          CS01
+     C                   CAT       BA02:0        CS01
+     C                   CAT       CSCount       CS01
+     
+     C                   MOVE      BB03          CS02
+     C                   MOVE      BA01          CS03
+     C                   MOVE      BB05          CS04
+     C* 客戶代號從出貨主檔取得
+     C                   MOVE      BA11          CS05
+     C                   CAT       BA12:0        CS05
+     C                   MOVE      BA15          CS06
+     C                   Z-ADD     0             CS07
+     C                   MOVE      'O'           CS08
+     
+     C* 寫入寄賣庫存檔
+     C                   WRITE                   CSREC1
+     C                   ENDIF
+     C                   ENDSR
+     
+     C* 更新寄賣庫存處理子程序
+     C     UPDCONSIGN    BEGSR
+     C* 建立寄賣庫存查詢前綴
+     C                   MOVE      BA01          CSPrefix
+     C                   CAT       BA02:0        CSPrefix
+     
+     C* 尋找相應的寄賣庫存記錄
+     C     CSPrefix      SETLL     CSPF
+     C     CSPrefix      READE     CSPF                                 61
+     C     *IN61         DOWEQ     *OFF
+     
+     C* 檢查產品編號是否匹配
+     C     CS02          IFEQ      BB03
+     
+     C* 更新寄賣數量
+     C                   MOVE      wNewQty       CS04
+     
+     C* 更新寄賣庫存記錄
+     C                   UPDATE                  CSREC1
+     C                   ENDIF
+     
+     C* 處理下一筆寄賣記錄
+     C     CSPrefix      READE     CSPF                                 61
+     C                   ENDDO
+     C                   ENDSR
+     
+     C* 刪除寄賣庫存處理子程序
+     C     DELCONSIGN    BEGSR
+     C* 建立寄賣庫存查詢前綴
+     C                   MOVE      BA01          CSPrefix
+     C                   CAT       BA02:0        CSPrefix
+     
+     C* 尋找相應的寄賣庫存記錄
+     C     CSPrefix      SETLL     CSPF
+     C     CSPrefix      READE     CSPF                                 61
+     C     *IN61         DOWEQ     *OFF
+     
+     C* 檢查產品編號是否匹配
+     C     CS02          IFEQ      BB03
+     
+     C* 刪除寄賣庫存記錄
+     C                   DELETE                  CSREC1
+     C                   ENDIF
+     
+     C* 處理下一筆寄賣記錄
+     C     CSPrefix      READE     CSPF                                 61
+     C                   ENDDO
+     C                   ENDSR
+```
+
+## 修改說明
+
+1. **檔案與資料結構擴展**
+   - 擴展出貨主檔結構 BAREC1，包含寄賣相關欄位
+   - 新增寄賣庫存檔案 CSPF 及其資料結構 CSREC1
+   - 保留原有的產品及庫存檔案參照
+
+2. **寄賣標識檢查**
+   - 在處理明細前，先檢查對應的出貨主檔是否為寄賣出貨
+   - 讀取寄賣標識 (BA13) 和寄賣類型 (BA14)
+   - 根據寄賣標識決定後續處理邏輯
+
+3. **新增明細處理擴展**
+   - 在 ADD 處理流程中，增加寄賣庫存處理
+   - 對寄賣出貨的明細，通過 ADDCONSIGN 子程序創建對應的寄賣庫存記錄
+   - 為每個寄賣出貨明細項目分配唯一的寄賣庫存編號
+
+4. **更新明細處理擴展**
+   - 在 UPDATE 處理流程中，增加寄賣庫存數量更新
+   - 通過 UPDCONSIGN 子程序找到相應的寄賣庫存記錄
+   - 同步更新寄賣庫存數量與出貨明細數量
+
+5. **刪除明細處理擴展**
+   - 在 DELETE 處理流程中，增加寄賣庫存記錄刪除
+   - 通過 DELCONSIGN 子程序找到並刪除相應的寄賣庫存記錄
+   - 確保寄賣庫存記錄與出貨明細保持一致
+
+6. **寄賣庫存處理子程序**
+   - ADDCONSIGN：創建新的寄賣庫存記錄
+     - 檢查是否已存在相應記錄
+     - 生成唯一的寄賣庫存編號
+     - 記錄寄賣相關資訊
+
+   - UPDCONSIGN：更新現有寄賣庫存記錄
+     - 根據出貨日期、地點和產品編號查找記錄
+     - 更新寄賣數量
+
+   - DELCONSIGN：刪除寄賣庫存記錄
+     - 查找對應的寄賣庫存記錄
+     - 執行刪除操作
+
+這些修改使 W2BB01 程式能夠在維護出貨明細時同步維護寄賣庫存記錄，確保：
+
+- 新增寄賣出貨明細時，自動建立對應的寄賣庫存記錄
+- 更新寄賣出貨明細數量時，同步更新寄賣庫存數量
+- 刪除寄賣出貨明細時，同步刪除對應的寄賣庫存記錄
+
+這樣寄賣庫存系統與出貨管理系統將保持數據一致性，避免『R1D3』類型的寄賣出貨數量被直接從庫存中扣除，同時為庫存報表提供正確的寄賣資訊來源。
+
+# W2BB03 產品出貨登錄程式修改 (IBM RPG)
+
+以下是針對 W2BB03 產品出貨登錄程式的 IBM RPG 修改內容，主要擴充寄賣出貨處理功能：
+
+```
+      * 修改 W2BB03 - 產品出貨登錄程式
+      * 增加寄賣出貨登錄處理邏輯
+      
+     F* 檔案定義區段
+     FBAPF     IF   E           K DISK                  
+     F                                     RENAME(BAREC:BAREC1)
+     FBBPF     UF A E           K DISK                  
+     F                                     RENAME(BBREC:BBREC1)
+     F* 新增寄賣庫存檔案
+     FCSPF     UF A E           K DISK                  
+     F                                     RENAME(CSREC:CSREC1)
+     F* 產品主檔
+     FPDTPF    IF   E           K DISK                  
+     F                                     RENAME(PDTREC:PDTREC1)
+     F* 庫存主檔
+     FIVTPF    UF A E           K DISK                  
+     F                                     RENAME(INVREC:INVREC1)
+     F* 螢幕顯示檔案
+     FBBNSCR   CF   E             WORKSTN
+     F                                     RENAME(SCRREC:SCRREC1)
+
+     D* 資料結構定義
+     D BAREC1         DS                  
+     D  BA01                 1      8  0  
+     D  BA02                 9     13     
+     D  BA03                14     25     
+     D  BA04                26     36  2  
+     D  BA05                37     37     
+     D  BA06                38     39     
+     D  BA07                40    167     
+     D  BA08                168   169     
+     D  BA09                170   179     
+     D  BA10                180   180     
+     D  BA11                181   195     
+     D  BA12                196   200     
+     D* 新增寄賣欄位
+     D  BA13                201   201     
+     D  BA14                202   206     
+     D  BA15                207   214  0  
+     D  BAXX                215   222  0  
+     D  BAYY                223   228  0  
+     D  BAZZ                229   238     
+
+     D BBREC1         DS                  
+     D  BB01                 1     12     
+     D  BB02                13     18  0  
+     D  BB03                19     27     
+     D  BB04                28     35  0  
+     D  BB05                36     43  0  
+     D  BB06                44     51  0  
+     D  BB07                52     62  2  
+     D  BB08                63     71  2  
+     D  BB08A               72     80  2  
+     D  BB08B               81     89  2  
+     D  BB09                90     90     
+     D  BB10                91    218     
+     D  BB11                219   219     
+     D  BBXX                220   227  0  
+     D  BBYY                228   233  0  
+     D  BBZZ                234   243     
+
+     D* 寄賣庫存資料結構
+     D CSREC1         DS                  
+     D  CS01                 1     12     
+     D  CS02                13     21     
+     D  CS03                22     29  0  
+     D  CS04                30     37  0  
+     D  CS05                38     47     
+     D  CS06                48     55  0  
+     D  CS07                56     63  0  
+     D  CS08                64     64     
+
+     D* 產品與庫存資料結構
+     D PDTREC1        DS                  
+     D* 產品結構定義...
+     
+     D INVREC1        DS                  
+     D* 庫存結構定義...
+
+     D* 螢幕顯示格式
+     D SCRREC1        DS                  
+     D* 原有螢幕欄位...
+     D* 新增寄賣相關螢幕欄位
+     D  SCRCONS              400   400    
+     D  SCRCONTYP            401   405    
+     D  SCRSETTDT            406   413  0
+
+     D* 工作變數定義
+     D wBAKey          S             25A   INZ
+     D wNextItem       S              6P 0 INZ
+     D IsConsign       S              1A   INZ('N')
+     D ConsignType     S              5A   INZ
+     D SettleDate      S              8P 0 INZ
+     D CSPrefix        S             13A   INZ
+     D CSCount         S             10I 0 INZ
+     D CurDate         S              8P 0
+     D CurTime         S              6P 0
+     D CurUser         S             10A
+     D i               S             10I 0
+     D ErrorMsg        S             50A   INZ
+     
+     C* 程式主體
+     C     *ENTRY        PLIST
+     C                   PARM                    SHIPNUM         12
+     
+     C* 取得當前日期時間與使用者
+     C                   TIME                    CurDate
+     C                   TIME                    CurTime
+     C                   MOVE      USRPRF        CurUser
+
+     C* 初始化作業
+     C                   MOVE      SHIPNUM       wBAKey
+     
+     C* 讀取出貨主檔
+     C     wBAKey        CHAIN     BAPF
+     C                   IFEQ      *IN61         *ON
+     C                   MOVE      '出貨單不存在' ErrorMsg
+     C                   EXSR      SHOWMSG
+     C                   RETURN
+     C                   ENDIF
+     
+     C* 檢查出貨單狀態
+     C     BA05          IFNE      'O'
+     C     BA05          ANDNE     'P'
+     C                   MOVE      '出貨單狀態' ErrorMsg
+     C                   CAT       BA05          ErrorMsg
+     C                   CAT       '不可登錄'    ErrorMsg
+     C                   EXSR      SHOWMSG
+     C                   RETURN
+     C                   ENDIF
+     
+     C* 檢查是否為寄賣出貨
+     C                   MOVE      'N'           IsConsign
+     C     BA13          IFEQ      'Y'
+     C                   MOVE      'Y'           IsConsign
+     C                   MOVE      BA14          ConsignType
+     C                   MOVE      BA15          SettleDate
+     C                   ENDIF
+     
+     C* 取得下一個明細項次
+     C                   EXSR      GETNEXTITEM
+     
+     C* 顯示出貨登錄螢幕
+     C                   EXSR      SHOWSCREEN
+     
+     C* 結束程式
+     C                   SETON                                        LR
+     
+     C* 取得下一個明細項次子程序
+     C     GETNEXTITEM   BEGSR
+     C                   Z-ADD     0             wNextItem
+     
+     C* 找出目前最大項次
+     C     BB01          SETLL     BBPF
+     C     BB01          READE     BBPF                                 61
+     C     *IN61         DOWEQ     *OFF
+     C                   IF        BB02 > wNextItem
+     C                   MOVE      BB02          wNextItem
+     C                   ENDIF
+     C     BB01          READE     BBPF                                 61
+     C                   ENDDO
+     
+     C* 項次加1
+     C                   ADD       1             wNextItem
+     C                   ENDSR
+     
+     C* 顯示出貨登錄螢幕子程序
+     C     SHOWSCREEN    BEGSR
+     C* 清除螢幕欄位
+     C                   CLEAR                   SCRREC1
+     
+     C* 填入出貨主檔資訊
+     C                   MOVE      BA01          SCRDATE
+     C                   MOVE      BA02          SCRLOC
+     C                   MOVE      BA03          SCRORDNUM
+     C                   MOVE      wNextItem     SCRITEM
+     
+     C* 填入寄賣相關資訊
+     C     IsConsign     IFEQ      'Y'
+     C                   MOVE      'Y'           SCRCONS
+     C                   MOVE      ConsignType   SCRCONTYP
+     C                   MOVE      SettleDate    SCRSETTDT
+     C                   ENDIF
+     
+     C* 顯示螢幕
+     C                   DOW       *IN03 = *OFF
+     C                   EXFMT     MAINSCR
+     
+     C* 檢查功能鍵
+     C     *IN03         IFEQ      *ON
+     C                   LEAVE
+     C                   ENDIF
+     C     *IN12         IFEQ      *ON
+     C                   ITER
+     C                   ENDIF
+     
+     C* 處理輸入資料
+     C                   EXSR      PROCESSDATA
+     C                   ENDDO
+     C                   ENDSR
+     
+     C* 處理登錄資料子程序
+     C     PROCESSDATA   BEGSR
+     C* 檢查輸入資料
+     C                   EXSR      VALIDATEDATA
+     C     ErrorMsg      IFNE      *BLANKS
+     C                   EXSR      SHOWMSG
+     C                   RETURN
+     C                   ENDIF
+     
+     C* 新增出貨明細記錄
+     C                   CLEAR                   BBREC1
+     C                   MOVE      BA03          BB01
+     C                   MOVE      SCRITEM       BB02
+     C                   MOVE      SCRPRODUCT    BB03
+     C                   MOVE      SCRORDQTY     BB04
+     C                   MOVE      SCRSHIPQTY    BB05
+     C                   SUB       SCRSHIPQTY    BB04
+     C                   MOVE      BB04          BB06      # 未出數量
+     C                   MOVE      SCRPRICE      BB07
+     C                   MOVE      SCRFOBUNIT    BB08
+     C                   MOVE      SCRFHIUNIT    BB08A
+     C                   MOVE      SCRDTYUNIT    BB08B
+     C                   MOVE      'O'           BB09
+     C                   MOVE      SCRMEMO       BB10
+     C                   MOVE      'N'           BB11
+     C                   MOVE      CurDate       BBXX
+     C                   MOVE      CurTime       BBYY
+     C                   MOVE      CurUser       BBZZ
+     
+     C* 寫入出貨明細檔
+     C                   WRITE                   BBREC1
+     
+     C* 處理寄賣庫存
+     C     IsConsign     IFEQ      'Y'
+     C                   EXSR      PROCCONSIGN
+     C                   ENDIF
+     
+     C* 成功訊息
+     C                   MOVE      '登錄成功'    ErrorMsg
+     C                   EXSR      SHOWMSG
+     
+     C* 準備下一筆
+     C                   ADD       1             wNextItem
+     C                   CLEAR                   SCRREC1
+     C                   MOVE      wNextItem     SCRITEM
+     C                   ENDSR
+     
+     C* 寄賣庫存處理子程序
+     C     PROCCONSIGN   BEGSR
+     C* 建立寄賣庫存記錄
+     C                   CLEAR                   CSREC1
+     
+     C* 產生寄賣庫存編號 BA01+BA02+順序號
+     C                   Z-ADD     1             CSCount
+     C* 查找目前最大序號
+     C                   MOVE      BA01          CSPrefix
+     C                   CAT       BA02:0        CSPrefix
+     C     CSPrefix      SETLL     CSPF
+     C     CSPrefix      READE     CSPF                                 61
+     C     *IN61         DOWEQ     *OFF
+     C                   ADD       1             CSCount
+     C     CSPrefix      READE     CSPF                                 61
+     C                   ENDDO
+     
+     C* 產生寄賣庫存編號
+     C                   MOVE      CSPrefix      CS01
+     C                   CAT       CSCount       CS01
+     
+     C                   MOVE      BB03          CS02
+     C                   MOVE      BA01          CS03
+     C                   MOVE      BB05          CS04
+     C* 客戶代號從出貨主檔取得
+     C                   MOVE      BA11          CS05
+     C                   CAT       BA12:0        CS05
+     C                   MOVE      SettleDate    CS06
+     C                   Z-ADD     0             CS07
+     C                   MOVE      'O'           CS08
+     
+     C* 寫入寄賣庫存檔
+     C                   WRITE                   CSREC1
+     C                   ENDSR
+     
+     C* 驗證輸入資料子程序
+     C     VALIDATEDATA  BEGSR
+     C* 原有驗證邏輯...
+     
+     C* 新增寄賣相關驗證
+     C     IsConsign     IFEQ      'Y'
+     C     ConsignType   IFEQ      *BLANKS
+     C                   MOVE      '寄賣類型必填' ErrorMsg
+     C                   RETURN
+     C                   ENDIF
+     C     SettleDate    IFEQ      0
+     C                   MOVE      '結算日必填'  ErrorMsg
+     C                   RETURN
+     C                   ENDIF
+     C                   ENDIF
+     
+     C                   MOVE      *BLANKS       ErrorMsg
+     C                   ENDSR
+     
+     C* 顯示訊息子程序
+     C     SHOWMSG       BEGSR
+     C* 訊息顯示邏輯...
+     C                   ENDSR
+     
+     
+      ** 以下為螢幕顯示檔案定義 (BBNSCR) **
+      
+     A          R MAINSCR                     
+     A                                      BLINK
+     A                                  1  2'產品出貨登錄'
+     A                                  2  2'出貨單號:'
+     A            SCRORDNUM     12      2 12
+     A                                  3  2'出貨日期:'
+     A            SCRDATE        8  0   3 12
+     A                                  3 25'地點:'
+     A            SCRLOC         5      3 32
+     A                                  4  2'項次:'
+     A            SCRITEM        6  0   4 12
+     A                                  5  2'產品編號:'
+     A            SCRPRODUCT     9   B  5 12
+     A                                  6  2'訂單數量:'
+     A            SCRORDQTY      8  0B  6 12
+     A                                  7  2'出貨數量:'
+     A            SCRSHIPQTY     8  0B  7 12
+     A                                  8  2'單價:'
+     A            SCRPRICE      11  2B  8 12
+     A                                  9  2'FOB單價:'
+     A            SCRFOBUNIT     9  2B  9 12
+     A                                 10  2'FHI單價:'
+     A            SCRFHIUNIT     9  2B 10 12
+     A                                 11  2'關稅單價:'
+     A            SCRDTYUNIT     9  2B 11 12
+     A                                 12  2'備註:'
+     A            SCRMEMO      128   B 12 12
+     A* 新增寄賣相關欄位
+     A                                 14  2'寄賣標識:'
+     A            SCRCONS        1   O 14 12
+     A                                 15  2'寄賣類型:'
+     A            SCRCONTYP      5   O 15 12
+     A                                 16  2'預計結算日:'
+     A            SCRSETTDT      8  0O 16 12
+     A                                 18  2'F3=離開'
+     A                                 18 15'F5=清除'
+     A                                 18 30'F12=取消'
+     A  03                              
+     A  12                              
+```
+
+## 修改說明
+
+1. **檔案與資料結構擴展**
+   - 擴展出貨主檔結構 BAREC1，包含寄賣相關欄位
+   - 新增寄賣庫存檔案 CSPF 及其資料結構 CSREC1
+   - 擴展螢幕顯示格式，增加寄賣相關欄位
+
+2. **寄賣標識檢查與初始化**
+   - 讀取出貨主檔時，檢查是否為寄賣出貨 (BA13)
+   - 初始化寄賣類型 (BA14) 和預計結算日期 (BA15)
+   - 在螢幕顯示中呈現寄賣相關資訊
+
+3. **出貨登錄螢幕增強**
+   - 在 MAINSCR 顯示格式中新增寄賣標識、寄賣類型和預計結算日期欄位
+   - 對於寄賣出貨，這些欄位為顯示用 (Output Only)，來源為出貨主檔
+   - 提供明確的視覺提示，表明當前正在處理寄賣出貨
+
+4. **寄賣庫存處理**
+   - 新增 PROCCONSIGN 子程序專門處理寄賣庫存記錄的創建
+   - 為每筆寄賣出貨明細建立對應的寄賣庫存記錄
+   - 生成唯一的寄賣庫存編號：出貨日期 + 地點 + 順序號
+   - 記錄產品編號、出貨數量、客戶資訊和預計結算日期等
+
+5. **資料驗證增強**
+   - 在 VALIDATEDATA 子程序中增加寄賣相關驗證
+   - 確保寄賣出貨必須有寄賣類型
+   - 確保寄賣出貨必須有預計結算日期
+   - 提供適當的錯誤訊息
+
+6. **處理流程調整**
+   - 登錄出貨明細後，根據是否為寄賣出貨決定是否執行寄賣庫存處理
+   - 寄賣出貨同時在 BBPF (出貨明細檔) 和 CSPF (寄賣庫存檔) 建立記錄
+   - 寄賣庫存記錄與出貨明細有明確的關聯，便於後續追蹤和管理
+
+這些修改使 W2BB03 程式在登錄產品出貨時能夠正確處理寄賣出貨，主要優點包括：
+
+- 直觀的使用者界面，明確標示寄賣出貨資訊
+- 自動為寄賣出貨建立對應的寄賣庫存記錄
+- 確保寄賣出貨資料的完整性和有效性
+- 支援『R1D3』類型的寄賣品正確處理
+- 為庫存報表提供準確的寄賣資訊來源
+
+通過這些修改，出貨登錄作業人員可以輕鬆處理寄賣出貨，系統也能維護準確的寄賣庫存記錄，避免直接從庫存中扣除寄賣出貨數量。
