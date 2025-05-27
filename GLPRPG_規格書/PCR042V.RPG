@@ -1,0 +1,69 @@
+*---------------------------------------------------------------*
+*  程式名稱：PCR042V  參數驗證程式 (RPGII)
+*---------------------------------------------------------------*
+C     QTR_CODE    DS      1 0      * 季度代碼(1-4)
+C     YEAR        DS      4 0      * 年度
+C     COMP_OPT    DS      1        * 上季比較選項(Y/N)
+C     YTD_OPT     DS      1        * 年度累計選項(Y/N)
+C     ERROR_MSG   DS     80        * 錯誤訊息
+C     START_MONTH DS      2 0      * 起始月份
+C     END_MONTH   DS      2 0      * 結束月份
+C     MONTH_COUNT DS      2 0      * 已結帳月份計數
+C     MONTH_TOTAL DS      2 0      * 總月份數
+*---------------------------------------------------------------*
+C     *ENTRY    PLIST
+C               PARM    QTR_CODE
+C               PARM    YEAR
+C               PARM    COMP_OPT
+C               PARM    YTD_OPT
+C               PARM    ERROR_MSG
+*---------------------------------------------------------------*
+*  檢查季度代碼
+*---------------------------------------------------------------*
+C     QTR_CODE  IFGT    4
+C               MOVE    '無效的季度代碼' ERROR_MSG
+C               RETURN
+C               ENDIF
+*---------------------------------------------------------------*
+*  檢查年度
+*---------------------------------------------------------------*
+C     YEAR      IFLT    2000
+C               MOVE    '無效的年度' ERROR_MSG
+C               RETURN
+C               ENDIF
+*---------------------------------------------------------------*
+*  計算季度起訖月份
+*---------------------------------------------------------------*
+C     QTR_CODE  IFEQ    1
+C               MOVE    1        START_MONTH
+C               MOVE    3        END_MONTH
+C     QTR_CODE  ELSEIF  2
+C               MOVE    4        START_MONTH
+C               MOVE    6        END_MONTH
+C     QTR_CODE  ELSEIF  3
+C               MOVE    7        START_MONTH
+C               MOVE    9        END_MONTH
+C     QTR_CODE  ELSEIF  4
+C               MOVE    10       START_MONTH
+C               MOVE    12       END_MONTH
+C               ENDIF
+*---------------------------------------------------------------*
+*  檢查季度內所有月份是否已結帳 (假設GLCLPF有CLOSE_FLAG欄位)
+*---------------------------------------------------------------*
+C               Z-ADD   0        MONTH_COUNT
+C               Z-ADD   0        MONTH_TOTAL
+C     I         DO      M START_MONTH END_MONTH
+C               CHAIN   (YEAR:M) GLCLPF
+C               IF      %FOUND
+C               IF      CLOSE_FLAG = 'Y'
+C               ADD     1        MONTH_COUNT
+C               ENDIF
+C               ENDIF
+C               ADD     1        MONTH_TOTAL
+C               ENDDO
+C     MONTH_COUNT IFNE  MONTH_TOTAL
+C               MOVE    '尚未完成結帳' ERROR_MSG
+C               RETURN
+C               ENDIF
+C               MOVE    ' '      ERROR_MSG
+*---------------------------------------------------------------* 
